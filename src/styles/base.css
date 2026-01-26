@@ -245,6 +245,39 @@ button {
   margin-top: 12px;
 }
 
+.wallet-note {
+  margin-top: 12px;
+}
+
+.wallet-bags {
+  margin-top: 16px;
+}
+
+.wallet-bag-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.wallet-bag {
+  background: #fdf7ea;
+  border: 1px solid #eadfc9;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wallet-bag-form {
+  display: grid;
+  gap: 16px;
+}
+
+.wallet-bag-section h4 {
+  margin-bottom: 8px;
+}
+
 .stat-card {
   background: #fdf7ea;
   border: 1px solid #eadfc9;
