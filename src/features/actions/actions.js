@@ -77,19 +77,19 @@ export async function renderActions(container) {
           character_id: activeCharacter.id,
           cp: 0,
           sp: 0,
-          ep: 0,
           gp: 0,
           pp: 0
         };
       }
       const direction = form.dataset.moneyForm;
       const formData = new FormData(form);
+      const coin = formData.get('coin');
+      const amount = Number(formData.get('amount') || 0);
       const delta = {
-        cp: Number(formData.get('cp') || 0),
-        sp: Number(formData.get('sp') || 0),
-        ep: Number(formData.get('ep') || 0),
-        gp: Number(formData.get('gp') || 0),
-        pp: Number(formData.get('pp') || 0)
+        cp: coin === 'cp' ? amount : 0,
+        sp: coin === 'sp' ? amount : 0,
+        gp: coin === 'gp' ? amount : 0,
+        pp: coin === 'pp' ? amount : 0
       };
       const sign = direction === 'pay' ? -1 : 1;
       const signedDelta = Object.fromEntries(
@@ -142,12 +142,19 @@ export async function renderActions(container) {
 function moneyFields() {
   return `
     <div class="money-grid">
-      ${['cp', 'sp', 'ep', 'gp', 'pp'].map((coin) => `
-        <label class="field">
-          <span>${coin.toUpperCase()}</span>
-          <input name="${coin}" type="number" value="0" />
-        </label>
-      `).join('')}
+      <label class="field">
+        <span>Quantità</span>
+        <input name="amount" type="number" value="0" min="0" />
+      </label>
+      <label class="field">
+        <span>Tipo moneta</span>
+        <select name="coin">
+          <option value="pp">Platino (PP)</option>
+          <option value="gp">Oro (GP)</option>
+          <option value="sp">Argento (SP)</option>
+          <option value="cp">Rame (CP)</option>
+        </select>
+      </label>
     </div>
     <label class="field">
       <span>Motivo</span>

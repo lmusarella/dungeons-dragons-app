@@ -11,7 +11,7 @@ export function formatCoin(value, label) {
 
 export function formatWallet(wallet, unit = 'gp') {
   if (!wallet) return '-';
-  const entries = ['pp', 'gp', 'ep', 'sp', 'cp'];
+  const entries = ['pp', 'gp', 'sp', 'cp'];
   return entries
     .map((coin) => `${wallet[coin] ?? 0} ${coin}`)
     .join(' · ');

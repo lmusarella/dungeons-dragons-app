@@ -2,7 +2,7 @@ import { fetchItems, createItem, updateItem, deleteItem } from './inventoryApi.j
 import { getState, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
-import { formatWeight, formatWallet } from '../../lib/format.js';
+import { formatWeight } from '../../lib/format.js';
 import { buildDrawerLayout, buildInput, buildTextarea, createToast, openDrawer, closeDrawer, buildSelect, openConfirmModal, openFormModal } from '../../ui/components.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
 import { renderWalletSummary } from '../wallet/wallet.js';
@@ -64,8 +64,6 @@ export async function renderInventory(container) {
   const weightStep = weightUnit === 'kg' ? '0.1' : '1';
   const equippedItems = items.filter((item) => item.equipped_state && item.equipped_state !== 'none');
   const attunedCount = items.filter((item) => item.attunement_active).length;
-  const walletBags = getWalletBags(activeCharacter.id);
-
   container.innerHTML = `
     <section class="card compact-card">
       <header class="card-header">
@@ -102,11 +100,9 @@ export async function renderInventory(container) {
           </header>
           ${renderWalletSummary(wallet)}
           <p class="muted wallet-note">Monete: Platino (PP), Oro (GP), Argento (SP), Rame (CP).</p>
-          ${renderWalletBags(walletBags)}
           <div class="compact-action-grid">
             <button class="primary" type="button" data-money-action="pay">Paga</button>
             <button class="primary" type="button" data-money-action="receive">Ricevi</button>
-            <button class="primary" type="button" data-manage-wallet>Gestisci wallet</button>
           </div>
         </div>
       </div>
@@ -215,17 +211,17 @@ export async function renderInventory(container) {
           character_id: activeCharacter.id,
           cp: 0,
           sp: 0,
-          ep: 0,
           gp: 0,
           pp: 0
         };
       }
+      const coin = formData.get('coin');
+      const amount = Number(formData.get('amount') || 0);
       const delta = {
-        cp: Number(formData.get('cp') || 0),
-        sp: Number(formData.get('sp') || 0),
-        ep: Number(formData.get('ep') || 0),
-        gp: Number(formData.get('gp') || 0),
-        pp: Number(formData.get('pp') || 0)
+        cp: coin === 'cp' ? amount : 0,
+        sp: coin === 'sp' ? amount : 0,
+        gp: coin === 'gp' ? amount : 0,
+        pp: coin === 'pp' ? amount : 0
       };
       const sign = direction === 'pay' ? -1 : 1;
       const signedDelta = Object.fromEntries(
@@ -251,34 +247,6 @@ export async function renderInventory(container) {
         createToast('Errore aggiornamento denaro', 'error');
       }
     }));
-
-  const manageWalletButton = container.querySelector('[data-manage-wallet]');
-  if (manageWalletButton) {
-    manageWalletButton.addEventListener('click', async () => {
-      const formData = await openFormModal({
-        title: 'Gestisci wallet',
-        submitLabel: 'Salva',
-        content: buildWalletBagFields(walletBags, wallet)
-      });
-      if (!formData) return;
-      const nextBags = parseWalletBagForm(formData);
-      if (!wallet) {
-        createToast('Wallet non disponibile', 'error');
-        return;
-      }
-      const totals = sumWalletBags(nextBags);
-      const exceedsWallet = ['pp', 'gp', 'ep', 'sp', 'cp'].some(
-        (coin) => (totals[coin] ?? 0) > (wallet?.[coin] ?? 0)
-      );
-      if (exceedsWallet) {
-        createToast('I sacchetti superano il totale wallet', 'error');
-        return;
-      }
-      saveWalletBags(activeCharacter.id, nextBags);
-      createToast('Sacchetti aggiornati');
-      renderInventory(container);
-    });
-  }
 
   const lootButton = container.querySelector('[data-add-loot]');
   if (lootButton) {
@@ -405,12 +373,19 @@ function buildEquipmentCompact(items) {
 function moneyFields() {
   return `
     <div class="money-grid compact-grid-fields">
-      ${['cp', 'sp', 'ep', 'gp', 'pp'].map((coin) => `
-        <label class="field">
-          <span>${coin.toUpperCase()}</span>
-          <input name="${coin}" type="number" value="0" />
-        </label>
-      `).join('')}
+      <label class="field">
+        <span>Quantità</span>
+        <input name="amount" type="number" value="0" min="0" />
+      </label>
+      <label class="field">
+        <span>Tipo moneta</span>
+        <select name="coin">
+          <option value="pp">Platino (PP)</option>
+          <option value="gp">Oro (GP)</option>
+          <option value="sp">Argento (SP)</option>
+          <option value="cp">Rame (CP)</option>
+        </select>
+      </label>
     </div>
     <label class="field">
       <span>Motivo</span>
@@ -450,108 +425,6 @@ function getCategoryLabel(category) {
   return categoryLabels.get(category) ?? (category ? category : 'Altro');
 }
 
-function getWalletBags(characterId) {
-  if (typeof localStorage === 'undefined') return buildDefaultWalletBags();
-  const stored = localStorage.getItem(getWalletBagKey(characterId));
-  if (!stored) return buildDefaultWalletBags();
-  try {
-    const parsed = JSON.parse(stored);
-    return normalizeWalletBags(parsed);
-  } catch (error) {
-    return buildDefaultWalletBags();
-  }
-}
-
-function saveWalletBags(characterId, bags) {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(getWalletBagKey(characterId), JSON.stringify(bags));
-}
-
-function getWalletBagKey(characterId) {
-  return `dd_wallet_bags:${characterId}`;
-}
-
-function buildDefaultWalletBags() {
-  return {
-    carry: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
-    stash: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }
-  };
-}
-
-function normalizeWalletBags(bags) {
-  const base = buildDefaultWalletBags();
-  return {
-    carry: { ...base.carry, ...(bags?.carry ?? {}) },
-    stash: { ...base.stash, ...(bags?.stash ?? {}) }
-  };
-}
-
-function renderWalletBags(bags) {
-  return `
-    <div class="wallet-bags">
-      <h4>Sacchetti</h4>
-      <div class="wallet-bag-row">
-        <div class="wallet-bag">
-          <strong>Con te</strong>
-          <span class="muted">${formatWallet(bags.carry)}</span>
-        </div>
-        <div class="wallet-bag">
-          <strong>Lasciate</strong>
-          <span class="muted">${formatWallet(bags.stash)}</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function buildWalletBagFields(bags, wallet) {
-  const normalized = normalizeWalletBags(bags);
-  const total = formatWallet(wallet);
-  return `
-    <p class="muted">Totale wallet: ${total}</p>
-    <div class="wallet-bag-form">
-      ${buildWalletBagSection('Con te', 'carry', normalized.carry)}
-      ${buildWalletBagSection('Lasciate', 'stash', normalized.stash)}
-    </div>
-  `;
-}
-
-function buildWalletBagSection(title, prefix, data) {
-  return `
-    <div class="wallet-bag-section">
-      <h4>${title}</h4>
-      <div class="money-grid compact-grid-fields">
-        ${['pp', 'gp', 'ep', 'sp', 'cp'].map((coin) => `
-          <label class="field">
-            <span>${coin.toUpperCase()}</span>
-            <input name="${prefix}_${coin}" type="number" min="0" value="${data[coin] ?? 0}" />
-          </label>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function parseWalletBagForm(formData) {
-  const parse = (prefix) => ({
-    pp: Number(formData.get(`${prefix}_pp`) || 0),
-    gp: Number(formData.get(`${prefix}_gp`) || 0),
-    ep: Number(formData.get(`${prefix}_ep`) || 0),
-    sp: Number(formData.get(`${prefix}_sp`) || 0),
-    cp: Number(formData.get(`${prefix}_cp`) || 0)
-  });
-  return {
-    carry: parse('carry'),
-    stash: parse('stash')
-  };
-}
-
-function sumWalletBags(bags) {
-  return ['pp', 'gp', 'ep', 'sp', 'cp'].reduce((acc, coin) => {
-    acc[coin] = (bags.carry?.[coin] ?? 0) + (bags.stash?.[coin] ?? 0);
-    return acc;
-  }, {});
-}
 
 function openItemDrawer(character, item, items, onSave) {
   const form = document.createElement('form');
