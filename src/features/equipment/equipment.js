@@ -35,7 +35,7 @@ export async function renderEquipment(container) {
     <section class="card">
       <header class="card-header">
         <h2>Equipaggiamento</h2>
-        <span class="pill">Attunement attivi: ${attunedCount}</span>
+        <span class="pill">Sintonie attive: ${attunedCount}</span>
       </header>
       ${states.map((state) => buildEquipmentSection(state, equippedItems)).join('')}
       ${!equippedItems.length ? '<p class="muted">Nessun oggetto equipaggiato.</p>' : ''}
@@ -62,7 +62,7 @@ export async function renderEquipment(container) {
       if (!item) return;
       try {
         await updateItem(item.id, { attunement_active: !item.attunement_active });
-        createToast('Attunement aggiornato');
+        createToast('Sintonia aggiornata');
         renderEquipment(container);
       } catch (error) {
         createToast('Errore attunement', 'error');

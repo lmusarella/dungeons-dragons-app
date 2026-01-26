@@ -68,10 +68,24 @@ export async function renderInventory(container) {
     <section class="card compact-card">
       <header class="card-header">
         <h2>Equip</h2>
-        <span class="pill">Attunement: ${attunedCount}</span>
+        <span class="pill">Slot Sintonia Attivi: ${attunedCount}</span>
       </header>
       <div data-equipment-list>
         ${buildEquipmentCompact(equippedItems)}
+      </div>
+    </section>
+     <section class="card compact-card">
+      <div class="compact-grid">
+        <div class="compact-panel">
+          <header class="compact-header">
+            <h3>Monete</h3>
+          </header>
+          ${renderWalletSummary(wallet)}       
+          <div class="compact-action-grid">
+            <button class="primary" type="button" data-money-action="pay">Paga</button>
+            <button class="primary" type="button" data-money-action="receive">Ricevi</button>
+          </div>
+        </div>
       </div>
     </section>
     <section class="card">
@@ -91,21 +105,6 @@ export async function renderInventory(container) {
         <strong>${formatWeight(totalWeight, weightUnit)}</strong>
       </div>
       <div data-inventory-list></div>
-    </section>
-    <section class="card compact-card">
-      <div class="compact-grid">
-        <div class="compact-panel">
-          <header class="compact-header">
-            <h3>Azioni denaro</h3>
-          </header>
-          ${renderWalletSummary(wallet)}
-          <p class="muted wallet-note">Monete: Platino (PP), Oro (GP), Argento (SP), Rame (CP).</p>
-          <div class="compact-action-grid">
-            <button class="primary" type="button" data-money-action="pay">Paga</button>
-            <button class="primary" type="button" data-money-action="receive">Ricevi</button>
-          </div>
-        </div>
-      </div>
     </section>
   `;
 
@@ -191,7 +190,7 @@ export async function renderInventory(container) {
       if (!item) return;
       try {
         await updateItem(item.id, { attunement_active: !item.attunement_active });
-        createToast('Attunement aggiornato');
+        createToast('Sintonia aggiornata');
         renderInventory(container);
       } catch (error) {
         createToast('Errore attunement', 'error');
@@ -357,7 +356,7 @@ function buildEquipmentCompact(items) {
                   <div class="compact-actions">
                     <button data-toggle="${item.id}" data-state="none">Rimuovi</button>
                     <button data-attune="${item.id}">
-                      ${item.attunement_active ? 'Disattiva attune' : 'Attiva attune'}
+                      ${item.attunement_active ? 'Disattiva sintonia' : 'Attiva sintonia'}
                     </button>
                   </div>
                 </li>
@@ -486,7 +485,7 @@ function openItemDrawer(character, item, items, onSave) {
 
   const attunement = document.createElement('label');
   attunement.className = 'checkbox';
-  attunement.innerHTML = '<input type="checkbox" name="attunement_active" /> <span>Attunement attivo</span>';
+  attunement.innerHTML = '<input type="checkbox" name="attunement_active" /> <span>Sintonia attiva</span>';
   form.appendChild(attunement);
 
   form.appendChild(buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' }));

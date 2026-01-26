@@ -8,9 +8,7 @@ export function renderWalletSummary(wallet) {
     { key: 'cp', label: 'Rame' }
   ];
   return `
-    <div class="wallet-summary">
-      <h3>Wallet</h3>
-      <p>${formatWallet(wallet)}</p>
+    <div class="wallet-summary">     
       <div class="wallet-grid">
         ${coins.map((coin) => `
           <div class="stat-card">
