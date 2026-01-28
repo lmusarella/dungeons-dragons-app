@@ -276,7 +276,7 @@ button {
 
 .app-main {
   flex: 1;
-  padding-bottom: 72px;
+  padding-bottom: 140px;
 }
 
 .bottom-nav {
@@ -482,6 +482,16 @@ button {
   height: 36px;
 }
 
+.resource-avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #6f4e37;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 12px;
+}
+
 .resource-actions {
   align-items: center;
 }
@@ -489,6 +499,7 @@ button {
 .resource-card {
   flex-direction: column;
   align-items: stretch;
+  justify-content: flex-start;
   gap: 10px;
   padding: 12px;
   border: 1px solid #eadfc9;
@@ -504,14 +515,17 @@ button {
   gap: 12px;
 }
 
-.resource-detail-button {
-  min-height: 32px;
-}
-
 .resource-info {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.resource-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .resource-meta {
@@ -527,17 +541,42 @@ button {
   flex-wrap: wrap;
 }
 
+.resource-charge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.resource-charge-label {
+  font-size: 0.75rem;
+  color: #6a5540;
+}
+
+.resource-charge-count {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #6f4e37;
+}
+
+.resource-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.resource-passive {
+  font-size: 0.75rem;
+  color: #665a48;
+}
+
 .resource-actions--top {
   display: flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.resource-passive {
-  font-size: 0.75rem;
-  color: #665a48;
 }
 
 .resource-cta {
@@ -551,14 +590,27 @@ button {
   border: 1px solid #6f4e37;
   background: #6f4e37;
   color: #fff;
-  border-radius: 10px;
-  padding: 6px 12px;
-  min-height: 34px;
+  border-radius: 999px;
+  padding: 5px 12px;
+  min-height: 30px;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
 }
 
 .resource-cta-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.resource-action-button {
+  border: 1px solid #c9b79f;
+  background: #fff;
+  color: #6f4e37;
+  border-radius: 10px;
+  padding: 6px 10px;
+  min-height: 30px;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .actions {
@@ -759,6 +811,48 @@ button {
   gap: 8px;
 }
 
+.hp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.hp-bar-stack {
+  flex: 1;
+  min-width: 0;
+}
+
+.armor-class-card {
+  position: relative;
+  min-width: 64px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #fef6e5 0%, #f3d5a9 100%);
+  border: 1px solid rgba(111, 78, 55, 0.2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  box-shadow: 0 6px 12px rgba(111, 78, 55, 0.12);
+}
+
+.armor-class-card strong {
+  font-size: 1.15rem;
+}
+
+.armor-class-card__sigil {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  background: #6f4e37;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  box-shadow: 0 4px 8px rgba(111, 78, 55, 0.25);
+}
 .hp-panel-title,
 .hp-panel-hit-dice {
   display: flex;
@@ -1079,7 +1173,9 @@ button {
   background: #fffaf1;
   border-radius: 16px;
   padding: 20px;
-  width: min(360px, 90%);
+  width: min(520px, 92%);
+  max-height: 85vh;
+  overflow-y: auto;
   border: 1px solid #e6dcc8;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
 }
@@ -1104,11 +1200,12 @@ button {
 
 .toast-container {
   position: fixed;
-  right: 16px;
-  bottom: 90px;
+  right: 88px;
+  bottom: 110px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  z-index: 30;
 }
 
 .toast {

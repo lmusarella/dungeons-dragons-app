@@ -511,6 +511,14 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   nameField.querySelector('input').required = true;
   mainSection.appendChild(nameField);
   mainSection.appendChild(buildInput({ label: 'Sistema', name: 'system', placeholder: 'Es. D&D 5e', value: character?.system ?? '' }));
+  const mainGrid = document.createElement('div');
+  mainGrid.className = 'character-edit-grid';
+  mainGrid.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: characterData.level ?? '' }));
+  mainGrid.appendChild(buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' }));
+  mainGrid.appendChild(buildInput({ label: 'Allineamento', name: 'alignment', value: characterData.alignment ?? '' }));
+  mainGrid.appendChild(buildInput({ label: 'Classe', name: 'class_name', value: characterData.class_name ?? characterData.class_archetype ?? '' }));
+  mainGrid.appendChild(buildInput({ label: 'Archetipo', name: 'archetype', value: characterData.archetype ?? '' }));
+  mainSection.appendChild(mainGrid);
   mainSection.appendChild(buildInput({
     label: 'Foto (URL)',
     name: 'avatar_url',
@@ -706,6 +714,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       used: toNumberOrNull(formData.get('hit_dice_used'))
     },
     ac: toNumberOrNull(formData.get('ac')),
+    level: toNumberOrNull(formData.get('level')),
+    race: formData.get('race')?.trim() || null,
+    alignment: formData.get('alignment')?.trim() || null,
+    class_name: formData.get('class_name')?.trim() || null,
+    archetype: formData.get('archetype')?.trim() || null,
     speed: toNumberOrNull(formData.get('speed')),
     proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
     initiative: toNumberOrNull(formData.get('initiative')),
@@ -787,7 +800,8 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
                 <span class="pill">Allineamento ${data.alignment ?? '-'}</span>
               </div>
               <span class="pill">Razza ${data.race ?? '-'}</span>
-              <span class="pill">Classe/Archetipo ${data.class_archetype ?? '-'}</span>
+              <span class="pill">Classe ${data.class_name ?? data.class_archetype ?? '-'}</span>
+              <span class="pill">Archetipo ${data.archetype ?? '-'}</span>
             </div>
           </div>
         </div>
@@ -815,18 +829,23 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
             <strong>${hpLabel}</strong>
           </div>
         </div>
-        <div class="hp-bar">
-          <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
-        </div>
-        <div class="hp-panel-hit-dice">
-          <span>Dadi vita</span>
-          <strong>${formatHitDice(hitDice)}</strong>
-        </div>
-        <div class="hp-panel-subgrid">
-          <div class="stat-chip">
+        <div class="hp-bar-row">
+          <div class="armor-class-card">
             <span>CA</span>
             <strong>${armorClass ?? '-'}</strong>
+            <span class="armor-class-card__sigil" aria-hidden="true">🛡️</span>
           </div>
+          <div class="hp-bar-stack">
+            <div class="hp-bar">
+              <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
+            </div>
+            <div class="hp-panel-hit-dice">
+              <span>Dadi vita</span>
+              <strong>${formatHitDice(hitDice)}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="hp-panel-subgrid">
           <div class="stat-chip">
             <span>Iniziativa</span>
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
@@ -1032,21 +1051,33 @@ function buildResourceList(resources, canManageResources) {
         <li class="resource-card">
           <div class="resource-card-header">
             <div class="resource-info">
-              ${res.image_url ? `<img class="resource-avatar" src="${res.image_url}" alt="Foto di ${res.name}" />` : ''}
+              ${res.image_url
+    ? `<img class="resource-avatar" src="${res.image_url}" alt="Foto di ${res.name}" />`
+    : `<div class="resource-avatar resource-avatar--placeholder" aria-hidden="true">${res.name?.trim().charAt(0).toUpperCase() || 'R'}</div>`}
               <div class="resource-meta">
-                <strong>${res.name}</strong>
-                <div class="resource-submeta">
+                <div class="resource-title-row">
+                  <strong>${res.name}</strong>
                   <span class="chip chip--small">${formatResourceRecovery(res)}</span>
-                  ${Number(res.max_uses) ? buildResourceCharges(res) : ''}
+                </div>
+                <div class="resource-submeta">
+                  ${Number(res.max_uses)
+    ? `
+                      <div class="resource-charge-row">
+                        <span class="resource-charge-label">Cariche</span>
+                        <span class="resource-charge-count">${Math.max((Number(res.max_uses) || 0) - (Number(res.used) || 0), 0)}/${Number(res.max_uses)}</span>
+                        ${buildResourceCharges(res)}
+                      </div>
+                    `
+    : '<span class="resource-passive">Passiva</span>'}
                 </div>
               </div>
             </div>
-            <div class="resource-actions resource-actions--top">
-              ${canManageResources ? buildResourceManagementButtons(res) : ''}
-              <button class="icon-button resource-detail-button" data-detail-resource="${res.id}" aria-label="Dettaglio risorsa">
-                <span aria-hidden="true">🔍</span>
-              </button>
+            <div class="resource-card-actions">
               ${Number(res.max_uses) ? `<div class="resource-cta">${buildResourceCtaButtons(res)}</div>` : ''}
+              <div class="resource-actions resource-actions--top">
+                <button class="resource-action-button" data-detail-resource="${res.id}">Dettagli</button>
+                ${canManageResources ? `<button class="resource-action-button" data-edit-resource="${res.id}">Modifica</button>` : ''}
+              </div>
             </div>
           </div>
         </li>
@@ -1100,26 +1131,18 @@ function buildResourceCharges(resource) {
   return `<div class="resource-charges" aria-label="Cariche risorsa">${charges}</div>`;
 }
 
-function buildResourceManagementButtons(resource) {
-  return `
-    <button class="icon-button" data-edit-resource="${resource.id}" aria-label="Modifica risorsa">
-      <span aria-hidden="true">✏️</span>
-    </button>
-  `;
-}
-
 function buildResourceCtaButtons(resource) {
   const maxUses = Number(resource.max_uses) || 0;
   const used = Number(resource.used) || 0;
   if (maxUses === 0) return '';
   const canUse = used < maxUses;
-  const canRecover = used > 0;
-  const showRecover = canRecover;
-  const showUse = !showRecover && canUse;
-  if (!showRecover && !showUse) return '';
-  return showRecover
-    ? `<button class="resource-cta-button" data-recover-resource="${resource.id}">Recupera</button>`
-    : `<button class="resource-cta-button" data-use-resource="${resource.id}">Usa</button>`;
+  if (canUse) {
+    return `<button class="resource-cta-button" data-use-resource="${resource.id}">Usa</button>`;
+  }
+  if (used > 0) {
+    return `<button class="resource-cta-button" data-recover-resource="${resource.id}">Ricarica</button>`;
+  }
+  return '';
 }
 
 function openResourceDrawer(character, onSave, resource = null) {
