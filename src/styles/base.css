@@ -222,6 +222,34 @@ button {
   flex-wrap: wrap;
 }
 
+.resource-usage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resource-charges {
+  display: flex;
+  gap: 4px;
+}
+
+.charge-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #3bb273;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.charge-indicator--long {
+  border-radius: 2px;
+  background: #4a7bd9;
+}
+
+.charge-indicator--used {
+  background: #d64541;
+}
+
 .actions button {
   border: 1px solid #6f4e37;
   border-radius: 10px;
@@ -658,6 +686,31 @@ button {
   object-fit: cover;
   border: 1px solid #eadfc9;
   background: #fff;
+}
+
+.transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transaction-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transaction-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #eadfc9;
+  border-radius: 12px;
+  background: #fffaf0;
 }
 
 .detail-card label {
