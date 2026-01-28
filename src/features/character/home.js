@@ -71,8 +71,8 @@ export async function renderHome(container) {
         <section class="card home-card home-section">
           <header class="card-header">
             <div>
-              <p class="eyebrow">Sezione</p>
-              <h3>Tiri salvezza</h3>
+              <p class="eyebrow">Tiri salvezza</p>
+              <h3></h3>
             </div>
           </header>
           ${activeCharacter ? buildSavingThrowSection(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
@@ -80,8 +80,7 @@ export async function renderHome(container) {
         <section class="card home-card home-section home-scroll-panel">
           <header class="card-header">
             <div>
-              <p class="eyebrow">Sezione</p>
-              <h3>Abilità</h3>
+              <p class="eyebrow">Abilità</p>            
             </div>
           </header>
           <div class="home-scroll-body">
@@ -91,8 +90,7 @@ export async function renderHome(container) {
         <section class="card home-card home-section home-scroll-panel">
           <header class="card-header">
             <div>
-              <p class="eyebrow">Sezione</p>
-              <h3>Competenze extra</h3>
+              <p class="eyebrow">Competenze extra</p>         
             </div>
           </header>
           <div class="home-scroll-body home-scroll-body--compact">
@@ -104,8 +102,7 @@ export async function renderHome(container) {
         <section class="card home-card home-section">
           <header class="card-header">
             <div>
-              <p class="eyebrow">Scheda</p>
-              <h2>Personaggio</h2>
+              <p class="eyebrow">Scheda Personaggio</p>           
             </div>
             <div class="actions">
               ${characters.length > 1 ? '<select data-character-select></select>' : ''}
@@ -118,8 +115,7 @@ export async function renderHome(container) {
         <section class="card home-card home-section home-scroll-panel">
           <header class="card-header">
             <div>
-              <p class="eyebrow">Sezione</p>
-              <h3>Risorse</h3>
+              <p class="eyebrow">Risorse</p>           
             </div>
             ${activeCharacter && canManageResources ? `
               <button class="icon-button icon-button--add" data-add-resource aria-label="Nuova risorsa">
