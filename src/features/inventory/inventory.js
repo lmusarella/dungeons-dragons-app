@@ -2,9 +2,9 @@ import { fetchItems, createItem, updateItem, deleteItem } from './inventoryApi.j
 import { getState, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
-import { formatWeight } from '../../lib/format.js';
+import { formatCoin, formatWeight } from '../../lib/format.js';
 import { buildDrawerLayout, buildInput, buildTextarea, createToast, openDrawer, closeDrawer, buildSelect, openConfirmModal, openFormModal } from '../../ui/components.js';
-import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
+import { fetchWallet, upsertWallet, createTransaction, fetchTransactions } from '../wallet/walletApi.js';
 import { renderWalletSummary } from '../wallet/wallet.js';
 
 const bodyParts = [
@@ -109,6 +109,7 @@ export async function renderInventory(container) {
           <div class="compact-action-grid">
             <button class="primary" type="button" data-money-action="pay">Paga</button>
             <button class="primary" type="button" data-money-action="receive">Ricevi</button>
+            <button type="button" data-view-transactions>Transazioni</button>
           </div>
         </div>
       </div>
@@ -288,6 +289,27 @@ export async function renderInventory(container) {
       }
     }));
 
+  const transactionsButton = container.querySelector('[data-view-transactions]');
+  if (transactionsButton) {
+    transactionsButton.addEventListener('click', async () => {
+      if (state.offline) {
+        createToast('Transazioni disponibili solo online', 'error');
+        return;
+      }
+      try {
+        const transactions = await fetchTransactions(activeCharacter.id);
+        await openFormModal({
+          title: 'Transazioni',
+          submitLabel: 'Chiudi',
+          cancelLabel: 'Chiudi',
+          content: buildTransactionList(transactions)
+        });
+      } catch (error) {
+        createToast('Errore caricamento transazioni', 'error');
+      }
+    });
+  }
+
   const lootButton = container.querySelector('[data-add-loot]');
   if (lootButton) {
     lootButton.addEventListener('click', async () => {
@@ -319,6 +341,65 @@ export async function renderInventory(container) {
 
   container.querySelector('[data-add-item]').addEventListener('click', () => {
     openItemDrawer(activeCharacter, null, items, renderInventory.bind(null, container));
+  });
+}
+
+function buildTransactionList(transactions) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'transaction-list';
+  if (!transactions.length) {
+    wrapper.innerHTML = '<p class="muted">Nessuna transazione registrata.</p>';
+    return wrapper;
+  }
+  const list = document.createElement('ul');
+  list.className = 'transaction-items';
+  transactions.forEach((transaction) => {
+    const item = document.createElement('li');
+    const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
+    const amountLabel = formatTransactionAmount(transaction.amount);
+    const dateLabel = formatTransactionDate(transaction.occurred_on || transaction.created_at);
+    item.innerHTML = `
+      <div>
+        <strong>${directionLabel}</strong>
+        <p class="muted">${transaction.reason || 'Nessuna nota'} · ${dateLabel}</p>
+      </div>
+      <span>${amountLabel}</span>
+    `;
+    list.appendChild(item);
+  });
+  wrapper.appendChild(list);
+  return wrapper;
+}
+
+function formatTransactionAmount(amount) {
+  const normalized = normalizeTransactionAmount(amount);
+  const entries = ['pp', 'gp', 'sp', 'cp']
+    .map((coin) => ({ coin, value: Number(normalized?.[coin] ?? 0) }))
+    .filter((entry) => entry.value !== 0);
+  if (!entries.length) return '0 gp';
+  return entries.map((entry) => formatCoin(entry.value, entry.coin)).join(' · ');
+}
+
+function normalizeTransactionAmount(amount) {
+  if (!amount) return {};
+  if (typeof amount === 'string') {
+    try {
+      return JSON.parse(amount);
+    } catch (error) {
+      return {};
+    }
+  }
+  return amount;
+}
+
+function formatTransactionDate(value) {
+  if (!value) return 'Data non disponibile';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data non disponibile';
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
   });
 }
 

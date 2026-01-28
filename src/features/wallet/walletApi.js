@@ -29,3 +29,13 @@ export async function createTransaction(payload) {
   if (error) throw error;
   return data;
 }
+
+export async function fetchTransactions(characterId) {
+  const { data, error } = await supabase
+    .from('money_transactions')
+    .select('*')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}

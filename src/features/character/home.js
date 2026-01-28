@@ -301,6 +301,7 @@ async function openCharacterDrawer(user, onSave, character = null) {
   const skillMasteryStates = characterData.skill_mastery || {};
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
+  const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const form = document.createElement('div');
   form.className = 'character-edit-form';
 
@@ -339,6 +340,27 @@ async function openCharacterDrawer(user, onSave, character = null) {
   statsGrid.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? '' }));
   statsGrid.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? '' }));
   statsSection.appendChild(statsGrid);
+
+  const acSection = document.createElement('div');
+  acSection.className = 'character-edit-section';
+  acSection.innerHTML = `
+    <h4>Opzioni CA base</h4>
+    <p class="muted">Base = 10 + Destrezza. Seleziona eventuali modificatori extra.</p>
+    <div class="character-saving-grid">
+      ${[
+    { key: 'str', label: 'Forza' },
+    { key: 'con', label: 'Costituzione' },
+    { key: 'int', label: 'Intelligenza' },
+    { key: 'wis', label: 'Saggezza' },
+    { key: 'cha', label: 'Carisma' }
+  ].map((ability) => `
+        <label class="toggle-pill">
+          <input type="checkbox" name="ac_mod_${ability.key}" ${acAbilityModifiers[ability.key] ? 'checked' : ''} />
+          <span>${ability.label}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
 
   const abilitySection = document.createElement('div');
   abilitySection.className = 'character-edit-section';
@@ -419,6 +441,7 @@ async function openCharacterDrawer(user, onSave, character = null) {
 
   form.appendChild(mainSection);
   form.appendChild(statsSection);
+  form.appendChild(acSection);
   form.appendChild(abilitySection);
   form.appendChild(skillSection);
   form.appendChild(savingSection);
@@ -456,6 +479,10 @@ async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
+  const nextAcModifiers = { ...characterData.ac_ability_modifiers };
+  ['str', 'con', 'int', 'wis', 'cha'].forEach((ability) => {
+    nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
+  });
   const nextData = {
     ...characterData,
     avatar_url: formData.get('avatar_url')?.trim() || null,
@@ -473,6 +500,7 @@ async function openCharacterDrawer(user, onSave, character = null) {
     speed: toNumberOrNull(formData.get('speed')),
     proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
     initiative: toNumberOrNull(formData.get('initiative')),
+    ac_ability_modifiers: nextAcModifiers,
     abilities: {
       str: toNumberOrNull(formData.get('ability_str')),
       dex: toNumberOrNull(formData.get('ability_dex')),
@@ -685,13 +713,37 @@ function buildResourceList(resources, canManageResources) {
             </div>
           </div>
           <div class="actions">
-            ${Number(res.max_uses) ? `<span>${res.used}/${res.max_uses}</span>` : '<span>Passiva</span>'}
+            ${Number(res.max_uses)
+    ? `
+                <div class="resource-usage">
+                  ${buildResourceCharges(res)}
+                  <span class="muted">${res.used}/${res.max_uses}</span>
+                </div>
+              `
+    : '<span>Passiva</span>'}
             ${canManageResources ? buildResourceActions(res) : ''}
           </div>
         </li>
       `).join('')}
     </ul>
   `;
+}
+
+function buildResourceCharges(resource) {
+  const maxUses = Number(resource.max_uses) || 0;
+  const used = Number(resource.used) || 0;
+  if (!maxUses) return '';
+  const style = resource.reset_on === 'long_rest' ? 'long' : 'short';
+  const charges = Array.from({ length: maxUses }, (_, index) => {
+    const isUsed = index < used;
+    const classes = [
+      'charge-indicator',
+      style === 'long' ? 'charge-indicator--long' : 'charge-indicator--short',
+      isUsed ? 'charge-indicator--used' : ''
+    ].filter(Boolean).join(' ');
+    return `<span class="${classes}" aria-hidden="true"></span>`;
+  }).join('');
+  return `<div class="resource-charges" aria-label="Cariche risorsa">${charges}</div>`;
 }
 
 function buildResourceActions(resource) {
@@ -933,6 +985,10 @@ function formatHitDice(hitDice) {
 function calculateArmorClass(data, abilities, items) {
   const equippedItems = (items || []).filter((item) => item.equipable);
   const dexMod = getAbilityModifier(abilities.dex) ?? 0;
+  const acAbilityModifiers = data.ac_ability_modifiers || {};
+  const extraMods = Object.keys(acAbilityModifiers)
+    .filter((ability) => acAbilityModifiers[ability])
+    .reduce((total, ability) => total + (getAbilityModifier(abilities[ability]) ?? 0), 0);
   const armorCandidates = equippedItems.filter((item) => item.category === 'armor' && !item.is_shield);
   const shieldBonus = equippedItems
     .filter((item) => item.is_shield)
@@ -947,7 +1003,7 @@ function calculateArmorClass(data, abilities, items) {
   }).filter((value) => value !== null);
   const armorValue = armorValues.length ? Math.max(...armorValues) : null;
   const fallbackBase = normalizeNumber(data.ac);
-  const base = armorValue ?? fallbackBase ?? (10 + dexMod);
+  const base = armorValue ?? fallbackBase ?? (10 + dexMod + extraMods);
   return base + shieldBonus;
 }
 
