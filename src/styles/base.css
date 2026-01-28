@@ -501,7 +501,7 @@ button {
   align-items: stretch;
   justify-content: flex-start;
   gap: 8px;
-  padding: 10px;
+  padding: 16px 14px;
   border: 1px solid #eadfc9;
   border-radius: 14px;
   background: #fffaf2;
@@ -511,7 +511,7 @@ button {
 
 .resource-card-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -523,7 +523,7 @@ button {
 .resource-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   flex: 1;
 }
@@ -549,6 +549,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: center;
+  text-align: center;
 }
 
 .resource-submeta {
@@ -581,6 +583,14 @@ button {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+}
+
+.resource-detail-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 12px;
 }
 
 .resource-passive {
