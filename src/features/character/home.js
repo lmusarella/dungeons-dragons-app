@@ -209,8 +209,6 @@ export async function renderHome(container) {
       if (!resource) return;
       const maxUses = Number(resource.max_uses) || 0;
       if (!maxUses || resource.used >= maxUses) return;
-      const shouldUse = await openConfirmModal({ message: 'Usare la risorsa?' });
-      if (!shouldUse) return;
       try {
         await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
         createToast('Risorsa usata');
@@ -418,6 +416,7 @@ function openResourceDetail(resource) {
   const usageLabel = maxUses ? `${resource.used}/${resource.max_uses}` : 'Passiva';
   detail.innerHTML = `
     <div class="detail-card detail-card--text">
+      ${resource.image_url ? `<img class="resource-detail-image" src="${resource.image_url}" alt="Foto di ${resource.name}" />` : ''}
       <h4>${resource.name}</h4>
       ${resource.cast_time ? `<p class="resource-chip">${resource.cast_time}</p>` : ''}
       <p class="muted">${formatResourceRecovery(resource)}</p>
@@ -1051,26 +1050,25 @@ function buildHpShortcutFields(character, allowHitDice = true) {
   return wrapper;
 }
 
-function buildResourceList(resources, canManageResources, { showCharges = true } = {}) {
+function buildResourceList(resources, canManageResources, { showCharges = true, showUseButton = true } = {}) {
   return `
     <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
         <li class="resource-card" data-resource-card="${res.id}">
           <div class="resource-card-layout">
-            <div class="resource-card-cta">
-              <button
-                class="resource-cta-button resource-cta-button--label"
-                data-use-resource="${res.id}"
-                ${!Number(res.max_uses) || res.used >= Number(res.max_uses) ? 'disabled' : ''}
-              >
-                Usa
-              </button>
-            </div>
+            ${showUseButton ? `
+              <div class="resource-card-cta">
+                <button
+                  class="resource-cta-button resource-cta-button--label"
+                  data-use-resource="${res.id}"
+                  ${!Number(res.max_uses) || res.used >= Number(res.max_uses) ? 'disabled' : ''}
+                >
+                  Usa
+                </button>
+              </div>
+            ` : ''}
             <div class="resource-card-header">
               <div class="resource-info">
-                ${res.image_url
-    ? `<img class="resource-avatar" src="${res.image_url}" alt="Foto di ${res.name}" />`
-    : `<div class="resource-avatar resource-avatar--placeholder" aria-hidden="true">${res.name?.trim().charAt(0).toUpperCase() || 'R'}</div>`}
                 <div class="resource-meta">
                   <div class="resource-title-row">
                     <strong>${res.name}</strong>
@@ -1089,7 +1087,10 @@ function buildResourceList(resources, canManageResources, { showCharges = true }
               </div>
               <div class="resource-card-actions">
                 <div class="resource-actions resource-actions--top">
-                  ${canManageResources ? `<button class="resource-action-button resource-icon-button" data-edit-resource="${res.id}" aria-label="Modifica risorsa">✏️</button>` : ''}
+                  ${canManageResources ? `
+                    <button class="resource-action-button resource-icon-button" data-edit-resource="${res.id}" aria-label="Modifica risorsa">✏️</button>
+                    <button class="resource-action-button resource-icon-button" data-delete-resource="${res.id}" aria-label="Elimina risorsa">🗑️</button>
+                  ` : ''}
                 </div>
               </div>
             </div>
@@ -1113,7 +1114,7 @@ function buildResourceSections(resources, canManageResources) {
     ? `
       <div class="resource-section">
         <h4>Abilità Passive</h4>
-        ${buildResourceList(passiveResources, canManageResources, { showCharges: false })}
+        ${buildResourceList(passiveResources, canManageResources, { showCharges: false, showUseButton: false })}
       </div>
     `
     : '';
