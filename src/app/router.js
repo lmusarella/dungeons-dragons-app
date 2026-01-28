@@ -33,6 +33,12 @@ function renderRoute() {
   outlet.innerHTML = '';
   updateActiveTab(route);
   const bottomNav = document.querySelector('[data-bottom-nav]');
-  if (bottomNav) bottomNav.hidden = route === 'login';
+  const actionsFab = document.querySelector('[data-actions-fab]');
+  const hideFooter = route === 'login' || route === 'characters';
+  if (bottomNav) bottomNav.hidden = hideFooter;
+  if (actionsFab) {
+    actionsFab.hidden = hideFooter;
+    actionsFab.classList.remove('is-open');
+  }
   view?.(outlet);
 }

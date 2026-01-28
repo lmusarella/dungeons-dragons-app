@@ -3,6 +3,7 @@ import { navigate } from '../../app/router.js';
 import { getState, setActiveCharacter, setState } from '../../app/state.js';
 import { createToast } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
+import { openCharacterDrawer } from './home.js';
 
 export async function renderCharacterSelect(container) {
   container.innerHTML = `<section class="card"><p>Caricamento...</p></section>`;
@@ -22,6 +23,8 @@ export async function renderCharacterSelect(container) {
 
   const activeCharacter = characters.find((char) => char.id === state.activeCharacterId);
 
+  const canCreateCharacter = Boolean(user) && !offline;
+
   container.innerHTML = `
     <section class="card">
       <header class="character-select-header">
@@ -29,6 +32,7 @@ export async function renderCharacterSelect(container) {
           <h2>Seleziona personaggio</h2>
           <p class="muted">Scegli una scheda per aprire la home del personaggio.</p>
         </div>
+        ${canCreateCharacter ? '<button class="primary" type="button" data-create-character>Nuovo personaggio</button>' : ''}
       </header>
       <div class="character-card-grid">
         ${characters.length
@@ -45,6 +49,13 @@ export async function renderCharacterSelect(container) {
         navigate('home');
       });
     });
+
+  const createButton = container.querySelector('[data-create-character]');
+  if (createButton) {
+    createButton.addEventListener('click', () => {
+      openCharacterDrawer(user, () => renderCharacterSelect(container));
+    });
+  }
 }
 
 function buildCharacterCard(character, isActive) {
