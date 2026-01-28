@@ -68,6 +68,15 @@ export async function renderHome(container) {
   container.innerHTML = `
     <div class="home-layout">
       <div class="home-column home-column--left">
+        <section class="card home-card home-section">
+          <header class="card-header">
+            <div>
+              <p class="eyebrow">Sezione</p>
+              <h3>Tiri salvezza</h3>
+            </div>
+          </header>
+          ${activeCharacter ? buildSavingThrowSection(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+        </section>
         <section class="card home-card home-section home-scroll-panel">
           <header class="card-header">
             <div>
@@ -78,6 +87,15 @@ export async function renderHome(container) {
           <div class="home-scroll-body">
             ${activeCharacter ? buildSkillList(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
+        </section>
+        <section class="card home-card home-section">
+          <header class="card-header">
+            <div>
+              <p class="eyebrow">Sezione</p>
+              <h3>Competenze</h3>
+            </div>
+          </header>
+          ${activeCharacter ? buildProficiencyOverview(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
         </section>
       </div>
       <div class="home-column home-column--center">
@@ -93,15 +111,6 @@ export async function renderHome(container) {
             </div>
           </header>
           ${activeCharacter ? buildCharacterOverview(activeCharacter, canEditCharacter, items) : buildEmptyState(canCreateCharacter, offline)}
-        </section>
-        <section class="card home-card home-section">
-          <header class="card-header">
-            <div>
-              <p class="eyebrow">Sezione</p>
-              <h3>Salvezza e competenze</h3>
-            </div>
-          </header>
-          ${activeCharacter ? buildSavingThrowSection(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
         </section>
       </div>
       <div class="home-column home-column--right">
@@ -228,6 +237,13 @@ export async function renderHome(container) {
         const refreshed = await fetchResources(activeCharacter.id);
         updateCache('resources', refreshed);
         await cacheSnapshot({ resources: refreshed });
+        if (resetOn === 'long_rest') {
+          const nextData = applyLongRestHitDice(activeCharacter.data);
+          if (nextData) {
+            await saveCharacterData(activeCharacter, nextData, 'Dadi vita recuperati', container);
+            return;
+          }
+        }
         renderHome(container);
       } catch (error) {
         createToast('Errore aggiornamento risorse', 'error');
@@ -243,10 +259,30 @@ export async function renderHome(container) {
       const formData = await openFormModal({
         title,
         submitLabel,
-        content: buildHpShortcutFields()
+        content: buildHpShortcutFields(activeCharacter, action === 'heal')
       });
       if (!formData) return;
-      const amount = Number(formData.get('amount'));
+      const useHitDice = formData.has('use_hit_dice');
+      const hitDice = activeCharacter.data?.hit_dice || {};
+      const abilities = activeCharacter.data?.abilities || {};
+      const hitDiceUsed = Number(hitDice.used) || 0;
+      const hitDiceMax = Number(hitDice.max) || 0;
+      const hitDiceSides = getHitDiceSides(hitDice.die);
+      let amount = Number(formData.get('amount'));
+
+      if (action === 'heal' && useHitDice) {
+        if (!hitDiceSides) {
+          createToast('Configura un dado vita valido', 'error');
+          return;
+        }
+        if (hitDiceUsed >= hitDiceMax) {
+          createToast('Nessun dado vita disponibile', 'error');
+          return;
+        }
+        const conMod = getAbilityModifier(abilities.con) ?? 0;
+        amount = Math.max(rollDie(hitDiceSides) + conMod, 1);
+      }
+
       if (!amount || amount <= 0) {
         createToast('Inserisci un valore valido', 'error');
         return;
@@ -259,12 +295,19 @@ export async function renderHome(container) {
       const adjusted = maxHp !== null && maxHp !== undefined
         ? Math.min(nextHp, Number(maxHp))
         : nextHp;
+      const nextHitDice = action === 'heal' && useHitDice
+        ? {
+          ...hitDice,
+          used: Math.min(hitDiceUsed + 1, hitDiceMax)
+        }
+        : hitDice;
       await saveCharacterData(activeCharacter, {
         ...activeCharacter.data,
         hp: {
           ...activeCharacter.data?.hp,
           current: adjusted
-        }
+        },
+        hit_dice: nextHitDice
       }, action === 'heal' ? 'PF curati' : 'Danno ricevuto', container);
     }));
 
@@ -458,6 +501,15 @@ async function openCharacterDrawer(user, onSave, character = null) {
     </div>
   `;
 
+  const proficiencyNotesSection = document.createElement('div');
+  proficiencyNotesSection.className = 'character-edit-section';
+  proficiencyNotesSection.appendChild(buildTextarea({
+    label: 'Competenze (strumenti, lingue, ecc.)',
+    name: 'proficiency_notes',
+    placeholder: 'Es. kit da ladro, strumenti musicali, linguaggi conosciuti...',
+    value: characterData.proficiency_notes ?? ''
+  }));
+
   form.appendChild(mainSection);
   form.appendChild(statsSection);
   form.appendChild(acSection);
@@ -465,6 +517,7 @@ async function openCharacterDrawer(user, onSave, character = null) {
   form.appendChild(skillSection);
   form.appendChild(savingSection);
   form.appendChild(proficiencySection);
+  form.appendChild(proficiencyNotesSection);
 
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
@@ -520,6 +573,7 @@ async function openCharacterDrawer(user, onSave, character = null) {
     proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
     initiative: toNumberOrNull(formData.get('initiative')),
     ac_ability_modifiers: nextAcModifiers,
+    proficiency_notes: formData.get('proficiency_notes')?.trim() || null,
     abilities: {
       str: toNumberOrNull(formData.get('ability_str')),
       dex: toNumberOrNull(formData.get('ability_dex')),
@@ -605,24 +659,24 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
             <span>CA ${armorClass ?? '-'}</span>
             <span>Velocità ${data.speed ?? '-'}</span>
           </div>
-        </div>
-      </div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <span>Bonus competenza</span>
-          <strong>${formatSigned(proficiencyBonus)}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Iniziativa</span>
-          <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Percezione passiva</span>
-          <strong>${passivePerception ?? '-'}</strong>
-        </div>
-        <div class="stat-card">
-          <span>Dadi vita</span>
-          <strong>${formatHitDice(hitDice)}</strong>
+          <div class="hp-panel-stats">
+            <div class="stat-card">
+              <span>Bonus competenza</span>
+              <strong>${formatSigned(proficiencyBonus)}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Iniziativa</span>
+              <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Percezione passiva</span>
+              <strong>${passivePerception ?? '-'}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Dadi vita</span>
+              <strong>${formatHitDice(hitDice)}</strong>
+            </div>
+          </div>
         </div>
       </div>
       <div class="detail-section">
@@ -692,16 +746,10 @@ function buildSavingThrowSection(character) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const skillStates = data.skills || {};
-  const skillMasteryStates = data.skill_mastery || {};
   const savingStates = data.saving_throws || {};
-  const initiativeBonus = data.initiative ?? getAbilityModifier(abilities.dex);
-  const passivePerception = calculatePassivePerception(abilities, proficiencyBonus, skillStates, skillMasteryStates);
-  const hitDice = data.hit_dice || {};
 
   return `
     <div class="detail-section">
-      <h4>Tiri salvezza</h4>
       <div class="detail-grid detail-grid--compact">
         ${savingThrowList.map((save) => {
     const proficient = Boolean(savingStates[save.key]);
@@ -721,52 +769,92 @@ function buildSavingThrowSection(character) {
         `;
   }).join('')}
       </div>
-      <h4>Competenze extra abilità</h4>
-      <div class="detail-grid detail-grid--compact">
-        <div class="modifier-card">
-          <div>
-            <div class="modifier-title">
-              <strong>Bonus competenza</strong>
-            </div>
-          </div>
-          <div class="modifier-value">${formatSigned(proficiencyBonus)}</div>
+    </div>
+  `;
+}
+
+function buildProficiencyOverview(character) {
+  const data = character.data || {};
+  const proficiencies = data.proficiencies || {};
+  const notes = data.proficiency_notes || '';
+  const noteItems = parseProficiencyNotes(notes);
+  const equipped = equipmentProficiencyList
+    .filter((prof) => proficiencies[prof.key])
+    .map((prof) => prof.label);
+
+  return `
+    <div class="detail-section">
+      <div class="detail-card detail-card--text">
+        <div>
+          <strong>Equipaggiamento</strong>
+          ${equipped.length
+    ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
         </div>
-        <div class="modifier-card">
-          <div>
-            <div class="modifier-title">
-              <strong>Iniziativa</strong>
-            </div>
-          </div>
-          <div class="modifier-value">${formatSigned(normalizeNumber(initiativeBonus))}</div>
-        </div>
-        <div class="modifier-card">
-          <div>
-            <div class="modifier-title">
-              <strong>Percezione passiva</strong>
-            </div>
-          </div>
-          <div class="modifier-value">${passivePerception ?? '-'}</div>
-        </div>
-        <div class="modifier-card">
-          <div>
-            <div class="modifier-title">
-              <strong>Dadi vita</strong>
-            </div>
-          </div>
-          <div class="modifier-value">${formatHitDice(hitDice)}</div>
+        <div>
+          <strong>Strumenti e lingue</strong>
+          ${noteItems.length
+    ? `<div class="tag-row">${noteItems.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    : '<p class="muted">Aggiungi strumenti o lingue nel profilo.</p>'}
         </div>
       </div>
     </div>
   `;
 }
 
-function buildHpShortcutFields() {
-  return `
-    <label class="field">
-      <span>Valore</span>
-      <input name="amount" type="number" min="1" value="1" required />
-    </label>
+function buildHpShortcutFields(character, allowHitDice = true) {
+  const wrapper = document.createElement('div');
+  const amountField = buildInput({ label: 'Valore', name: 'amount', type: 'number', value: '1' });
+  const amountInput = amountField.querySelector('input');
+  if (amountInput) {
+    amountInput.min = '1';
+    amountInput.required = true;
+  }
+  wrapper.appendChild(amountField);
+
+  if (!allowHitDice) {
+    return wrapper;
+  }
+
+  const hitDice = character?.data?.hit_dice || {};
+  const hitDiceUsed = Number(hitDice.used) || 0;
+  const hitDiceMax = Number(hitDice.max) || 0;
+  const remaining = Math.max(hitDiceMax - hitDiceUsed, 0);
+  const hitDiceSides = getHitDiceSides(hitDice.die);
+  const canUse = remaining > 0 && hitDiceSides;
+
+  const hitDiceField = document.createElement('label');
+  hitDiceField.className = 'checkbox';
+  const hitDiceLabel = hitDice.die ? `${hitDice.die}` : 'dado vita';
+  hitDiceField.innerHTML = `
+    <input type="checkbox" name="use_hit_dice" ${canUse ? '' : 'disabled'} />
+    <span>Usa dado vita (${hitDiceLabel}) · rimasti ${remaining}/${hitDiceMax || '-'}</span>
   `;
+  wrapper.appendChild(hitDiceField);
+
+  if (!canUse) {
+    const hint = document.createElement('p');
+    hint.className = 'muted';
+    hint.textContent = 'Nessun dado vita disponibile o configurato.';
+    wrapper.appendChild(hint);
+  }
+
+  const checkbox = hitDiceField.querySelector('input');
+  const syncState = () => {
+    const useDice = checkbox?.checked;
+    if (!amountInput) return;
+    amountInput.disabled = Boolean(useDice);
+    amountInput.required = !useDice;
+    if (useDice) {
+      amountInput.value = '';
+    } else if (!amountInput.value) {
+      amountInput.value = '1';
+    }
+  };
+  checkbox?.addEventListener('change', syncState);
+  syncState();
+
+  return wrapper;
 }
 
 function buildResourceList(resources, canManageResources) {
@@ -995,6 +1083,14 @@ const equipmentProficiencyList = [
   { key: 'shield', label: 'Scudi' }
 ];
 
+function parseProficiencyNotes(notes) {
+  if (!notes) return [];
+  return notes
+    .split(/[,;\n]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 function normalizeNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   const numberValue = Number(value);
@@ -1022,6 +1118,37 @@ function calculatePassivePerception(abilities, proficiencyBonus, skillStates, sk
   const total = calculateSkillModifier(abilities.wis, proficiencyBonus, hasProficiency ? (mastery ? 2 : 1) : 0);
   if (total === null) return null;
   return 10 + total;
+}
+
+function getHitDiceSides(hitDiceDie) {
+  if (!hitDiceDie || typeof hitDiceDie !== 'string') return null;
+  const match = hitDiceDie.trim().match(/d(\d+)/i);
+  if (!match) return null;
+  const sides = Number(match[1]);
+  return Number.isNaN(sides) ? null : sides;
+}
+
+function rollDie(sides) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+
+function applyLongRestHitDice(data) {
+  if (!data) return null;
+  const hitDice = data.hit_dice || {};
+  const max = Number(hitDice.max) || 0;
+  const used = Number(hitDice.used) || 0;
+  if (!max || !used) return null;
+  const recovery = Math.floor(max / 2);
+  if (!recovery) return null;
+  const nextUsed = Math.max(used - Math.min(recovery, used), 0);
+  if (nextUsed === used) return null;
+  return {
+    ...data,
+    hit_dice: {
+      ...hitDice,
+      used: nextUsed
+    }
+  };
 }
 
 function formatSigned(value) {

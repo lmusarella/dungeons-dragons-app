@@ -365,6 +365,18 @@ button {
   font-size: 0.85rem;
 }
 
+.hp-panel-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.hp-panel .stat-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(234, 223, 201, 0.8);
+}
+
 .stat-grid,
 .wallet-grid {
   display: grid;
@@ -1220,13 +1232,6 @@ button {
   }
   .drawer-panel {
     width: 420px;
-  }
-}
-
-@media (min-width: 900px) {
-  .character-overview-top {
-    grid-template-columns: 1.4fr 1fr;
-    align-items: center;
   }
 }
 
