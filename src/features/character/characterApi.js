@@ -61,9 +61,13 @@ export async function updateResourcesReset(characterId, resetOn) {
     })
     .filter(Boolean);
   if (!updates.length) return;
-  const { error: updateError } = await supabase
-    .from('resources')
-    .upsert(updates, { onConflict: 'id' });
+  const results = await Promise.all(
+    updates.map((update) => supabase
+      .from('resources')
+      .update({ used: update.used })
+      .eq('id', update.id)),
+  );
+  const updateError = results.find((result) => result.error)?.error;
   if (updateError) throw updateError;
 }
 
