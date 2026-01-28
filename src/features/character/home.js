@@ -268,6 +268,7 @@ export async function renderHome(container) {
       const hitDiceUsed = Number(hitDice.used) || 0;
       const hitDiceMax = Number(hitDice.max) || 0;
       const hitDiceSides = getHitDiceSides(hitDice.die);
+      const diceCount = Math.max(Number(formData.get('hit_dice_count')) || 1, 1);
       let amount = Number(formData.get('amount'));
 
       if (action === 'heal' && useHitDice) {
@@ -279,8 +280,15 @@ export async function renderHome(container) {
           createToast('Nessun dado vita disponibile', 'error');
           return;
         }
+        const remaining = Math.max(hitDiceMax - hitDiceUsed, 0);
+        if (diceCount > remaining) {
+          createToast(`Hai solo ${remaining} dadi vita disponibili`, 'error');
+          return;
+        }
         const conMod = getAbilityModifier(abilities.con) ?? 0;
-        amount = Math.max(rollDie(hitDiceSides) + conMod, 1);
+        const rolls = Array.from({ length: diceCount }, () => rollDie(hitDiceSides));
+        const totalRoll = rolls.reduce((sum, roll) => sum + roll, 0);
+        amount = Math.max(totalRoll + conMod * diceCount, 1);
       }
 
       if (!amount || amount <= 0) {
@@ -298,9 +306,12 @@ export async function renderHome(container) {
       const nextHitDice = action === 'heal' && useHitDice
         ? {
           ...hitDice,
-          used: Math.min(hitDiceUsed + 1, hitDiceMax)
+          used: Math.min(hitDiceUsed + diceCount, hitDiceMax)
         }
         : hitDice;
+      const message = action === 'heal'
+        ? `PF curati +${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
+        : `Danno ${amount}`;
       await saveCharacterData(activeCharacter, {
         ...activeCharacter.data,
         hp: {
@@ -308,7 +319,7 @@ export async function renderHome(container) {
           current: adjusted
         },
         hit_dice: nextHitDice
-      }, action === 'heal' ? 'PF curati' : 'Danno ricevuto', container);
+      }, message, container);
     }));
 
 }
@@ -647,60 +658,83 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
             <p class="muted">${character.system ?? 'Sistema'} </p>
           </div>
         </div>
-        <div class="hp-panel">
-          <div class="hp-panel-header">
-            <span>HP</span>
-            <strong>${hpLabel}</strong>
-          </div>
-          <div class="hp-bar">
-            <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
-          </div>
-          <div class="hp-panel-meta">
-            <span>CA ${armorClass ?? '-'}</span>
-            <span>Velocità ${data.speed ?? '-'}</span>
-          </div>
-          <div class="hp-panel-stats">
-            <div class="stat-card">
-              <span>Bonus competenza</span>
-              <strong>${formatSigned(proficiencyBonus)}</strong>
-            </div>
-            <div class="stat-card">
-              <span>Iniziativa</span>
-              <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-            </div>
-            <div class="stat-card">
-              <span>Percezione passiva</span>
-              <strong>${passivePerception ?? '-'}</strong>
-            </div>
-            <div class="stat-card">
-              <span>Dadi vita</span>
-              <strong>${formatHitDice(hitDice)}</strong>
-            </div>
-          </div>
-        </div>
       </div>
-      <div class="detail-section">
-        <h4>Descrizione</h4>
-        <div class="detail-card detail-card--text">
-          <p>${data.description ? data.description : 'Aggiungi una descrizione del personaggio.'}</p>
-        </div>
-      </div>
-      <div class="hp-shortcuts">
-        <strong>PF rapidi</strong>
-        <div class="button-row">
-          <button class="ghost-button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>Cura</button>
-          <button class="ghost-button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>Danno</button>
-        </div>
-      </div>
-      <div>
-        <h4>Statistiche</h4>
-        <div class="stat-grid">
-          ${abilityCards.map((ability) => `
-            <div class="stat-card">
-              <span>${ability.label}</span>
-              <strong>${formatAbility(ability.value)}</strong>
+      <div class="character-overview-columns">
+        <aside class="character-stats-column">
+          <h4>Statistiche</h4>
+          <div class="stat-grid stat-grid--compact">
+            ${abilityCards.map((ability) => `
+              <div class="stat-card">
+                <span>${ability.label}</span>
+                <strong>${formatAbility(ability.value)}</strong>
+              </div>
+            `).join('')}
+          </div>
+        </aside>
+        <div class="character-overview-content">
+          <div class="character-overview-content-grid">
+            <div class="hp-panel">
+              <div class="hp-panel-header">
+                <div class="hp-panel-title">
+                  <span>HP</span>
+                  <strong>${hpLabel}</strong>
+                </div>
+                <div class="hp-panel-hit-dice">
+                  <span>Dadi vita</span>
+                  <strong>${formatHitDice(hitDice)}</strong>
+                </div>
+              </div>
+              <div class="hp-bar">
+                <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
+              </div>
+              <div class="hp-panel-meta">
+                <span>Velocità ${data.speed ?? '-'}</span>
+              </div>
+              <div class="hp-shortcuts">
+                <strong>PF rapidi</strong>
+                <div class="button-row">
+                  <button class="ghost-button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>Cura</button>
+                  <button class="ghost-button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>Danno</button>
+                </div>
+              </div>
             </div>
-          `).join('')}
+            <div class="overview-stat-grid">
+              <div class="stat-icon-card">
+                <span class="stat-icon" aria-hidden="true">🛡️</span>
+                <div>
+                  <span>Classe Armatura</span>
+                  <strong>${armorClass ?? '-'}</strong>
+                </div>
+              </div>
+              <div class="stat-icon-card">
+                <span class="stat-icon" aria-hidden="true">⚡</span>
+                <div>
+                  <span>Iniziativa</span>
+                  <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
+                </div>
+              </div>
+              <div class="stat-icon-card">
+                <span class="stat-icon" aria-hidden="true">👁️</span>
+                <div>
+                  <span>Percezione passiva</span>
+                  <strong>${passivePerception ?? '-'}</strong>
+                </div>
+              </div>
+              <div class="stat-icon-card stat-icon-card--circle">
+                <span class="stat-icon" aria-hidden="true">⭐</span>
+                <div>
+                  <span>Bonus competenza</span>
+                  <strong>${formatSigned(proficiencyBonus)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <h4>Descrizione</h4>
+            <div class="detail-card detail-card--text">
+              <p>${data.description ? data.description : 'Aggiungi una descrizione del personaggio.'}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -832,6 +866,14 @@ function buildHpShortcutFields(character, allowHitDice = true) {
   `;
   wrapper.appendChild(hitDiceField);
 
+  const hitDiceCountField = document.createElement('label');
+  hitDiceCountField.className = 'field hit-dice-count';
+  hitDiceCountField.innerHTML = `
+    <span>Numero dadi vita</span>
+    <input type="number" name="hit_dice_count" min="1" max="${remaining}" value="1" />
+  `;
+  wrapper.appendChild(hitDiceCountField);
+
   if (!canUse) {
     const hint = document.createElement('p');
     hint.className = 'muted';
@@ -840,6 +882,11 @@ function buildHpShortcutFields(character, allowHitDice = true) {
   }
 
   const checkbox = hitDiceField.querySelector('input');
+  const countInput = hitDiceCountField.querySelector('input');
+  if (countInput) {
+    countInput.required = false;
+  }
+
   const syncState = () => {
     const useDice = checkbox?.checked;
     if (!amountInput) return;
@@ -850,6 +897,14 @@ function buildHpShortcutFields(character, allowHitDice = true) {
     } else if (!amountInput.value) {
       amountInput.value = '1';
     }
+    if (countInput) {
+      countInput.disabled = !useDice;
+      countInput.required = Boolean(useDice);
+      if (!useDice) {
+        countInput.value = '1';
+      }
+    }
+    hitDiceCountField.style.display = useDice ? 'grid' : 'none';
   };
   checkbox?.addEventListener('change', syncState);
   syncState();
@@ -859,7 +914,7 @@ function buildHpShortcutFields(character, allowHitDice = true) {
 
 function buildResourceList(resources, canManageResources) {
   return `
-    <ul class="resource-list">
+    <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
         <li>
           <div class="resource-info">
@@ -869,7 +924,7 @@ function buildResourceList(resources, canManageResources) {
               <p class="muted">${formatResourceRecovery(res)}</p>
             </div>
           </div>
-          <div class="actions">
+          <div class="actions resource-actions">
             ${Number(res.max_uses)
     ? `
                 <div class="resource-usage">
@@ -908,8 +963,12 @@ function buildResourceActions(resource) {
   const used = Number(resource.used) || 0;
   if (maxUses === 0) {
     return `
-      <button data-edit-resource="${resource.id}">Modifica</button>
-      <button data-delete-resource="${resource.id}">Elimina</button>
+      <button class="icon-button" data-edit-resource="${resource.id}" aria-label="Modifica risorsa">
+        <span aria-hidden="true">✏️</span>
+      </button>
+      <button class="icon-button icon-button--danger" data-delete-resource="${resource.id}" aria-label="Elimina risorsa">
+        <span aria-hidden="true">🗑️</span>
+      </button>
     `;
   }
   const canUse = maxUses === 0 ? false : used < maxUses;
@@ -917,8 +976,12 @@ function buildResourceActions(resource) {
   return `
     <button data-use-resource="${resource.id}" ${canUse ? '' : 'disabled'}>Usa</button>
     <button data-recover-resource="${resource.id}" ${canRecover ? '' : 'disabled'}>Recupera</button>
-    <button data-edit-resource="${resource.id}">Modifica</button>
-    <button data-delete-resource="${resource.id}">Elimina</button>
+    <button class="icon-button" data-edit-resource="${resource.id}" aria-label="Modifica risorsa">
+      <span aria-hidden="true">✏️</span>
+    </button>
+    <button class="icon-button icon-button--danger" data-delete-resource="${resource.id}" aria-label="Elimina risorsa">
+      <span aria-hidden="true">🗑️</span>
+    </button>
   `;
 }
 
