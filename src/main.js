@@ -9,7 +9,6 @@ import { renderHome } from './features/character/home.js';
 import { renderCharacterSelect } from './features/character/select.js';
 import { renderInventory } from './features/inventory/inventory.js';
 import { renderJournal } from './features/journal/journal.js';
-import { renderSettings } from './features/character/settings.js';
 import { loadCachedData } from './lib/offline/cache.js';
 import { registerSW } from 'virtual:pwa-register';
 
@@ -29,7 +28,6 @@ registerRoute('home', renderHome);
 registerRoute('characters', renderCharacterSelect);
 registerRoute('inventory', renderInventory);
 registerRoute('journal', renderJournal);
-registerRoute('settings', renderSettings);
 
 subscribe(() => {
   updateOfflineBanner();

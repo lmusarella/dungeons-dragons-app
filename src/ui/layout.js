@@ -40,8 +40,20 @@ export function renderLayout(container) {
         Offline (solo lettura)
       </div>
       <main class="app-main" data-route-outlet></main>
+      <div class="actions-fab" data-actions-fab>
+        <div class="actions-fab-menu" data-actions-menu>
+          <button class="actions-fab-item" type="button">Cura</button>
+          <button class="actions-fab-item" type="button">Danno</button>
+          <button class="actions-fab-item" type="button">Riposo Breve</button>
+          <button class="actions-fab-item" type="button">Riposo Lungo</button>
+          <button class="actions-fab-item" type="button">Lancia Dadi</button>
+        </div>
+        <button class="actions-fab-toggle" type="button" data-actions-toggle aria-expanded="false">
+          Azioni
+        </button>
+      </div>
       <nav class="bottom-nav" data-bottom-nav>
-        <a href="#/home" data-tab="home">Home</a>
+        <a href="#/home" data-tab="home">Scheda Personaggio</a>
         <a href="#/inventory" data-tab="inventory">Inventario</a>
         <a href="#/journal" data-tab="journal">Diario</a>
       </nav>
@@ -90,10 +102,27 @@ export function renderLayout(container) {
     });
   }
 
+  const actionsFab = container.querySelector('[data-actions-fab]');
+  const actionsToggle = container.querySelector('[data-actions-toggle]');
+  if (actionsFab && actionsToggle) {
+    actionsToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      actionsFab.classList.toggle('is-open');
+      actionsToggle.setAttribute('aria-expanded', actionsFab.classList.contains('is-open'));
+    });
+  }
+
   container.addEventListener('click', (event) => {
     const target = event.target.closest('[data-drawer-close]');
     if (target) {
       closeDrawer();
+    }
+    if (actionsFab && actionsFab.classList.contains('is-open')) {
+      const insideFab = event.target.closest('[data-actions-fab]');
+      if (!insideFab) {
+        actionsFab.classList.remove('is-open');
+        actionsToggle?.setAttribute('aria-expanded', 'false');
+      }
     }
   });
 }
@@ -158,7 +187,6 @@ function buildMenuContent() {
   wrapper.innerHTML = `
     <h2>Menu</h2>
     <a class="menu-item" href="#/characters" data-drawer-close>Seleziona personaggi</a>
-    <a class="menu-item" href="#/settings" data-drawer-close>Impostazioni</a>
     <button class="menu-item menu-item--danger" type="button" data-logout data-drawer-close>Logout</button>
   `;
   return wrapper;

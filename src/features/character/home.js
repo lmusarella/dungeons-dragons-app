@@ -447,7 +447,7 @@ function buildEmptyState(canCreateCharacter, offline) {
   `;
 }
 
-async function openCharacterDrawer(user, onSave, character = null) {
+export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
   const characterData = character?.data || {};
   const hp = characterData.hp || {};
