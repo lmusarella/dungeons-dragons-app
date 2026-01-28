@@ -476,7 +476,7 @@ button {
 
 .character-overview-content-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -1115,10 +1115,22 @@ button {
   box-shadow: inset 0 0 0 1px rgba(111, 78, 55, 0.06);
 }
 
+.modifier-card > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
 .modifier-title {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.modifier-title strong {
+  white-space: nowrap;
 }
 
 .modifier-ability {
@@ -1133,8 +1145,9 @@ button {
 .modifier-tags {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 2px;
+  flex-wrap: nowrap;
+  margin-top: 0;
+  white-space: nowrap;
 }
 
 .modifier-tag {

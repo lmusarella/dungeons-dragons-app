@@ -978,10 +978,12 @@ function buildResourceCtaButtons(resource) {
   if (maxUses === 0) return '';
   const canUse = used < maxUses;
   const canRecover = used > 0;
-  return `
-    <button class="resource-cta-button" data-use-resource="${resource.id}" ${canUse ? '' : 'disabled'}>Usa</button>
-    <button class="resource-cta-button" data-recover-resource="${resource.id}" ${canRecover ? '' : 'disabled'}>Recupera</button>
-  `;
+  const showRecover = canRecover;
+  const showUse = !showRecover && canUse;
+  if (!showRecover && !showUse) return '';
+  return showRecover
+    ? `<button class="resource-cta-button" data-recover-resource="${resource.id}">Recupera</button>`
+    : `<button class="resource-cta-button" data-use-resource="${resource.id}">Usa</button>`;
 }
 
 function openResourceDrawer(character, onSave, resource = null) {
