@@ -1524,104 +1524,116 @@ button {
   gap: 8px;
 }
 
-.spell-slots__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.spell-slots__title {
   font-size: 0.72rem;
   color: #6a5442;
 }
 
-.spell-slots__recharge {
-  font-weight: 600;
-  color: #6f4e37;
-}
-
-.spell-slots__grid {
+.spell-slots__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
-  gap: 6px;
-  width: 100%;
-}
-
-.spell-slot-tile {
-  display: grid;
-  align-items: center;
-  justify-items: center;
   gap: 4px;
-  padding: 6px 4px;
-  border-radius: 10px;
-  border: 1px solid #e6d8c2;
-  background: #fdf6ea;
+}
+
+.spell-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  padding: 4px 0;
+  border-top: 1px solid #eadbc6;
+}
+
+.spell-slot-row:first-child {
+  border-top: none;
 }
 
 .spell-slot-label {
   font-weight: 600;
-  font-size: 0.7rem;
   color: #5a381f;
 }
 
 .spell-slot-count {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: #6f4e37;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.75rem;
-  display: inline-flex;
+  font-weight: 600;
+  color: #6f4e37;
+  min-width: 18px;
+  text-align: center;
+}
+
+.spell-slot-charges {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+}
+
+.spell-slot-empty {
+  color: #b08c5a;
+  font-size: 0.7rem;
 }
 
 .spell-notes {
   margin: 0;
 }
 
-.spell-list {
-  margin-top: 12px;
+.spell-list-actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
-.spell-card {
-  position: relative;
+.spell-list-button {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 0.75rem;
 }
 
-.spell-card__title {
-  align-items: center;
+.spell-list-modal {
+  display: grid;
+  gap: 16px;
 }
 
-.spell-card__title {
-  justify-content: space-between;
-  width: 100%;
+.spell-list-modal__section h4 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: #5a381f;
+}
+
+.spell-list-modal__items {
+  display: grid;
   gap: 8px;
 }
 
-.spell-card__heading {
+.spell-list-modal__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #eadbc6;
+  background: #fffaf1;
+  font-size: 0.75rem;
+}
+
+.spell-list-modal__item-info {
+  display: grid;
+  gap: 4px;
+}
+
+.spell-list-modal__item-title {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.spell-card__actions {
+.spell-list-modal__item-meta {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  color: #6a5540;
 }
 
-.spell-card__action {
-  min-height: 24px;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 0.7rem;
-  border-radius: 8px;
-}
-
-.spell-slots__empty {
-  margin: 0;
+.spell-list-modal-card {
+  max-width: 520px;
 }
 
 .accordion-stack {
