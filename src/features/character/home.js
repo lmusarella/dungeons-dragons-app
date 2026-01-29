@@ -1001,6 +1001,7 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
   const tempTrackFlex = hasTempHp ? tempHpValue : 0;
   const hpLabel = maxHp ? `${currentHp ?? '-'}/${maxHp}` : `${currentHp ?? '-'}`;
   const tempHpLabel = tempHp ?? '-';
+  const weakPoints = normalizeNumber(hp.weak_points);
   const armorClass = calculateArmorClass(data, abilities, items);
   const abilityCards = [
     { key: 'str', label: abilityShortLabel.str, value: abilities.str },
@@ -1111,6 +1112,10 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
           <div class="stat-chip">
             <span>Percezione passiva</span>
             <strong>${passivePerception ?? '-'}</strong>
+          </div>
+          <div class="stat-chip stat-chip--wide">
+            <span>Punti indebolimento</span>
+            <strong>${weakPoints ?? '-'}</strong>
           </div>
           <div class="death-saves">
             <span class="death-saves__label">TS morte</span>
@@ -1381,12 +1386,13 @@ function buildAttackSection(character, items = []) {
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
     const meleeRange = Number(weapon.melee_range) || 1.5;
     const rangeParts = [];
-    if (weaponRange === 'melee') {
+    if (weaponRange === 'melee' && meleeRange > 1.5) {
       rangeParts.push(`Portata ${meleeRange} m`);
-      if (weapon.is_thrown && normalRange) {
-        rangeParts.push(`Lancio ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
-      }
-    } else if (normalRange) {
+    }
+    if (weaponRange === 'melee' && weapon.is_thrown && normalRange) {
+      rangeParts.push(`Lancio ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
+    }
+    if (weaponRange !== 'melee' && normalRange) {
       rangeParts.push(`Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
     }
     const rangeText = rangeParts.join(' · ');
@@ -1398,11 +1404,11 @@ function buildAttackSection(character, items = []) {
               <div class="attack-card__title">
                 <strong class="attack-card__name">${weapon.name}</strong>
                 <span class="modifier-ability modifier-ability--${attackAbility}">${abilityLabel}</span>
-                <span class="attack-card__hit">Colpire ${formatSigned(attackTotal)}</span>
+                <span class="attack-card__hit">TC ${formatSigned(attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
-                ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
                 <span class="attack-card__damage">${damageText}</span>
+                ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
             <button class="icon-button icon-button--fire" data-roll-damage="${weaponKey}" aria-label="Calcola danni ${weapon.name}">
@@ -1542,9 +1548,9 @@ function buildResourceList(resources, canManageResources, { showCharges = true, 
           <div class="attack-card__body resource-card__body">
             <div class="attack-card__title resource-card__title">
               <strong class="attack-card__name">${res.name}</strong>
-              ${res.cast_time ? `<span class="resource-chip">${res.cast_time}</span>` : ''}
             </div>
             <div class="attack-card__meta resource-card__meta">
+              ${res.cast_time ? `<span class="resource-chip">${res.cast_time}</span>` : ''}
               ${showCharges && Number(res.max_uses)
     ? `
                     <div class="resource-charge-row">
