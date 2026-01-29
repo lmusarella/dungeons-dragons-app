@@ -540,6 +540,7 @@ button {
 .resource-card__body {
   flex: 1;
   min-width: 0;
+  text-align: left;
 }
 
 .resource-card__title {
@@ -554,6 +555,7 @@ button {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .resource-card__title .resource-chip {
@@ -1223,6 +1225,11 @@ button {
   border: 1px solid #eadfc9;
   font-size: 0.75rem;
   white-space: nowrap;
+}
+
+.stat-chip--wide {
+  flex: 1 1 100%;
+  justify-content: space-between;
 }
 
 .wallet-note {
@@ -1998,6 +2005,8 @@ button {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .attack-card__title {
