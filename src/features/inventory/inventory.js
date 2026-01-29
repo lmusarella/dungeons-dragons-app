@@ -815,6 +815,12 @@ async function openItemModal(character, item, items, onSave) {
   const thrownInput = thrownField.querySelector('input');
   const rangeGrid = document.createElement('div');
   rangeGrid.className = 'compact-field-grid';
+  const meleeRangeField = buildInput({
+    label: 'Portata arma (m)',
+    name: 'melee_range',
+    type: 'number',
+    value: item?.melee_range ?? 1.5
+  });
   const rangeNormalField = buildInput({
     label: 'Gittata normale',
     name: 'range_normal',
@@ -827,6 +833,7 @@ async function openItemModal(character, item, items, onSave) {
     type: 'number',
     value: item?.range_disadvantage ?? ''
   });
+  rangeGrid.appendChild(meleeRangeField);
   rangeGrid.appendChild(rangeNormalField);
   rangeGrid.appendChild(rangeDisadvantageField);
 
@@ -925,6 +932,8 @@ async function openItemModal(character, item, items, onSave) {
       input.disabled = !isWeapon;
       if (!isWeapon) {
         input.value = '';
+      } else if (input.name === 'melee_range' && !input.value) {
+        input.value = '1.5';
       }
     });
     armorTypeSelect.disabled = !isArmor;
@@ -994,6 +1003,7 @@ async function openItemModal(character, item, items, onSave) {
     attack_modifier: Number(formData.get('attack_modifier')) || 0,
     damage_modifier: Number(formData.get('damage_modifier')) || 0,
     is_thrown: formData.get('is_thrown') === 'on',
+    melee_range: formData.get('melee_range') === '' ? null : Number(formData.get('melee_range')),
     range_normal: Number(formData.get('range_normal')) || null,
     range_disadvantage: Number(formData.get('range_disadvantage')) || null,
     armor_type: formData.get('armor_type') || null,
