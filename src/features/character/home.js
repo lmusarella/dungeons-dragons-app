@@ -1140,52 +1140,54 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
             <span>Percezione passiva</span>
             <strong>${passivePerception ?? '-'}</strong>
           </div>
-          <div class="weakness-track">
-            <span class="weakness-track__label">Punti indebolimento</span>
-            <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
-              ${weaknessLevels.map((level) => {
+          <div class="hp-panel-status-row">
+            <div class="weakness-track">
+              <span class="weakness-track__label">Punti indebolimento</span>
+              <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
+                ${weaknessLevels.map((level) => {
     const isFilled = level.value === weakPoints;
     return `
-                <button
-                  class="death-save-dot ${isFilled ? 'is-filled' : ''}"
-                  type="button"
-                  role="radio"
-                  aria-checked="${isFilled}"
-                  data-weakness-level="${level.value}"
-                  aria-label="Livello ${level.value}: ${level.description}"
-                >
-                  <span aria-hidden="true"></span>
-                </button>
-              `;
+                  <button
+                    class="death-save-dot ${isFilled ? 'is-filled' : ''}"
+                    type="button"
+                    role="radio"
+                    aria-checked="${isFilled}"
+                    data-weakness-level="${level.value}"
+                    aria-label="Livello ${level.value}: ${level.description}"
+                  >
+                    <span aria-hidden="true"></span>
+                  </button>
+                `;
   }).join('')}
+              </div>
+              <span class="weakness-track__description">${weaknessDescription}</span>
             </div>
-            <span class="weakness-track__description">${weaknessDescription}</span>
-          </div>
-          <div class="death-saves">
-            <span class="death-saves__label">TS morte</span>
-            <div class="death-saves__group" aria-label="Successi">
-              <span class="death-saves__tag">✓</span>
-              ${Array.from({ length: 3 }, (_, index) => {
+            <div class="death-saves">
+              <span class="death-saves__label">TS morte</span>
+              <div class="death-saves__group" aria-label="Successi">
+                <span class="death-saves__tag">✓</span>
+                ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveSuccesses;
     return `
-                <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}">
-                  <span aria-hidden="true"></span>
-                </button>
-              `;
+                  <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}">
+                    <span aria-hidden="true"></span>
+                  </button>
+                `;
   }).join('')}
-            </div>
-            <div class="death-saves__group" aria-label="Fallimenti">
-              <span class="death-saves__tag">✗</span>
-              ${Array.from({ length: 3 }, (_, index) => {
+              </div>
+              <div class="death-saves__group" aria-label="Fallimenti">
+                <span class="death-saves__tag">✗</span>
+                ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveFailures;
     return `
-                <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}">
-                  <span aria-hidden="true"></span>
-                </button>
-              `;
+                  <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}">
+                    <span aria-hidden="true"></span>
+                  </button>
+                `;
   }).join('')}
+              </div>
             </div>
           </div>
         </div>
@@ -1595,14 +1597,14 @@ function buildResourceList(resources, canManageResources, { showCharges = true, 
             </div>
             <div class="attack-card__meta resource-card__meta">
               ${res.cast_time ? `<span class="resource-chip">${res.cast_time}</span>` : ''}
-              ${showCharges && Number(res.max_uses)
-    ? `
-                    <div class="resource-charge-row">
-                      ${buildResourceCharges(res)}
-                    </div>
-                  `
-    : ''}
             </div>
+            ${showCharges && Number(res.max_uses)
+    ? `
+              <div class="resource-card__charges">
+                ${buildResourceCharges(res)}
+              </div>
+            `
+    : ''}
           </div>
           <div class="resource-card-actions">
             ${showUseButton ? `
@@ -1649,6 +1651,7 @@ function buildResourceCharges(resource) {
   const used = Number(resource.used) || 0;
   if (!maxUses) return '';
   const style = resource.reset_on === 'long_rest' ? 'long' : 'short';
+  const remaining = Math.max(maxUses - used, 0);
   const charges = Array.from({ length: maxUses }, (_, index) => {
     const isUsed = index < used;
     const classes = [
@@ -1658,7 +1661,13 @@ function buildResourceCharges(resource) {
     ].filter(Boolean).join(' ');
     return `<span class="${classes}" aria-hidden="true"></span>`;
   }).join('');
-  return `<div class="resource-charges" aria-label="Cariche risorsa">${charges}</div>`;
+  return `
+    <div class="resource-charge-row" aria-label="Cariche risorsa">
+      <span class="resource-charge-label">Cariche</span>
+      <span class="resource-charge-count">${remaining}/${maxUses}</span>
+      <div class="resource-charges" aria-hidden="true">${charges}</div>
+    </div>
+  `;
 }
 
 function openResourceDrawer(character, onSave, resource = null) {
