@@ -1698,7 +1698,7 @@ function buildSpellSection(character) {
       count: remaining,
       max
     };
-  });
+  }).filter((entry) => entry.max > 0);
   const summaryChips = [
     `Caratteristica ${spellAbilityLabel ?? '-'}`,
     `CD incantesimi ${spellSaveDc === null ? '-' : spellSaveDc}`,
