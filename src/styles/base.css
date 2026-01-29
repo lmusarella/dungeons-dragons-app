@@ -492,6 +492,7 @@ button {
   padding: 6px 8px;
   border-bottom: none;
   margin-bottom: 4px;
+      margin-top: 4px;
 }
 
 .resource-list--compact li:last-child {
@@ -563,7 +564,7 @@ button {
 .resource-card__description {
   margin: 4px 0 0;
   color: #6a5540;
-  font-size: 0.75rem;
+  font-size: 0.70rem !important;
 }
 
 .resource-card__charges {
@@ -707,8 +708,8 @@ button {
   color: #fff;
   box-shadow: 0 4px 8px rgba(111, 78, 55, 0.25);
   text-transform: uppercase;
-  font-size: 0.6rem;
-  padding: 2px 6px;
+  font-size: 0.47rem;
+  padding: 1px 4px;
 }
 
 .resource-form-actions {
