@@ -698,6 +698,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       `).join('')}
     </div>
   `;
+  acSection.appendChild(buildInput({
+    label: 'Modificatore CA totale',
+    name: 'ac_bonus',
+    type: 'number',
+    value: characterData.ac_bonus ?? 0
+  }));
 
   const abilitySection = document.createElement('div');
   abilitySection.className = 'character-edit-section';
@@ -922,6 +928,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     attack_bonus_ranged: toNumberOrNull(formData.get('attack_bonus_ranged')) ?? 0,
     damage_bonus_melee: toNumberOrNull(formData.get('damage_bonus_melee')) ?? 0,
     damage_bonus_ranged: toNumberOrNull(formData.get('damage_bonus_ranged')) ?? 0,
+    ac_bonus: toNumberOrNull(formData.get('ac_bonus')) ?? 0,
     is_spellcaster: formData.get('is_spellcaster') === 'on',
     spell_notes: formData.get('spell_notes')?.trim() || null,
     ac_ability_modifiers: nextAcModifiers,
@@ -1372,9 +1379,17 @@ function buildAttackSection(character, items = []) {
       : `${damageDie}${damageTotal ? ` ${formatSigned(damageTotal)}` : ''}`;
     const normalRange = Number(weapon.range_normal) || null;
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
-    const rangeText = normalRange
-      ? `Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`
-      : '';
+    const meleeRange = Number(weapon.melee_range) || 1.5;
+    const rangeParts = [];
+    if (weaponRange === 'melee') {
+      rangeParts.push(`Portata ${meleeRange} m`);
+      if (weapon.is_thrown && normalRange) {
+        rangeParts.push(`Lancio ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
+      }
+    } else if (normalRange) {
+      rangeParts.push(`Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
+    }
+    const rangeText = rangeParts.join(' · ');
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
     return `
@@ -1523,45 +1538,35 @@ function buildResourceList(resources, canManageResources, { showCharges = true, 
   return `
     <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
-        <li class="resource-card" data-resource-card="${res.id}">
-          <div class="resource-card-layout">
-            ${showUseButton ? `
-              <div class="resource-card-cta">
-                <button
-                  class="resource-cta-button resource-cta-button--label"
-                  data-use-resource="${res.id}"
-                  ${!Number(res.max_uses) || res.used >= Number(res.max_uses) ? 'disabled' : ''}
-                >
-                  Usa
-                </button>
-              </div>
-            ` : ''}
-            <div class="resource-card-header">
-              <div class="resource-info">
-                <div class="resource-meta">
-                  <div class="resource-title-row">
-                    <strong>${res.name}</strong>
-                    ${res.cast_time ? `<span class="resource-chip">${res.cast_time}</span>` : ''}
-                  </div>
-                  <div class="resource-submeta">
-                    ${showCharges && Number(res.max_uses)
-    ? `
-                        <div class="resource-charge-row">
-                          ${buildResourceCharges(res)}
-                        </div>
-                      `
-    : ''}
-                  </div>
-                </div>
-              </div>
-              <div class="resource-card-actions">
-                <div class="resource-actions resource-actions--top">
-                  ${canManageResources ? `
-                    <button class="resource-action-button resource-icon-button" data-edit-resource="${res.id}" aria-label="Modifica risorsa">✏️</button>
-                  ` : ''}
-                </div>
-              </div>
+        <li class="modifier-card attack-card resource-card" data-resource-card="${res.id}">
+          <div class="attack-card__body resource-card__body">
+            <div class="attack-card__title resource-card__title">
+              <strong class="attack-card__name">${res.name}</strong>
+              ${res.cast_time ? `<span class="resource-chip">${res.cast_time}</span>` : ''}
             </div>
+            <div class="attack-card__meta resource-card__meta">
+              ${showCharges && Number(res.max_uses)
+    ? `
+                    <div class="resource-charge-row">
+                      ${buildResourceCharges(res)}
+                    </div>
+                  `
+    : ''}
+            </div>
+          </div>
+          <div class="resource-card-actions">
+            ${showUseButton ? `
+              <button
+                class="resource-cta-button resource-cta-button--label"
+                data-use-resource="${res.id}"
+                ${!Number(res.max_uses) || res.used >= Number(res.max_uses) ? 'disabled' : ''}
+              >
+                Usa
+              </button>
+            ` : ''}
+            ${canManageResources ? `
+              <button class="resource-action-button resource-icon-button" data-edit-resource="${res.id}" aria-label="Modifica risorsa">✏️</button>
+            ` : ''}
           </div>
         </li>
       `).join('')}
@@ -1998,12 +2003,13 @@ function formatHitDice(hitDice) {
 }
 
 function calculateArmorClass(data, abilities, items) {
-  const equippedItems = (items || []).filter((item) => item.equipable);
+  const equippedItems = (items || []).filter((item) => item.equipable && getEquipSlots(item).length);
   const dexMod = getAbilityModifier(abilities.dex) ?? 0;
   const acAbilityModifiers = data.ac_ability_modifiers || {};
   const extraMods = Object.keys(acAbilityModifiers)
     .filter((ability) => acAbilityModifiers[ability])
     .reduce((total, ability) => total + (getAbilityModifier(abilities[ability]) ?? 0), 0);
+  const acBonus = normalizeNumber(data.ac_bonus) ?? 0;
   const armorCandidates = equippedItems.filter((item) => item.category === 'armor' && !item.is_shield);
   const shieldBonus = equippedItems
     .filter((item) => item.is_shield)
@@ -2019,7 +2025,7 @@ function calculateArmorClass(data, abilities, items) {
   const armorValue = armorValues.length ? Math.max(...armorValues) : null;
   const fallbackBase = normalizeNumber(data.ac);
   const base = armorValue ?? fallbackBase ?? (10 + dexMod + extraMods);
-  return base + shieldBonus;
+  return base + shieldBonus + acBonus;
 }
 
 function getEquipSlots(item) {
