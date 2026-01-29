@@ -560,6 +560,11 @@ button {
   justify-content: flex-start;
 }
 
+.resource-card__charges {
+  margin-top: 2px;
+  width: 100%;
+}
+
 .resource-card__title .resource-chip {
   font-size: 0.6rem;
 }
@@ -1097,8 +1102,17 @@ button {
   align-items: center;
 }
 
+.hp-panel-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
 .death-saves {
-  margin-left: auto;
+  margin-left: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1161,14 +1175,14 @@ button {
 }
 
 .weakness-track {
-  margin-left: auto;
+  margin-left: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 0.65rem;
   color: #6a5540;
-  align-items: flex-end;
-  text-align: right;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .weakness-track__label {
@@ -2054,9 +2068,11 @@ button {
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #efe2cf;
-  color: #6f4e37;
-  border: 1px solid #e2d0b6;
+  background: #d9b186;
+  color: #3e2513;
+  border: 1px solid #b68755;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 232, 0.6);
   white-space: nowrap;
 }
 
@@ -2069,7 +2085,7 @@ button {
 
 .attack-card__damage {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 400;
   color: #3e2a1a;
 }
 
