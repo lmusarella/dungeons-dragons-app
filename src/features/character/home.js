@@ -188,6 +188,18 @@ export async function renderHome(container) {
     });
   }
 
+  const inspirationButton = container.querySelector('[data-toggle-inspiration]');
+  if (inspirationButton && activeCharacter && canEditCharacter) {
+    inspirationButton.addEventListener('click', async () => {
+      const currentData = activeCharacter.data || {};
+      const nextData = {
+        ...currentData,
+        inspiration: !currentData.inspiration
+      };
+      await saveCharacterData(activeCharacter, nextData, 'Ispirazione aggiornata', container);
+    });
+  }
+
   container.querySelectorAll('[data-open-dice]')
     .forEach((button) => button.addEventListener('click', () => {
       handleDiceAction(button.dataset.openDice);
@@ -866,6 +878,7 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
   const hitDice = data.hit_dice || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const hasInspiration = Boolean(data.inspiration);
   const initiativeBonus = data.initiative ?? getAbilityModifier(abilities.dex);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
@@ -915,6 +928,19 @@ function buildCharacterOverview(character, canEditCharacter, items = []) {
           <div class="proficiency-chip">
             <span>Bonus competenza</span>
             <strong>${formatSigned(proficiencyBonus)}</strong>
+          </div>
+          <div class="inspiration-chip">
+            <span>Ispirazione</span>
+            <button
+              class="inspiration-toggle"
+              type="button"
+              data-toggle-inspiration
+              aria-pressed="${hasInspiration}"
+              aria-label="Imposta ispirazione"
+              ${canEditCharacter ? '' : 'disabled'}
+            >
+              <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
+            </button>
           </div>
           <button class="ghost-button background-button" type="button" data-show-background>
             Background
