@@ -222,6 +222,13 @@ export async function renderHome(container) {
     });
   }
 
+  const spellListButton = container.querySelector('[data-spell-list]');
+  if (spellListButton) {
+    spellListButton.addEventListener('click', () => {
+      openSpellListModal(activeCharacter, container);
+    });
+  }
+
   const backgroundButton = container.querySelector('[data-show-background]');
   if (backgroundButton) {
     backgroundButton.addEventListener('click', () => {
@@ -1528,7 +1535,21 @@ function buildAttackSection(character, items = []) {
   const damageBonusRanged = Number(data.damage_bonus_ranged ?? data.damage_bonus) || 0;
   const extraAttacks = Number(data.extra_attacks) || 0;
   const equippedWeapons = items.filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
-  if (!equippedWeapons.length) {
+  const spellcasting = data.spellcasting || {};
+  const spellAbilityKey = spellcasting.ability;
+  const spellAbilityScore = spellAbilityKey ? data.abilities?.[spellAbilityKey] : null;
+  const spellAbilityMod = getAbilityModifier(spellAbilityScore);
+  const spellProficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const spellAttackBonus = spellAbilityMod === null || spellProficiencyBonus === null
+    ? null
+    : spellAbilityMod + spellProficiencyBonus;
+  const spells = Array.isArray(data.spells) ? data.spells : [];
+  const cantripAttacks = spells.filter((spell) => {
+    const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
+    return isCantrip && spell.attack_roll && spell.damage_die;
+  });
+  const hasSpellAttacks = cantripAttacks.length && spellAttackBonus !== null && spellAbilityKey;
+  if (!equippedWeapons.length && !hasSpellAttacks) {
     return '<p class="muted">Nessuna arma equipaggiata.</p>';
   }
   const bonusChips = [];
@@ -1599,6 +1620,28 @@ function buildAttackSection(character, items = []) {
           </div>
         `;
   }).join('')}
+        ${hasSpellAttacks
+    ? cantripAttacks.map((spell) => {
+      const damageModifier = Number(spell.damage_modifier) || 0;
+      const damageText = `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
+      const abilityLabel = abilityShortLabel[spellAbilityKey] ?? spellAbilityKey?.toUpperCase();
+      return `
+            <div class="modifier-card attack-card">
+              <div class="attack-card__body">
+                <div class="attack-card__title">
+                  <strong class="attack-card__name">${spell.name}</strong>
+                  <span class="modifier-ability modifier-ability--${spellAbilityKey}">${abilityLabel}</span>
+                  <span class="attack-card__hit">${formatSigned(spellAttackBonus)}</span>
+                </div>
+                <div class="attack-card__meta">
+                  <span class="attack-card__damage">${damageText}</span>
+                  <span class="chip chip--small">Trucchetto</span>
+                </div>
+              </div>
+            </div>
+          `;
+    }).join('')
+    : ''}
       </div>
     </div>
   `;
@@ -1626,13 +1669,6 @@ function buildSpellSection(character) {
     level,
     count: Math.max(0, Number(slots[level]) || 0)
   }));
-  const rechargeLabel = recharge === 'short_rest' ? 'Riposo breve' : 'Riposo lungo';
-  const spells = Array.isArray(data.spells) ? [...data.spells] : [];
-  spells.sort((a, b) => {
-    const levelDiff = Number(a.level) - Number(b.level);
-    if (levelDiff !== 0) return levelDiff;
-    return (a.name ?? '').localeCompare(b.name ?? '', 'it', { sensitivity: 'base' });
-  });
   const summaryChips = [
     `Caratteristica ${spellAbilityLabel ?? '-'}`,
     `CD incantesimi ${spellSaveDc === null ? '-' : spellSaveDc}`,
@@ -1646,66 +1682,157 @@ function buildSpellSection(character) {
     <div class="detail-section">
       <div class="detail-card detail-card--text spell-summary-card">
         <div class="spell-slots">
-          <div class="spell-slots__header">
-            <span>Slot rimanenti</span>
-            <span class="spell-slots__recharge">${rechargeLabel}</span>
-          </div>
-          <div class="spell-slots__grid">
-            ${slotEntries.map((entry) => `
-              <div class="spell-slot-tile">
-                <span class="spell-slot-label">${entry.level}°</span>
+          <span class="spell-slots__title">Slot rimanenti</span>
+          <div class="spell-slots__list">
+            ${slotEntries.map((entry) => {
+    const indicatorClass = recharge === 'short_rest' ? 'charge-indicator' : 'charge-indicator charge-indicator--long';
+    const charges = Array.from({ length: entry.count }, () => `<span class="${indicatorClass}"></span>`).join('');
+    return `
+              <div class="spell-slot-row">
+                <span class="spell-slot-label">Slot ${entry.level}°</span>
                 <span class="spell-slot-count">${entry.count}</span>
+                <div class="spell-slot-charges" aria-hidden="true">${charges || '<span class="spell-slot-empty">-</span>'}</div>
               </div>
-            `).join('')}
+            `;
+  }).join('')}
           </div>
         </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
+        <div class="spell-list-actions">
+          <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>
+        </div>
       </div>
-      ${spells.length
-    ? `
-        <ul class="resource-list resource-list--compact spell-list">
-          ${spells.map((spell) => {
-    const levelLabel = Number(spell.level) === 0 ? 'Trucchetto' : `Livello ${spell.level}°`;
-    const castTimeLabel = spell.cast_time?.trim() || null;
-    const castTimeClass = getResourceCastTimeClass(normalizeSpellCastTime(castTimeLabel));
-    return `
-            <li class="modifier-card attack-card resource-card spell-card">
-              ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
-              <div class="attack-card__body resource-card__body">
-                <div class="attack-card__title resource-card__title spell-card__title">
-                  <div class="spell-card__heading">
-                    <strong class="attack-card__name">${spell.name}</strong>
-                    <span class="chip chip--small">${levelLabel}</span>
-                  </div>
-                  <div class="spell-card__actions">
-                    <button class="resource-cta-button resource-cta-button--label spell-card__action" type="button" data-spell-cast="${spell.id}">Lancia</button>
-                    <button class="resource-action-button spell-card__action" type="button" data-spell-edit="${spell.id}">Modifica</button>
-                  </div>
-                </div>
-              </div>
-            </li>
-          `;
-  }).join('')}
-        </ul>
-      `
-    : '<p class="muted">Nessun incantesimo configurato.</p>'}
     </div>
   `;
 }
 
-function normalizeSpellCastTime(castTime) {
-  if (!castTime) return null;
-  const normalized = castTime.toLowerCase();
-  if (normalized.includes('bonus')) return 'Azione Bonus';
-  if (normalized.includes('reazione')) return 'Reazione';
-  if (normalized.includes('azione')) return 'Azione';
-  return castTime;
+function sortSpellsByLevel(spells) {
+  return [...spells].sort((a, b) => {
+    const levelDiff = Number(a.level) - Number(b.level);
+    if (levelDiff !== 0) return levelDiff;
+    return (a.name ?? '').localeCompare(b.name ?? '', 'it', { sensitivity: 'base' });
+  });
+}
+
+function getSpellTypeLabel(spell) {
+  const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
+  return isCantrip ? 'Trucchetto' : 'Incantesimo';
+}
+
+async function consumeSpellSlot(character, level, container) {
+  if (!character) return false;
+  const data = character.data || {};
+  const spellcasting = data.spellcasting || {};
+  const slots = { ...(spellcasting.slots || {}) };
+  const current = Math.max(0, Number(slots[level]) || 0);
+  if (!current) {
+    createToast('Slot incantesimo esauriti', 'error');
+    return false;
+  }
+  slots[level] = Math.max(0, current - 1);
+  await saveCharacterData(character, {
+    ...data,
+    spellcasting: {
+      ...spellcasting,
+      slots
+    }
+  }, 'Slot incantesimo consumato', container);
+  return true;
+}
+
+function openSpellListModal(character, container) {
+  if (!character) return;
+  const data = character.data || {};
+  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
+  const content = document.createElement('div');
+  content.className = 'spell-list-modal';
+  if (!spells.length) {
+    content.innerHTML = '<p class="muted">Nessun incantesimo configurato.</p>';
+  } else {
+    const grouped = spells.reduce((acc, spell) => {
+      const level = Number(spell.level) || 0;
+      acc[level] = acc[level] || [];
+      acc[level].push(spell);
+      return acc;
+    }, {});
+    const levels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+    content.innerHTML = levels.map((level) => {
+      const title = level === 0 ? 'Trucchetti' : `Incantesimi di livello ${level}°`;
+      return `
+        <section class="spell-list-modal__section">
+          <h4>${title}</h4>
+          <div class="spell-list-modal__items">
+            ${grouped[level].map((spell) => {
+    const typeLabel = getSpellTypeLabel(spell);
+    const damageModifier = Number(spell.damage_modifier) || 0;
+    const damageText = spell.damage_die
+      ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
+      : null;
+    const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
+    return `
+              <div class="spell-list-modal__item">
+                <div class="spell-list-modal__item-info">
+                  <div class="spell-list-modal__item-title">
+                    <strong>${spell.name}</strong>
+                    <span class="chip chip--small">${typeLabel}</span>
+                  </div>
+                  <div class="spell-list-modal__item-meta">
+                    ${attackLabel ? `<span>${attackLabel}</span>` : ''}
+                    ${damageText ? `<span>Danni ${damageText}</span>` : ''}
+                  </div>
+                </div>
+                ${level > 0
+    ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-spell-cast="${spell.id}">Lancia</button>`
+    : ''}
+              </div>
+            `;
+  }).join('')}
+          </div>
+        </section>
+      `;
+    }).join('');
+  }
+
+  openFormModal({
+    title: 'Lista incantesimi',
+    submitLabel: 'Chiudi',
+    cancelLabel: null,
+    content,
+    cardClass: 'spell-list-modal-card'
+  });
+
+  const modal = document.querySelector('[data-form-modal]');
+  const closeModal = () => {
+    modal?.querySelector('[data-form-submit]')?.click();
+  };
+
+  content.querySelectorAll('[data-spell-cast]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      const spell = spells.find((entry) => entry.id === button.dataset.spellCast);
+      if (!spell) return;
+      const level = Number(spell.level) || 0;
+      if (level < 1) return;
+      const consumed = await consumeSpellSlot(character, level, container);
+      if (consumed) {
+        closeModal();
+      }
+    }));
 }
 
 function openSpellDrawer(character, onSave) {
   if (!character) return;
   const form = document.createElement('div');
   form.className = 'drawer-form';
+  const spellKindField = document.createElement('label');
+  spellKindField.className = 'field';
+  spellKindField.innerHTML = '<span>Tipo incantesimo</span>';
+  const spellKindSelect = buildSelect([
+    { value: 'cantrip', label: 'Trucchetto' },
+    { value: 'spell', label: 'Incantesimo' }
+  ], 'spell');
+  spellKindSelect.name = 'spell_kind';
+  spellKindField.appendChild(spellKindSelect);
+  form.appendChild(spellKindField);
   const nameField = buildInput({
     label: 'Nome incantesimo',
     name: 'spell_name',
@@ -1724,7 +1851,7 @@ function openSpellDrawer(character, onSave) {
   });
   const levelInput = levelField.querySelector('input');
   if (levelInput) {
-    levelInput.min = '0';
+    levelInput.min = '1';
     levelInput.max = '9';
   }
   form.appendChild(levelField);
@@ -1747,11 +1874,47 @@ function openSpellDrawer(character, onSave) {
   concentrationField.className = 'checkbox';
   concentrationField.innerHTML = '<input type="checkbox" name="spell_concentration" /> <span>Concentrazione</span>';
   form.appendChild(concentrationField);
+  const attackRollField = document.createElement('label');
+  attackRollField.className = 'checkbox';
+  attackRollField.innerHTML = '<input type="checkbox" name="spell_attack_roll" /> <span>Tiro per colpire (targhet)</span>';
+  form.appendChild(attackRollField);
+  form.appendChild(buildInput({
+    label: 'Dado danno',
+    name: 'spell_damage_die',
+    placeholder: 'Es. 1d10'
+  }));
+  form.appendChild(buildInput({
+    label: 'Modificatore danni',
+    name: 'spell_damage_modifier',
+    type: 'number',
+    value: ''
+  }));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
     name: 'spell_description',
     placeholder: 'Descrizione dell\'incantesimo...'
   }));
+
+  const syncSpellKind = () => {
+    if (!levelInput) return;
+    if (spellKindSelect.value === 'cantrip') {
+      levelInput.value = '0';
+      levelInput.min = '0';
+      levelInput.max = '0';
+      levelInput.readOnly = true;
+      levelInput.disabled = true;
+    } else {
+      if (Number(levelInput.value) === 0) {
+        levelInput.value = '1';
+      }
+      levelInput.min = '1';
+      levelInput.max = '9';
+      levelInput.readOnly = false;
+      levelInput.disabled = false;
+    }
+  };
+  spellKindSelect.addEventListener('change', syncSpellKind);
+  syncSpellKind();
 
   openFormModal({
     title: 'Nuovo incantesimo',
@@ -1765,16 +1928,24 @@ function openSpellDrawer(character, onSave) {
       return;
     }
     const toNumberOrNull = (value) => (value === '' || value === null ? null : Number(value));
+    const selectedKind = formData.get('spell_kind') || null;
     const rawLevel = toNumberOrNull(formData.get('spell_level')) ?? 0;
-    const level = Math.min(9, Math.max(0, rawLevel));
+    const level = selectedKind === 'cantrip'
+      ? 0
+      : Math.min(9, Math.max(1, rawLevel || 1));
+    const damageModifier = toNumberOrNull(formData.get('spell_damage_modifier'));
     const nextSpell = {
       id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       name,
       level,
+      kind: selectedKind || (level === 0 ? 'cantrip' : 'spell'),
       cast_time: formData.get('spell_cast_time')?.trim() || null,
       duration: formData.get('spell_duration')?.trim() || null,
       range: formData.get('spell_range')?.trim() || null,
       concentration: formData.has('spell_concentration'),
+      attack_roll: formData.has('spell_attack_roll'),
+      damage_die: formData.get('spell_damage_die')?.trim() || null,
+      damage_modifier: damageModifier,
       description: formData.get('spell_description')?.trim() || null
     };
     const nextSpells = Array.isArray(character.data?.spells)
