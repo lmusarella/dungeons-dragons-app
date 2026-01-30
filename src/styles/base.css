@@ -37,7 +37,7 @@ h2 {
 }
 
 h3 {
-  font-size: 1.05rem;
+  font-size: 1.75rem;
   font-weight: 600;
 }
 
@@ -935,18 +935,18 @@ button {
 .character-hero {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .character-overview {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .character-overview-top {
   display: grid;
-  gap: 16px;
+  gap: 8px;
 }
 
 .character-overview-columns {
@@ -981,8 +981,8 @@ button {
 }
 
 .character-avatar {
-  width: 96px;
-  height: 96px;
+  width: 196px;
+  height: 196px;
   border-radius: 16px;
   object-fit: cover;
   border: 2px solid #eadfc9;
@@ -1286,7 +1286,6 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 12px;
-  margin-top: 12px;
 }
 
 .stat-grid--compact {
@@ -1639,7 +1638,7 @@ button {
 
 .accordion-stack {
   display: grid;
-  gap: 12px;
+  gap: 4px;
 }
 
 .drawer {
@@ -2024,7 +2023,7 @@ button {
 }
 
 .detail-section {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .detail-grid {

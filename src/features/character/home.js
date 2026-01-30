@@ -1700,9 +1700,9 @@ function buildSpellSection(character) {
     };
   }).filter((entry) => entry.max > 0);
   const summaryChips = [
-    `Caratteristica ${spellAbilityLabel ?? '-'}`,
-    `CD incantesimi ${spellSaveDc === null ? '-' : spellSaveDc}`,
-    `Tiro per colpire ${spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus)}`
+    `${spellAbilityLabel ?? '-'}`,
+    `CD ${spellSaveDc === null ? '-' : spellSaveDc}`,
+    `TC ${spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus)}`
   ];
   const summaryChipRow = summaryChips.length
     ? `<div class="tag-row">${summaryChips.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
