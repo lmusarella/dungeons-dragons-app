@@ -34,7 +34,7 @@ window.onkeydown = function(e) {
         elem.diceLimit = $t.id('diceLimit');
 
         box = new DICE.dice_box(elem.container);
-        box.bind_swipe(elem.center_div, before_roll, after_roll);
+        box.bind_swipe(elem.container, before_roll, after_roll);
 
         $t.bind(elem.textInput, 'change', function(ev) { //shows instructions
             show_instructions(); 

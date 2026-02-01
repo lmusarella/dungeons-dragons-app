@@ -84,9 +84,9 @@ export function openDiceOverlay({ sides = 20, keepOpen = false } = {}) {
   const resultEl = overlayEl.querySelector('#result');
   let last = null;
 
-  let resolveFn, rejectFn;
-  const waitForRoll = new Promise((resolve, reject) => {
-    resolveFn = resolve; rejectFn = reject;
+  let resolveFn;
+  const waitForRoll = new Promise((resolve) => {
+    resolveFn = resolve;
   });
 
   const onMut = () => {
@@ -111,7 +111,7 @@ export function openDiceOverlay({ sides = 20, keepOpen = false } = {}) {
     cleanup();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
 
-    if (last == null) rejectFn?.(new Error('Dice overlay closed'));
+    if (last == null) resolveFn?.(null);
 
     closeDiceOverlay = closeRef;
   };
