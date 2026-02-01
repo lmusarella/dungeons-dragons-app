@@ -1,5 +1,6 @@
 import './styles/base.css';
 import './styles/theme.css';
+import './features/dice-roller/styles.css';
 import { renderLayout, updateHeaderInfo, updateOfflineBanner } from './ui/layout.js';
 import { initRouter, registerRoute } from './app/router.js';
 import { initSession, ensureProfile, signOut } from './app/session.js';
