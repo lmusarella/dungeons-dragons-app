@@ -60,6 +60,7 @@ function buildOverlayMarkup() {
               <option value="none" selected>Nessuno</option>
               <option value="bless">Benedizione</option>
               <option value="bane">Anatema</option>
+              <option value="bardic">Ispirazione bardica</option>
             </select>
           </div>
            <div class="diceov-control" data-dice-control="d20">
@@ -354,10 +355,16 @@ export function openDiceOverlay({
     if (!buffSelect || buffWrapper?.hasAttribute('hidden')) return null;
     const choice = buffSelect.value;
     if (choice === 'none') return null;
-    const roll = Math.floor(Math.random() * 4) + 1;
-    const delta = choice === 'bless' ? roll : -roll;
-    const label = choice === 'bless' ? 'Benedizione' : 'Anatema';
-    return { choice, roll, delta, label };
+    const sides = choice === 'bardic' ? 6 : 4;
+    const roll = Math.floor(Math.random() * sides) + 1;
+    const isPositive = choice === 'bless' || choice === 'bardic';
+    const delta = isPositive ? roll : -roll;
+    const label = choice === 'bless'
+      ? 'Benedizione'
+      : choice === 'bardic'
+        ? 'Ispirazione bardica'
+        : 'Anatema';
+    return { choice, roll, delta, label, sides };
   }
 
   function setHistoryOpen(open) {
@@ -443,7 +450,9 @@ export function openDiceOverlay({
         const selection = rolls.length > 1 ? ` (selezionato ${picked})` : '';
         const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Mod ${formatModifier(modifier)}`];
         if (state.lastBuff) {
-          pieces.push(`${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d4: ${state.lastBuff.roll})`);
+          pieces.push(
+            `${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d${state.lastBuff.sides}: ${state.lastBuff.roll})`
+          );
         }
         resultDetail.textContent = pieces.join(' · ');
       }
@@ -461,7 +470,9 @@ export function openDiceOverlay({
       if (constant) pieces.push(`Costante ${formatModifier(constant)}`);
       if (modifier) pieces.push(`Mod ${formatModifier(modifier)}`);
       if (state.lastBuff) {
-        pieces.push(`${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d4: ${state.lastBuff.roll})`);
+        pieces.push(
+          `${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d${state.lastBuff.sides}: ${state.lastBuff.roll})`
+        );
       }
       resultDetail.textContent = pieces.join(' · ');
     }
@@ -574,6 +585,7 @@ export function openDiceOverlay({
   const onRoll = (event) => {
     if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
     state.lastRoll = event.detail || null;
+    state.lastBuff = null;
     if (state.lastRoll) {
       state.lastBuff = rollBuff();
       void consumeInspiration();
