@@ -96,6 +96,7 @@ export async function renderInventory(container) {
 
   let items = state.cache.items;
   let wallet = state.cache.wallet;
+  let transactions = [];
   if (!state.offline) {
     try {
       items = await fetchItems(activeCharacter.id);
@@ -111,6 +112,11 @@ export async function renderInventory(container) {
     } catch (error) {
       createToast('Errore caricamento wallet', 'error');
     }
+    try {
+      transactions = await fetchTransactions(activeCharacter.id);
+    } catch (error) {
+      createToast('Errore caricamento transazioni', 'error');
+    }
   }
 
   const totalWeight = calcTotalWeight(items);
@@ -119,16 +125,14 @@ export async function renderInventory(container) {
   const equippedItems = items.filter((item) => getEquipSlots(item).length);
   const attunedCount = items.filter((item) => item.attunement_active).length;
   container.innerHTML = `
-    <div class="inventory-columns">
-      <section class="card">
+    <div class="inventory-layout">
+      <section class="card inventory-wallet-wide">
         <header class="card-header">
-          <h2>Equipaggiamento</h2>
-          <span class="pill">Slot Sintonia Attivi: ${attunedCount}</span>
+          <h2>Monete</h2>
         </header>
-        ${buildEquippedList(equippedItems)}
-        ${!equippedItems.length ? '<p class="muted">Nessun oggetto equipaggiato.</p>' : ''}
+        ${renderWalletSummary(wallet)}
       </section>
-      <section class="card">
+      <section class="card inventory-main">
         <header class="card-header">
           <h2>Inventario</h2>
           <div class="button-row">
@@ -147,17 +151,28 @@ export async function renderInventory(container) {
         </div>
         <div data-inventory-list></div>
       </section>
-      <section class="card compact-card inventory-wallet">
-        <header class="compact-header">
-          <h3>Monete</h3>
-        </header>
-        ${renderWalletSummary(wallet)}       
-        <div class="compact-action-grid">
-          <button class="primary" type="button" data-money-action="pay">Paga</button>
-          <button class="primary" type="button" data-money-action="receive">Ricevi</button>
-          <button type="button" data-view-transactions>Transazioni</button>
-        </div>
-      </section>
+      <div class="inventory-side">
+        <section class="card">
+          <header class="card-header">
+            <h2>Equipaggiamento</h2>
+            <span class="pill">Slot Sintonia Attivi: ${attunedCount}</span>
+          </header>
+          ${buildEquippedList(equippedItems)}
+          ${!equippedItems.length ? '<p class="muted">Nessun oggetto equipaggiato.</p>' : ''}
+        </section>
+        <section class="card">
+          <header class="card-header">
+            <h2>Transazioni</h2>
+          </header>
+          <div class="button-row">
+            <button class="primary" type="button" data-money-action="pay">Paga</button>
+            <button class="primary" type="button" data-money-action="receive">Ricevi</button>
+          </div>
+          <div class="inventory-transactions">
+            ${state.offline ? '<p class="muted">Transazioni disponibili solo online.</p>' : buildTransactionList(transactions).outerHTML}
+          </div>
+        </section>
+      </div>
     </div>
   `;
 
@@ -314,28 +329,6 @@ export async function renderInventory(container) {
         createToast('Errore aggiornamento denaro', 'error');
       }
     }));
-
-  const transactionsButton = container.querySelector('[data-view-transactions]');
-  if (transactionsButton) {
-    transactionsButton.addEventListener('click', async () => {
-      if (state.offline) {
-        createToast('Transazioni disponibili solo online', 'error');
-        return;
-      }
-      try {
-        const transactions = await fetchTransactions(activeCharacter.id);
-        await openFormModal({
-          title: 'Transazioni',
-          submitLabel: 'Chiudi',
-          cancelLabel: 'Chiudi',
-          content: buildTransactionList(transactions),
-          cardClass: 'modal-card--scrollable'
-        });
-      } catch (error) {
-        createToast('Errore caricamento transazioni', 'error');
-      }
-    });
-  }
 
   const lootButton = container.querySelector('[data-add-loot]');
   if (lootButton) {
