@@ -234,6 +234,8 @@ export function openDiceOverlay({
   const selectInput = overlayEl.querySelector('select[name="dice-roll-select"]');
   const resultValue = overlayEl.querySelector('[data-dice-result]');
   const resultDetail = overlayEl.querySelector('[data-dice-detail]');
+  const resultPanel = overlayEl.querySelector('.diceov-result');
+  const historyPanel = overlayEl.querySelector('.diceov-history');
   const historyList = overlayEl.querySelector('[data-dice-history]');
 
   const state = {
@@ -250,6 +252,14 @@ export function openDiceOverlay({
     state.lastRoll = null;
   }
 
+  function syncHistoryHeight() {
+    if (!resultPanel || !historyPanel) return;
+    const height = resultPanel.getBoundingClientRect().height;
+    if (!height) return;
+    historyPanel.style.minHeight = `${height}px`;
+    historyPanel.style.maxHeight = `${height}px`;
+  }
+
   function renderHistory() {
     if (!historyList) return;
     if (!state.history.length) {
@@ -259,8 +269,10 @@ export function openDiceOverlay({
     historyList.innerHTML = state.history
       .map((entry) => `
         <div class="diceov-history-row">
-          <span class="diceov-history-type">${entry.type || '—'}</span>
-          <span class="diceov-history-value">${entry.value ?? '—'}</span>
+          <div class="diceov-history-type diceov-history-type--${String(entry.type || 'gen').toLowerCase()}">
+            <span class="diceov-history-type-code">${entry.type || '—'}</span>
+            ${entry.subtype ? `<span class="diceov-history-subtype">${entry.subtype}</span>` : ''}
+          </div>
           <span class="diceov-history-total">${entry.total ?? '—'}</span>
           <span class="diceov-history-date">${formatHistoryDate(entry.timestamp)}</span>
         </div>
@@ -315,6 +327,14 @@ export function openDiceOverlay({
     if (selected && modifierInput) {
       modifierInput.value = Number(selected.modifier) || 0;
     }
+  }
+
+  function getSelectionLabel() {
+    if (!selectInput) return null;
+    const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
+    if (!selected) return null;
+    const rawLabel = selected.shortLabel || selected.label || '';
+    return rawLabel.replace(/\s*\([^)]*\)\s*$/, '').trim() || null;
   }
 
   function updateNotationFromMode() {
@@ -443,6 +463,7 @@ export function openDiceOverlay({
   setInspirationAvailability(state.inspirationAvailable);
   updateInspiration();
   renderHistory();
+  requestAnimationFrame(syncHistoryHeight);
 
   overlayEl.removeAttribute('hidden');
 
@@ -452,6 +473,7 @@ export function openDiceOverlay({
   } else {
     updateNotationFromMode();
   }
+  requestAnimationFrame(syncHistoryHeight);
 
   const resultEl = overlayEl.querySelector('#result');
   let last = null;
@@ -488,6 +510,7 @@ export function openDiceOverlay({
       if (summary) {
         addHistoryEntry({
           type: rollType || 'GEN',
+          subtype: getSelectionLabel(),
           value: summary.value,
           total: summary.total,
           timestamp: new Date().toISOString()

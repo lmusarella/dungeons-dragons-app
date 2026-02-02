@@ -375,6 +375,7 @@ header {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
   margin-top: 12px;
+  align-items: start;
 }
 
 .diceov-result,
@@ -403,6 +404,7 @@ header {
   margin: 0;
   font-size: 0.85rem;
   color: rgba(255,255,255,0.7);
+  display: none;
 }
 
 .diceov-history-list {
@@ -410,11 +412,14 @@ header {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .diceov-history-row {
   display: grid;
-  grid-template-columns: 34px 40px 48px minmax(90px, 1fr);
+  grid-template-columns: minmax(64px, 1fr) 48px minmax(90px, 1fr);
   gap: 6px;
   font-size: 0.75rem;
   align-items: center;
@@ -422,13 +427,40 @@ header {
 }
 
 .diceov-history-type {
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.diceov-history-type-code {
   color: #ffdc7a;
 }
 
-.diceov-history-value,
+.diceov-history-type--ts .diceov-history-type-code {
+  color: #5cd1ff;
+}
+
+.diceov-history-type--ta .diceov-history-type-code {
+  color: #b08cff;
+}
+
+.diceov-history-type--tc .diceov-history-type-code {
+  color: #7dff9a;
+}
+
+.diceov-history-subtype {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
 .diceov-history-total {
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
 }
 
 .diceov-history-date {
@@ -440,6 +472,12 @@ header {
   font-size: 0.75rem;
   color: rgba(255,255,255,0.5);
   margin: 0;
+}
+
+.diceov-history {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* opzionale: spaziatura dentro UI originale */
