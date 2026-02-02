@@ -534,6 +534,7 @@ function handleDiceAction(type) {
     'saving-throws': {
       title: 'Tiro Salvezza',
       mode: 'd20',
+      rollType: 'TS',
       selection: activeCharacter
         ? { label: 'Tiro salvezza', options: buildSavingThrowRollOptions(activeCharacter) }
         : null
@@ -541,6 +542,7 @@ function handleDiceAction(type) {
     skills: {
       title: 'Tiro Abilità',
       mode: 'd20',
+      rollType: 'TA',
       selection: activeCharacter
         ? { label: 'Abilità', options: buildSkillRollOptions(activeCharacter) }
         : null
@@ -548,11 +550,12 @@ function handleDiceAction(type) {
     'attack-roll': {
       title: 'Tiro per Colpire',
       mode: 'd20',
+      rollType: 'TC',
       selection: activeCharacter
         ? { label: 'Attacco', options: buildAttackRollOptions(activeCharacter, items) }
         : null
     },
-    roller: { title: 'Lancia Dadi generico', mode: 'generic' }
+    roller: { title: 'Lancia Dadi generico', mode: 'generic', rollType: 'GEN' }
   };
   const config = configs[type] ?? { title: 'Lancia dadi', mode: 'generic' };
   openDiceRollerModal({
@@ -711,7 +714,8 @@ function openDiceRollerModal({
   mode,
   selection = null,
   allowInspiration = false,
-  onConsumeInspiration = null
+  onConsumeInspiration = null,
+  rollType = null
 }) {
   openDiceOverlay({
     keepOpen: true,
@@ -719,7 +723,8 @@ function openDiceRollerModal({
     mode,
     selection,
     allowInspiration,
-    onConsumeInspiration
+    onConsumeInspiration,
+    rollType
   });
 }
 
