@@ -1356,6 +1356,38 @@ button {
   position: relative;
 }
 
+.coin-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  border: 1px solid #eadfc9;
+  background: #f4ead6;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.coin-avatar--pp {
+  background-color: #e6eef8;
+  background-image: var(--coin-pp-image, none);
+}
+
+.coin-avatar--gp {
+  background-color: #f8e7b6;
+  background-image: var(--coin-gp-image, none);
+}
+
+.coin-avatar--sp {
+  background-color: #eceff2;
+  background-image: var(--coin-sp-image, none);
+}
+
+.coin-avatar--cp {
+  background-color: #f3d2b6;
+  background-image: var(--coin-cp-image, none);
+}
+
 .stat-card__modifier {
   position: absolute;
   top: -8px;

@@ -128,13 +128,13 @@ export async function renderInventory(container) {
     <div class="inventory-layout">
       <section class="card inventory-wallet-wide">
         <header class="card-header">
-          <h2>Monete</h2>
+          <h2 class="eyebrow">Monete</h2>
         </header>
         ${renderWalletSummary(wallet)}
       </section>
       <section class="card inventory-main">
         <header class="card-header">
-          <h2>Inventario</h2>
+          <h2 class="eyebrow">Inventario</h2>
           <div class="button-row">
             <button class="primary" type="button" data-add-loot>Loot rapido</button>
             <button class="primary" data-add-item>Nuovo oggetto</button>
@@ -154,7 +154,7 @@ export async function renderInventory(container) {
       <div class="inventory-side">
         <section class="card">
           <header class="card-header">
-            <h2>Equipaggiamento</h2>
+            <h2 class="eyebrow">Equipaggiamento</h2>
             <span class="pill">Slot Sintonia Attivi: ${attunedCount}</span>
           </header>
           ${buildEquippedList(equippedItems)}
@@ -162,7 +162,7 @@ export async function renderInventory(container) {
         </section>
         <section class="card">
           <header class="card-header">
-            <h2>Transazioni</h2>
+            <h2 class="eyebrow">Transazioni</h2>
           </header>
           <div class="button-row">
             <button class="primary" type="button" data-money-action="pay">Paga</button>
@@ -433,7 +433,7 @@ function buildInventoryTree(items) {
     const children = items.filter((item) => item.container_item_id === container.id);
     return `
       <div class="inventory-group">
-        <h4>${container.name}</h4>
+        <p class="eyebrow">${container.name}</p>
         ${buildItemList(children)}
       </div>
     `;
@@ -442,7 +442,7 @@ function buildInventoryTree(items) {
   return `
     ${containerSections}
     <div class="inventory-group">
-      <h4>Oggetti</h4>
+      <p class="eyebrow">Oggetti</p>
       ${buildItemList(topLevel)}
     </div>
   `;
@@ -450,30 +450,32 @@ function buildInventoryTree(items) {
 
 function buildItemList(items) {
   if (!items.length) {
-    return '<p class="muted">Nessun oggetto.</p>';
+    return '<p class="muted eyebrow">Nessun oggetto.</p>';
   }
   return `
-    <ul class="inventory-list">
+    <ul class="inventory-list resource-list resource-list--compact">
       ${items.map((item) => `
-        <li>
-          <div class="item-info">
-            ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
-            <div>
-              <strong>${item.name}</strong>
-            <p class="muted">
-              ${getCategoryLabel(item.category)} · ${item.qty}x · ${item.weight ?? 0} lb
-            </p>
-            <div class="tag-row">
-              ${item.equipable ? `<span class="chip">equipaggiabile${getEquipSlots(item).length ? ` · ${getBodyPartLabels(getEquipSlots(item))}` : ''}</span>` : ''}
-              ${item.sovrapponibile ? '<span class="chip">sovrapponibile</span>' : ''}
-              ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
-            </div>
+        <li class="modifier-card attack-card resource-card inventory-item-card">
+          <div class="attack-card__body resource-card__body">
+            <div class="resource-card__title item-info">
+              ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
+              <div>
+                <strong class="attack-card__name">${item.name}</strong>
+                <p class="muted resource-card__description">
+                  ${getCategoryLabel(item.category)} · ${item.qty}x · ${item.weight ?? 0} lb
+                </p>
+                <div class="tag-row resource-card__meta">
+                  ${item.equipable ? `<span class="chip">equipaggiabile${getEquipSlots(item).length ? ` · ${getBodyPartLabels(getEquipSlots(item))}` : ''}</span>` : ''}
+                  ${item.sovrapponibile ? '<span class="chip">sovrapponibile</span>' : ''}
+                  ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
+                </div>
+              </div>
             </div>
           </div>
-          <div class="actions">
-            ${item.category === 'consumable' ? `<button data-use="${item.id}">Usa</button>` : ''}
-            <button data-edit="${item.id}">Modifica</button>
-            <button data-delete="${item.id}">Elimina</button>
+          <div class="resource-card-actions">
+            ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Usa</button>` : ''}
+            <button class="resource-action-button" data-edit="${item.id}">Modifica</button>
+            <button class="resource-action-button" data-delete="${item.id}">Elimina</button>
           </div>
         </li>
       `).join('')}
@@ -484,22 +486,26 @@ function buildItemList(items) {
 function buildEquippedList(items) {
   if (!items.length) return '';
   return `
-    <ul class="inventory-list">
+    <ul class="inventory-list resource-list resource-list--compact">
       ${items.map((item) => `
-        <li>
-          <div class="item-info">
-            ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
-            <div>
-              <strong>${item.name}</strong>
-              <p class="muted">${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}</p>
-              <div class="tag-row">
-                ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
+        <li class="modifier-card attack-card resource-card inventory-item-card">
+          <div class="attack-card__body resource-card__body">
+            <div class="resource-card__title item-info">
+              ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
+              <div>
+                <strong class="attack-card__name">${item.name}</strong>
+                <p class="muted resource-card__description">
+                  ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
+                </p>
+                <div class="tag-row resource-card__meta">
+                  ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
+                </div>
               </div>
             </div>
           </div>
-          <div class="actions">
-            <button data-unequip="${item.id}">Rimuovi</button>
-            <button data-attune="${item.id}">
+          <div class="resource-card-actions">
+            <button class="resource-action-button" data-unequip="${item.id}">Rimuovi</button>
+            <button class="resource-action-button" data-attune="${item.id}">
               ${item.attunement_active ? 'Disattiva attune' : 'Attiva attune'}
             </button>
           </div>
