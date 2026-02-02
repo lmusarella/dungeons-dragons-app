@@ -351,20 +351,15 @@ header {
 
 .diceov-generic-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-end;
+  gap: 10px;
   margin-bottom: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
-.diceov-generic-row input[name="dice-count"] {
-  flex: 0 0 72px;
-  width: 72px;
-}
-
-.diceov-generic-row select[name="dice-type"] {
-  flex: 0 0 80px;
-  width: auto;
+.diceov-generic-row .diceov-field {
+  flex: 1 1 140px;
+  min-width: 120px;
 }
 
 .diceov-generic-notation {
@@ -373,8 +368,16 @@ header {
   width: 100%;
 }
 
+.diceov-generic-row input[name="dice-count"] {
+  width: 72px;
+}
+
+.diceov-generic-row select[name="dice-type"] {
+  width: auto;
+}
+
 .diceov-generic-row .diceov-field--modifier {
-  flex: 0 0 84px;
+  flex: 0 1 120px;
 }
 
 .diceov-generic-row .diceov-field--modifier input[type="number"] {

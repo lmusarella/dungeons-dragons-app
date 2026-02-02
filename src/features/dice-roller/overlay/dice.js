@@ -80,20 +80,30 @@ function buildOverlayMarkup() {
        
         <div class="diceov-control" data-dice-control="generic">       
           <div class="diceov-generic-row">
-           <span class="diceov-label">Dadi</span>
-            <input type="number" name="dice-count" min="1" value="1" aria-label="Numero dadi" />
-            <select name="dice-type" aria-label="Tipo dado">
-              <option value="d4">d4</option>
-              <option value="d6">d6</option>
-              <option value="d8">d8</option>
-              <option value="d10">d10</option>
-              <option value="d12">d12</option>
-              <option value="d20" selected>d20</option>
-              <option value="d100">d100</option>
-            </select>
-             <span class="diceov-label">Notazione</span>
-            <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="1d20" spellcheck="false" />
-            <div class="diceov-field diceov-field--modifier" data-modifier-slot></div>
+            <div class="diceov-field">
+              <label class="diceov-label" for="dice-count">Dadi</label>
+              <input id="dice-count" type="number" name="dice-count" min="1" value="1" />
+            </div>
+            <div class="diceov-field">
+              <label class="diceov-label" for="dice-type">Tipo dado</label>
+              <select id="dice-type" name="dice-type">
+                <option value="d4">d4</option>
+                <option value="d6">d6</option>
+                <option value="d8">d8</option>
+                <option value="d10">d10</option>
+                <option value="d12">d12</option>
+                <option value="d20" selected>d20</option>
+                <option value="d100">d100</option>
+              </select>
+            </div>
+            <div class="diceov-field">
+              <label class="diceov-label" for="dice-notation">Notazione</label>
+              <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="1d20" spellcheck="false" />
+            </div>
+            <div class="diceov-field diceov-field--modifier">
+              <label class="diceov-label" for="dice-modifier-generic">Mod</label>
+              <input id="dice-modifier-generic" type="number" name="dice-modifier-generic" value="0" step="1" />
+            </div>
           </div>
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
         </div>
@@ -257,8 +267,7 @@ export function openDiceOverlay({
   const rollModeInput = overlayEl.querySelector('select[name="dice-roll-mode"]');
   const modifierInput = overlayEl.querySelector('input[name="dice-modifier"]');
   const modifierField = modifierInput?.closest('.diceov-field--modifier');
-  const modifierSlot = overlayEl.querySelector('[data-modifier-slot]');
-  const modifierHome = overlayEl.querySelector('[data-modifier-home]') ?? modifierField?.parentElement ?? null;
+  const genericModifierInput = overlayEl.querySelector('input[name="dice-modifier-generic"]');
   const notationInput = overlayEl.querySelector('input[name="dice-notation"]');
   const selectWrapper = overlayEl.querySelector('[data-dice-select]');
   const selectLabel = overlayEl.querySelector('[data-dice-select-label]');
@@ -282,22 +291,8 @@ export function openDiceOverlay({
     history: loadHistory()
   };
 
-  function placeModifierField(isGeneric) {
-    if (!modifierField) return;
-    if (isGeneric && modifierSlot) {
-      if (!modifierSlot.contains(modifierField)) {
-        modifierSlot.appendChild(modifierField);
-      }
-      return;
-    }
-    if (!isGeneric && modifierHome) {
-      const anchor = buffWrapper && modifierHome.contains(buffWrapper) ? buffWrapper : null;
-      if (anchor) {
-        modifierHome.insertBefore(modifierField, anchor);
-        return;
-      }
-      modifierHome.appendChild(modifierField);
-    }
+  function getActiveModifierInput() {
+    return mode === 'generic' ? (genericModifierInput || modifierInput) : modifierInput;
   }
 
   function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
@@ -478,7 +473,7 @@ export function openDiceOverlay({
   }
 
   function renderRollResult(notation) {
-    const modifier = Number(modifierInput?.value) || 0;
+    const modifier = Number(getActiveModifierInput()?.value) || 0;
     if (mode !== 'generic') {
       const info = getD20RollInfo(notation);
       state.lastBuff = info.buff;
@@ -529,7 +524,7 @@ export function openDiceOverlay({
   }
 
   function summarizeRoll(notation) {
-    const modifier = Number(modifierInput?.value) || 0;
+    const modifier = Number(getActiveModifierInput()?.value) || 0;
     if (mode !== 'generic') {
       const info = getD20RollInfo(notation);
       state.lastBuff = info.buff;
@@ -553,6 +548,7 @@ export function openDiceOverlay({
   }
   if (rollModeInput) rollModeInput.onchange = () => updateNotationFromMode();
   if (modifierInput) modifierInput.oninput = updateModifier;
+  if (genericModifierInput) genericModifierInput.oninput = updateModifier;
   if (notationInput) notationInput.oninput = updateNotationFromGeneric;
   if (selectInput) {
     selectInput.onchange = () => {
@@ -590,15 +586,15 @@ export function openDiceOverlay({
   setBuffVisibility();
   setInspirationAvailability(state.inspirationAvailable);
   updateInspiration();
-  placeModifierField(overlayMode === 'generic');
   renderHistory();
   setHistoryOpen(false);
 
   overlayEl.removeAttribute('hidden');
 
   const hasExplicitModifier = modifier !== null && modifier !== undefined && modifier !== '';
-  if (modifierInput && hasExplicitModifier && Number.isFinite(Number(modifier))) {
-    modifierInput.value = Number(modifier);
+  const activeModifierInput = getActiveModifierInput();
+  if (activeModifierInput && hasExplicitModifier && Number.isFinite(Number(modifier))) {
+    activeModifierInput.value = Number(modifier);
   }
 
   if (mode === 'generic') {
