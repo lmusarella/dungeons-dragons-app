@@ -56,10 +56,11 @@ function buildOverlayMarkup() {
           </div>
            <div class="diceov-control" data-dice-control="d20">
           <div class="diceov-inspiration" data-dice-inspiration>
-            <label class="diceov-label">           
-              Ispirazione
+            <span class="diceov-label">Ispirazione</span>
+            <label class="diceov-toggle">
+              <input id="dice-inspiration" type="checkbox" name="dice-inspiration" />
+              <span class="diceov-toggle-track" aria-hidden="true"></span>
             </label>
-            <input type="checkbox" name="dice-inspiration" />
           </div>
         </div>
          <p class="diceov-warning" data-inspiration-warning hidden>
@@ -86,10 +87,16 @@ function buildOverlayMarkup() {
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
         </div>
       </div>
-      <div class="diceov-result">
-        <p class="diceov-result-label">Risultato</p>
-        <p class="diceov-result-value" data-dice-result>—</p>
-        <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
+      <div class="diceov-results">
+        <div class="diceov-result">
+          <p class="diceov-result-label">Risultato</p>
+          <p class="diceov-result-value" data-dice-result>—</p>
+          <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
+        </div>
+        <div class="diceov-history">
+          <p class="diceov-result-label">Storico</p>
+          <div class="diceov-history-list" data-dice-history></div>
+        </div>
       </div>
     </section>
     ${buildDiceMarkup()}
@@ -106,6 +113,38 @@ export function createDiceRollerEmbed() {
 function parseLastInt(text) {
   const m = String(text).match(/\d+/g);
   return m ? parseInt(m[m.length - 1], 10) : null;
+}
+
+const HISTORY_KEY = 'diceRollHistory';
+const HISTORY_LIMIT = 12;
+
+function loadHistory() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(entries) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+  } catch { }
+}
+
+function formatHistoryDate(timestamp) {
+  try {
+    return new Date(timestamp).toLocaleString('it-IT', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    });
+  } catch {
+    return timestamp;
+  }
 }
 
 function formatModifier(value) {
@@ -149,7 +188,8 @@ export function openDiceOverlay({
   mode = 'generic',
   selection = null,
   allowInspiration = false,
-  onConsumeInspiration = null
+  onConsumeInspiration = null,
+  rollType = null
 } = {}) {
   if (!overlayEl) {
     overlayEl = document.createElement('div');
@@ -194,18 +234,44 @@ export function openDiceOverlay({
   const selectInput = overlayEl.querySelector('select[name="dice-roll-select"]');
   const resultValue = overlayEl.querySelector('[data-dice-result]');
   const resultDetail = overlayEl.querySelector('[data-dice-detail]');
+  const historyList = overlayEl.querySelector('[data-dice-history]');
 
   const state = {
     lastRoll: null,
     inspirationAvailable: Boolean(allowInspiration),
     inspirationConsumed: false,
-    selectionOptions: Array.isArray(selection?.options) ? selection.options : []
+    selectionOptions: Array.isArray(selection?.options) ? selection.options : [],
+    history: loadHistory()
   };
 
   function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
     if (resultValue) resultValue.textContent = label;
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
+  }
+
+  function renderHistory() {
+    if (!historyList) return;
+    if (!state.history.length) {
+      historyList.innerHTML = '<p class="diceov-history-empty">Nessun tiro ancora.</p>';
+      return;
+    }
+    historyList.innerHTML = state.history
+      .map((entry) => `
+        <div class="diceov-history-row">
+          <span class="diceov-history-type">${entry.type || '—'}</span>
+          <span class="diceov-history-value">${entry.value ?? '—'}</span>
+          <span class="diceov-history-total">${entry.total ?? '—'}</span>
+          <span class="diceov-history-date">${formatHistoryDate(entry.timestamp)}</span>
+        </div>
+      `)
+      .join('');
+  }
+
+  function addHistoryEntry(entry) {
+    state.history = [entry, ...state.history].slice(0, HISTORY_LIMIT);
+    saveHistory(state.history);
+    renderHistory();
   }
 
   function updateInspiration() {
@@ -324,6 +390,26 @@ export function openDiceOverlay({
     }
   }
 
+  function summarizeRoll(notation) {
+    const modifier = Number(modifierInput?.value) || 0;
+    if (mode !== 'generic') {
+      const rolls = notation.result || [];
+      if (!rolls.length) return null;
+      const rollMode = getRollMode(overlayEl);
+      const picked = rollMode === 'advantage'
+        ? Math.max(...rolls)
+        : rollMode === 'disadvantage'
+          ? Math.min(...rolls)
+          : rolls[0];
+      return { value: picked, total: picked + modifier };
+    }
+    const rolls = notation.result || [];
+    const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
+    const constant = Number(notation.constant) || 0;
+    const value = diceTotal + constant;
+    return { value, total: value + modifier };
+  }
+
   if (inspirationInput) {
     inspirationInput.onchange = () => {
       updateInspiration();
@@ -356,6 +442,7 @@ export function openDiceOverlay({
   setSelectionOptions();
   setInspirationAvailability(state.inspirationAvailable);
   updateInspiration();
+  renderHistory();
 
   overlayEl.removeAttribute('hidden');
 
@@ -396,6 +483,17 @@ export function openDiceOverlay({
     if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
     state.lastRoll = event.detail || null;
     if (state.lastRoll) renderRollResult(state.lastRoll);
+    if (state.lastRoll) {
+      const summary = summarizeRoll(state.lastRoll);
+      if (summary) {
+        addHistoryEntry({
+          type: rollType || 'GEN',
+          value: summary.value,
+          total: summary.total,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
   };
   window.addEventListener('diceRoll', onRoll);
 

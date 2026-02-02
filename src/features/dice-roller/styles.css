@@ -263,6 +263,63 @@ header {
   width: 84px;
 }
 
+.diceov-inspiration {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diceov-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 22px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #1d1d1d;
+  border: 1px solid #2f2f2f;
+  cursor: pointer;
+  transition: background 0.2s ease, border 0.2s ease;
+}
+
+.diceov-toggle input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.diceov-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #5e5e5e;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.diceov-toggle input:checked + .diceov-toggle-track {
+  transform: translateX(18px);
+  background: #ffdc7a;
+}
+
+.diceov-toggle input:focus-visible + .diceov-toggle-track {
+  outline: 2px solid rgba(255, 220, 122, 0.6);
+  outline-offset: 2px;
+}
+
+.diceov-toggle input:disabled + .diceov-toggle-track,
+.diceov-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.diceov-toggle input:disabled + .diceov-toggle-track {
+  background: #3a3a3a;
+}
+
 .diceov-checkbox {
   display: flex;
   align-items: center;
@@ -313,9 +370,16 @@ header {
   color: rgba(255,255,255,0.6);
 }
 
-.diceov-result {
+.diceov-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
   margin-top: 12px;
-  padding: 10px 12px;
+}
+
+.diceov-result,
+.diceov-history {
+  padding: 8px 10px;
   border-radius: 10px;
   background: #0f0f0f;
   border: 1px solid #2b2b2b;
@@ -339,6 +403,43 @@ header {
   margin: 0;
   font-size: 0.85rem;
   color: rgba(255,255,255,0.7);
+}
+
+.diceov-history-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diceov-history-row {
+  display: grid;
+  grid-template-columns: 34px 40px 48px minmax(90px, 1fr);
+  gap: 6px;
+  font-size: 0.75rem;
+  align-items: center;
+  color: rgba(255,255,255,0.8);
+}
+
+.diceov-history-type {
+  font-weight: 600;
+  color: #ffdc7a;
+}
+
+.diceov-history-value,
+.diceov-history-total {
+  font-variant-numeric: tabular-nums;
+}
+
+.diceov-history-date {
+  color: rgba(255,255,255,0.55);
+  text-align: right;
+}
+
+.diceov-history-empty {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  margin: 0;
 }
 
 /* opzionale: spaziatura dentro UI originale */
