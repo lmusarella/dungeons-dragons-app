@@ -78,12 +78,9 @@ function buildOverlayMarkup() {
             </p>
         </div>
        
-        <div class="diceov-control" data-dice-control="generic">
-          <div class="diceov-generic-header">
-            <span class="diceov-label">Dadi</span>
-            <label class="diceov-label diceov-label--inline" for="dice-notation">Notazione dadi</label>
-          </div>
+        <div class="diceov-control" data-dice-control="generic">       
           <div class="diceov-generic-row">
+           <span class="diceov-label">Dadi</span>
             <input type="number" name="dice-count" min="1" value="1" aria-label="Numero dadi" />
             <select name="dice-type" aria-label="Tipo dado">
               <option value="d4">d4</option>
@@ -94,6 +91,7 @@ function buildOverlayMarkup() {
               <option value="d20" selected>d20</option>
               <option value="d100">d100</option>
             </select>
+             <span class="diceov-label">Notazione</span>
             <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="1d20" spellcheck="false" />
             <div class="diceov-field diceov-field--modifier" data-modifier-slot></div>
           </div>
@@ -502,7 +500,7 @@ export function openDiceOverlay({
         const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Mod ${formatModifier(modifier)}`];
         if (info.buff) {
           pieces.push(
-            `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
+            `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
           );
         }
         resultDetail.textContent = pieces.join(' · ');
