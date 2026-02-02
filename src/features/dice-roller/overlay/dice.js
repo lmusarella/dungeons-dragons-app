@@ -351,20 +351,41 @@ export function openDiceOverlay({
     }
   }
 
-  function rollBuff() {
+  function getBuffConfig() {
     if (!buffSelect || buffWrapper?.hasAttribute('hidden')) return null;
     const choice = buffSelect.value;
     if (choice === 'none') return null;
     const sides = choice === 'bardic' ? 6 : 4;
-    const roll = Math.floor(Math.random() * sides) + 1;
     const isPositive = choice === 'bless' || choice === 'bardic';
-    const delta = isPositive ? roll : -roll;
     const label = choice === 'bless'
       ? 'Benedizione'
       : choice === 'bardic'
         ? 'Ispirazione bardica'
         : 'Anatema';
-    return { choice, roll, delta, label, sides };
+    return { choice, sides, label, sign: isPositive ? 1 : -1 };
+  }
+
+  function getD20RollInfo(notation) {
+    const rolls = notation.result || [];
+    const rollMode = getRollMode(overlayEl);
+    const baseCount = rollMode === 'normal' ? 1 : 2;
+    const baseRolls = rolls.slice(0, baseCount);
+    const buffConfig = getBuffConfig();
+    let buff = null;
+    if (buffConfig && rolls.length > baseCount) {
+      const buffRoll = rolls[baseCount];
+      if (typeof buffRoll === 'number') {
+        buff = { ...buffConfig, roll: buffRoll, delta: buffConfig.sign * buffRoll };
+      }
+    }
+    const picked = baseRolls.length
+      ? rollMode === 'advantage'
+        ? Math.max(...baseRolls)
+        : rollMode === 'disadvantage'
+          ? Math.min(...baseRolls)
+          : baseRolls[0]
+      : null;
+    return { rollMode, baseRolls, picked, buff };
   }
 
   function setHistoryOpen(open) {
@@ -397,7 +418,9 @@ export function openDiceOverlay({
     if (mode !== 'generic') {
       const rollMode = getRollMode(overlayEl);
       const diceCount = rollMode === 'normal' ? 1 : 2;
-      updateDiceInput(overlayEl, `${diceCount}d${sides}`);
+      const buffConfig = getBuffConfig();
+      const buffNotation = buffConfig ? `+1d${buffConfig.sides}` : '';
+      updateDiceInput(overlayEl, `${diceCount}d${sides}${buffNotation}`);
       resetResult();
     }
   }
@@ -425,33 +448,28 @@ export function openDiceOverlay({
 
   function renderRollResult(notation) {
     const modifier = Number(modifierInput?.value) || 0;
-    const buffDelta = state.lastBuff?.delta || 0;
     if (mode !== 'generic') {
-      const rolls = notation.result || [];
-      if (!rolls.length) {
+      const info = getD20RollInfo(notation);
+      state.lastBuff = info.buff;
+      if (!info.baseRolls.length) {
         resetResult();
         return;
       }
-      const rollMode = getRollMode(overlayEl);
-      const picked = rollMode === 'advantage'
-        ? Math.max(...rolls)
-        : rollMode === 'disadvantage'
-          ? Math.min(...rolls)
-          : rolls[0];
-      const total = picked + modifier + buffDelta;
-      const rollLabel = rollMode === 'advantage'
+      const buffDelta = info.buff?.delta || 0;
+      const total = (info.picked ?? 0) + modifier + buffDelta;
+      const rollLabel = info.rollMode === 'advantage'
         ? 'Vantaggio'
-        : rollMode === 'disadvantage'
+        : info.rollMode === 'disadvantage'
           ? 'Svantaggio'
           : 'Normale';
-      const rollsLabel = rolls.join(', ');
+      const rollsLabel = info.baseRolls.join(', ');
       if (resultValue) resultValue.textContent = `${total}`;
       if (resultDetail) {
-        const selection = rolls.length > 1 ? ` (selezionato ${picked})` : '';
+        const selection = info.baseRolls.length > 1 ? ` (selezionato ${info.picked})` : '';
         const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Mod ${formatModifier(modifier)}`];
-        if (state.lastBuff) {
+        if (info.buff) {
           pieces.push(
-            `${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d${state.lastBuff.sides}: ${state.lastBuff.roll})`
+            `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
           );
         }
         resultDetail.textContent = pieces.join(' · ');
@@ -462,6 +480,7 @@ export function openDiceOverlay({
     const rolls = notation.result || [];
     const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
     const constant = Number(notation.constant) || 0;
+    const buffDelta = state.lastBuff?.delta || 0;
     const total = diceTotal + constant + modifier + buffDelta;
     const rollDetail = rolls.length ? `Dadi: ${rolls.join(', ')}` : 'Dadi: —';
     if (resultValue) resultValue.textContent = `${total}`;
@@ -480,21 +499,17 @@ export function openDiceOverlay({
 
   function summarizeRoll(notation) {
     const modifier = Number(modifierInput?.value) || 0;
-    const buffDelta = state.lastBuff?.delta || 0;
     if (mode !== 'generic') {
-      const rolls = notation.result || [];
-      if (!rolls.length) return null;
-      const rollMode = getRollMode(overlayEl);
-      const picked = rollMode === 'advantage'
-        ? Math.max(...rolls)
-        : rollMode === 'disadvantage'
-          ? Math.min(...rolls)
-          : rolls[0];
-      return { value: picked, total: picked + modifier + buffDelta };
+      const info = getD20RollInfo(notation);
+      state.lastBuff = info.buff;
+      if (!info.baseRolls.length) return null;
+      const buffDelta = info.buff?.delta || 0;
+      return { value: info.picked, total: (info.picked ?? 0) + modifier + buffDelta };
     }
     const rolls = notation.result || [];
     const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
     const constant = Number(notation.constant) || 0;
+    const buffDelta = state.lastBuff?.delta || 0;
     const value = diceTotal + constant;
     return { value, total: value + modifier + buffDelta };
   }
@@ -530,7 +545,7 @@ export function openDiceOverlay({
   if (buffSelect) {
     buffSelect.onchange = () => {
       state.lastBuff = null;
-      updateModifier();
+      updateNotationFromMode();
     };
   }
   if (historyToggle) {
@@ -587,7 +602,6 @@ export function openDiceOverlay({
     state.lastRoll = event.detail || null;
     state.lastBuff = null;
     if (state.lastRoll) {
-      state.lastBuff = rollBuff();
       void consumeInspiration();
       renderRollResult(state.lastRoll);
     }
