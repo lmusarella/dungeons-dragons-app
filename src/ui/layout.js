@@ -72,7 +72,7 @@ export function renderLayout(container) {
       <div class="modal" data-confirm-modal hidden>
         <div class="modal-overlay" data-confirm-overlay></div>
         <div class="modal-card" role="dialog" aria-modal="true">
-          <h3 class="eyebrow" data-confirm-title>Conferma</h3>
+          <p class="eyebrow" data-confirm-title>Conferma</p>
           <p class="eyebrow" data-confirm-message></p>
           <div class="modal-actions">
             <button class="ghost-button" data-confirm-cancel>Annulla</button>
@@ -83,7 +83,7 @@ export function renderLayout(container) {
       <div class="modal" data-form-modal hidden>
         <div class="modal-overlay" data-form-overlay></div>
         <div class="modal-card" role="dialog" aria-modal="true">
-          <h3 class="eyebrow" data-form-title>Inserisci dati</h3>
+          <p class="eyebrow" data-form-title>Inserisci dati</p>
           <form data-form-body>
             <div data-form-fields></div>
             <div class="modal-actions">

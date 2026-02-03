@@ -1118,6 +1118,15 @@ button {
   background: #4b3b8b;
 }
 
+.armor-class-card--speed {
+  background: linear-gradient(140deg, #e9f7f1 0%, #c8ecdd 100%);
+  border-color: rgba(60, 132, 107, 0.2);
+}
+
+.armor-class-card--speed .armor-class-card__sigil {
+  background: #2f7f61;
+}
+
 .hp-bar-label {
   display: flex;
   align-items: center;

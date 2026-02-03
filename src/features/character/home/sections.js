@@ -149,6 +149,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
             <span class="armor-class-card__sigil" aria-hidden="true">⚡</span>
           </div>
+          <div class="armor-class-card armor-class-card--speed">
+            <span>Vel</span>
+            <strong>${data.speed ?? '-'}</strong>
+            <span class="armor-class-card__sigil" aria-hidden="true">🏃</span>
+          </div>
           <div class="hp-bar-stack">
             <div class="hp-bar-label">
               <span>HP</span>
@@ -176,10 +181,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
           </div>
         </div>
         <div class="hp-panel-subgrid">
-          <div class="stat-chip stat-chip--highlight">
-            <span>Velocità</span>
-            <strong>${data.speed ?? '-'}</strong>
-          </div>
           <div class="stat-chip stat-chip--highlight">
             <span>Percezione passiva</span>
             <strong>${passivePerception ?? '-'}</strong>
@@ -339,9 +340,6 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           <button class="tab-bar__button is-active" type="button" role="tab" aria-selected="true" data-proficiency-tab="equipment">
             Equipaggiamento
           </button>
-          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="equip">
-            Equip
-          </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="tools">
             Strumenti
           </button>
@@ -356,43 +354,6 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           ${equipped.length
     ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
-        </div>
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="equip">
-          ${canEditCharacter ? `
-            <div class="button-row">
-              <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
-                <span aria-hidden="true">+</span>
-              </button>
-            </div>
-          ` : ''}
-          ${equippedItems.length
-    ? `
-              <ul class="inventory-list resource-list resource-list--compact">
-                ${equippedItems.map((item) => `
-                  <li class="modifier-card attack-card resource-card inventory-item-card">
-                    <div class="attack-card__body resource-card__body">
-                      <div class="resource-card__title item-info">
-                        ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
-                        <div class="item-info-body">
-                          <div class="item-info-line">
-                            <strong class="attack-card__name">${item.name}</strong>
-                            <span class="muted item-meta">
-                              ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    ${canEditCharacter ? `
-                      <div class="resource-card-actions">
-                        <button class="resource-action-button" type="button" data-unequip="${item.id}">Rimuovi</button>
-                      </div>
-                    ` : ''}
-                  </li>
-                `).join('')}
-              </ul>
-            `
-    : '<p class="muted">Nessun oggetto equipaggiato.</p>'}
         </div>
         <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="tools">
           ${tools.length
@@ -409,6 +370,44 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     ? `<div class="tag-row">${talents.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
         </div>
+      </div>
+      <div class="detail-card detail-card--text">
+        <p class="eyebrow">Equip</p>
+        ${canEditCharacter ? `
+          <div class="button-row">
+            <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
+        ` : ''}
+        ${equippedItems.length
+    ? `
+            <ul class="inventory-list resource-list resource-list--compact">
+              ${equippedItems.map((item) => `
+                <li class="modifier-card attack-card resource-card inventory-item-card">
+                  <div class="attack-card__body resource-card__body">
+                    <div class="resource-card__title item-info">
+                      ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
+                      <div class="item-info-body">
+                        <div class="item-info-line">
+                          <strong class="attack-card__name">${item.name}</strong>
+                          <span class="muted item-meta">
+                            ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  ${canEditCharacter ? `
+                    <div class="resource-card-actions">
+                      <button class="resource-action-button" type="button" data-unequip="${item.id}">Rimuovi</button>
+                    </div>
+                  ` : ''}
+                </li>
+              `).join('')}
+            </ul>
+          `
+    : '<p class="muted">Nessun oggetto equipaggiato.</p>'}
       </div>
     </div>
   `;
