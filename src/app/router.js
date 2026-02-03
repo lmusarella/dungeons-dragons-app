@@ -21,25 +21,44 @@ function renderRoute() {
   if (!outlet) return;
   const route = window.location.hash.replace('#/', '') || 'home';
   const { user } = getState();
+  const bottomNav = document.querySelector('[data-bottom-nav]');
+  const actionsFab = document.querySelector('[data-actions-fab]');
+  const actionsBackdrop = document.querySelector('.actions-fab-backdrop');
+  const appHeader = document.querySelector('[data-app-header]');
+  const offlineBanner = document.querySelector('[data-offline-banner]');
+  const hideShell = route === 'login' || route === 'characters';
+  const hideHeader = route === 'login';
+  const showFab = route === 'home' || route === 'inventory';
+  const applyShellVisibility = (shouldHide, shouldShowFab) => {
+    const { offline } = getState();
+    if (bottomNav) bottomNav.hidden = shouldHide;
+    if (actionsFab) {
+      actionsFab.hidden = !shouldShowFab;
+      actionsFab.classList.remove('is-open');
+    }
+    if (actionsBackdrop) actionsBackdrop.hidden = !shouldShowFab;
+    if (appHeader) appHeader.hidden = hideHeader;
+    if (offlineBanner) offlineBanner.hidden = hideHeader || !offline;
+    if (actionsFab) {
+      actionsFab.querySelectorAll('[data-fab-scope]')
+        .forEach((item) => {
+          item.hidden = item.dataset.fabScope !== route;
+        });
+    }
+  };
   if (!user && route !== 'login') {
+    applyShellVisibility(true, false);
     window.location.hash = '#/login';
     return;
   }
   if (user && route === 'login') {
+    applyShellVisibility(false, showFab);
     window.location.hash = '#/home';
     return;
   }
   const view = routes.get(route) || routes.get('home');
   outlet.innerHTML = '';
   updateActiveTab(route);
-  const bottomNav = document.querySelector('[data-bottom-nav]');
-  const actionsFab = document.querySelector('[data-actions-fab]');
-  const hideFooter = route === 'login' || route === 'characters';
-  const showFab = route === 'home' || route === 'inventory';
-  if (bottomNav) bottomNav.hidden = hideFooter;
-  if (actionsFab) {
-    actionsFab.hidden = !showFab;
-    actionsFab.classList.remove('is-open');
-  }
+  applyShellVisibility(hideShell, showFab);
   view?.(outlet);
 }

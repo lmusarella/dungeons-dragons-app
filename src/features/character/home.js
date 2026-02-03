@@ -8,6 +8,7 @@ import { openCharacterDrawer } from './home/characterDrawer.js';
 import {
   buildAttackSection,
   buildCharacterOverview,
+  buildEquipSection,
   buildEmptyState,
   buildResourceSections,
   buildSavingThrowSection,
@@ -138,6 +139,7 @@ export async function renderHome(container) {
           </header>
           ${activeCharacter ? buildCharacterOverview(activeCharacter, canEditCharacter, items) : buildEmptyState(canCreateCharacter, offline)}
         </section>
+        ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
       </div>
       <div class="home-column home-column--right">
         <section class="card home-card home-section home-scroll-panel">
@@ -566,6 +568,10 @@ export async function renderHome(container) {
 
 }
 
+export function bindGlobalFabHandlers() {
+  bindFabHandlers();
+}
+
 function bindFabHandlers() {
   if (fabHandlersBound) return;
   document.addEventListener('click', async (event) => {
@@ -577,7 +583,7 @@ function bindFabHandlers() {
     const lootButton = event.target.closest('[data-add-loot]');
     if (!hpButton && !restButton && !diceButton && !lootButton) return;
     event.preventDefault();
-    const container = lastHomeContainer ?? document.querySelector('[data-route-outlet]');
+    const container = lastHomeContainer ?? null;
     if (hpButton) {
       await handleHpAction(hpButton.dataset.hpAction, container);
       closeFabMenu();

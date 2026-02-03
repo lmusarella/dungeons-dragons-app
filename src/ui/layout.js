@@ -5,7 +5,7 @@ export function renderLayout(container) {
   const baseUrl = import.meta.env.BASE_URL;
   container.innerHTML = `
     <div class="app-shell">
-      <header class="app-header">
+      <header class="app-header" data-app-header>
         <div class="app-header-left">
           <div class="app-logo">
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
@@ -46,6 +46,8 @@ export function renderLayout(container) {
       <div class="actions-fab" data-actions-fab>
         <div class="actions-fab-menu" data-actions-menu>
           <button class="actions-fab-item" type="button" data-add-loot>Loot rapido</button>
+          <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory">Paga</button>
+          <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory">Ricevi</button>
           <button class="actions-fab-item" type="button" data-hp-action="heal">Cura</button>
           <button class="actions-fab-item" type="button" data-hp-action="damage">Danno</button>
           <button class="actions-fab-item" type="button" data-rest="short_rest">Riposo Breve</button>
@@ -151,7 +153,8 @@ export function updateOfflineBanner() {
   const banner = document.querySelector('[data-offline-banner]');
   if (!banner) return;
   const { offline } = getState();
-  banner.hidden = !offline;
+  const route = window.location.hash.replace('#/', '') || 'home';
+  banner.hidden = route === 'login' || !offline;
 }
 
 export function updateHeaderInfo() {

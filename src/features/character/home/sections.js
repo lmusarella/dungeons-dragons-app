@@ -332,8 +332,6 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const equipped = equipmentProficiencyList
     .filter((prof) => proficiencies[prof.key])
     .map((prof) => prof.label);
-  const equippedItems = (items || []).filter((item) => getEquipSlots(item).length);
-  const attunedCount = (items || []).filter((item) => item.attunement_active).length;
   return `
     <div class="detail-section">
       <div class="proficiency-tabs" data-proficiency-tabs>
@@ -372,50 +370,57 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
         </div>
       </div>
-      <section class="card home-card home-section home-scroll-panel">
-        <header class="card-header">
-          <div>
-            <p class="eyebrow">Equip</p>
-            <span class="pill">Oggetti in sintonia: ${attunedCount}</span>
-          </div>
-          <div class="actions">
-            ${canEditCharacter ? `
-              <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
-                <span aria-hidden="true">+</span>
-              </button>
-            ` : ''}
-          </div>
-        </header>
-        ${equippedItems.length
+    </div>
+  `;
+}
+
+export function buildEquipSection(character, items = [], canEditCharacter = false) {
+  const equippedItems = (items || []).filter((item) => getEquipSlots(item).length);
+  const attunedCount = (items || []).filter((item) => item.attunement_active).length;
+  return `
+    <section class="card home-card home-section home-scroll-panel">
+      <header class="card-header">
+        <div>
+          <p class="eyebrow">Equip</p>
+          <span class="pill pill--accent">Oggetti in sintonia: ${attunedCount}</span>
+        </div>
+        <div class="actions">
+          ${canEditCharacter ? `
+            <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
+              <span aria-hidden="true">+</span>
+            </button>
+          ` : ''}
+        </div>
+      </header>
+      ${equippedItems.length
     ? `
-            <ul class="inventory-list resource-list resource-list--compact">
-              ${equippedItems.map((item) => `
-                <li class="modifier-card attack-card resource-card inventory-item-card">
-                  <div class="attack-card__body resource-card__body">
-                    <div class="resource-card__title item-info">
-                      ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
-                      <div class="item-info-body">
-                        <div class="item-info-line">
-                          <strong class="attack-card__name">${item.name}</strong>
-                          <span class="muted item-meta">
-                            ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
-                          </span>
-                        </div>
+          <ul class="inventory-list resource-list resource-list--compact">
+            ${equippedItems.map((item) => `
+              <li class="modifier-card attack-card resource-card inventory-item-card">
+                <div class="attack-card__body resource-card__body">
+                  <div class="resource-card__title item-info">
+                    ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
+                    <div class="item-info-body">
+                      <div class="item-info-line">
+                        <strong class="attack-card__name">${item.name}</strong>
+                        <span class="muted item-meta">
+                          ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  ${canEditCharacter ? `
-                    <div class="resource-card-actions">
-                      <button class="resource-action-button" type="button" data-unequip="${item.id}">Rimuovi</button>
-                    </div>
-                  ` : ''}
-                </li>
-              `).join('')}
-            </ul>
-          `
+                </div>
+                ${canEditCharacter ? `
+                  <div class="resource-card-actions">
+                    <button class="resource-action-button" type="button" data-unequip="${item.id}">Rimuovi</button>
+                  </div>
+                ` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        `
     : '<p class="muted">Nessun oggetto equipaggiato.</p>'}
-      </section>
-    </div>
+    </section>
   `;
 }
 
