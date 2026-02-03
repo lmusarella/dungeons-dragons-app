@@ -540,6 +540,15 @@ button {
   margin-top: 4px;
 }
 
+.resource-list--centered {
+  margin: 0 auto;
+  max-width: 520px;
+}
+
+.resource-list--centered li {
+  width: 100%;
+}
+
 .resource-list--compact li:last-child {
   margin-bottom: 0;
 }
@@ -573,6 +582,12 @@ button {
 
 .resource-card-actions .icon-button span {
   line-height: 1;
+}
+
+.equip-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .resource-list--compact .resource-avatar {

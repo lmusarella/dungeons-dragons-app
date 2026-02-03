@@ -15,8 +15,8 @@ import {
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories, itemCategories } from './constants.js';
 import { openItemModal } from './modals.js';
-import { buildEquippedList, buildInventoryTree, buildLootFields, buildTransactionList, moneyFields } from './render.js';
-import { getEquipSlots, getWeightUnit, normalizeTransactionAmount } from './utils.js';
+import { buildInventoryTree, buildLootFields, buildTransactionList, moneyFields } from './render.js';
+import { getWeightUnit, normalizeTransactionAmount } from './utils.js';
 
 export async function renderInventory(container) {
   const state = getState();
@@ -54,8 +54,6 @@ export async function renderInventory(container) {
   const totalWeight = calcTotalWeight(items);
   const weightUnit = getWeightUnit(activeCharacter);
   const weightStep = weightUnit === 'kg' ? '0.1' : '1';
-  const equippedItems = items.filter((item) => getEquipSlots(item).length);
-  const attunedCount = items.filter((item) => item.attunement_active).length;
   container.innerHTML = `
     <div class="inventory-layout">
       <section class="card inventory-wallet-wide">
@@ -83,14 +81,6 @@ export async function renderInventory(container) {
         <div data-inventory-list></div>
       </section>
       <div class="inventory-side">
-        <section class="card">
-          <header class="card-header">
-            <h2 class="eyebrow">Equipaggiamento</h2>
-            <span class="pill">Slot Sintonia Attivi: ${attunedCount}</span>
-          </header>
-          ${buildEquippedList(equippedItems)}
-          ${!equippedItems.length ? '<p class="muted">Nessun oggetto equipaggiato.</p>' : ''}
-        </section>
         <section class="card">
           <header class="card-header">
             <h2 class="eyebrow">Transazioni</h2>
@@ -184,32 +174,6 @@ export async function renderInventory(container) {
   searchInput.addEventListener('input', renderList);
   categorySelect.addEventListener('change', renderList);
   equipableSelect.addEventListener('change', renderList);
-
-  container.querySelectorAll('[data-unequip]')
-    .forEach((btn) => btn.addEventListener('click', async () => {
-      const item = items.find((entry) => entry.id === btn.dataset.unequip);
-      if (!item) return;
-      try {
-        await updateItem(item.id, { equip_slot: null, equip_slots: [] });
-        createToast('Equip rimosso');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore aggiornamento', 'error');
-      }
-    }));
-
-  container.querySelectorAll('[data-attune]')
-    .forEach((btn) => btn.addEventListener('click', async () => {
-      const item = items.find((entry) => entry.id === btn.dataset.attune);
-      if (!item) return;
-      try {
-        await updateItem(item.id, { attunement_active: !item.attunement_active });
-        createToast('Sintonia aggiornata');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore attunement', 'error');
-      }
-    }));
 
   container.querySelectorAll('[data-money-action]')
     .forEach((button) => button.addEventListener('click', async () => {
