@@ -21,6 +21,7 @@ import { bodyParts } from '../inventory/constants.js';
 import {
   openAvatarModal,
   openBackgroundModal,
+  openPreparedSpellsModal,
   openResourceDetail,
   openResourceDrawer,
   openSpellDrawer,
@@ -825,10 +826,14 @@ async function handleRestAction(resetOn, container) {
     const nextData = applyRestRecovery(activeCharacter.data, resetOn);
     if (nextData) {
       await saveCharacterData(activeCharacter, nextData, null, container ? () => renderHome(container) : null);
-      return;
-    }
-    if (container) {
+    } else if (container) {
       renderHome(container);
+    }
+    if (resetOn === 'long_rest') {
+      const refreshed = getState().characters.find((char) => char.id === activeCharacter.id);
+      if (refreshed?.data?.spellcasting?.can_prepare) {
+        await openPreparedSpellsModal(refreshed, container ? () => renderHome(container) : null);
+      }
     }
   } catch (error) {
     createToast('Errore aggiornamento risorse', 'error');

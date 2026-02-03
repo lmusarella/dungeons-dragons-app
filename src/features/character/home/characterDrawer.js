@@ -306,6 +306,14 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   slotRechargeSelect.name = 'spell_slot_recharge';
   slotRechargeField.appendChild(slotRechargeSelect);
   spellcastingSection.appendChild(slotRechargeField);
+  const canPrepareField = document.createElement('label');
+  canPrepareField.className = 'checkbox';
+  canPrepareField.innerHTML = '<input type="checkbox" name="spell_can_prepare" /> <span>Incantatore con preparazione</span>';
+  const canPrepareInput = canPrepareField.querySelector('input');
+  if (canPrepareInput) {
+    canPrepareInput.checked = Boolean(spellcasting.can_prepare);
+  }
+  spellcastingSection.appendChild(canPrepareField);
   spellcastingSection.appendChild(buildTextarea({
     label: 'Incantesimi (note)',
     name: 'spell_notes',
@@ -545,11 +553,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
   });
   const isSpellcaster = formData.get('is_spellcaster') === 'on';
+  const canPrepare = formData.get('spell_can_prepare') === 'on';
   const spellSlotLevels = Array.from({ length: 9 }, (_, index) => index + 1);
   const nextSpellcasting = isSpellcaster
     ? {
       ability: formData.get('spellcasting_ability') || null,
       recharge: formData.get('spell_slot_recharge') || 'long_rest',
+      can_prepare: canPrepare,
       slots: spellSlotLevels.reduce((acc, level) => {
         acc[level] = toNumberOrNull(formData.get(`spell_slot_${level}`)) ?? 0;
         return acc;

@@ -301,6 +301,12 @@ button {
   padding-bottom: 140px;
 }
 
+.app-shell--auth .app-main {
+  padding-bottom: 0;
+  min-height: 100vh;
+  display: flex;
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -560,6 +566,64 @@ button {
 
 .resource-list--compact li:last-child {
   margin-bottom: 0;
+}
+
+.inventory-table {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-table__header,
+.inventory-table__row {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(80px, 1fr)) minmax(140px, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-table__header {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fdf7ea;
+  border: 1px solid #eadfc9;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: #6f4e37;
+}
+
+.inventory-table__body {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-table__row {
+  padding: 10px 12px;
+  border: 1px solid #eadfc9;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.inventory-table__cell {
+  font-size: 14px;
+}
+
+.inventory-table__cell--item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-table__cell--actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.inventory-table__cell--item .item-info-body {
+  gap: 4px;
 }
 
 .item-info-body {
@@ -1799,8 +1863,31 @@ button {
   color: #6a5540;
 }
 
+.spell-list-modal__item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .spell-list-modal-card {
   max-width: 520px;
+}
+
+.prepared-spells-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.prepared-spells-modal__section h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: #5a381f;
+}
+
+.prepared-spells-modal__list {
+  display: grid;
+  gap: 8px;
 }
 
 .accordion-stack {
@@ -2051,6 +2138,15 @@ button {
 .login-card {
   max-width: 420px;
   margin: 40px auto;
+}
+
+.login-view {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  width: 100%;
 }
 
 .character-select-header {
@@ -2842,7 +2938,7 @@ button {
 
 .inventory-layout {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -2865,11 +2961,11 @@ button {
 }
 
 .inventory-main {
-  grid-column: 1 / span 3;
+  grid-column: 1 / span 4;
 }
 
 .inventory-side {
-  grid-column: 4 / -1;
+  grid-column: 5 / -1;
   display: flex;
   flex-direction: column;
   gap: 16px;

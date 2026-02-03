@@ -82,39 +82,50 @@ export function buildItemList(items, weightUnit = 'lb') {
     return '<p class="muted eyebrow">Nessun oggetto.</p>';
   }
   return `
-    <ul class="inventory-list resource-list resource-list--compact">
-      ${items.map((item) => `
-        <li class="modifier-card attack-card resource-card inventory-item-card">
-          <div class="attack-card__body resource-card__body">
-            <div class="resource-card__title item-info">
+    <div class="inventory-table">
+      <div class="inventory-table__header">
+        <span>Oggetto</span>
+        <span>Categoria</span>
+        <span>Qtà</span>
+        <span>Peso</span>
+        <span>Volume</span>
+        <span>Azioni</span>
+      </div>
+      <div class="inventory-table__body">
+        ${items.map((item) => {
+    const volumeValue = item.volume !== null && item.volume !== undefined ? item.volume : '-';
+    const equipSlots = getEquipSlots(item);
+    return `
+          <div class="inventory-table__row">
+            <div class="inventory-table__cell inventory-table__cell--item">
               ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
               <div class="item-info-body">
-                <div class="item-info-line">
-                  <strong class="attack-card__name">${item.name}</strong>
-                  <span class="muted item-meta">
-                    ${getCategoryLabel(item.category)} · ${item.qty}x · ${formatWeight(item.weight ?? 0, weightUnit)}${item.volume !== null && item.volume !== undefined ? ` · vol ${item.volume}` : ''}
-                  </span>
-                </div>
+                <strong>${item.name}</strong>
                 <div class="tag-row resource-card__meta">
-                  ${item.equipable ? `<span class="chip">equipaggiabile${getEquipSlots(item).length ? ` · ${getBodyPartLabels(getEquipSlots(item))}` : ''}</span>` : ''}
+                  ${item.equipable ? `<span class="chip">equipaggiabile${equipSlots.length ? ` · ${getBodyPartLabels(equipSlots)}` : ''}</span>` : ''}
                   ${item.sovrapponibile ? '<span class="chip">sovrapponibile</span>' : ''}
                   ${item.attunement_active ? '<span class="chip">in sintonia</span>' : ''}
                 </div>
               </div>
             </div>
+            <div class="inventory-table__cell">${getCategoryLabel(item.category)}</div>
+            <div class="inventory-table__cell">${item.qty}</div>
+            <div class="inventory-table__cell">${formatWeight(item.weight ?? 0, weightUnit)}</div>
+            <div class="inventory-table__cell">${volumeValue}</div>
+            <div class="inventory-table__cell inventory-table__cell--actions">
+              ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Usa</button>` : ''}
+              <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">
+                <span aria-hidden="true">✏️</span>
+              </button>
+              <button class="resource-action-button icon-button" data-delete="${item.id}" aria-label="Elimina" title="Elimina">
+                <span aria-hidden="true">🗑️</span>
+              </button>
+            </div>
           </div>
-          <div class="resource-card-actions">
-            ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Usa</button>` : ''}
-            <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">
-              <span aria-hidden="true">✏️</span>
-            </button>
-            <button class="resource-action-button icon-button" data-delete="${item.id}" aria-label="Elimina" title="Elimina">
-              <span aria-hidden="true">🗑️</span>
-            </button>
-          </div>
-        </li>
-      `).join('')}
-    </ul>
+        `;
+  }).join('')}
+      </div>
+    </div>
   `;
 }
 

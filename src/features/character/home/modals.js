@@ -5,10 +5,22 @@ import {
   buildSelect,
   buildTextarea,
   createToast,
+  openConfirmModal,
   openFormModal
 } from '../../../ui/components.js';
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { formatResourceRecovery, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
+
+function getPrepStateLabel(state) {
+  switch (state) {
+    case 'prepared':
+      return 'Preparato';
+    case 'always':
+      return 'Sempre preparato';
+    default:
+      return 'Conosciuto';
+  }
+}
 
 export function openBackgroundModal(character) {
   if (!character) return;
@@ -100,6 +112,7 @@ export function openSpellListModal(character, onRender) {
   if (!character) return;
   const data = character.data || {};
   const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
+  const canPrepare = Boolean(data.spellcasting?.can_prepare);
   const content = document.createElement('div');
   content.className = 'spell-list-modal';
   if (!spells.length) {
@@ -125,21 +138,31 @@ export function openSpellListModal(character, onRender) {
       ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
       : null;
     const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
+    const prepState = canPrepare ? spell.prep_state || 'known' : null;
     return `
               <div class="spell-list-modal__item">
                 <div class="spell-list-modal__item-info">
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
                     <span class="chip chip--small">${typeLabel}</span>
+                    ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
                   </div>
                   <div class="spell-list-modal__item-meta">
                     ${attackLabel ? `<span>${attackLabel}</span>` : ''}
                     ${damageText ? `<span>Danni ${damageText}</span>` : ''}
                   </div>
                 </div>
-                ${level > 0
+                <div class="spell-list-modal__item-actions">
+                  <button class="icon-button" type="button" data-spell-edit="${spell.id}" aria-label="Modifica incantesimo" title="Modifica">
+                    <span aria-hidden="true">✏️</span>
+                  </button>
+                  <button class="icon-button icon-button--danger" type="button" data-spell-delete="${spell.id}" aria-label="Elimina incantesimo" title="Elimina">
+                    <span aria-hidden="true">🗑️</span>
+                  </button>
+                  ${level > 0
     ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-spell-cast="${spell.id}">Lancia</button>`
     : ''}
+                </div>
               </div>
             `;
   }).join('')}
@@ -173,83 +196,141 @@ export function openSpellListModal(character, onRender) {
         closeModal();
       }
     }));
+
+  content.querySelectorAll('[data-spell-edit]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const spell = spells.find((entry) => entry.id === button.dataset.spellEdit);
+      if (!spell) return;
+      closeModal();
+      setTimeout(() => {
+        openSpellDrawer(character, () => onRender?.(), spell);
+      }, 0);
+    }));
+
+  content.querySelectorAll('[data-spell-delete]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      const spell = spells.find((entry) => entry.id === button.dataset.spellDelete);
+      if (!spell) return;
+      const shouldDelete = await openConfirmModal({ message: `Eliminare l'incantesimo ${spell.name}?` });
+      if (!shouldDelete) return;
+      const nextSpells = spells.filter((entry) => entry.id !== spell.id);
+      const nextData = {
+        ...character.data,
+        spells: nextSpells
+      };
+      await saveCharacterData(character, nextData, 'Incantesimo eliminato', () => onRender?.());
+      closeModal();
+    }));
 }
 
-export function openSpellDrawer(character, onSave) {
+export function openSpellDrawer(character, onSave, spell = null) {
   if (!character) return;
+  const canPrepare = Boolean(character.data?.spellcasting?.can_prepare);
   const form = document.createElement('div');
-  form.className = 'drawer-form';
+  form.className = 'drawer-form modal-form-grid spell-form';
+  const buildRow = (elements, variant = 'balanced') => {
+    const row = document.createElement('div');
+    row.className = `modal-form-row modal-form-row--${variant}`;
+    elements.filter(Boolean).forEach((element) => row.appendChild(element));
+    return row;
+  };
   const spellKindField = document.createElement('label');
   spellKindField.className = 'field';
   spellKindField.innerHTML = '<span>Tipo incantesimo</span>';
+  const initialKind = spell?.kind ?? (Number(spell?.level) === 0 ? 'cantrip' : 'spell');
   const spellKindSelect = buildSelect([
     { value: 'cantrip', label: 'Trucchetto' },
     { value: 'spell', label: 'Incantesimo' }
-  ], 'spell');
+  ], initialKind);
   spellKindSelect.name = 'spell_kind';
   spellKindField.appendChild(spellKindSelect);
-  form.appendChild(spellKindField);
   const nameField = buildInput({
     label: 'Nome incantesimo',
     name: 'spell_name',
-    placeholder: 'Es. Palla di fuoco'
+    placeholder: 'Es. Palla di fuoco',
+    value: spell?.name ?? ''
   });
   const nameInput = nameField.querySelector('input');
   if (nameInput) {
     nameInput.required = true;
   }
-  form.appendChild(nameField);
   const levelField = buildInput({
     label: 'Livello incantesimo',
     name: 'spell_level',
     type: 'number',
-    value: 1
+    value: spell?.level ?? 1
   });
   const levelInput = levelField.querySelector('input');
   if (levelInput) {
     levelInput.min = '1';
     levelInput.max = '9';
   }
-  form.appendChild(levelField);
-  form.appendChild(buildInput({
+  const prepStateField = canPrepare ? document.createElement('label') : null;
+  let prepStateSelect = null;
+  if (prepStateField) {
+    prepStateField.className = 'field';
+    prepStateField.innerHTML = '<span>Preparazione</span>';
+    prepStateSelect = buildSelect([
+      { value: 'known', label: 'Conosciuto' },
+      { value: 'prepared', label: 'Preparato' },
+      { value: 'always', label: 'Sempre preparato' }
+    ], spell?.prep_state ?? 'known');
+    prepStateSelect.name = 'spell_prep_state';
+    prepStateField.appendChild(prepStateSelect);
+  }
+  form.appendChild(buildRow([spellKindField, levelField, prepStateField], 'compact'));
+  form.appendChild(buildRow([nameField], 'balanced'));
+  form.appendChild(buildRow([buildInput({
     label: 'Tempo di lancio',
     name: 'spell_cast_time',
-    placeholder: 'Es. 1 azione'
-  }));
-  form.appendChild(buildInput({
+    placeholder: 'Es. 1 azione',
+    value: spell?.cast_time ?? ''
+  }), buildInput({
     label: 'Durata',
     name: 'spell_duration',
-    placeholder: 'Es. 1 minuto'
-  }));
-  form.appendChild(buildInput({
+    placeholder: 'Es. 1 minuto',
+    value: spell?.duration ?? ''
+  }), buildInput({
     label: 'Range',
     name: 'spell_range',
-    placeholder: 'Es. 18 m'
-  }));
+    placeholder: 'Es. 18 m',
+    value: spell?.range ?? ''
+  })], 'compact'));
   const concentrationField = document.createElement('label');
   concentrationField.className = 'checkbox';
   concentrationField.innerHTML = '<input type="checkbox" name="spell_concentration" /> <span>Concentrazione</span>';
-  form.appendChild(concentrationField);
   const attackRollField = document.createElement('label');
   attackRollField.className = 'checkbox';
   attackRollField.innerHTML = '<input type="checkbox" name="spell_attack_roll" /> <span>Tiro per colpire (targhet)</span>';
-  form.appendChild(attackRollField);
-  form.appendChild(buildInput({
+  form.appendChild(buildRow([concentrationField, attackRollField], 'balanced'));
+  const damageDieField = buildInput({
     label: 'Dado danno',
     name: 'spell_damage_die',
-    placeholder: 'Es. 1d10'
-  }));
-  form.appendChild(buildInput({
+    placeholder: 'Es. 1d10',
+    value: spell?.damage_die ?? ''
+  });
+  const damageModifierField = buildInput({
     label: 'Modificatore danni',
     name: 'spell_damage_modifier',
     type: 'number',
-    value: ''
-  }));
+    value: spell?.damage_modifier ?? ''
+  });
+  form.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
     name: 'spell_description',
-    placeholder: 'Descrizione dell\'incantesimo...'
+    placeholder: 'Descrizione dell\'incantesimo...',
+    value: spell?.description ?? ''
   }));
+
+  const concentrationInput = form.querySelector('input[name="spell_concentration"]');
+  if (concentrationInput) {
+    concentrationInput.checked = Boolean(spell?.concentration);
+  }
+  const attackRollInput = form.querySelector('input[name="spell_attack_roll"]');
+  if (attackRollInput) {
+    attackRollInput.checked = Boolean(spell?.attack_roll);
+  }
 
   const syncSpellKind = () => {
     if (!levelInput) return;
@@ -273,9 +354,10 @@ export function openSpellDrawer(character, onSave) {
   syncSpellKind();
 
   openFormModal({
-    title: 'Nuovo incantesimo',
-    submitLabel: 'Aggiungi',
-    content: form
+    title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',
+    submitLabel: spell ? 'Salva' : 'Aggiungi',
+    content: form,
+    cardClass: 'modal-card--form'
   }).then(async (formData) => {
     if (!formData) return;
     const name = formData.get('spell_name')?.trim();
@@ -290,8 +372,9 @@ export function openSpellDrawer(character, onSave) {
       ? 0
       : Math.min(9, Math.max(1, rawLevel || 1));
     const damageModifier = toNumberOrNull(formData.get('spell_damage_modifier'));
+    const prepState = canPrepare ? formData.get('spell_prep_state') || 'known' : spell?.prep_state || 'known';
     const nextSpell = {
-      id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: spell?.id ?? `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       name,
       level,
       kind: selectedKind || (level === 0 ? 'cantrip' : 'spell'),
@@ -302,16 +385,94 @@ export function openSpellDrawer(character, onSave) {
       attack_roll: formData.has('spell_attack_roll'),
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
-      description: formData.get('spell_description')?.trim() || null
+      description: formData.get('spell_description')?.trim() || null,
+      prep_state: prepState
     };
-    const nextSpells = Array.isArray(character.data?.spells)
-      ? [...character.data.spells, nextSpell]
-      : [nextSpell];
+    const currentSpells = Array.isArray(character.data?.spells) ? character.data.spells : [];
+    const nextSpells = spell
+      ? currentSpells.map((entry) => (entry.id === spell.id ? nextSpell : entry))
+      : [...currentSpells, nextSpell];
     const nextData = {
       ...character.data,
       spells: nextSpells
     };
-    await saveCharacterData(character, nextData, 'Incantesimo aggiunto', onSave);
+    const message = spell ? 'Incantesimo aggiornato' : 'Incantesimo aggiunto';
+    await saveCharacterData(character, nextData, message, onSave);
+  });
+}
+
+export function openPreparedSpellsModal(character, onSave) {
+  if (!character) return;
+  const data = character.data || {};
+  const spellcasting = data.spellcasting || {};
+  if (!spellcasting.can_prepare) return;
+  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
+  const selectable = spells.filter((entry) => {
+    const prepState = entry.prep_state || 'known';
+    const level = Number(entry.level) || 0;
+    return prepState !== 'always' && level > 0;
+  });
+  if (!selectable.length) {
+    createToast('Nessun incantesimo preparabile.', 'info');
+    return;
+  }
+  const prepared = selectable.filter((entry) => (entry.prep_state || 'known') === 'prepared');
+  const known = selectable.filter((entry) => (entry.prep_state || 'known') !== 'prepared');
+  const content = document.createElement('div');
+  content.className = 'prepared-spells-modal';
+  content.innerHTML = `
+    <p class="muted">Seleziona gli incantesimi da preparare per oggi.</p>
+    ${prepared.length ? `
+      <div class="prepared-spells-modal__section">
+        <h4>Preparati</h4>
+        <div class="prepared-spells-modal__list">
+          ${prepared.map((entry) => `
+            <label class="checkbox">
+              <input type="checkbox" name="prepared_${entry.id}" checked />
+              <span>${entry.name}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${known.length ? `
+      <div class="prepared-spells-modal__section">
+        <h4>Disponibili</h4>
+        <div class="prepared-spells-modal__list">
+          ${known.map((entry) => `
+            <label class="checkbox">
+              <input type="checkbox" name="prepared_${entry.id}" />
+              <span>${entry.name}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  openFormModal({
+    title: 'Incantesimi preparati',
+    submitLabel: 'Salva',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: 'modal-card--form'
+  }).then(async (formData) => {
+    if (!formData) return;
+    const nextSpells = spells.map((entry) => {
+      const prepState = entry.prep_state || 'known';
+      if (prepState === 'always') return entry;
+      if (Number(entry.level) === 0) return entry;
+      const isPrepared = formData.has(`prepared_${entry.id}`);
+      return {
+        ...entry,
+        prep_state: isPrepared ? 'prepared' : 'known'
+      };
+    });
+    const nextData = {
+      ...character.data,
+      spells: nextSpells
+    };
+    await saveCharacterData(character, nextData, 'Incantesimi preparati aggiornati', onSave);
   });
 }
 
