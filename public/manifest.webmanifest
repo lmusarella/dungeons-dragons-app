@@ -2,13 +2,13 @@
   "name": "Dungeon Dragon",
   "short_name": "DungeonDragon",
   "description": "Tablet-first D&D character manager",
-  "start_url": "/dungeon-dragon-app/#/",
+  "start_url": "./#/",
   "display": "standalone",
   "background_color": "#f6f1e7",
   "theme_color": "#6f4e37",
   "icons": [
     {
-      "src": "/dungeon-dragon-app/icons/icon.svg",
+      "src": "./icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
