@@ -5,24 +5,26 @@ import { setState } from '../../app/state.js';
 
 export function renderLogin(container) {
   container.innerHTML = `
-    <section class="card login-card">
-      <h2>Accedi</h2>
-      <p>Usa email e password per entrare o creare l'account.</p>
-      <form data-login-form>
-        <label class="field">
-          <span>Email</span>
-          <input type="email" name="email" required placeholder="nome@email.it" />
-        </label>
-        <label class="field">
-          <span>Password</span>
-          <input type="password" name="password" required minlength="6" />
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" name="signup" />
-          <span>Nuovo account</span>
-        </label>
-        <button class="primary" type="submit">Continua</button>
-      </form>
+    <section class="login-view">
+      <div class="card login-card">
+        <h2>Accedi</h2>
+        <p>Usa email e password per entrare o creare l'account.</p>
+        <form data-login-form>
+          <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" required placeholder="nome@email.it" />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" required minlength="6" />
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="signup" />
+            <span>Nuovo account</span>
+          </label>
+          <button class="primary" type="submit">Continua</button>
+        </form>
+      </div>
     </section>
   `;
 

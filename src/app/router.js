@@ -26,9 +26,14 @@ function renderRoute() {
   const actionsBackdrop = document.querySelector('.actions-fab-backdrop');
   const appHeader = document.querySelector('[data-app-header]');
   const offlineBanner = document.querySelector('[data-offline-banner]');
+  const appShell = document.querySelector('.app-shell');
   const hideShell = route === 'login' || route === 'characters';
-  const hideHeader = route === 'login';
+  const hideHeader = route === 'login' || route === 'characters';
   const showFab = route === 'home' || route === 'inventory';
+  const isAuthRoute = route === 'login' || route === 'characters';
+  if (appShell) {
+    appShell.classList.toggle('app-shell--auth', isAuthRoute);
+  }
   const applyShellVisibility = (shouldHide, shouldShowFab) => {
     const { offline } = getState();
     if (bottomNav) bottomNav.hidden = shouldHide;
