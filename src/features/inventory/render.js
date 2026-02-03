@@ -99,7 +99,7 @@ export function buildItemList(items, weightUnit = 'lb') {
                 <div class="tag-row resource-card__meta">
                   ${item.equipable ? `<span class="chip">equipaggiabile${getEquipSlots(item).length ? ` · ${getBodyPartLabels(getEquipSlots(item))}` : ''}</span>` : ''}
                   ${item.sovrapponibile ? '<span class="chip">sovrapponibile</span>' : ''}
-                  ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
+                  ${item.attunement_active ? '<span class="chip">in sintonia</span>' : ''}
                 </div>
               </div>
             </div>
@@ -111,40 +111,6 @@ export function buildItemList(items, weightUnit = 'lb') {
             </button>
             <button class="resource-action-button icon-button" data-delete="${item.id}" aria-label="Elimina" title="Elimina">
               <span aria-hidden="true">🗑️</span>
-            </button>
-          </div>
-        </li>
-      `).join('')}
-    </ul>
-  `;
-}
-
-export function buildEquippedList(items) {
-  if (!items.length) return '';
-  return `
-    <ul class="inventory-list resource-list resource-list--compact">
-      ${items.map((item) => `
-        <li class="modifier-card attack-card resource-card inventory-item-card">
-          <div class="attack-card__body resource-card__body">
-            <div class="resource-card__title item-info">
-              ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" />` : ''}
-              <div class="item-info-body">
-                <div class="item-info-line">
-                  <strong class="attack-card__name">${item.name}</strong>
-                  <span class="muted item-meta">
-                    ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
-                  </span>
-                </div>
-                <div class="tag-row resource-card__meta">
-                  ${item.attunement_active ? '<span class="chip">attuned</span>' : ''}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="resource-card-actions">
-            <button class="resource-action-button" data-unequip="${item.id}">Rimuovi</button>
-            <button class="resource-action-button" data-attune="${item.id}">
-              ${item.attunement_active ? 'Disattiva attune' : 'Attiva attune'}
             </button>
           </div>
         </li>

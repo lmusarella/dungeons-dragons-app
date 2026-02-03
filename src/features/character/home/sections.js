@@ -333,6 +333,7 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     .filter((prof) => proficiencies[prof.key])
     .map((prof) => prof.label);
   const equippedItems = (items || []).filter((item) => getEquipSlots(item).length);
+  const attunedCount = (items || []).filter((item) => item.attunement_active).length;
   return `
     <div class="detail-section">
       <div class="proficiency-tabs" data-proficiency-tabs>
@@ -372,17 +373,20 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
         </div>
       </div>
       <div class="detail-card detail-card--text">
-        <p class="eyebrow">Equip</p>
-        ${canEditCharacter ? `
-          <div class="button-row">
-            <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
-              <span aria-hidden="true">+</span>
-            </button>
+        <header class="card-header">
+          <p class="eyebrow">Equip</p>
+          <div class="equip-actions">
+            <span class="pill">Oggetti in sintonia: ${attunedCount}</span>
+            ${canEditCharacter ? `
+              <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
+                <span aria-hidden="true">+</span>
+              </button>
+            ` : ''}
           </div>
-        ` : ''}
+        </header>
         ${equippedItems.length
     ? `
-            <ul class="inventory-list resource-list resource-list--compact">
+            <ul class="inventory-list resource-list resource-list--compact resource-list--centered">
               ${equippedItems.map((item) => `
                 <li class="modifier-card attack-card resource-card inventory-item-card">
                   <div class="attack-card__body resource-card__body">
