@@ -22,6 +22,7 @@ export async function openItemModal(character, item, items, onSave) {
     weightInput.step = unit === 'kg' ? '0.1' : '1';
   }
   fields.appendChild(weightField);
+  fields.appendChild(buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 }));
   fields.appendChild(buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 }));
   const categorySelect = buildSelect(
     [{ value: '', label: 'Seleziona' }, ...itemCategories],
@@ -47,6 +48,14 @@ export async function openItemModal(character, item, items, onSave) {
   containerField.innerHTML = '<span>Contenitore</span>';
   containerField.appendChild(containerSelect);
   fields.appendChild(containerField);
+  const maxVolumeField = buildInput({
+    label: 'Volume massimo contenitore',
+    name: 'max_volume',
+    type: 'number',
+    value: item?.max_volume ?? ''
+  });
+  const maxVolumeInput = maxVolumeField.querySelector('input');
+  fields.appendChild(maxVolumeField);
 
   const equipableWrapper = document.createElement('div');
   equipableWrapper.className = 'compact-field-grid';
@@ -236,6 +245,7 @@ export async function openItemModal(character, item, items, onSave) {
     }
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
+    const isContainer = categorySelect.value === 'container';
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
@@ -266,6 +276,12 @@ export async function openItemModal(character, item, items, onSave) {
     }
     if (shieldBonusInput) {
       shieldBonusInput.disabled = !isArmor || !(shieldInput?.checked ?? false);
+    }
+    if (maxVolumeInput) {
+      maxVolumeInput.disabled = !isContainer;
+      if (!isContainer) {
+        maxVolumeInput.value = '';
+      }
     }
   };
   equipableInput?.addEventListener('change', updateEquipmentFields);
@@ -305,9 +321,11 @@ export async function openItemModal(character, item, items, onSave) {
     image_url: formData.get('image_url')?.trim() || null,
     qty: Number(formData.get('qty')),
     weight: Number(formData.get('weight')),
+    volume: Number(formData.get('volume')) || 0,
     value_cp: Number(formData.get('value_cp')),
     category,
     container_item_id: formData.get('container_item_id') || null,
+    max_volume: formData.get('max_volume') === '' ? null : Number(formData.get('max_volume')),
     equipable: equipableEnabled,
     equip_slot: equipSlot,
     equip_slots: equipSlots,

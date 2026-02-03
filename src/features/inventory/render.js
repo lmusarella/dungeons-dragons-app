@@ -50,9 +50,20 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
 
   const containerSections = containers.map((container) => {
     const children = items.filter((item) => item.container_item_id === container.id);
+    const usedVolume = children.reduce((total, entry) => {
+      const volume = Number(entry.volume) || 0;
+      const qty = Number(entry.qty) || 1;
+      return total + volume * qty;
+    }, 0);
+    const maxVolume = Number(container.max_volume) || null;
+    const volumeLabel = maxVolume
+      ? `Volume ${usedVolume}/${maxVolume}`
+      : usedVolume
+        ? `Volume ${usedVolume}`
+        : '';
     return `
       <div class="inventory-group">
-        <p class="eyebrow">${container.name}</p>
+        <p class="eyebrow">${container.name}${volumeLabel ? ` · <span class="muted">${volumeLabel}</span>` : ''}</p>
         ${buildItemList(children, weightUnit)}
       </div>
     `;
@@ -82,7 +93,7 @@ export function buildItemList(items, weightUnit = 'lb') {
                 <div class="item-info-line">
                   <strong class="attack-card__name">${item.name}</strong>
                   <span class="muted item-meta">
-                    ${getCategoryLabel(item.category)} · ${item.qty}x · ${formatWeight(item.weight ?? 0, weightUnit)}
+                    ${getCategoryLabel(item.category)} · ${item.qty}x · ${formatWeight(item.weight ?? 0, weightUnit)}${item.volume !== null && item.volume !== undefined ? ` · vol ${item.volume}` : ''}
                   </span>
                 </div>
                 <div class="tag-row resource-card__meta">
@@ -194,6 +205,10 @@ export function buildLootFields(weightStep) {
       <label class="field">
         <span>Peso</span>
         <input name="weight" type="number" value="0" min="0" step="${weightStep}" />
+      </label>
+      <label class="field">
+        <span>Volume</span>
+        <input name="volume" type="number" value="0" min="0" step="0.1" />
       </label>
       <label class="field">
         <span>Valore (cp)</span>

@@ -1,5 +1,5 @@
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
-import { createItem, fetchItems } from '../inventory/inventoryApi.js';
+import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, setActiveCharacter, setState, updateCache } from '../../app/state.js';
 import { buildInput, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
@@ -16,6 +16,7 @@ import {
 } from './home/sections.js';
 import { buildLootFields } from '../inventory/render.js';
 import { getWeightUnit } from '../inventory/utils.js';
+import { bodyParts } from '../inventory/constants.js';
 import {
   openAvatarModal,
   openBackgroundModal,
@@ -263,6 +264,124 @@ export async function renderHome(container) {
         ?? buttons[0].dataset.proficiencyTab;
       if (defaultTab) setActiveTab(defaultTab);
     });
+
+  const addEquipButton = container.querySelector('[data-add-equip]');
+  if (addEquipButton && activeCharacter && canEditCharacter) {
+    addEquipButton.addEventListener('click', async () => {
+      const equipableItems = (items || []).filter((item) => item.equipable && !getEquipSlots(item).length);
+      if (!equipableItems.length) {
+        createToast('Nessun oggetto equipaggiabile disponibile', 'error');
+        return;
+      }
+      const content = document.createElement('div');
+      content.className = 'drawer-form';
+      const itemField = document.createElement('label');
+      itemField.className = 'field';
+      itemField.innerHTML = '<span>Oggetto</span>';
+      const itemSelect = document.createElement('select');
+      itemSelect.name = 'item_id';
+      equipableItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        itemSelect.appendChild(option);
+      });
+      itemField.appendChild(itemSelect);
+      content.appendChild(itemField);
+
+      const equipSlotsField = document.createElement('fieldset');
+      equipSlotsField.className = 'equip-slot-field';
+      equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
+      const equipSlotList = document.createElement('div');
+      equipSlotList.className = 'equip-slot-list';
+      bodyParts.forEach((part) => {
+        const label = document.createElement('label');
+        label.className = 'checkbox';
+        label.innerHTML = `<input type="checkbox" name="equip_slots" value="${part.value}" /> <span>${part.label}</span>`;
+        equipSlotList.appendChild(label);
+      });
+      equipSlotsField.appendChild(equipSlotList);
+      content.appendChild(equipSlotsField);
+
+      const formData = await openFormModal({
+        title: 'Equipaggia oggetto',
+        submitLabel: 'Equipaggia',
+        content
+      });
+      if (!formData) return;
+      const equipSlots = formData.getAll('equip_slots');
+      if (!equipSlots.length) {
+        createToast('Seleziona almeno uno slot', 'error');
+        return;
+      }
+      const item = equipableItems.find((entry) => String(entry.id) === formData.get('item_id'));
+      if (!item) return;
+      const proficiencies = activeCharacter.data?.proficiencies || {};
+      if (item.category === 'weapon') {
+        if (!item.weapon_type) {
+          createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
+          return;
+        }
+        const proficient = item.weapon_type === 'simple'
+          ? Boolean(proficiencies.weapon_simple)
+          : Boolean(proficiencies.weapon_martial);
+        if (!proficient) {
+          createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+          return;
+        }
+      }
+      if (item.category === 'armor') {
+        if (item.is_shield) {
+          if (!proficiencies.shield) {
+            createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+            return;
+          }
+        } else if (!item.armor_type) {
+          createToast('Definisci il tipo di armatura prima di equipaggiarla', 'error');
+          return;
+        } else {
+          const proficient = item.armor_type === 'light'
+            ? Boolean(proficiencies.armor_light)
+            : item.armor_type === 'medium'
+              ? Boolean(proficiencies.armor_medium)
+              : Boolean(proficiencies.armor_heavy);
+          if (!proficient) {
+            createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+            return;
+          }
+        }
+      }
+      if (!item.sovrapponibile) {
+        const conflicting = (items || [])
+          .filter((entry) => entry.id !== item.id)
+          .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+        if (conflicting.length) {
+          createToast('Uno o più slot selezionati sono già occupati', 'error');
+          return;
+        }
+      }
+      try {
+        await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
+        createToast('Equip aggiornato');
+        renderHome(container);
+      } catch (error) {
+        createToast('Errore aggiornamento equip', 'error');
+      }
+    });
+  }
+
+  container.querySelectorAll('[data-unequip]')
+    .forEach((btn) => btn.addEventListener('click', async () => {
+      const item = (items || []).find((entry) => entry.id === btn.dataset.unequip);
+      if (!item) return;
+      try {
+        await updateItem(item.id, { equip_slot: null, equip_slots: [] });
+        createToast('Equip rimosso');
+        renderHome(container);
+      } catch (error) {
+        createToast('Errore aggiornamento equip', 'error');
+      }
+    }));
 
   const inspirationButton = container.querySelector('[data-toggle-inspiration]');
   if (inspirationButton && activeCharacter && canEditCharacter) {
@@ -523,12 +642,14 @@ async function handleLootAction(container) {
       name: formData.get('name'),
       qty: Number(formData.get('qty')),
       weight: Number(formData.get('weight')),
+      volume: Number(formData.get('volume')) || 0,
       value_cp: Number(formData.get('value_cp')),
       category: 'loot',
       equipable: false,
       equip_slot: null,
       equip_slots: [],
-      sovrapponibile: false
+      sovrapponibile: false,
+      max_volume: null
     });
     createToast('Loot aggiunto');
     if (container) {

@@ -59,6 +59,7 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
   const isExhausted = maxUses && resource.used >= maxUses;
+  const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
   const submitLabel = maxUses
     ? isExhausted
@@ -68,12 +69,14 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   const usageLabel = maxUses ? `${resource.used}/${resource.max_uses}` : 'Passiva';
   detail.innerHTML = `
     <div class="detail-card detail-card--text">
-      ${resource.image_url ? `<img class="resource-detail-image" src="${resource.image_url}" alt="Foto di ${resource.name}" />` : ''}
       <h4>${resource.name}</h4>
-      ${resource.cast_time ? `<p class="resource-chip">${resource.cast_time}</p>` : ''}
-      <p class="muted">${formatResourceRecovery(resource)}</p>
-      <p>Cariche: ${usageLabel}</p>
       ${resource.description ? `<p>${resource.description}</p>` : ''}
+      ${isActive ? '' : `
+        ${resource.image_url ? `<img class="resource-detail-image" src="${resource.image_url}" alt="Foto di ${resource.name}" />` : ''}
+        ${resource.cast_time ? `<p class="resource-chip">${resource.cast_time}</p>` : ''}
+        <p class="muted">${formatResourceRecovery(resource)}</p>
+        <p>Cariche: ${usageLabel}</p>
+      `}
     </div>
   `;
   openFormModal({

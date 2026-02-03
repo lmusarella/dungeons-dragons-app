@@ -44,7 +44,7 @@ export const itemCategories = [
   { value: 'magic', label: 'Magici', equipable: true },
   { value: 'jewelry', label: 'Gioielli e ornamenti', equipable: true },
   { value: 'tool', label: 'Strumenti' },
-  { value: 'container', label: 'Contenitore' },
+  { value: 'container', label: 'Contenitore', equipable: true },
   { value: 'misc', label: 'Altro' }
 ];
 
