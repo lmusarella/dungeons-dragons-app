@@ -58,13 +58,13 @@ export async function renderInventory(container) {
     <div class="inventory-layout">
       <section class="card inventory-wallet-wide">
         <header class="card-header">
-          <h2 class="eyebrow">Monete</h2>
+          <p class="eyebrow">Monete</p>
         </header>
         ${renderWalletSummary(wallet)}
       </section>
       <section class="card inventory-main">
         <header class="card-header">
-          <h2 class="eyebrow">Inventario</h2>
+          <p class="eyebrow">Inventario</p>
           <div class="button-row">
             <button class="primary" data-add-item>Nuovo oggetto</button>
           </div>
@@ -83,7 +83,7 @@ export async function renderInventory(container) {
       <div class="inventory-side">
         <section class="card">
           <header class="card-header">
-            <h2 class="eyebrow">Transazioni</h2>
+            <p class="eyebrow">Transazioni</p>
           </header>
           <div class="button-row">
             <button class="primary" type="button" data-money-action="pay">Paga</button>

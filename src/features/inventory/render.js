@@ -72,7 +72,6 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
   return `
     ${containerSections}
     <div class="inventory-group">
-      <p class="eyebrow">Oggetti</p>
       ${buildItemList(topLevel, weightUnit)}
     </div>
   `;
