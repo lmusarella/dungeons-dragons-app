@@ -60,6 +60,10 @@ export async function renderActions(container) {
           <input name="weight" type="number" value="0" />
         </label>
         <label class="field">
+          <span>Volume</span>
+          <input name="volume" type="number" value="0" />
+        </label>
+        <label class="field">
           <span>Valore (cp)</span>
           <input name="value_cp" type="number" value="0" />
         </label>
@@ -127,12 +131,14 @@ export async function renderActions(container) {
           name: formData.get('name'),
           qty: Number(formData.get('qty')),
           weight: Number(formData.get('weight')),
+          volume: Number(formData.get('volume')) || 0,
           value_cp: Number(formData.get('value_cp')),
           category: 'loot',
           equipable: false,
           equip_slot: null,
           equip_slots: [],
-          sovrapponibile: false
+          sovrapponibile: false,
+          max_volume: null
         });
       createToast('Loot aggiunto');
       lootForm.reset();

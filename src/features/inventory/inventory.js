@@ -376,12 +376,14 @@ export async function renderInventory(container) {
           name: formData.get('name'),
           qty: Number(formData.get('qty')),
           weight: Number(formData.get('weight')),
+          volume: Number(formData.get('volume')) || 0,
           value_cp: Number(formData.get('value_cp')),
           category: 'loot',
           equipable: false,
           equip_slot: null,
           equip_slots: [],
-          sovrapponibile: false
+          sovrapponibile: false,
+          max_volume: null
         });
         createToast('Loot aggiunto');
         renderInventory(container);
