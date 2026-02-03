@@ -571,12 +571,13 @@ button {
 .inventory-table {
   display: grid;
   gap: 8px;
+  width: 100%;
 }
 
 .inventory-table__header,
 .inventory-table__row {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(80px, 1fr)) minmax(140px, 1fr);
+  grid-template-columns: minmax(260px, 2.4fr) repeat(4, minmax(90px, 1fr)) minmax(160px, 1fr);
   align-items: center;
   gap: 12px;
 }
@@ -2938,7 +2939,7 @@ button {
 
 .inventory-layout {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -2961,11 +2962,11 @@ button {
 }
 
 .inventory-main {
-  grid-column: 1 / span 4;
+  grid-column: 1 / span 6;
 }
 
 .inventory-side {
-  grid-column: 5 / -1;
+  grid-column: 7 / -1;
   display: flex;
   flex-direction: column;
   gap: 16px;

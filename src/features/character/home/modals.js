@@ -225,7 +225,7 @@ export function openSpellListModal(character, onRender) {
 
 export function openSpellDrawer(character, onSave, spell = null) {
   if (!character) return;
-  const canPrepare = Boolean(character.data?.spellcasting?.can_prepare);
+  const canPrepare = Boolean(character.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form';
   const buildRow = (elements, variant = 'balanced') => {
