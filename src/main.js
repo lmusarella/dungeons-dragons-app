@@ -6,7 +6,7 @@ import { initRouter, registerRoute } from './app/router.js';
 import { initSession, ensureProfile, signOut } from './app/session.js';
 import { getState, setState, subscribe } from './app/state.js';
 import { renderLogin } from './features/auth/login.js';
-import { renderHome } from './features/character/home.js';
+import { bindGlobalFabHandlers, renderHome } from './features/character/home.js';
 import { renderCharacterSelect } from './features/character/select.js';
 import { renderInventory } from './features/inventory/inventory.js';
 import { renderJournal } from './features/journal/journal.js';
@@ -15,6 +15,7 @@ import { registerSW } from 'virtual:pwa-register';
 
 const app = document.querySelector('#app');
 renderLayout(app);
+bindGlobalFabHandlers();
 
 document.addEventListener('click', async (event) => {
   const target = event.target.closest('[data-logout]');
