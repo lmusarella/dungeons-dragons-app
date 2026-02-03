@@ -87,10 +87,6 @@ export async function renderInventory(container) {
           <header class="card-header">
             <p class="eyebrow">Transazioni</p>
           </header>
-          <div class="button-row">
-            <button class="money-action-button money-action-button--pay" type="button" data-money-action="pay">Paga</button>
-            <button class="money-action-button money-action-button--receive" type="button" data-money-action="receive">Ricevi</button>
-          </div>
           <div class="inventory-transactions">
             ${state.offline ? '<p class="muted">Transazioni disponibili solo online.</p>' : buildTransactionList(transactions).outerHTML}
           </div>

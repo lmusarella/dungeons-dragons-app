@@ -8,6 +8,7 @@ import { openCharacterDrawer } from './home/characterDrawer.js';
 import {
   buildAttackSection,
   buildCharacterOverview,
+  buildEquipSection,
   buildEmptyState,
   buildResourceSections,
   buildSavingThrowSection,
@@ -138,6 +139,7 @@ export async function renderHome(container) {
           </header>
           ${activeCharacter ? buildCharacterOverview(activeCharacter, canEditCharacter, items) : buildEmptyState(canCreateCharacter, offline)}
         </section>
+        ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
       </div>
       <div class="home-column home-column--right">
         <section class="card home-card home-section home-scroll-panel">

@@ -21,33 +21,38 @@ function renderRoute() {
   if (!outlet) return;
   const route = window.location.hash.replace('#/', '') || 'home';
   const { user } = getState();
+  const bottomNav = document.querySelector('[data-bottom-nav]');
+  const actionsFab = document.querySelector('[data-actions-fab]');
+  const actionsBackdrop = document.querySelector('.actions-fab-backdrop');
+  const hideShell = route === 'login' || route === 'characters';
+  const showFab = route === 'home' || route === 'inventory';
+  const applyShellVisibility = (shouldHide, shouldShowFab) => {
+    if (bottomNav) bottomNav.hidden = shouldHide;
+    if (actionsFab) {
+      actionsFab.hidden = !shouldShowFab;
+      actionsFab.classList.remove('is-open');
+    }
+    if (actionsBackdrop) actionsBackdrop.hidden = !shouldShowFab;
+    if (actionsFab) {
+      actionsFab.querySelectorAll('[data-fab-scope]')
+        .forEach((item) => {
+          item.hidden = item.dataset.fabScope !== route;
+        });
+    }
+  };
   if (!user && route !== 'login') {
+    applyShellVisibility(true, false);
     window.location.hash = '#/login';
     return;
   }
   if (user && route === 'login') {
+    applyShellVisibility(false, showFab);
     window.location.hash = '#/home';
     return;
   }
   const view = routes.get(route) || routes.get('home');
   outlet.innerHTML = '';
   updateActiveTab(route);
-  const bottomNav = document.querySelector('[data-bottom-nav]');
-  const actionsFab = document.querySelector('[data-actions-fab]');
-  const actionsBackdrop = document.querySelector('.actions-fab-backdrop');
-  const hideFooter = route === 'login' || route === 'characters';
-  const showFab = route === 'home' || route === 'inventory';
-  if (bottomNav) bottomNav.hidden = hideFooter;
-  if (actionsFab) {
-    actionsFab.hidden = !showFab;
-    actionsFab.classList.remove('is-open');
-  }
-  if (actionsBackdrop) actionsBackdrop.hidden = !showFab;
-  if (actionsFab) {
-    actionsFab.querySelectorAll('[data-fab-scope]')
-      .forEach((item) => {
-        item.hidden = item.dataset.fabScope !== route;
-      });
-  }
+  applyShellVisibility(hideShell, showFab);
   view?.(outlet);
 }
