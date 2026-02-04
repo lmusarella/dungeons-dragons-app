@@ -10,14 +10,14 @@ export function renderLogin(container) {
         <div class="login-header">
           <img class="login-logo" src="/icons/logo_dd.png" alt="Dungeon & Dragon" />
           <div>
-            <p class="eyebrow">Dungeon &amp; Dragon</p>
+            <p class="eyebrow">Dungeons &amp; Dragons</p>
             <p class="login-title">Accedi</p>
           </div>
         </div>
         <p class="login-subtitle">Usa email e password per entrare o creare l'account.</p>
         <form data-login-form>
           <label class="field">
-            <span>Email</span>
+            <span >Email</span>
             <input type="email" name="email" required placeholder="nome@email.it" />
           </label>
           <label class="field">
