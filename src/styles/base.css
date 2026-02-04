@@ -392,9 +392,9 @@ button {
   left: 50%;
   padding: 10px 16px;
   border-radius: 999px;
-  border: 1px solid #e6dcc8;
-  background: #fffaf1;
-  color: #5a3b25;
+  border: none;
+  background: var(--accent);
+  color: #fff8ea;
   font-weight: 600;
   box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.12);
   transform: translate(-50%, 0) scale(0.9);
@@ -410,35 +410,35 @@ button {
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(1) {
-  transform: translate(-50%, -86px) translateX(-230px);
+  transform: translate(-50%, -110px) translateX(-260px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(2) {
-  transform: translate(-50%, -122px) translateX(-165px);
+  transform: translate(-50%, -150px) translateX(-185px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(3) {
-  transform: translate(-50%, -146px) translateX(-90px);
+  transform: translate(-50%, -180px) translateX(-100px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(4) {
-  transform: translate(-50%, -146px) translateX(90px);
+  transform: translate(-50%, -180px) translateX(100px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(5) {
-  transform: translate(-50%, -122px) translateX(165px);
+  transform: translate(-50%, -150px) translateX(185px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(6) {
-  transform: translate(-50%, -86px) translateX(230px);
+  transform: translate(-50%, -110px) translateX(260px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(7) {
-  transform: translate(-50%, -70px) translateX(-300px);
+  transform: translate(-50%, -90px) translateX(-340px);
 }
 
 .actions-fab.is-open .actions-fab-item:nth-child(8) {
-  transform: translate(-50%, -70px) translateX(300px);
+  transform: translate(-50%, -90px) translateX(340px);
 }
 
 .actions-fab-toggle {
