@@ -742,7 +742,7 @@ button {
 }
 
 .inventory-table__badges .resource-chip {
-  font-size: 0.6rem;
+  font-size: 0.67rem;
 }
 
 .inventory-table__badges .resource-chip--floating {
@@ -869,7 +869,7 @@ button {
 }
 
 .resource-card__badges .resource-chip {
-  font-size: 0.6rem;
+  font-size: 0.67rem;
 }
 
 .resource-card__badges .resource-chip--floating {
@@ -1101,13 +1101,7 @@ button {
   background: #d64541;
 }
 
-.actions button {
-  border-radius: 10px;
-  padding: 8px 12px;
-}
-
 .icon-button {
-  border: 1px solid #d8c5a5;
   background: #fffaf1;
   border-radius: 999px;
   width: 30px;
@@ -1136,6 +1130,7 @@ button {
   border-color: #e3a07f;
   background: #fff1e8;
   color: #b24a2b;
+  margin-top: 4px;
 }
 
 .icon-button--danger {
