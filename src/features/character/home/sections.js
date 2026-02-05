@@ -74,7 +74,14 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
     { value: 5, description: 'Velocità ridotta a 0.' },
     { value: 6, description: 'Morte.' }
   ];
-  const weaknessDescription = weaknessLevels.find((level) => level.value === weakPoints)?.description || 'Nessun indebolimento.';
+  const activeWeaknesses = weaknessLevels.filter((level) => level.value <= weakPoints);
+  const weaknessDescription = activeWeaknesses.length
+    ? `
+      <ul class="weakness-track__list">
+        ${activeWeaknesses.map((level) => `<li>${level.description}</li>`).join('')}
+      </ul>
+    `
+    : 'Nessun indebolimento.';
   const armorClass = calculateArmorClass(data, abilities, items);
   const abilityCards = [
     { key: 'str', label: abilityShortLabel.str, value: abilities.str },
@@ -207,7 +214,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
                 `;
   }).join('')}
               </div>
-              <span class="weakness-track__description">${weaknessDescription}</span>
+              <div class="weakness-track__description">${weaknessDescription}</div>
             </div>
             <div class="death-saves">
               <span class="death-saves__label">TS morte</span>

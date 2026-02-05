@@ -77,6 +77,7 @@ function buildOverlayMarkup() {
               Attenzione: userai il punto ispirazione su questo tiro.
             </p>
          <p class="diceov-warning" data-weakness-warning hidden></p>
+         <p class="diceov-warning" data-rollmode-warning hidden></p>
         </div>
        
         <div class="diceov-control" data-dice-control="generic">       
@@ -267,6 +268,7 @@ export function openDiceOverlay({
   const inspirationField = overlayEl.querySelector('[data-dice-inspiration]');
   const inspirationWarning = overlayEl.querySelector('[data-inspiration-warning]');
   const weaknessWarning = overlayEl.querySelector('[data-weakness-warning]');
+  const rollModeWarning = overlayEl.querySelector('[data-rollmode-warning]');
   const rollModeInput = overlayEl.querySelector('select[name="dice-roll-mode"]');
   const modifierInput = overlayEl.querySelector('input[name="dice-modifier"]');
   const modifierField = modifierInput?.closest('.diceov-field--modifier');
@@ -292,7 +294,8 @@ export function openDiceOverlay({
     inspirationConsumed: false,
     selectionOptions: Array.isArray(selection?.options) ? selection.options : [],
     history: loadHistory(),
-    selectionRollMode: null
+    selectionRollMode: null,
+    selectionRollModeReason: null
   };
 
   const normalizedWeakPoints = Math.max(0, Number(weakPoints) || 0);
@@ -360,6 +363,7 @@ export function openDiceOverlay({
     rollModeInput.disabled = inspired;
     if (inspirationWarning) inspirationWarning.toggleAttribute('hidden', !inspired);
     updateWeaknessWarning();
+    updateRollModeWarning();
   }
 
   function setInspirationAvailability(available) {
@@ -383,6 +387,7 @@ export function openDiceOverlay({
       selectWrapper.setAttribute('hidden', '');
       selectInput.innerHTML = '';
       state.selectionRollMode = null;
+      state.selectionRollModeReason = null;
       return;
     }
     selectWrapper.removeAttribute('hidden');
@@ -397,6 +402,7 @@ export function openDiceOverlay({
       modifierInput.value = Number(selected.modifier) || 0;
     }
     state.selectionRollMode = selected?.rollMode || null;
+    state.selectionRollModeReason = selected?.rollModeReason || null;
   }
 
   function updateWeaknessWarning() {
@@ -406,12 +412,22 @@ export function openDiceOverlay({
     weaknessWarning.toggleAttribute('hidden', !shouldShow);
   }
 
+  function updateRollModeWarning() {
+    if (!rollModeWarning) return;
+    const mode = getRollMode(overlayEl);
+    const shouldShow = Boolean(state.selectionRollModeReason)
+      && state.selectionRollMode === mode;
+    rollModeWarning.textContent = state.selectionRollModeReason ?? '';
+    rollModeWarning.toggleAttribute('hidden', !shouldShow);
+  }
+
   function applyDefaultRollMode() {
     if (!rollModeInput) return;
     rollModeInput.value = weaknessReason
       ? 'disadvantage'
       : (state.selectionRollMode || 'normal');
     updateWeaknessWarning();
+    updateRollModeWarning();
   }
 
   function setBuffVisibility() {
@@ -592,6 +608,7 @@ export function openDiceOverlay({
   if (rollModeInput) {
     rollModeInput.onchange = () => {
       updateWeaknessWarning();
+      updateRollModeWarning();
       updateNotationFromMode();
     };
   }
@@ -603,6 +620,7 @@ export function openDiceOverlay({
       const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
       if (selected && modifierInput) modifierInput.value = Number(selected.modifier) || 0;
       state.selectionRollMode = selected?.rollMode || null;
+      state.selectionRollModeReason = selected?.rollModeReason || null;
       if (!inspirationInput?.checked) {
         applyDefaultRollMode();
       }

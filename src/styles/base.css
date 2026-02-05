@@ -1586,6 +1586,17 @@ button {
   color: rgba(106, 85, 64, 0.85);
 }
 
+.weakness-track__list {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.weakness-track__list li {
+  margin: 0;
+}
+
 .stat-mini-card {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(234, 223, 201, 0.9);
@@ -2762,6 +2773,45 @@ button {
   font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transaction-item--incoming .transaction-amount {
+  color: #1f7a4f;
+}
+
+.transaction-item--outgoing .transaction-amount {
+  color: #b33b2f;
+}
+
+.transaction-item--incoming .transaction-info strong {
+  color: #1f7a4f;
+}
+
+.transaction-item--outgoing .transaction-info strong {
+  color: #b33b2f;
+}
+
+.transaction-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transaction-coin .coin-avatar {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+.transaction-coin__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-coin__divider {
+  color: rgba(28, 27, 26, 0.4);
 }
 
 .inventory-transactions .transaction-ledger {
