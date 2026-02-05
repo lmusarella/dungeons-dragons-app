@@ -788,12 +788,14 @@ function buildSkillRollOptions(character, items = []) {
     const mastery = Boolean(skillMasteryStates[skill.key]);
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const modifierValue = total ?? 0;
+    const isStealthHeavy = skill.key === 'stealth' && hasHeavyArmor;
     return {
       value: skill.key,
       label: `${skill.label} (${formatSigned(total)})`,
       shortLabel: skill.label,
       modifier: modifierValue,
-      rollMode: skill.key === 'stealth' && hasHeavyArmor ? 'disadvantage' : null
+      rollMode: isStealthHeavy ? 'disadvantage' : null,
+      rollModeReason: isStealthHeavy ? 'Svantaggio automatico: armatura pesante su Furtività.' : null
     };
   });
 }

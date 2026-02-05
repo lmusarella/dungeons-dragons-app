@@ -1,10 +1,43 @@
 import { formatWeight } from '../../lib/format.js';
 import {
-  formatTransactionAmount,
   formatTransactionDate,
   getCategoryLabel,
-  getItemStatusLabels
+  getItemStatusLabels,
+  normalizeTransactionAmount
 } from './utils.js';
+
+function buildTransactionAmount(amount) {
+  const baseUrl = import.meta.env.BASE_URL;
+  const coinIcons = {
+    pp: `${baseUrl}icons/moneta_platino.png`,
+    gp: `${baseUrl}icons/moneta_oro.png`,
+    sp: `${baseUrl}icons/moneta_argento.png`,
+    cp: `${baseUrl}icons/moneta_rame.png`
+  };
+  const normalized = normalizeTransactionAmount(amount);
+  const entries = ['pp', 'gp', 'sp', 'cp']
+    .map((coin) => ({ coin, value: Number(normalized?.[coin] ?? 0) }))
+    .filter((entry) => entry.value !== 0);
+  const safeEntries = entries.length ? entries : [{ coin: 'gp', value: 0 }];
+  return safeEntries.map((entry, index) => `
+      ${index ? '<span class="transaction-coin__divider" aria-hidden="true">·</span>' : ''}
+      <span class="transaction-coin" data-coin="${entry.coin}">
+        <span class="coin-avatar coin-avatar--${entry.coin}" aria-hidden="true">
+          <img src="${coinIcons[entry.coin]}" alt="" loading="lazy" />
+        </span>
+        <span class="transaction-coin__value">${entry.value}</span>
+      </span>
+    `).join('');
+}
+
+function buildTransactionAmountLabel(amount) {
+  const normalized = normalizeTransactionAmount(amount);
+  const entries = ['pp', 'gp', 'sp', 'cp']
+    .map((coin) => ({ coin, value: Number(normalized?.[coin] ?? 0) }))
+    .filter((entry) => entry.value !== 0);
+  if (!entries.length) return '0 gp';
+  return entries.map((entry) => `${entry.value} ${entry.coin}`).join(' · ');
+}
 
 export function buildTransactionList(transactions) {
   const wrapper = document.createElement('div');
@@ -24,15 +57,18 @@ export function buildTransactionList(transactions) {
   transactions.forEach((transaction) => {
     const item = document.createElement('li');
     const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
-    const amountLabel = formatTransactionAmount(transaction.amount);
+    const amountLabel = buildTransactionAmount(transaction.amount);
+    const amountLabelText = buildTransactionAmountLabel(transaction.amount);
     const dateLabel = formatTransactionDate(transaction.occurred_on || transaction.created_at);
+    const directionClass = transaction.direction === 'pay' ? 'transaction-item--outgoing' : 'transaction-item--incoming';
+    item.className = `transaction-item ${directionClass}`;
     item.innerHTML = `
       <div class="transaction-info">
         <strong>${directionLabel}</strong>
         <p class="muted">${transaction.reason || 'Nessuna nota'} · ${dateLabel}</p>
       </div>
       <div class="transaction-meta">
-        <span class="transaction-amount">${amountLabel}</span>
+        <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
         <div class="transaction-actions">
           <button class="icon-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
