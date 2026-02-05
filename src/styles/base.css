@@ -702,7 +702,7 @@ button {
 
 .inventory-table__row {
   padding: 10px 12px;
-  border: 1px solid #eadfc9;
+  border: 3px solid #eadfc9;
   border-radius: 16px;
   background: #fff;
 }
@@ -1644,9 +1644,9 @@ button {
 
 .stat-card {
   background: #fdf7ea;
-  border: 1px solid #eadfc9;
+  border: 3px solid #eadfc9;
   border-radius: 12px;
-  padding: 12px;
+  padding: 8px;
   text-align: center;
   position: relative;
 }
