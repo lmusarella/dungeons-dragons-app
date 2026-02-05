@@ -177,10 +177,22 @@ export function openSpellListModal(character, onRender) {
       return acc;
     }, {});
     const levels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-    content.innerHTML = levels.map((level) => {
+    const nav = `
+      <nav class="spell-list-modal__nav" aria-label="Livelli incantesimo">
+        ${levels.map((level, index) => {
+    const label = level === 0 ? 'Trucchetti' : `${level} Livello`;
+    return `
+          <button class="spell-list-modal__nav-button${index === 0 ? ' is-active' : ''}" type="button" data-spell-level="${level}">
+            ${label}
+          </button>
+        `;
+  }).join('')}
+      </nav>
+    `;
+    content.innerHTML = `${nav}${levels.map((level, index) => {
       const title = level === 0 ? 'Trucchetti' : `Incantesimi di livello ${level}°`;
       return `
-        <section class="spell-list-modal__section">
+        <section class="spell-list-modal__section${index === 0 ? '' : ' is-hidden'}" data-spell-section="${level}">
           <h4>${title}</h4>
           <div class="spell-list-modal__items">
             ${grouped[level].map((spell) => {
@@ -191,8 +203,9 @@ export function openSpellListModal(character, onRender) {
       : null;
     const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
     const prepState = canPrepare ? spell.prep_state || 'known' : null;
+    const description = spell.description?.trim();
     return `
-              <div class="spell-list-modal__item">
+              <div class="spell-list-modal__item" data-spell-item="${spell.id}">
                 <div class="spell-list-modal__item-info">
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
@@ -203,6 +216,14 @@ export function openSpellListModal(character, onRender) {
                     ${attackLabel ? `<span>${attackLabel}</span>` : ''}
                     ${damageText ? `<span>Danni ${damageText}</span>` : ''}
                   </div>
+                  ${description ? `
+                  <button class="spell-list-modal__toggle" type="button" data-spell-toggle="${spell.id}" aria-expanded="false">
+                    Mostra descrizione
+                  </button>
+                  <div class="spell-list-modal__item-description" data-spell-description="${spell.id}">
+                    ${description}
+                  </div>
+                  ` : ''}
                 </div>
                 <div class="spell-list-modal__item-actions">
                   <button class="icon-button" type="button" data-spell-edit="${spell.id}" aria-label="Modifica incantesimo" title="Modifica">
@@ -221,7 +242,7 @@ export function openSpellListModal(character, onRender) {
           </div>
         </section>
       `;
-    }).join('');
+    }).join('')}`;
   }
 
   openFormModal({
@@ -258,6 +279,35 @@ export function openSpellListModal(character, onRender) {
         openSpellDrawer(character, () => onRender?.(), spell);
       }, 0);
     }));
+
+  content.querySelectorAll('[data-spell-level]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const level = button.dataset.spellLevel;
+      if (!level) return;
+      content.querySelectorAll('[data-spell-level]').forEach((navButton) => {
+        navButton.classList.toggle('is-active', navButton === button);
+      });
+      content.querySelectorAll('[data-spell-section]').forEach((section) => {
+        section.classList.toggle('is-hidden', section.dataset.spellSection !== level);
+      });
+    }));
+
+  content.querySelectorAll('[data-spell-toggle]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const spellId = button.dataset.spellToggle;
+      const item = content.querySelector(`[data-spell-item="${spellId}"]`);
+      const description = content.querySelector(`[data-spell-description="${spellId}"]`);
+      if (!item || !description) return;
+      const isExpanded = item.classList.toggle('is-expanded');
+      button.setAttribute('aria-expanded', String(isExpanded));
+      button.textContent = isExpanded ? 'Nascondi descrizione' : 'Mostra descrizione';
+      description.hidden = !isExpanded;
+    }));
+
+  content.querySelectorAll('[data-spell-description]')
+    .forEach((description) => {
+      description.hidden = true;
+    });
 
   content.querySelectorAll('[data-spell-delete]')
     .forEach((button) => button.addEventListener('click', async () => {
