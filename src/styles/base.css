@@ -730,7 +730,7 @@ button {
 
 .inventory-table__badges {
   position: absolute;
-  top: 6px;
+  top: -10px;
   right: 10px;
   display: flex;
   gap: 6px;
@@ -857,7 +857,7 @@ button {
 
 .resource-card__badges {
   position: absolute;
-  top: 6px;
+  top: -10px;
   right: 8px;
   display: flex;
   gap: 6px;
@@ -1050,15 +1050,15 @@ button {
 }
 
 .resource-chip--floating.resource-chip--magic {
-  background: #7c4bd9;
+  background: #2563eb;
 }
 
 .resource-chip--floating.resource-chip--equipable {
-  background: #1f7a6f;
+  background: #f97316;
 }
 
 .resource-chip--floating.resource-chip--attunement {
-  background: #c2543d;
+  background: #10b981;
 }
 
 .resource-form-actions {
