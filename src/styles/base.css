@@ -625,7 +625,6 @@ button {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 12px;
 }
 
 .filters {
@@ -1620,7 +1619,7 @@ button {
 .wallet-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .wallet-card {
@@ -2587,7 +2586,7 @@ button {
 .pill {
   padding: 4px 10px;
   border-radius: 999px;
-  background: #eadfc9;
+  background: #7b6d53;
   font-size: 0.75rem;
 }
 
