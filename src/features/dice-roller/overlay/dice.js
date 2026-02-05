@@ -54,9 +54,9 @@ function buildOverlayMarkup() {
             <label class="diceov-label" for="dice-modifier">Mod</label>
             <input id="dice-modifier" type="number" name="dice-modifier" value="0" step="1" />
           </div>
-          <div class="diceov-control" data-dice-buff hidden>
-            <label class="diceov-label" for="dice-buff">Buff/Debuff</label>
-            <select id="dice-buff" name="dice-buff">
+          <div class="diceov-control" data-dice-buff="d20" hidden>
+            <label class="diceov-label" for="dice-buff-d20">Buff/Debuff</label>
+            <select id="dice-buff-d20" name="dice-buff-d20">
               <option value="none" selected>Nessuno</option>
               <option value="plus-d4">+d4</option>
               <option value="plus-d6">+d6</option>
@@ -106,6 +106,16 @@ function buildOverlayMarkup() {
             <div class="diceov-field diceov-field--modifier">
               <label class="diceov-label" for="dice-modifier-generic">Mod</label>
               <input id="dice-modifier-generic" type="number" name="dice-modifier-generic" value="0" step="1" />
+            </div>
+            <div class="diceov-field" data-dice-buff="damage" hidden>
+              <label class="diceov-label" for="dice-buff-damage">Buff/Debuff</label>
+              <select id="dice-buff-damage" name="dice-buff-damage">
+                <option value="none" selected>Nessuno</option>
+                <option value="plus-d4">+d4</option>
+                <option value="plus-d6">+d6</option>
+                <option value="minus-d4">-d4</option>
+                <option value="minus-d6">-d6</option>
+              </select>
             </div>
           </div>
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
@@ -286,8 +296,10 @@ export function openDiceOverlay({
   const selectInput = overlayEl.querySelector('select[name="dice-roll-select"]');
   const resultValue = overlayEl.querySelector('[data-dice-result]');
   const resultDetail = overlayEl.querySelector('[data-dice-detail]');
-  const buffWrapper = overlayEl.querySelector('[data-dice-buff]');
-  const buffSelect = overlayEl.querySelector('select[name="dice-buff"]');
+  const buffWrapperD20 = overlayEl.querySelector('[data-dice-buff="d20"]');
+  const buffSelectD20 = overlayEl.querySelector('select[name="dice-buff-d20"]');
+  const buffWrapperDamage = overlayEl.querySelector('[data-dice-buff="damage"]');
+  const buffSelectDamage = overlayEl.querySelector('select[name="dice-buff-damage"]');
   const stage = overlayEl.querySelector('.diceov-stage');
   const historyAccordion = overlayEl.querySelector('[data-history-accordion]');
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
@@ -463,19 +475,30 @@ export function openDiceOverlay({
     updateNotationFromMode();
   }
 
+  function getActiveBuffElements() {
+    const isDamage = rollType === 'DMG' && mode === 'generic';
+    if (isDamage) {
+      return { wrapper: buffWrapperDamage, select: buffSelectDamage };
+    }
+    return { wrapper: buffWrapperD20, select: buffSelectD20 };
+  }
+
   function setBuffVisibility() {
-    if (!buffWrapper || !buffSelect) return;
-    const supported = ['TS', 'TA', 'TC', 'DMG'].includes(rollType);
-    buffWrapper.toggleAttribute('hidden', !supported);
-    if (!supported) {
-      buffSelect.value = 'none';
+    const isSupported = ['TS', 'TA', 'TC', 'DMG'].includes(rollType);
+    const isDamage = rollType === 'DMG' && mode === 'generic';
+    if (buffWrapperD20) buffWrapperD20.toggleAttribute('hidden', !(isSupported && !isDamage));
+    if (buffWrapperDamage) buffWrapperDamage.toggleAttribute('hidden', !(isSupported && isDamage));
+    if (buffSelectD20) buffSelectD20.value = 'none';
+    if (buffSelectDamage) buffSelectDamage.value = 'none';
+    if (!isSupported) {
       state.lastBuff = null;
     }
   }
 
   function getBuffConfig() {
-    if (!buffSelect || buffWrapper?.hasAttribute('hidden')) return null;
-    const choice = buffSelect.value;
+    const { wrapper, select } = getActiveBuffElements();
+    if (!select || wrapper?.hasAttribute('hidden')) return null;
+    const choice = select.value;
     if (choice === 'none') return null;
     const sides = choice.endsWith('d6') ? 6 : 4;
     const isPositive = choice.startsWith('plus');
@@ -698,16 +721,16 @@ export function openDiceOverlay({
     if (notationInput) notationInput.value = notation;
     updateNotationFromGeneric();
   };
-  if (buffSelect) {
-    buffSelect.onchange = () => {
-      state.lastBuff = null;
-      if (mode === 'generic') {
-        updateNotationFromGeneric();
-      } else {
-        updateNotationFromMode();
-      }
-    };
-  }
+  const handleBuffChange = () => {
+    state.lastBuff = null;
+    if (mode === 'generic') {
+      updateNotationFromGeneric();
+    } else {
+      updateNotationFromMode();
+    }
+  };
+  if (buffSelectD20) buffSelectD20.onchange = handleBuffChange;
+  if (buffSelectDamage) buffSelectDamage.onchange = handleBuffChange;
   if (historyToggle) {
     historyToggle.onclick = () => {
       const shouldOpen = !historyAccordion?.classList.contains('is-open');
