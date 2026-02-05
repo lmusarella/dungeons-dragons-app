@@ -81,12 +81,28 @@ export function rollDie(sides) {
 
 export function parseDamageDice(damageDie) {
   if (!damageDie || typeof damageDie !== 'string') return null;
-  const match = damageDie.trim().match(/(\d+)d(\d+)/i);
-  if (!match) return null;
-  const count = Number(match[1]);
-  const sides = Number(match[2]);
-  if (!Number.isFinite(count) || !Number.isFinite(sides) || !count || !sides) return null;
-  return { count, sides };
+  const trimmed = damageDie.trim();
+  if (!trimmed) return null;
+  const regex = /([+-]?)\s*(\d+)\s*d\s*(\d+)/gi;
+  const parts = [];
+  let match;
+  while ((match = regex.exec(trimmed)) !== null) {
+    const sign = match[1] === '-' ? -1 : 1;
+    const count = Number(match[2]);
+    const sides = Number(match[3]);
+    if (!Number.isFinite(count) || !Number.isFinite(sides) || !count || !sides) return null;
+    parts.push({ count, sides, sign });
+  }
+  if (!parts.length) return null;
+  const leftover = trimmed.replace(regex, '').trim();
+  if (leftover) return null;
+  const notation = parts
+    .map((part, index) => {
+      const prefix = part.sign < 0 ? '-' : index === 0 ? '' : '+';
+      return `${prefix}${part.count}d${part.sides}`;
+    })
+    .join('');
+  return { notation, parts };
 }
 
 export function formatSigned(value) {
@@ -212,7 +228,7 @@ export function buildWeaponDamageOverlayConfig(character, weapon) {
   if (!dice) return null;
   return {
     title: `Danni ${weapon.name}`,
-    notation: `${dice.count}d${dice.sides}`,
+    notation: dice.notation,
     modifier: damageTotal
   };
 }
@@ -224,7 +240,7 @@ export function buildSpellDamageOverlayConfig(spell) {
   const damageModifier = Number(spell.damage_modifier) || 0;
   return {
     title: `Danni ${spell.name}`,
-    notation: `${dice.count}d${dice.sides}`,
+    notation: dice.notation,
     modifier: damageModifier
   };
 }
@@ -330,13 +346,24 @@ export function calculateWeaponDamageRoll(character, weapon) {
   const damageTotal = abilityMod + (Number(weapon.damage_modifier) || 0) + damageBonus;
   const dice = parseDamageDice(weapon.damage_die);
   if (!dice) return null;
-  const rolls = Array.from({ length: dice.count }, () => rollDie(dice.sides));
-  const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
+  const rollGroups = dice.parts.map((part) => ({
+    ...part,
+    rolls: Array.from({ length: part.count }, () => rollDie(part.sides))
+  }));
+  const diceTotal = rollGroups.reduce((sum, group) => (
+    sum + group.sign * group.rolls.reduce((innerSum, value) => innerSum + value, 0)
+  ), 0);
   const total = diceTotal + damageTotal;
   const bonusLabel = damageTotal ? ` ${formatSigned(damageTotal)}` : '';
+  const rollsLabel = rollGroups
+    .map((group, index) => {
+      const prefix = group.sign < 0 ? '-' : index === 0 ? '' : '+';
+      return `${prefix}${group.count}d${group.sides}: ${group.rolls.join(' + ')}`;
+    })
+    .join(' ');
   return {
     total,
-    label: `${weapon.name} (${dice.count}d${dice.sides}: ${rolls.join(' + ')}${bonusLabel})`
+    label: `${weapon.name} (${dice.notation}: ${rollsLabel}${bonusLabel})`
   };
 }
 
@@ -345,12 +372,23 @@ export function calculateSpellDamageRoll(spell) {
   const dice = parseDamageDice(spell.damage_die);
   if (!dice) return null;
   const damageModifier = Number(spell.damage_modifier) || 0;
-  const rolls = Array.from({ length: dice.count }, () => rollDie(dice.sides));
-  const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
+  const rollGroups = dice.parts.map((part) => ({
+    ...part,
+    rolls: Array.from({ length: part.count }, () => rollDie(part.sides))
+  }));
+  const diceTotal = rollGroups.reduce((sum, group) => (
+    sum + group.sign * group.rolls.reduce((innerSum, value) => innerSum + value, 0)
+  ), 0);
   const total = diceTotal + damageModifier;
   const bonusLabel = damageModifier ? ` ${formatSigned(damageModifier)}` : '';
+  const rollsLabel = rollGroups
+    .map((group, index) => {
+      const prefix = group.sign < 0 ? '-' : index === 0 ? '' : '+';
+      return `${prefix}${group.count}d${group.sides}: ${group.rolls.join(' + ')}`;
+    })
+    .join(' ');
   return {
     total,
-    label: `${spell.name} (${dice.count}d${dice.sides}: ${rolls.join(' + ')}${bonusLabel})`
+    label: `${spell.name} (${dice.notation}: ${rollsLabel}${bonusLabel})`
   };
 }

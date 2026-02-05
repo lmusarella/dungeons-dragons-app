@@ -465,7 +465,7 @@ export function openDiceOverlay({
 
   function setBuffVisibility() {
     if (!buffWrapper || !buffSelect) return;
-    const supported = ['TS', 'TA', 'TC'].includes(rollType);
+    const supported = ['TS', 'TA', 'TC', 'DMG'].includes(rollType);
     buffWrapper.toggleAttribute('hidden', !supported);
     if (!supported) {
       buffSelect.value = 'none';
@@ -504,6 +504,21 @@ export function openDiceOverlay({
           : baseRolls[0]
       : null;
     return { rollMode, baseRolls, picked, buff };
+  }
+
+  function getGenericRollInfo(notation) {
+    const rolls = notation.result || [];
+    const buffConfig = getBuffConfig();
+    if (buffConfig && rolls.length) {
+      const buffRoll = rolls[rolls.length - 1];
+      if (typeof buffRoll === 'number') {
+        return {
+          baseRolls: rolls.slice(0, -1),
+          buff: { ...buffConfig, roll: buffRoll, delta: buffConfig.sign * buffRoll }
+        };
+      }
+    }
+    return { baseRolls: rolls, buff: null };
   }
 
   function setHistoryOpen(open) {
@@ -545,7 +560,11 @@ export function openDiceOverlay({
 
   function updateNotationFromGeneric() {
     const notation = notationInput?.value?.trim();
-    const value = notation || buildGenericNotation(overlayEl);
+    const baseValue = notation || buildGenericNotation(overlayEl);
+    const buffConfig = getBuffConfig();
+    const value = buffConfig
+      ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
+      : baseValue;
     updateDiceInput(overlayEl, value);
     resetResult();
   }
@@ -599,20 +618,21 @@ export function openDiceOverlay({
       return;
     }
 
-    const rolls = notation.result || [];
-    const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
+    const info = getGenericRollInfo(notation);
+    state.lastBuff = info.buff;
+    const diceTotal = info.baseRolls.reduce((sum, value) => sum + value, 0);
     const constant = Number(notation.constant) || 0;
-    const buffDelta = state.lastBuff?.delta || 0;
+    const buffDelta = info.buff?.delta || 0;
     const total = diceTotal + constant + modifier + buffDelta;
-    const rollDetail = rolls.length ? `Dadi: ${rolls.join(', ')}` : 'Dadi: —';
+    const rollDetail = info.baseRolls.length ? `Dadi: ${info.baseRolls.join(', ')}` : 'Dadi: —';
     if (resultValue) resultValue.textContent = `${total}`;
     if (resultDetail) {
       const pieces = [rollDetail];
       if (constant) pieces.push(`Costante ${formatModifier(constant)}`);
       if (modifier) pieces.push(`Mod ${formatModifier(modifier)}`);
-      if (state.lastBuff) {
+      if (info.buff) {
         pieces.push(
-          `${state.lastBuff.label} ${formatModifier(state.lastBuff.delta)} (d${state.lastBuff.sides}: ${state.lastBuff.roll})`
+          `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
         );
       }
       resultDetail.textContent = pieces.join(' · ');
@@ -629,10 +649,11 @@ export function openDiceOverlay({
       const buffDelta = info.buff?.delta || 0;
       return { value: info.picked, total: (info.picked ?? 0) + modifier + buffDelta };
     }
-    const rolls = notation.result || [];
-    const diceTotal = rolls.reduce((sum, value) => sum + value, 0);
+    const info = getGenericRollInfo(notation);
+    state.lastBuff = info.buff;
+    const diceTotal = info.baseRolls.reduce((sum, value) => sum + value, 0);
     const constant = Number(notation.constant) || 0;
-    const buffDelta = state.lastBuff?.delta || 0;
+    const buffDelta = info.buff?.delta || 0;
     const value = diceTotal + constant;
     return { value, total: value + modifier + buffDelta };
   }
@@ -680,7 +701,11 @@ export function openDiceOverlay({
   if (buffSelect) {
     buffSelect.onchange = () => {
       state.lastBuff = null;
-      updateNotationFromMode();
+      if (mode === 'generic') {
+        updateNotationFromGeneric();
+      } else {
+        updateNotationFromMode();
+      }
     };
   }
   if (historyToggle) {
