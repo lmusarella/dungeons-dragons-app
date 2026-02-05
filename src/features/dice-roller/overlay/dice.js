@@ -454,6 +454,7 @@ export function openDiceOverlay({
       : (state.selectionRollMode || 'normal');
     updateWeaknessWarning();
     updateRollModeWarning();
+    updateNotationFromMode();
   }
 
   function setBuffVisibility() {
