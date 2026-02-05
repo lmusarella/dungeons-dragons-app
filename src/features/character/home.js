@@ -868,6 +868,8 @@ function buildSkillRollOptions(character, items = []) {
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
+  const conditionState = getConditionState(character);
+  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
   const hasHeavyArmor = (items || []).some((item) => item.category === 'armor'
     && item.armor_type === 'heavy'
     && item.equipable
@@ -878,13 +880,20 @@ function buildSkillRollOptions(character, items = []) {
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const modifierValue = total ?? 0;
     const isStealthHeavy = skill.key === 'stealth' && hasHeavyArmor;
+    const rollModeReasons = [];
+    if (poisonedConditions.length) {
+      rollModeReasons.push(`Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.`);
+    }
+    if (isStealthHeavy) {
+      rollModeReasons.push('Svantaggio automatico: armatura pesante su Furtività.');
+    }
     return {
       value: skill.key,
       label: `${skill.label} (${formatSigned(total)})`,
       shortLabel: skill.label,
       modifier: modifierValue,
-      rollMode: isStealthHeavy ? 'disadvantage' : null,
-      rollModeReason: isStealthHeavy ? 'Svantaggio automatico: armatura pesante su Furtività.' : null
+      rollMode: rollModeReasons.length ? 'disadvantage' : null,
+      rollModeReason: rollModeReasons.length ? rollModeReasons.join(' ') : null
     };
   });
 }
