@@ -1,3 +1,5 @@
+import { normalizeCharacterId } from '../../../app/state.js';
+
 let overlayEl = null;
 
 function buildDiceMarkup() {
@@ -162,21 +164,31 @@ function hasInvalidRolls(notation) {
 const HISTORY_KEY = 'diceRollHistory';
 const HISTORY_LIMIT = 12;
 
-function loadHistory() {
+function getHistoryStorageKey(characterId) {
+  const normalizedId = normalizeCharacterId(characterId);
+  return `${HISTORY_KEY}:${normalizedId || 'global'}`;
+}
+
+function loadHistory(characterId) {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(HISTORY_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const scopedRaw = window.localStorage.getItem(getHistoryStorageKey(characterId));
+    if (scopedRaw) {
+      const parsedScoped = JSON.parse(scopedRaw);
+      return Array.isArray(parsedScoped) ? parsedScoped : [];
+    }
+    const legacyRaw = window.localStorage.getItem(HISTORY_KEY);
+    const legacyParsed = legacyRaw ? JSON.parse(legacyRaw) : [];
+    return Array.isArray(legacyParsed) ? legacyParsed : [];
   } catch {
     return [];
   }
 }
 
-function saveHistory(entries) {
+function saveHistory(entries, characterId) {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+    window.localStorage.setItem(getHistoryStorageKey(characterId), JSON.stringify(entries));
   } catch { }
 }
 
@@ -245,7 +257,9 @@ export function openDiceOverlay({
   allowInspiration = false,
   onConsumeInspiration = null,
   rollType = null,
-  weakPoints = 0
+  weakPoints = 0,
+  characterId = null,
+  historyLabel = null
 } = {}) {
   if (!overlayEl) {
     overlayEl = document.createElement('div');
@@ -312,7 +326,7 @@ export function openDiceOverlay({
     inspirationAvailable: Boolean(allowInspiration),
     inspirationConsumed: false,
     selectionOptions: Array.isArray(selection?.options) ? selection.options : [],
-    history: loadHistory(),
+    history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null
   };
@@ -357,6 +371,7 @@ export function openDiceOverlay({
           <div class="diceov-history-type diceov-history-type--${String(entry.type || 'gen').toLowerCase()}">
             <span class="diceov-history-type-code">${entry.type || '—'}</span>
             ${entry.subtype ? `<span class="diceov-history-subtype">${entry.subtype}</span>` : ''}
+            ${entry.context ? `<span class="diceov-history-subtype">${entry.context}</span>` : ''}
             ${entry.inspired ? '<span class="diceov-history-flag">Isp.</span>' : ''}
           </div>
           <span class="diceov-history-total">${entry.total ?? '—'}</span>
@@ -368,7 +383,7 @@ export function openDiceOverlay({
 
   function addHistoryEntry(entry) {
     state.history = [entry, ...state.history].slice(0, HISTORY_LIMIT);
-    saveHistory(state.history);
+    saveHistory(state.history, characterId);
     renderHistory();
   }
 
@@ -810,6 +825,7 @@ export function openDiceOverlay({
         addHistoryEntry({
           type: rollType || 'GEN',
           subtype: getSelectionLabel(),
+          context: historyLabel,
           inspired: state.inspirationConsumed,
           value: summary.value,
           total: summary.total,

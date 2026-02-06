@@ -453,7 +453,8 @@ export async function renderHome(container) {
           mode: 'generic',
           notation: overlayConfig.notation,
           modifier: overlayConfig.modifier,
-          rollType: 'DMG'
+          rollType: 'DMG',
+          characterId: activeCharacter?.id
         });
         return;
       }
@@ -470,7 +471,8 @@ export async function renderHome(container) {
         mode: 'generic',
         notation: overlayConfig.notation,
         modifier: overlayConfig.modifier,
-        rollType: 'DMG'
+        rollType: 'DMG',
+        characterId: activeCharacter?.id
       });
     }));
 
@@ -488,7 +490,9 @@ export async function renderHome(container) {
       mode: 'generic',
       notation: parsed.notation,
       modifier: Number(resource.damage_modifier) || 0,
-      rollType: 'DMG'
+      rollType: 'DMG',
+      characterId: activeCharacter?.id,
+      historyLabel: resource.name || null
     });
   };
 
@@ -1052,7 +1056,8 @@ function handleDiceAction(type) {
     ...config,
     allowInspiration,
     onConsumeInspiration,
-    weakPoints
+    weakPoints,
+    characterId: activeCharacter?.id
   });
 }
 
@@ -1193,7 +1198,9 @@ function openDiceRollerModal({
   allowInspiration = false,
   onConsumeInspiration = null,
   rollType = null,
-  weakPoints = 0
+  weakPoints = 0,
+  characterId = null,
+  historyLabel = null
 }) {
   openDiceOverlay({
     keepOpen: true,
@@ -1203,7 +1210,9 @@ function openDiceRollerModal({
     allowInspiration,
     onConsumeInspiration,
     rollType,
-    weakPoints
+    weakPoints,
+    characterId,
+    historyLabel
   });
 }
 
