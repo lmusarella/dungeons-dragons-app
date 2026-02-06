@@ -570,6 +570,11 @@ header {
   color: #7dff9a;
 }
 
+
+.diceov-history-type--dmg .diceov-history-type-code {
+  color: #ff6b6b;
+}
+
 .diceov-history-subtype {
   font-size: 0.7rem;
   font-weight: 600;
