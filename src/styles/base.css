@@ -1185,9 +1185,26 @@ button {
   gap: 12px;
 }
 
-.background-modal-block strong {
-  display: block;
-  margin-bottom: 6px;
+.background-modal-block {
+  padding: 6px 4px;
+}
+
+.background-modal-description {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  font-weight: 500;
+  color: #2e2418;
+  white-space: pre-wrap;
+}
+
+.modal-card--background {
+  width: min(780px, 95%);
+}
+
+.modal-card--background .detail-card {
+  background: linear-gradient(135deg, #fffaf1, #f9f0df);
+  border-color: #dbc7a5;
 }
 
 .proficiency-chip {

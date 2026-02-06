@@ -26,44 +26,28 @@ function getPrepStateLabel(state) {
 export function openBackgroundModal(character) {
   if (!character) return;
   const data = character.data || {};
-  const background = data.background || 'Background non impostato.';
   const description = data.description || 'Aggiungi una descrizione del background.';
   const content = document.createElement('div');
   content.className = 'background-modal';
-
-  const backgroundCard = document.createElement('div');
-  backgroundCard.className = 'detail-card detail-card--text';
-  const backgroundBlock = document.createElement('div');
-  backgroundBlock.className = 'background-modal-block';
-  const backgroundTitle = document.createElement('strong');
-  backgroundTitle.textContent = 'Background';
-  const backgroundText = document.createElement('p');
-  backgroundText.textContent = background;
-  backgroundBlock.appendChild(backgroundTitle);
-  backgroundBlock.appendChild(backgroundText);
-  backgroundCard.appendChild(backgroundBlock);
 
   const descriptionCard = document.createElement('div');
   descriptionCard.className = 'detail-card detail-card--text';
   const descriptionBlock = document.createElement('div');
   descriptionBlock.className = 'background-modal-block';
-  const descriptionTitle = document.createElement('strong');
-  descriptionTitle.textContent = 'Descrizione';
   const descriptionText = document.createElement('p');
+  descriptionText.className = 'background-modal-description';
   descriptionText.textContent = description;
-  descriptionBlock.appendChild(descriptionTitle);
   descriptionBlock.appendChild(descriptionText);
   descriptionCard.appendChild(descriptionBlock);
 
-  content.appendChild(backgroundCard);
   content.appendChild(descriptionCard);
 
   openFormModal({
-    title: 'Background',
-    submitLabel: 'Chiudi',
+    title: 'Descrizione background',
     cancelLabel: null,
     content,
-    cardClass: 'modal-card--scrollable'
+    cardClass: ['modal-card--scrollable', 'modal-card--background'],
+    showFooter: false
   });
 }
 
@@ -330,7 +314,11 @@ export function openSpellListModal(character, onRender) {
     .forEach((button) => button.addEventListener('click', async () => {
       const spell = spells.find((entry) => entry.id === button.dataset.spellDelete);
       if (!spell) return;
-      const shouldDelete = await openConfirmModal({ message: `Eliminare l'incantesimo ${spell.name}?` });
+      const shouldDelete = await openConfirmModal({
+        title: 'Conferma eliminazione incantesimo',
+        message: `Stai per eliminare l'incantesimo "${spell.name}" dalla scheda del personaggio. Questa azione non può essere annullata.`,
+        confirmLabel: 'Elimina'
+      });
       if (!shouldDelete) return;
       const nextSpells = spells.filter((entry) => entry.id !== spell.id);
       const nextData = {
