@@ -701,7 +701,7 @@ async function handleLootAction(container) {
   const weightUnit = getWeightUnit(activeCharacter);
   const weightStep = weightUnit === 'kg' ? '0.1' : '1';
   const formData = await openFormModal({
-    title: 'Aggiungi loot',
+    title: 'Aggiungi loot rapido',
     submitLabel: 'Aggiungi',
     content: buildLootFields(weightStep)
   });
@@ -1084,7 +1084,7 @@ async function handleHpAction(action, container) {
     createToast('Azioni HP disponibili solo con profilo online', 'error');
     return;
   }
-  const title = action === 'heal' ? 'Cura PF' : 'Infliggi danno';
+  const title = action === 'heal' ? 'Cura PF' : 'Subisci danno';
   const submitLabel = action === 'heal' ? 'Cura' : 'Danno';
   const formData = await openFormModal({
     title,

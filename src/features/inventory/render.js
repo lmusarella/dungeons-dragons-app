@@ -181,12 +181,16 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
       <label class="field">
         <span>Tipo moneta</span>
         <select name="coin">
-          <option value="pp" ${coin === 'pp' ? 'selected' : ''}>Platino (PP)</option>
-          <option value="gp" ${coin === 'gp' ? 'selected' : ''}>Oro (GP)</option>
-          <option value="sp" ${coin === 'sp' ? 'selected' : ''}>Argento (SP)</option>
-          <option value="cp" ${coin === 'cp' ? 'selected' : ''}>Rame (CP)</option>
+          <option value="pp" ${coin === 'pp' ? 'selected' : ''}>Platino</option>
+          <option value="gp" ${coin === 'gp' ? 'selected' : ''}>Oro</option>
+          <option value="sp" ${coin === 'sp' ? 'selected' : ''}>Argento</option>
+          <option value="cp" ${coin === 'cp' ? 'selected' : ''}>Rame</option>
         </select>
       </label>
+       <label class="field">
+      <span>Data</span>
+      <input name="occurred_on" type="date" value="${resolvedDate}" />
+    </label>
     </div>
     ${includeDirection ? `
       <label class="field">
@@ -201,10 +205,7 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
       <span>Motivo</span>
       <input name="reason" placeholder="Motivo" value="${reason}" />
     </label>
-    <label class="field">
-      <span>Data</span>
-      <input name="occurred_on" type="date" value="${resolvedDate}" />
-    </label>
+   
   `;
 }
 
@@ -216,10 +217,10 @@ export function exchangeFields({
   available = {}
 } = {}) {
   const entries = [
-    { key: 'pp', label: 'Platino (PP)', value: Number(available.pp ?? 0) },
-    { key: 'gp', label: 'Oro (GP)', value: Number(available.gp ?? 0) },
-    { key: 'sp', label: 'Argento (SP)', value: Number(available.sp ?? 0) },
-    { key: 'cp', label: 'Rame (CP)', value: Number(available.cp ?? 0) }
+    { key: 'pp', label: 'Platino', value: Number(available.pp ?? 0) },
+    { key: 'gp', label: 'Oro', value: Number(available.gp ?? 0) },
+    { key: 'sp', label: 'Argento', value: Number(available.sp ?? 0) },
+    { key: 'cp', label: 'Rame', value: Number(available.cp ?? 0) }
   ];
   const hasAvailable = entries.some((entry) => entry.value > 0);
   const sourceOptions = entries
@@ -271,11 +272,17 @@ export function exchangeFields({
 
 export function buildLootFields(weightStep) {
   return `
-    <div class="compact-field-grid">
+   <div class="compact-field-grid">
       <label class="field">
         <span>Nome</span>
         <input name="name" required />
       </label>
+       <label class="field">
+        <span>Valore</span>
+        <input name="value_cp" type="number" value="0" />
+      </label>
+   </div>
+    <div class="compact-field-grid">  
       <label class="field">
         <span>Quantità</span>
         <input name="qty" type="number" value="1" />
@@ -288,10 +295,7 @@ export function buildLootFields(weightStep) {
         <span>Volume</span>
         <input name="volume" type="number" value="0" min="0" step="0.1" />
       </label>
-      <label class="field">
-        <span>Valore (cp)</span>
-        <input name="value_cp" type="number" value="0" />
-      </label>
+     
     </div>
   `;
 }
