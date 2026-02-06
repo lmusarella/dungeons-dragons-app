@@ -67,8 +67,7 @@ export function renderLayout(container) {
       </nav>
       <div class="drawer" data-drawer>
         <div class="drawer-overlay" data-drawer-close></div>
-        <div class="drawer-panel">
-          <button class="drawer-close" data-drawer-close>Chiudi</button>
+        <div class="drawer-panel">          
           <div data-drawer-body></div>
         </div>
       </div>
@@ -143,10 +142,10 @@ export function renderLayout(container) {
   }
 
   container.addEventListener('click', (event) => {
-    const target = event.target.closest('[data-drawer-close]');
+    /*const target = event.target.closest('[data-drawer-close]');
     if (target) {
       closeDrawer();
-    }
+    }*/
     if (actionsFab && actionsFab.classList.contains('is-open')) {
       const insideFab = event.target.closest('[data-actions-fab]');
       if (!insideFab) {
