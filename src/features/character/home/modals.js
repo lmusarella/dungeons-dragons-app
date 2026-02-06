@@ -98,9 +98,19 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
+  const placeholderImage = `${import.meta.env.BASE_URL}icons/icon.svg`;
+  const imageUrl = resource.image_url?.trim() || placeholderImage;
+  const hasCustomImage = Boolean(resource.image_url?.trim());
+  const imageAlt = hasCustomImage
+    ? `Immagine di ${resource.name}`
+    : `Immagine placeholder per ${resource.name}`;
+  const imageClass = hasCustomImage
+    ? 'resource-detail-image'
+    : 'resource-detail-image resource-detail-image--placeholder';
 
   detail.innerHTML = `
     <div class="detail-card detail-card--text">
+      <img class="${imageClass}" src="${imageUrl}" alt="${imageAlt}" />
       <h4>${resource.name}</h4>
       <p>${description}</p>
     </div>
