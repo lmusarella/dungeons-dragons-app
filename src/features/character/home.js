@@ -42,6 +42,7 @@ import {
   getEquipSlots,
   getHitDiceSides,
   normalizeNumber,
+  parseDamageDice,
   rollDie
 } from './home/utils.js';
 import { applyMoneyDelta } from '../../lib/calc.js';
@@ -473,6 +474,37 @@ export async function renderHome(container) {
       });
     }));
 
+  const openResourceRollOverlay = (resource) => {
+    const notation = resource?.damage_dice_notation?.trim();
+    if (!notation) return;
+    const parsed = parseDamageDice(notation);
+    if (!parsed?.notation) {
+      createToast('Notazione dado non valida per questa abilità', 'error');
+      return;
+    }
+    openDiceOverlay({
+      keepOpen: true,
+      title: resource.name || 'Tiro abilità',
+      mode: 'generic',
+      notation: parsed.notation,
+      modifier: Number(resource.damage_modifier) || 0,
+      rollType: 'DMG'
+    });
+  };
+
+  const useResource = async (resource) => {
+    const maxUses = Number(resource.max_uses) || 0;
+    if (!maxUses || resource.used >= maxUses) return;
+    try {
+      await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
+      createToast('Risorsa usata');
+      openResourceRollOverlay(resource);
+      renderHome(container);
+    } catch (error) {
+      createToast('Errore utilizzo risorsa', 'error');
+    }
+  };
+
   container.querySelectorAll('[data-resource-card]')
     .forEach((card) => {
       const handleOpen = async (event) => {
@@ -480,17 +512,7 @@ export async function renderHome(container) {
         const resource = resources.find((entry) => entry.id === card.dataset.resourceCard);
         if (!resource) return;
         openResourceDetail(resource, {
-          onUse: async () => {
-            const maxUses = Number(resource.max_uses) || 0;
-            if (!maxUses || resource.used >= maxUses) return;
-            try {
-              await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
-              createToast('Risorsa usata');
-              renderHome(container);
-            } catch (error) {
-              createToast('Errore utilizzo risorsa', 'error');
-            }
-          },
+          onUse: () => useResource(resource),
           onReset: async () => {
             try {
               await updateResource(resource.id, { used: 0 });
@@ -509,15 +531,7 @@ export async function renderHome(container) {
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
-      const maxUses = Number(resource.max_uses) || 0;
-      if (!maxUses || resource.used >= maxUses) return;
-      try {
-        await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
-        createToast('Risorsa usata');
-        renderHome(container);
-      } catch (error) {
-        createToast('Errore utilizzo risorsa', 'error');
-      }
+      await useResource(resource);
     }));
 
   container.querySelectorAll('[data-delete-resource]')
