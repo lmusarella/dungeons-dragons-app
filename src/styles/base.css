@@ -2100,6 +2100,14 @@ button {
   max-width: 120px;
 }
 
+.hp-shortcut-fields {
+  gap: 12px;
+}
+
+.hp-shortcut-fields__count {
+  margin-top: 0;
+}
+
 .chip {
   display: inline-flex;
   padding: 4px 8px;

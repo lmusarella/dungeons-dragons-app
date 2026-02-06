@@ -1202,23 +1202,33 @@ function buildHpShortcutFields(
   } = {}
 ) {
   const wrapper = document.createElement('div');
+  wrapper.className = 'modal-form-grid hp-shortcut-fields';
   const amountField = buildInput({ label: 'Valore', name: 'amount', type: 'number', value: '1' });
+  amountField.classList.add('hp-shortcut-fields__amount');
   const amountInput = amountField.querySelector('input');
   if (amountInput) {
     amountInput.min = '1';
     amountInput.required = true;
   }
-  wrapper.appendChild(amountField);
+
+  const primaryRow = document.createElement('div');
+  primaryRow.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';
+  primaryRow.appendChild(amountField);
 
   if (allowTempHp) {
-    const tempHpField = document.createElement('label');
-    tempHpField.className = 'checkbox';
+    const tempHpField = document.createElement('div');
+    tempHpField.className = 'modal-toggle-field';
     tempHpField.innerHTML = `
-      <input type="checkbox" name="temp_hp" />
-      <span>HP temporanei</span>
+      <span class="modal-toggle-field__label">HP temporanei</span>
+      <label class="diceov-toggle">
+        <input type="checkbox" name="temp_hp" />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </label>
     `;
-    wrapper.appendChild(tempHpField);
+    primaryRow.appendChild(tempHpField);
   }
+
+  wrapper.appendChild(primaryRow);
 
   if (!allowHitDice) {
     if (allowMaxOverride) {
@@ -1244,22 +1254,28 @@ function buildHpShortcutFields(
   const hitDiceSides = getHitDiceSides(hitDice.die);
   const canUse = remaining > 0 && hitDiceSides;
 
-  const hitDiceField = document.createElement('label');
-  hitDiceField.className = 'checkbox';
+  const hitDiceField = document.createElement('div');
+  hitDiceField.className = 'modal-toggle-field';
   const hitDiceLabel = hitDice.die ? `${hitDice.die}` : 'dado vita';
   hitDiceField.innerHTML = `
-    <input type="checkbox" name="use_hit_dice" ${canUse ? '' : 'disabled'} />
-    <span>Usa dado vita (${hitDiceLabel}) · rimasti ${remaining}/${hitDiceMax || '-'}</span>
+    <span class="modal-toggle-field__label">Usa dado vita (${hitDiceLabel}) · rimasti ${remaining}/${hitDiceMax || '-'}</span>
+    <label class="diceov-toggle">
+      <input type="checkbox" name="use_hit_dice" ${canUse ? '' : 'disabled'} />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
   `;
-  wrapper.appendChild(hitDiceField);
 
   const hitDiceCountField = document.createElement('label');
-  hitDiceCountField.className = 'field hit-dice-count';
+  hitDiceCountField.className = 'field hit-dice-count hp-shortcut-fields__count';
   hitDiceCountField.innerHTML = `
     <span>Numero dadi vita</span>
     <input type="number" name="hit_dice_count" min="1" max="${remaining}" value="1" />
   `;
-  wrapper.appendChild(hitDiceCountField);
+
+  const hitDiceRow = document.createElement('div');
+  hitDiceRow.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';
+  hitDiceRow.append(hitDiceField, hitDiceCountField);
+  wrapper.appendChild(hitDiceRow);
 
   if (!canUse) {
     const hint = document.createElement('p');
@@ -1291,7 +1307,6 @@ function buildHpShortcutFields(
         countInput.value = '1';
       }
     }
-    hitDiceCountField.style.display = useDice ? 'grid' : 'none';
   };
   checkbox?.addEventListener('change', syncState);
   syncState();
