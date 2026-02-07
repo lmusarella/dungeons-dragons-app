@@ -315,7 +315,7 @@ button {
 
 .app-main {
   flex: 1;
-  padding-bottom: 140px;
+  padding-bottom: 60px;
 }
 
 .app-shell--auth {
