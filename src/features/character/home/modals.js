@@ -111,13 +111,12 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   detail.innerHTML = `
     <div class="detail-card detail-card--text resource-detail-card">
       <img class="${imageClass}" src="${imageUrl}" alt="${imageAlt}" />
-      <h4>${resource.name}</h4>
       <p>${description}</p>
     </div>
   `;
 
   openFormModal({
-    title: 'Dettaglio risorsa',
+    title: resource.name || 'Risorsa',
     submitLabel: hasAction
       ? (isExhausted ? 'Ripristina' : 'Usa')
       : 'Chiudi',

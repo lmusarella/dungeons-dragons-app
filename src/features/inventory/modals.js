@@ -376,13 +376,12 @@ export function openItemImageModal(item) {
     <div class="detail-card detail-card--text equipment-preview-card">
       <img class="equipment-preview-image" src="${item.image_url}" alt="Foto di ${item.name}" />
       <div class="equipment-preview-content">
-        <h4>${item.name}</h4>
         <p>${description}</p>
       </div>
     </div>
   `;
   openFormModal({
-    title: 'Dettaglio equipaggiamento',
+    title: item.name || 'Equipaggiamento',
     cancelLabel: null,
     content,
     cardClass: 'modal-card--equipment-preview',
