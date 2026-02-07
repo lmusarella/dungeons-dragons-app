@@ -24,13 +24,13 @@ export function renderLogin(container) {
             <span>Password</span>
             <input type="password" name="password" required minlength="6" />
           </label>
-          <label class="login-form__toggle-row">
+          <div class="login-form__toggle-row">
             <span>Nuovo account</span>
-            <span class="diceov-toggle condition-modal__toggle">
+            <label class="diceov-toggle condition-modal__toggle" aria-label="Nuovo account">
               <input type="checkbox" name="signup" />
               <span class="diceov-toggle-track" aria-hidden="true"></span>
-            </span>
-          </label>
+            </label>
+          </div>
           <div class="login-form__actions">
             <button class="primary" type="submit" data-login-submit>Accedi</button>
           </div>
