@@ -59,6 +59,9 @@ export function renderLogin(container) {
     const showDuplicateAccountToast = () => {
       createToast('Esiste già un account con questa email. Prova ad accedere.', 'error');
     };
+    const showConfirmEmailToast = () => {
+      createToast("Registrazione completata. Conferma l'email prima di procedere con il login.", 'success');
+    };
 
     try {
       const response = signup
@@ -74,13 +77,18 @@ export function renderLogin(container) {
           showDuplicateAccountToast();
           return;
         }
+
+        showConfirmEmailToast();
+        form.reset();
+        syncSubmitLabel();
+        return;
       }
 
       const user = response.data.user;
       if (user) {
         setState({ user });
         await ensureProfile(user);
-        window.location.hash = '#/home';
+        window.location.hash = '#/characters';
       }
     } catch (error) {
       const message = String(error?.message || '');
