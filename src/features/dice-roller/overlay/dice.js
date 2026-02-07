@@ -392,7 +392,8 @@ export function openDiceOverlay({
     if (!rollModeInput) return;
     const inspired = Boolean(inspirationInput?.checked);
     if (inspired) {
-      rollModeInput.value = 'advantage';
+      const currentMode = getRollMode(overlayEl);
+      rollModeInput.value = currentMode === 'disadvantage' ? 'normal' : 'advantage';
     } else {
       applyDefaultRollMode();
     }
