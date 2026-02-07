@@ -657,6 +657,13 @@ button {
   gap: 12px;
   flex-wrap: wrap;
   margin: 12px 0;
+  align-items: center;
+}
+
+.inventory-carry-chip {
+  margin-left: auto;
+  font-size: 0.76rem;
+  gap: 6px;
 }
 
 .inventory-list,
@@ -720,6 +727,9 @@ button {
   letter-spacing: 0.04em;
   font-weight: 700;
   color: var(--accent);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .inventory-table__body {
@@ -2735,15 +2745,10 @@ button {
   text-align: center;
 }
 
-.carry-widget {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fdf7ea;
-  border: 3px solid #eadfc9;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 8px;
+.inventory-list-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .login-card {
