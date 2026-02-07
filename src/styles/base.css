@@ -727,6 +727,9 @@ button {
   letter-spacing: 0.04em;
   font-weight: 700;
   color: var(--accent);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .inventory-table__body {
