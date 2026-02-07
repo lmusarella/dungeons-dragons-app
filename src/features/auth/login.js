@@ -15,7 +15,7 @@ export function renderLogin(container) {
           </div>
         </div>
         <p class="login-subtitle">Usa email e password per entrare o creare l'account.</p>
-        <form data-login-form>
+        <form class="login-form" data-login-form>
           <label class="field">
             <span >Email</span>
             <input type="email" name="email" required placeholder="nome@email.it" />
@@ -24,17 +24,31 @@ export function renderLogin(container) {
             <span>Password</span>
             <input type="password" name="password" required minlength="6" />
           </label>
-          <label class="checkbox">
-            <input type="checkbox" name="signup" />
+          <label class="login-form__toggle-row">
             <span>Nuovo account</span>
+            <span class="diceov-toggle condition-modal__toggle">
+              <input type="checkbox" name="signup" />
+              <span class="diceov-toggle-track" aria-hidden="true"></span>
+            </span>
           </label>
-          <button class="primary" type="submit">Accedi</button>
+          <div class="login-form__actions">
+            <button class="primary" type="submit" data-login-submit>Accedi</button>
+          </div>
         </form>
       </div>
     </section>
   `;
 
   const form = container.querySelector('[data-login-form]');
+  const signupInput = form.querySelector('input[name="signup"]');
+  const submitButton = form.querySelector('[data-login-submit]');
+  const syncSubmitLabel = () => {
+    if (!submitButton || !signupInput) return;
+    submitButton.textContent = signupInput.checked ? 'Registrati' : 'Accedi';
+  };
+  signupInput?.addEventListener('change', syncSubmitLabel);
+  syncSubmitLabel();
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
