@@ -342,6 +342,27 @@ export function openDiceOverlay({
     return null;
   })();
 
+  function getDefaultRollModeState() {
+    const hasWeaknessDisadvantage = Boolean(weaknessReason);
+    const selectionMode = state.selectionRollMode;
+    const hasAdvantage = selectionMode === 'advantage';
+    const hasDisadvantage = hasWeaknessDisadvantage || selectionMode === 'disadvantage';
+
+    if (hasAdvantage && hasDisadvantage) {
+      return {
+        mode: 'normal',
+        weaknessWarning: null,
+        rollModeWarning: 'Vantaggio e svantaggio si annullano: tiro normale.'
+      };
+    }
+
+    return {
+      mode: hasDisadvantage ? 'disadvantage' : (hasAdvantage ? 'advantage' : 'normal'),
+      weaknessWarning: hasDisadvantage ? weaknessReason : null,
+      rollModeWarning: state.selectionRollModeReason
+    };
+  }
+
   function getActiveModifierInput() {
     return mode === 'generic' ? (genericModifierInput || modifierInput) : modifierInput;
   }
@@ -392,7 +413,8 @@ export function openDiceOverlay({
     if (!rollModeInput) return;
     const inspired = Boolean(inspirationInput?.checked);
     if (inspired) {
-      rollModeInput.value = weaknessReason ? 'normal' : 'advantage';
+      const currentMode = getRollMode(overlayEl);
+      rollModeInput.value = currentMode === 'disadvantage' ? 'normal' : 'advantage';
     } else {
       applyDefaultRollMode();
     }
@@ -406,8 +428,8 @@ export function openDiceOverlay({
     state.inspirationAvailable = Boolean(available);
     if (inspirationField) inspirationField.toggleAttribute('hidden', !state.inspirationAvailable);
     if (inspirationInput) {
+      inspirationInput.checked = false;
       inspirationInput.disabled = !state.inspirationAvailable;
-      if (!state.inspirationAvailable) inspirationInput.checked = false;
     }
     if (!state.inspirationAvailable && rollModeInput) {
       rollModeInput.disabled = false;
@@ -467,25 +489,26 @@ export function openDiceOverlay({
 
   function updateWeaknessWarning() {
     if (!weaknessWarning) return;
-    const shouldShow = Boolean(weaknessReason) && getRollMode(overlayEl) === 'disadvantage';
-    weaknessWarning.textContent = weaknessReason ?? '';
+    const defaults = getDefaultRollModeState();
+    const shouldShow = Boolean(defaults.weaknessWarning) && getRollMode(overlayEl) === 'disadvantage';
+    weaknessWarning.textContent = defaults.weaknessWarning ?? '';
     weaknessWarning.toggleAttribute('hidden', !shouldShow);
   }
 
   function updateRollModeWarning() {
     if (!rollModeWarning) return;
+    const defaults = getDefaultRollModeState();
     const mode = getRollMode(overlayEl);
-    const shouldShow = Boolean(state.selectionRollModeReason)
-      && state.selectionRollMode === mode;
-    rollModeWarning.textContent = state.selectionRollModeReason ?? '';
+    const shouldShow = Boolean(defaults.rollModeWarning)
+      && defaults.mode === mode;
+    rollModeWarning.textContent = defaults.rollModeWarning ?? '';
     rollModeWarning.toggleAttribute('hidden', !shouldShow);
   }
 
   function applyDefaultRollMode() {
     if (!rollModeInput) return;
-    rollModeInput.value = weaknessReason
-      ? 'disadvantage'
-      : (state.selectionRollMode || 'normal');
+    const defaults = getDefaultRollModeState();
+    rollModeInput.value = defaults.mode;
     updateWeaknessWarning();
     updateRollModeWarning();
     updateNotationFromMode();
@@ -785,6 +808,14 @@ export function openDiceOverlay({
   }
 
   if (mode === 'generic') {
+    const diceCountInput = overlayEl.querySelector('[name="dice-count"]');
+    const diceTypeInput = overlayEl.querySelector('[name="dice-type"]');
+    if (diceCountInput) diceCountInput.value = '1';
+    if (diceTypeInput) diceTypeInput.value = 'd20';
+    if (notationInput) notationInput.value = '1d20';
+    if (genericModifierInput && !hasExplicitModifier) {
+      genericModifierInput.value = '0';
+    }
     if (notationInput && notation) {
       notationInput.value = String(notation).trim();
       syncGenericInputsFromNotation(overlayEl, notationInput.value);
