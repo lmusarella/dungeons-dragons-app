@@ -392,7 +392,7 @@ export function openDiceOverlay({
     if (!rollModeInput) return;
     const inspired = Boolean(inspirationInput?.checked);
     if (inspired) {
-      rollModeInput.value = weaknessReason ? 'normal' : 'advantage';
+      rollModeInput.value = 'advantage';
     } else {
       applyDefaultRollMode();
     }
@@ -406,8 +406,8 @@ export function openDiceOverlay({
     state.inspirationAvailable = Boolean(available);
     if (inspirationField) inspirationField.toggleAttribute('hidden', !state.inspirationAvailable);
     if (inspirationInput) {
+      inspirationInput.checked = false;
       inspirationInput.disabled = !state.inspirationAvailable;
-      if (!state.inspirationAvailable) inspirationInput.checked = false;
     }
     if (!state.inspirationAvailable && rollModeInput) {
       rollModeInput.disabled = false;
@@ -785,6 +785,14 @@ export function openDiceOverlay({
   }
 
   if (mode === 'generic') {
+    const diceCountInput = overlayEl.querySelector('[name="dice-count"]');
+    const diceTypeInput = overlayEl.querySelector('[name="dice-type"]');
+    if (diceCountInput) diceCountInput.value = '1';
+    if (diceTypeInput) diceTypeInput.value = 'd20';
+    if (notationInput) notationInput.value = '1d20';
+    if (genericModifierInput && !hasExplicitModifier) {
+      genericModifierInput.value = '0';
+    }
     if (notationInput && notation) {
       notationInput.value = String(notation).trim();
       syncGenericInputsFromNotation(overlayEl, notationInput.value);
