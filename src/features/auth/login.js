@@ -11,7 +11,7 @@ export function renderLogin(container) {
           <img class="login-logo" src="/icons/logo_dd.png" alt="Dungeon & Dragon" />
           <div>
             <p class="eyebrow">Dungeons &amp; Dragons</p>
-            <p class="login-title">Accedi</p>
+            <p class="login-title">Gestionale Personaggi</p>
           </div>
         </div>
         <p class="login-subtitle">Usa email e password per entrare o creare l'account.</p>
@@ -28,7 +28,7 @@ export function renderLogin(container) {
             <input type="checkbox" name="signup" />
             <span>Nuovo account</span>
           </label>
-          <button class="primary" type="submit">Continua</button>
+          <button class="primary" type="submit">Accedi</button>
         </form>
       </div>
     </section>
