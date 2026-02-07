@@ -2869,7 +2869,7 @@ button {
   gap: 12px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid #e6dcc8;
+  border: 3px solid #e6dcc8;
   background: linear-gradient(135deg, #fff, #fff7ea);
   text-align: left;
   cursor: pointer;
