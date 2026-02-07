@@ -2829,7 +2829,7 @@ button {
   padding: 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background-image:
     url('/img/sfondo_selezione.webp');
   background-size: cover;
@@ -2839,6 +2839,7 @@ button {
 .character-select-card {
   width: min(960px, 100%);
   margin: 0;
+  margin-left: 0;
 }
 
 .character-select-header {
@@ -2857,8 +2858,8 @@ button {
 }
 
 .character-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
