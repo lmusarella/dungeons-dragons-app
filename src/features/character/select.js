@@ -35,8 +35,7 @@ export async function renderCharacterSelect(container) {
       <div class="card character-select-card">
       <header class="character-select-header">
         <div>
-          <p class="muted">Seleziona personaggio</p>
-          <p class="muted">Scegli una scheda per aprire la home del personaggio.</p>
+          <p class="title-car-select">Seleziona o crea un personaggio</p>        
         </div>
         ${canCreateCharacter ? '<button class="icon-button icon-button--add character-select-add" type="button" data-create-character aria-label="Nuovo personaggio" title="Nuovo personaggio">+</button>' : ''}
       </header>

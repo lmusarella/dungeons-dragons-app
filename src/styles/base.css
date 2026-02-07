@@ -2845,8 +2845,8 @@ button {
 }
 
 .character-select-card {
-  width: min(400px, 100%);
-  margin: 0;
+  margin: 0 !important;
+  border: 3px solid #3b5d60;
 }
 
 .character-select-header {
@@ -3104,6 +3104,12 @@ button {
 .muted {
   color: #665a48;
   font-size: 0.85rem;
+}
+
+.title-car-select {
+  color: #3b5d60;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .hp-shortcuts {
