@@ -56,6 +56,10 @@ export function renderLogin(container) {
     const password = String(formData.get('password'));
     const signup = formData.get('signup') === 'on';
 
+    const showDuplicateAccountToast = () => {
+      createToast('Esiste già un account con questa email. Prova ad accedere.', 'error');
+    };
+
     try {
       const response = signup
         ? await supabase.auth.signUp({ email, password })
@@ -63,6 +67,15 @@ export function renderLogin(container) {
       if (response.error) {
         throw response.error;
       }
+
+      if (signup) {
+        const identities = response.data.user?.identities;
+        if (Array.isArray(identities) && identities.length === 0) {
+          showDuplicateAccountToast();
+          return;
+        }
+      }
+
       const user = response.data.user;
       if (user) {
         setState({ user });
@@ -70,6 +83,11 @@ export function renderLogin(container) {
         window.location.hash = '#/home';
       }
     } catch (error) {
+      const message = String(error?.message || '');
+      if (signup && /already\s+(registered|exists|in use)|user\s+already/i.test(message)) {
+        showDuplicateAccountToast();
+        return;
+      }
       createToast(error.message ?? 'Errore login', 'error');
     }
   });

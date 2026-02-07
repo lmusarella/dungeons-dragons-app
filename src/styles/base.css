@@ -2796,7 +2796,7 @@ button {
 
 .login-form__actions {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   margin-top: 2px;
 }
 .login-view {
