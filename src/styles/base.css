@@ -2112,6 +2112,13 @@ button:focus-visible,
   object-fit: cover;
 }
 
+.coin-avatar--gp img,
+.coin-avatar--sp img,
+.coin-avatar--cp img {
+  transform: scale(1.22);
+  transform-origin: center;
+}
+
 .coin-avatar--pp {
   background-color: #e6eef8;
   background-image: var(--coin-pp-image, none);
