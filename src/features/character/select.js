@@ -1,36 +1,33 @@
 import { fetchCharacters } from './characterApi.js';
 import { navigate } from '../../app/router.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState } from '../../app/state.js';
-import { createToast } from '../../ui/components.js';
+import { createToast, setGlobalLoading } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
 
 export async function renderCharacterSelect(container) {
-  container.innerHTML = `
-    <section class="auth-screen character-select-view">
-      <div class="card character-select-card"><p>Caricamento...</p></div>
-    </section>
-  `;
   const state = getState();
   const { user, offline } = state;
 
+  setGlobalLoading(true);
   let characters = state.characters;
-  if (!offline && user) {
-    try {
-      characters = await fetchCharacters(user.id);
-      setState({ characters });
-      await cacheSnapshot({ characters });
-    } catch (error) {
-      createToast('Errore caricamento personaggi', 'error');
+  try {
+    if (!offline && user) {
+      try {
+        characters = await fetchCharacters(user.id);
+        setState({ characters });
+        await cacheSnapshot({ characters });
+      } catch (error) {
+        createToast('Errore caricamento personaggi', 'error');
+      }
     }
-  }
 
-  const activeId = normalizeCharacterId(state.activeCharacterId);
-  const activeCharacter = characters.find((char) => normalizeCharacterId(char.id) === activeId);
+    const activeId = normalizeCharacterId(state.activeCharacterId);
+    const activeCharacter = characters.find((char) => normalizeCharacterId(char.id) === activeId);
 
-  const canCreateCharacter = Boolean(user) && !offline;
+    const canCreateCharacter = Boolean(user) && !offline;
 
-  container.innerHTML = `
+    container.innerHTML = `
     <section class="auth-screen character-select-view">
       <div class="card character-select-card">
       <header class="character-select-header">
@@ -57,10 +54,13 @@ export async function renderCharacterSelect(container) {
     });
 
   const createButton = container.querySelector('[data-create-character]');
-  if (createButton) {
-    createButton.addEventListener('click', () => {
-      openCharacterDrawer(user, () => renderCharacterSelect(container));
-    });
+    if (createButton) {
+      createButton.addEventListener('click', () => {
+        openCharacterDrawer(user, () => renderCharacterSelect(container));
+      });
+    }
+  } finally {
+    setGlobalLoading(false);
   }
 }
 
