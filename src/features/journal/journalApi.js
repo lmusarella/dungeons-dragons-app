@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase.js';
 
+const SESSION_FILES_BUCKET = 'journal-session-files';
+
 export async function fetchEntries(characterId) {
   const { data, error } = await supabase
     .from('journal_entries')
@@ -28,6 +30,62 @@ export async function fetchEntryTags(entryIds) {
     .in('entry_id', entryIds);
   if (error) throw error;
   return data ?? [];
+}
+
+export async function fetchSessionFiles(characterId) {
+  const { data, error } = await supabase
+    .from('journal_session_files')
+    .select('*')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function uploadSessionFile({ userId, characterId, file }) {
+  const extension = (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const safeBaseName = (file.name.replace(/\.[^.]+$/, '') || 'session-file')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64) || 'session-file';
+  const filePath = `${userId}/${characterId}/${Date.now()}-${safeBaseName}.${extension}`;
+
+  const { error } = await supabase
+    .storage
+    .from(SESSION_FILES_BUCKET)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'application/pdf'
+    });
+
+  if (error) throw error;
+  return filePath;
+}
+
+export async function createSessionFile(payload) {
+  const { data, error } = await supabase
+    .from('journal_session_files')
+    .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteSessionFile(fileRecord) {
+  const { error: deleteRowError } = await supabase
+    .from('journal_session_files')
+    .delete()
+    .eq('id', fileRecord.id);
+  if (deleteRowError) throw deleteRowError;
+
+  const { error: deleteObjectError } = await supabase
+    .storage
+    .from(SESSION_FILES_BUCKET)
+    .remove([fileRecord.file_path]);
+  if (deleteObjectError) throw deleteObjectError;
 }
 
 export async function createEntry(payload) {

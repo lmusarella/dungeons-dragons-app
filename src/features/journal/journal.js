@@ -2,6 +2,10 @@ import {
   fetchEntries,
   fetchTags,
   fetchEntryTags,
+  fetchSessionFiles,
+  uploadSessionFile,
+  createSessionFile,
+  deleteSessionFile,
   createEntry,
   updateEntry,
   deleteEntry,
@@ -11,7 +15,14 @@ import {
 } from './journalApi.js';
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
-import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import {
+  buildInput,
+  buildTextarea,
+  createToast,
+  openConfirmModal,
+  openFormModal,
+  setGlobalLoading
+} from '../../ui/components.js';
 
 export async function renderJournal(container) {
   const state = getState();
@@ -25,11 +36,13 @@ export async function renderJournal(container) {
   let entries = state.cache.journal;
   let tags = state.cache.tags;
   let entryTags = [];
+  let sessionFiles = [];
   if (!state.offline) {
     try {
       entries = await fetchEntries(activeCharacter.id);
       tags = await fetchTags(activeCharacter.user_id);
       entryTags = await fetchEntryTags(entries.map((entry) => entry.id));
+      sessionFiles = await fetchSessionFiles(activeCharacter.id);
       updateCache('journal', entries);
       updateCache('tags', tags);
       await cacheSnapshot({ journal: entries, tags, entryTags });
@@ -64,33 +77,38 @@ export async function renderJournal(container) {
           </button>
         </div>
       </section>
-      <section class="card journal-section-card">
-        <header class="card-header">
-          <p class="eyebrow">Voci</p>
-        </header>
-        <div data-journal-list></div>
-      </section>
-      <section class="card journal-section-card">
-        <header class="card-header">
-          <p class="eyebrow">Archivio file sessioni</p>
-          <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
-            <span aria-hidden="true">📎</span>
-          </button>
-        </header>
-        <p class="muted">Sezione predisposta: il caricamento locale è già disponibile, il salvataggio su Supabase verrà collegato quando sarà pronta la tabella.</p>
-        <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
-        <p class="muted" data-upload-feedback>Nessun file selezionato.</p>
-      </section>
+
+      <div class="journal-columns">
+        <section class="card journal-section-card journal-section-card--entries">
+          <header class="card-header">
+            <p class="eyebrow">Voci</p>
+          </header>
+          <div data-journal-list></div>
+        </section>
+
+        <section class="card journal-section-card journal-section-card--files">
+          <header class="card-header">
+            <p class="eyebrow">File sessioni</p>
+            <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
+              <span aria-hidden="true">📎</span>
+            </button>
+          </header>
+          <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
+          <p class="muted" data-upload-feedback>${state.offline ? 'Modalità offline: upload non disponibile.' : 'Carica un PDF di sessione per salvarlo nel diario.'}</p>
+          <div data-session-files-list></div>
+        </section>
+      </div>
     </div>
   `;
 
   const listEl = container.querySelector('[data-journal-list]');
+  const filesListEl = container.querySelector('[data-session-files-list]');
   const searchInput = container.querySelector('[data-search]');
   const uploadButton = container.querySelector('[data-upload-session-file]');
   const uploadInput = container.querySelector('[data-session-file-input]');
   const uploadFeedback = container.querySelector('[data-upload-feedback]');
 
-  function renderList() {
+  function renderEntriesList() {
     const term = searchInput.value.toLowerCase().trim();
     const filteredEntries = filterEntries(entries, term);
     listEl.innerHTML = filteredEntries.length
@@ -125,12 +143,43 @@ export async function renderJournal(container) {
       }));
   }
 
+  function renderSessionFiles() {
+    filesListEl.innerHTML = sessionFiles.length
+      ? buildFileList(sessionFiles)
+      : '<p class="muted">Nessun file caricato.</p>';
+
+    filesListEl.querySelectorAll('[data-delete-file]')
+      .forEach((button) => button.addEventListener('click', async () => {
+        const fileRecord = sessionFiles.find((entry) => entry.id === button.dataset.deleteFile);
+        if (!fileRecord) return;
+        const shouldDelete = await openConfirmModal({
+          title: 'Conferma eliminazione file',
+          message: `Stai per eliminare il file "${fileRecord.file_name}". Questa azione non può essere annullata.`,
+          confirmLabel: 'Elimina'
+        });
+        if (!shouldDelete) return;
+
+        setGlobalLoading(true);
+        try {
+          await deleteSessionFile(fileRecord);
+          createToast('File eliminato');
+          refresh();
+        } catch (error) {
+          createToast('Errore eliminazione file', 'error');
+        } finally {
+          setGlobalLoading(false);
+        }
+      }));
+  }
+
   async function refresh() {
     await renderJournal(container);
   }
 
-  renderList();
-  searchInput.addEventListener('input', renderList);
+  renderEntriesList();
+  renderSessionFiles();
+
+  searchInput.addEventListener('input', renderEntriesList);
   container.querySelector('[data-add-entry]').addEventListener('click', async () => {
     await openEntryModal(activeCharacter, null, tags, [], refresh);
   });
@@ -138,17 +187,67 @@ export async function renderJournal(container) {
     await openTagModal(activeCharacter, refresh);
   });
 
+  if (state.offline) {
+    uploadButton.disabled = true;
+  }
+
   uploadButton?.addEventListener('click', () => uploadInput?.click());
-  uploadInput?.addEventListener('change', () => {
+  uploadInput?.addEventListener('change', async () => {
     const file = uploadInput.files?.[0];
-    if (!file) {
-      if (uploadFeedback) uploadFeedback.textContent = 'Nessun file selezionato.';
+    if (!file) return;
+
+    const maxMb = 10;
+    if (file.type !== 'application/pdf') {
+      if (uploadFeedback) uploadFeedback.textContent = 'Formato non valido: carica un PDF.';
+      createToast('Carica solo file PDF', 'error');
+      uploadInput.value = '';
       return;
     }
-    if (uploadFeedback) {
-      uploadFeedback.textContent = `File pronto: ${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB).`;
+    if (file.size > maxMb * 1024 * 1024) {
+      if (uploadFeedback) uploadFeedback.textContent = 'File troppo grande (max 10MB).';
+      createToast('File troppo grande', 'error');
+      uploadInput.value = '';
+      return;
     }
-    createToast('File selezionato. Salvataggio remoto da collegare quando disponibile.');
+
+    if (uploadFeedback) {
+      uploadFeedback.textContent = `Upload in corso: ${file.name}...`;
+    }
+
+    setGlobalLoading(true);
+    try {
+      const filePath = await uploadSessionFile({
+        userId: activeCharacter.user_id,
+        characterId: activeCharacter.id,
+        file
+      });
+
+      await createSessionFile({
+        user_id: activeCharacter.user_id,
+        character_id: activeCharacter.id,
+        file_name: file.name,
+        file_path: filePath,
+        mime_type: file.type || 'application/pdf',
+        size_bytes: file.size,
+        metadata: {
+          original_name: file.name
+        }
+      });
+
+      createToast('File caricato con successo', 'success');
+      if (uploadFeedback) {
+        uploadFeedback.textContent = `Caricato: ${file.name}`;
+      }
+      uploadInput.value = '';
+      await refresh();
+    } catch (error) {
+      if (uploadFeedback) {
+        uploadFeedback.textContent = 'Errore durante il caricamento del file.';
+      }
+      createToast('Errore upload file', 'error');
+    } finally {
+      setGlobalLoading(false);
+    }
   });
 }
 
@@ -186,6 +285,47 @@ function buildEntryList(entries, entryTagMap, tagMap) {
   }).join('')}
     </ul>
   `;
+}
+
+function buildFileList(files) {
+  return `
+    <ul class="journal-entry-list">
+      ${files.map((file) => `
+        <li class="journal-entry-card journal-entry-card--file">
+          <div>
+            <strong>${file.file_name}</strong>
+            <p class="muted">${formatFileSize(file.size_bytes)} · ${file.mime_type || 'application/pdf'}</p>
+            <p class="muted">${formatDate(file.created_at)}</p>
+          </div>
+          <div class="actions">
+            <button class="icon-button icon-button--danger" data-delete-file="${file.id}" aria-label="Elimina file" title="Elimina file">
+              <span aria-hidden="true">🗑️</span>
+            </button>
+          </div>
+        </li>
+      `).join('')}
+    </ul>
+  `;
+}
+
+function formatFileSize(sizeBytes = 0) {
+  const bytes = Number(sizeBytes) || 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 async function openEntryModal(character, entry, tags, selectedTags, onSave) {

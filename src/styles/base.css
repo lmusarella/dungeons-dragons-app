@@ -3955,11 +3955,22 @@ button:focus-visible,
   gap: 12px;
 }
 
+.journal-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
 .journal-toolbar,
 .journal-section-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.journal-section-card {
+  min-width: 0;
 }
 
 .journal-filters-row {
@@ -3995,6 +4006,17 @@ button:focus-visible,
 .journal-entry-card .actions {
   display: inline-flex;
   gap: 6px;
+}
+
+
+.journal-entry-card--file {
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .journal-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 
