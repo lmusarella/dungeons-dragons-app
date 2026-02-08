@@ -2869,7 +2869,7 @@ button:focus-visible,
 }
 
 .inventory-list-scroll {
-  max-height: 62vh;
+  max-height: 64vh;
   overflow-y: auto;
   padding-right: 4px;
 }
