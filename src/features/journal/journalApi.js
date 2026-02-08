@@ -64,6 +64,16 @@ export async function uploadSessionFile({ userId, characterId, file }) {
   return filePath;
 }
 
+
+export async function getSessionFileSignedUrl(filePath, expiresInSeconds = 300) {
+  const { data, error } = await supabase
+    .storage
+    .from(SESSION_FILES_BUCKET)
+    .createSignedUrl(filePath, expiresInSeconds);
+  if (error) throw error;
+  return data?.signedUrl ?? null;
+}
+
 export async function createSessionFile(payload) {
   const { data, error } = await supabase
     .from('journal_session_files')

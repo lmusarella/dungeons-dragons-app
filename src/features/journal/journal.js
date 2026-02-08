@@ -6,6 +6,7 @@ import {
   uploadSessionFile,
   createSessionFile,
   deleteSessionFile,
+  getSessionFileSignedUrl,
   createEntry,
   updateEntry,
   deleteEntry,
@@ -170,6 +171,45 @@ export async function renderJournal(container) {
           setGlobalLoading(false);
         }
       }));
+
+
+    filesListEl.querySelectorAll('[data-preview-file]')
+      .forEach((button) => button.addEventListener('click', async () => {
+        const fileRecord = sessionFiles.find((entry) => entry.id === button.dataset.previewFile);
+        if (!fileRecord) return;
+        setGlobalLoading(true);
+        try {
+          const signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 600);
+          if (!signedUrl) {
+            createToast('Impossibile aprire l’anteprima', 'error');
+            return;
+          }
+          await openFilePreviewModal(fileRecord.file_name, signedUrl);
+        } catch (error) {
+          createToast('Errore apertura anteprima', 'error');
+        } finally {
+          setGlobalLoading(false);
+        }
+      }));
+
+    filesListEl.querySelectorAll('[data-download-file]')
+      .forEach((button) => button.addEventListener('click', async () => {
+        const fileRecord = sessionFiles.find((entry) => entry.id === button.dataset.downloadFile);
+        if (!fileRecord) return;
+        setGlobalLoading(true);
+        try {
+          const signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 120);
+          if (!signedUrl) {
+            createToast('Impossibile scaricare il file', 'error');
+            return;
+          }
+          triggerFileDownload(signedUrl, fileRecord.file_name);
+        } catch (error) {
+          createToast('Errore download file', 'error');
+        } finally {
+          setGlobalLoading(false);
+        }
+      }));
   }
 
   async function refresh() {
@@ -298,6 +338,12 @@ function buildFileList(files) {
             <p class="muted">${formatDate(file.created_at)}</p>
           </div>
           <div class="actions">
+            <button class="icon-button" data-preview-file="${file.id}" aria-label="Visualizza file" title="Visualizza">
+              <span aria-hidden="true">👁️</span>
+            </button>
+            <button class="icon-button" data-download-file="${file.id}" aria-label="Scarica file" title="Scarica">
+              <span aria-hidden="true">⬇️</span>
+            </button>
             <button class="icon-button icon-button--danger" data-delete-file="${file.id}" aria-label="Elimina file" title="Elimina file">
               <span aria-hidden="true">🗑️</span>
             </button>
@@ -325,6 +371,34 @@ function formatDate(value) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
+  });
+}
+
+function triggerFileDownload(url, fileName) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName || 'session-file.pdf';
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+async function openFilePreviewModal(fileName, signedUrl) {
+  const preview = document.createElement('div');
+  preview.className = 'journal-file-preview';
+  preview.innerHTML = `
+    <p class="muted">Anteprima: ${fileName}</p>
+    <iframe class="journal-file-preview__frame" src="${signedUrl}" title="Anteprima ${fileName}"></iframe>
+    <a class="ghost-button" href="${signedUrl}" target="_blank" rel="noopener noreferrer">Apri in nuova scheda</a>
+  `;
+
+  await openFormModal({
+    title: fileName,
+    content: preview,
+    submitLabel: 'Chiudi',
+    cancelLabel: null,
+    cardClass: ['modal-card--wide', 'modal-card--scrollable']
   });
 }
 

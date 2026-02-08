@@ -4013,6 +4013,20 @@ button:focus-visible,
   align-items: center;
 }
 
+
+.journal-file-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.journal-file-preview__frame {
+  width: 100%;
+  min-height: 62vh;
+  border: 1px solid #eadfc9;
+  border-radius: 12px;
+  background: #fff;
+}
 @media (max-width: 960px) {
   .journal-columns {
     grid-template-columns: 1fr;
