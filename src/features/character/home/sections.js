@@ -73,7 +73,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
   const activeConditions = conditionList.filter((condition) => conditionState.includes(condition.key));
   const conditionsLabel = activeConditions.length
     ? activeConditions.map((condition) => condition.label).join(', ')
-    : 'Normale';
+    : 'Nessuna condizione';
   const conditionsEffects = activeConditions.length
     ? `
       <ul class="condition-track__list">
