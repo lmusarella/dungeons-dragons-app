@@ -1,4 +1,4 @@
-import { fetchItems, createItem, updateItem, deleteItem } from './inventoryApi.js';
+import { fetchItems, updateItem, deleteItem } from './inventoryApi.js';
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
@@ -15,7 +15,7 @@ import {
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories, itemCategories } from './constants.js';
 import { openItemImageModal, openItemModal } from './modals.js';
-import { buildInventoryTree, buildLootFields, buildTransactionList, exchangeFields, moneyFields } from './render.js';
+import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields } from './render.js';
 import { getWeightUnit, normalizeTransactionAmount } from './utils.js';
 
 export async function renderInventory(container) {
@@ -531,42 +531,6 @@ export async function renderInventory(container) {
       });
     }));
 
-  const lootButton = document.querySelector('[data-add-loot]');
-  if (lootButton && !lootButton.dataset.bound) {
-    lootButton.dataset.bound = 'true';
-    lootButton.addEventListener('click', async () => {
-      const formData = await openFormModal({
-        title: 'Aggiungi loot',
-        submitLabel: 'Aggiungi',
-        content: buildLootFields(weightStep)
-      });
-      if (!formData) return;
-      await runWithGlobalLoader(async () => {
-        try {
-          await createItem({
-            user_id: activeCharacter.user_id,
-            character_id: activeCharacter.id,
-            name: formData.get('name'),
-            qty: Number(formData.get('qty')),
-            weight: Number(formData.get('weight')),
-            volume: Number(formData.get('volume')) || 0,
-            value_cp: Number(formData.get('value_cp')),
-            category: 'loot',
-            equipable: false,
-            equip_slot: null,
-            equip_slots: [],
-            sovrapponibile: false,
-            is_magic: false,
-            max_volume: null
-          });
-          createToast('Loot aggiunto');
-          renderInventory(container);
-        } catch (error) {
-          createToast('Errore loot', 'error');
-        }
-      });
-    });
-  }
 
   container.querySelector('[data-add-item]').addEventListener('click', () => {
     openItemModal(activeCharacter, null, items, renderInventory.bind(null, container));
