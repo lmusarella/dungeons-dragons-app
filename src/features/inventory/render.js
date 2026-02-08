@@ -45,12 +45,6 @@ export function buildTransactionList(transactions) {
     wrapper.innerHTML = '<p class="muted">Nessuna transazione registrata.</p>';
     return wrapper;
   }
-  wrapper.innerHTML = `
-    <div class="transaction-ledger-header">
-      <span>Descrizione</span>
-      <span>Importo</span>
-    </div>
-  `;
   const list = document.createElement('ul');
   list.className = 'transaction-items';
   transactions.forEach((transaction) => {
