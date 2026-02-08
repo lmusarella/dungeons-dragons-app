@@ -118,6 +118,10 @@ export function renderLayout(container) {
         </div>
       </div>
       <div class="toast-container" data-toast-container></div>
+      <div class="app-loading-overlay" data-app-loader hidden>
+        <div class="app-loading-spinner" aria-hidden="true"></div>
+        <p class="app-loading-text">Caricamento in corso...</p>
+      </div>
     </div>
   `;
 

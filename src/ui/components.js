@@ -1,3 +1,23 @@
+let globalLoadingDepth = 0;
+
+export function setGlobalLoading(isLoading) {
+  const loader = document.querySelector('[data-app-loader]');
+  if (!loader) return;
+
+  if (isLoading) {
+    globalLoadingDepth += 1;
+    loader.hidden = false;
+    loader.classList.add('is-visible');
+    return;
+  }
+
+  globalLoadingDepth = Math.max(0, globalLoadingDepth - 1);
+  if (globalLoadingDepth === 0) {
+    loader.classList.remove('is-visible');
+    loader.hidden = true;
+  }
+}
+
 export function createToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;

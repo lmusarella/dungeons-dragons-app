@@ -3,7 +3,7 @@ import { getState, normalizeCharacterId, updateCache } from '../../app/state.js'
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
 import { formatWeight } from '../../lib/format.js';
-import { createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import {
   fetchWallet,
   upsertWallet,
@@ -26,6 +26,15 @@ export async function renderInventory(container) {
     container.innerHTML = '<section class="card"><p>Nessun personaggio selezionato.</p></section>';
     return;
   }
+
+  const runWithGlobalLoader = async (action) => {
+    setGlobalLoading(true);
+    try {
+      return await action();
+    } finally {
+      setGlobalLoading(false);
+    }
+  };
 
   let items = state.cache.items;
   let wallet = state.cache.wallet;
@@ -157,13 +166,15 @@ export async function renderInventory(container) {
           confirmLabel: 'Elimina'
         });
         if (!shouldDelete) return;
-        try {
-          await deleteItem(item.id);
-          createToast('Oggetto eliminato');
-          renderInventory(container);
-        } catch (error) {
-          createToast('Errore eliminazione', 'error');
-        }
+        await runWithGlobalLoader(async () => {
+          try {
+            await deleteItem(item.id);
+            createToast('Oggetto eliminato');
+            renderInventory(container);
+          } catch (error) {
+            createToast('Errore eliminazione', 'error');
+          }
+        });
       }));
     listEl.querySelectorAll('[data-use]')
       .forEach((btn) => btn.addEventListener('click', async () => {
@@ -173,14 +184,16 @@ export async function renderInventory(container) {
           createToast('Quantità esaurita', 'error');
           return;
         }
-        try {
-          const nextQty = Math.max(item.qty - 1, 0);
-          await updateItem(item.id, { qty: nextQty });
-          createToast('Consumabile usato');
-          renderInventory(container);
-        } catch (error) {
-          createToast('Errore utilizzo consumabile', 'error');
-        }
+        await runWithGlobalLoader(async () => {
+          try {
+            const nextQty = Math.max(item.qty - 1, 0);
+            await updateItem(item.id, { qty: nextQty });
+            createToast('Consumabile usato');
+            renderInventory(container);
+          } catch (error) {
+            createToast('Errore utilizzo consumabile', 'error');
+          }
+        });
       }));
   }
 
@@ -195,6 +208,8 @@ export async function renderInventory(container) {
       if (button.dataset.bound) return;
       button.dataset.bound = 'true';
       button.addEventListener('click', async () => {
+        const route = window.location.hash.replace('#/', '') || 'home';
+        if (route !== 'inventory') return;
         const direction = button.dataset.moneyAction;
         const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
         const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
@@ -224,23 +239,25 @@ export async function renderInventory(container) {
         );
         const nextWallet = applyMoneyDelta(wallet, signedDelta);
 
-        try {
-          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-          await createTransaction({
-            user_id: wallet.user_id,
-            character_id: wallet.character_id,
-            direction,
-            amount: signedDelta,
-            reason: formData.get('reason'),
-            occurred_on: formData.get('occurred_on')
-          });
-          updateCache('wallet', saved);
-          await cacheSnapshot({ wallet: saved });
-          createToast('Wallet aggiornato');
-          renderInventory(container);
-        } catch (error) {
-          createToast('Errore aggiornamento denaro', 'error');
-        }
+        await runWithGlobalLoader(async () => {
+          try {
+            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+            await createTransaction({
+              user_id: wallet.user_id,
+              character_id: wallet.character_id,
+              direction,
+              amount: signedDelta,
+              reason: formData.get('reason'),
+              occurred_on: formData.get('occurred_on')
+            });
+            updateCache('wallet', saved);
+            await cacheSnapshot({ wallet: saved });
+            createToast('Wallet aggiornato');
+            renderInventory(container);
+          } catch (error) {
+            createToast('Errore aggiornamento denaro', 'error');
+          }
+        });
       });
     });
 
@@ -394,15 +411,17 @@ export async function renderInventory(container) {
       const delta = { cp: 0, sp: 0, gp: 0, pp: 0, [source]: -adjustedAmount, [target]: targetAmount };
       const nextWallet = applyMoneyDelta(wallet, delta);
 
-      try {
-        const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-        updateCache('wallet', saved);
-        await cacheSnapshot({ wallet: saved });
-        createToast('Scambio completato');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore scambio monete', 'error');
-      }
+      await runWithGlobalLoader(async () => {
+        try {
+          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+          updateCache('wallet', saved);
+          await cacheSnapshot({ wallet: saved });
+          createToast('Scambio completato');
+          renderInventory(container);
+        } catch (error) {
+          createToast('Errore scambio monete', 'error');
+        }
+      });
     });
   }
 
@@ -459,23 +478,25 @@ export async function renderInventory(container) {
       );
       const nextWallet = wallet ? applyMoneyDelta(wallet, delta) : null;
 
-      try {
-        if (nextWallet) {
-          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-          updateCache('wallet', saved);
-          await cacheSnapshot({ wallet: saved });
+      await runWithGlobalLoader(async () => {
+        try {
+          if (nextWallet) {
+            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+            updateCache('wallet', saved);
+            await cacheSnapshot({ wallet: saved });
+          }
+          await updateTransaction(transaction.id, {
+            direction: nextDirection,
+            amount: nextSigned,
+            reason: formData.get('reason'),
+            occurred_on: formData.get('occurred_on')
+          });
+          createToast('Transazione aggiornata');
+          renderInventory(container);
+        } catch (error) {
+          createToast('Errore aggiornamento transazione', 'error');
         }
-        await updateTransaction(transaction.id, {
-          direction: nextDirection,
-          amount: nextSigned,
-          reason: formData.get('reason'),
-          occurred_on: formData.get('occurred_on')
-        });
-        createToast('Transazione aggiornata');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore aggiornamento transazione', 'error');
-      }
+      });
     }));
 
   container.querySelectorAll('[data-delete-transaction]')
@@ -494,18 +515,20 @@ export async function renderInventory(container) {
       );
       const nextWallet = wallet ? applyMoneyDelta(wallet, delta) : null;
 
-      try {
-        if (nextWallet) {
-          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-          updateCache('wallet', saved);
-          await cacheSnapshot({ wallet: saved });
+      await runWithGlobalLoader(async () => {
+        try {
+          if (nextWallet) {
+            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+            updateCache('wallet', saved);
+            await cacheSnapshot({ wallet: saved });
+          }
+          await deleteTransaction(transaction.id);
+          createToast('Transazione eliminata');
+          renderInventory(container);
+        } catch (error) {
+          createToast('Errore eliminazione transazione', 'error');
         }
-        await deleteTransaction(transaction.id);
-        createToast('Transazione eliminata');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore eliminazione transazione', 'error');
-      }
+      });
     }));
 
   const lootButton = document.querySelector('[data-add-loot]');
@@ -518,28 +541,30 @@ export async function renderInventory(container) {
         content: buildLootFields(weightStep)
       });
       if (!formData) return;
-      try {
-        await createItem({
-          user_id: activeCharacter.user_id,
-          character_id: activeCharacter.id,
-          name: formData.get('name'),
-          qty: Number(formData.get('qty')),
-          weight: Number(formData.get('weight')),
-          volume: Number(formData.get('volume')) || 0,
-          value_cp: Number(formData.get('value_cp')),
-          category: 'loot',
-          equipable: false,
-          equip_slot: null,
-          equip_slots: [],
-          sovrapponibile: false,
-          is_magic: false,
-          max_volume: null
-        });
-        createToast('Loot aggiunto');
-        renderInventory(container);
-      } catch (error) {
-        createToast('Errore loot', 'error');
-      }
+      await runWithGlobalLoader(async () => {
+        try {
+          await createItem({
+            user_id: activeCharacter.user_id,
+            character_id: activeCharacter.id,
+            name: formData.get('name'),
+            qty: Number(formData.get('qty')),
+            weight: Number(formData.get('weight')),
+            volume: Number(formData.get('volume')) || 0,
+            value_cp: Number(formData.get('value_cp')),
+            category: 'loot',
+            equipable: false,
+            equip_slot: null,
+            equip_slots: [],
+            sovrapponibile: false,
+            is_magic: false,
+            max_volume: null
+          });
+          createToast('Loot aggiunto');
+          renderInventory(container);
+        } catch (error) {
+          createToast('Errore loot', 'error');
+        }
+      });
     });
   }
 

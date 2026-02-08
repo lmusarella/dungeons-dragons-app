@@ -17,6 +17,16 @@ const app = document.querySelector('#app');
 renderLayout(app);
 bindGlobalFabHandlers();
 
+document.addEventListener('pointerdown', (event) => {
+  const target = event.target.closest('button, .bottom-nav a, .menu-item');
+  if (!target) return;
+  target.classList.remove('is-pressed');
+  // force reflow to restart animation on repeated clicks
+  void target.offsetWidth;
+  target.classList.add('is-pressed');
+  window.setTimeout(() => target.classList.remove('is-pressed'), 220);
+});
+
 document.addEventListener('click', async (event) => {
   const target = event.target.closest('[data-logout]');
   if (target) {

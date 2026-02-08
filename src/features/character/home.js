@@ -1,7 +1,7 @@
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildInput, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
@@ -52,22 +52,23 @@ let lastHomeContainer = null;
 
 export async function renderHome(container) {
   lastHomeContainer = container;
-  container.innerHTML = `<div class="card"><p>Caricamento...</p></div>`;
   const state = getState();
   const { user, offline } = state;
 
-  let characters = state.characters;
-  if (!offline && user) {
-    try {
+  setGlobalLoading(true);
+  try {
+    let characters = state.characters;
+    if (!offline && user) {
+      try {
       characters = await fetchCharacters(user.id);
       setState({ characters });
       await cacheSnapshot({ characters });
-    } catch (error) {
-      createToast('Errore caricamento personaggi', 'error');
+      } catch (error) {
+        createToast('Errore caricamento personaggi', 'error');
+      }
     }
-  }
 
-  const activeId = normalizeCharacterId(state.activeCharacterId);
+    const activeId = normalizeCharacterId(state.activeCharacterId);
   const hasActive = characters.some((char) => normalizeCharacterId(char.id) === activeId);
   if (!hasActive && characters.length) {
     setActiveCharacter(characters[0].id);
@@ -621,7 +622,9 @@ export async function renderHome(container) {
         if (item) openItemImageModal(item);
       });
     });
-
+  } finally {
+    setGlobalLoading(false);
+  }
 }
 
 export function bindGlobalFabHandlers() {
