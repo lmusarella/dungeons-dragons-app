@@ -15,7 +15,7 @@ import {
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories, itemCategories } from './constants.js';
 import { openItemImageModal, openItemModal } from './modals.js';
-import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields } from './render.js';
+import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields, walletEditFields } from './render.js';
 import { getWeightUnit, normalizeTransactionAmount } from './utils.js';
 
 export async function renderInventory(container) {
@@ -95,8 +95,8 @@ export async function renderInventory(container) {
           <header class="card-header">
             <p class="eyebrow">Monete</p>
             <div class="button-row">
-              <button class="icon-button icon-button--swap" type="button" data-exchange-coins aria-label="Scambia monete" title="Scambia monete">
-                <span aria-hidden="true">⇄</span>
+              <button class="icon-button" type="button" data-edit-wallet aria-label="Modifica monete" title="Modifica monete">
+                <span aria-hidden="true">✏️</span>
               </button>
             </div>
           </header>
@@ -105,6 +105,11 @@ export async function renderInventory(container) {
         <section class="card">
           <header class="card-header">
             <p class="eyebrow">Transazioni</p>
+            <div class="button-row">
+              <button class="icon-button icon-button--swap" type="button" data-exchange-coins aria-label="Scambia monete" title="Scambia monete">
+                <span aria-hidden="true">⇄</span>
+              </button>
+            </div>
           </header>
           <div class="inventory-transactions">
             ${state.offline ? '<p class="muted">Transazioni disponibili solo online.</p>' : buildTransactionList(transactions).outerHTML}
@@ -260,6 +265,48 @@ export async function renderInventory(container) {
         });
       });
     });
+
+  const editWalletButton = container.querySelector('[data-edit-wallet]');
+  if (editWalletButton && !editWalletButton.dataset.bound) {
+    editWalletButton.dataset.bound = 'true';
+    editWalletButton.addEventListener('click', async () => {
+      if (!wallet) {
+        wallet = {
+          user_id: activeCharacter.user_id,
+          character_id: activeCharacter.id,
+          cp: 0,
+          sp: 0,
+          gp: 0,
+          pp: 0
+        };
+      }
+      const formData = await openFormModal({
+        title: 'Modifica monete',
+        submitLabel: 'Salva',
+        content: walletEditFields(wallet)
+      });
+      if (!formData) return;
+      const nextWallet = {
+        ...wallet,
+        pp: Math.max(0, Number(formData.get('pp') || 0)),
+        gp: Math.max(0, Number(formData.get('gp') || 0)),
+        sp: Math.max(0, Number(formData.get('sp') || 0)),
+        cp: Math.max(0, Number(formData.get('cp') || 0))
+      };
+
+      await runWithGlobalLoader(async () => {
+        try {
+          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+          updateCache('wallet', saved);
+          await cacheSnapshot({ wallet: saved });
+          createToast('Monete aggiornate');
+          renderInventory(container);
+        } catch (error) {
+          createToast('Errore aggiornamento monete', 'error');
+        }
+      });
+    });
+  }
 
   const exchangeButton = container.querySelector('[data-exchange-coins]');
   if (exchangeButton && !exchangeButton.dataset.bound) {
