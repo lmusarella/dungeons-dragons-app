@@ -2926,7 +2926,6 @@ button:focus-visible,
 
 .character-select-view {
   flex: 1;
-  min-height: 100dvh;
   width: 100%;
   padding: clamp(12px, 2vw, 24px);
   padding-left: clamp(8px, 1.5vw, 18px);
