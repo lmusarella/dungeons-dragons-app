@@ -2870,7 +2870,7 @@ button:focus-visible,
 
 .character-select-view {
   flex: 1;
-  min-height: 100%;
+  min-height: 100dvh;
   width: 100%;
   padding: clamp(12px, 2vw, 24px);
   padding-left: clamp(8px, 1.5vw, 18px);
@@ -2881,8 +2881,8 @@ button:focus-visible,
   background-image:
     url('/img/sfondo_selezione.webp');
   background-size: cover;
-  background-position: center right;
-  overflow: hidden;
+  background-position: center;
+  overflow: visible;
 }
 
 .character-select-card {
