@@ -1,8 +1,8 @@
+import { setGlobalLoading } from '../ui/components.js';
 import { updateActiveTab } from '../ui/layout.js';
 import { getState } from './state.js';
 
 const routes = new Map();
-
 export function registerRoute(path, renderFn) {
   routes.set(path, renderFn);
 }
@@ -12,11 +12,13 @@ export function navigate(path) {
 }
 
 export function initRouter() {
-  window.addEventListener('hashchange', () => renderRoute());
-  renderRoute();
+  window.addEventListener('hashchange', () => {
+    void renderRoute();
+  });
+  void renderRoute();
 }
 
-function renderRoute() {
+async function renderRoute() {
   const outlet = document.querySelector('[data-route-outlet]');
   if (!outlet) return;
   const route = window.location.hash.replace('#/', '') || 'home';
@@ -52,19 +54,25 @@ function renderRoute() {
         });
     }
   };
-  if (!user && route !== 'login') {
-    applyShellVisibility(true, false);
-    window.location.hash = '#/login';
-    return;
+
+  setGlobalLoading(true);
+  try {
+    if (!user && route !== 'login') {
+      applyShellVisibility(true, false);
+      window.location.hash = '#/login';
+      return;
+    }
+    if (user && route === 'login') {
+      applyShellVisibility(false, showFab);
+      window.location.hash = '#/home';
+      return;
+    }
+
+    const view = routes.get(route) || routes.get('home');
+    updateActiveTab(route);
+    applyShellVisibility(hideShell, showFab);
+    await view?.(outlet);
+  } finally {
+    setGlobalLoading(false);
   }
-  if (user && route === 'login') {
-    applyShellVisibility(false, showFab);
-    window.location.hash = '#/home';
-    return;
-  }
-  const view = routes.get(route) || routes.get('home');
-  outlet.innerHTML = '';
-  updateActiveTab(route);
-  applyShellVisibility(hideShell, showFab);
-  view?.(outlet);
 }
