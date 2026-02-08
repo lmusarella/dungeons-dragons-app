@@ -4324,7 +4324,7 @@ button:focus-visible,
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: rgba(230, 220, 200, 0.34);
+  background: rgba(18, 16, 14, 0.7);
   backdrop-filter: blur(3px);
   display: flex;
   flex-direction: column;
