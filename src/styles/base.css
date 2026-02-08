@@ -196,7 +196,7 @@ button:focus-visible,
 }
 
 .modal-title {
-  color: #3b5d60;
+  color: #e6dcc8;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -582,7 +582,7 @@ button:focus-visible,
 
 .field span {
   font-weight: 600;
-  color: #3b5d60;
+  color: #e6dcc8;
 }
 
 .field__input-row {
@@ -1902,7 +1902,7 @@ button:focus-visible,
 
 .condition-modal__item-label {
   min-width: 0;
-  color: #3b5d60;
+  color: #e6dcc8;
 }
 
 .condition-modal__item-label strong {
@@ -2720,12 +2720,12 @@ button:focus-visible,
 
 .modal-toggle-field__label {
   font-weight: 600;
-  color: #3b5d60;
+  color: #e6dcc8;
 }
 
 .modal-card--form .modal-toggle-field .diceov-toggle {
   background: rgba(59, 93, 96, 0.2);
-  border-color: #3b5d60;
+  border-color: #e6dcc8;
 }
 
 .modal-card--form .modal-toggle-field .diceov-toggle-track {
@@ -2758,7 +2758,7 @@ button:focus-visible,
 }
 
 .toast {
-  --toast-color: #3b5d60;
+  --toast-color: #e6dcc8;
   --toast-accent: #74d3ca;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--toast-color) 92%, #101b22 8%) 0%, var(--toast-color) 100%);
@@ -2873,7 +2873,7 @@ button:focus-visible,
   font-size: 1.4rem;
   font-weight: 600;
   margin: 0;
-  color: #3b5d60;
+  color: #e6dcc8;
 }
 
 .login-subtitle {
@@ -2891,7 +2891,7 @@ button:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: #3b5d60;
+  color: #e6dcc8;
   font-weight: 600;
   margin-bottom: 2px;
 }
@@ -3204,7 +3204,7 @@ button:focus-visible,
 }
 
 .title-car-select {
-  color: #3b5d60;
+  color: #e6dcc8;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -4324,22 +4324,22 @@ button:focus-visible,
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: rgba(59, 93, 96, 0.34);
+  background: rgba(230, 220, 200, 0.34);
   backdrop-filter: blur(3px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #3b5d60;
+  color: #e6dcc8;
 }
 
 .app-loading-spinner {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  border: 10px solid rgba(59, 93, 96, 0.28);
-  border-top-color: #3b5d60;
+  border: 10px solid rgba(230, 220, 200, 0.28);
+  border-top-color: #e6dcc8;
   animation: app-spinner-rotate 0.8s linear infinite;
 }
 
