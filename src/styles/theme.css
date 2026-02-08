@@ -8,18 +8,17 @@ body {
 
 .app-header {
   background-image:
-    linear-gradient(120deg, rgba(253, 247, 234, 0.86), rgba(245, 235, 216, 0.86)),
-    url('/img/sfondo_header.webp');
-  background-size: cover;
+    url('/img/sfondo_header_1.webp');
+  background-size: contain;
   background-position: center;
-  background-repeat: no-repeat;
+  background-repeat: repeat;
 }
 
 .bottom-nav {
-  background-image:
-    linear-gradient(120deg, rgba(253, 247, 234, 0.9), rgba(245, 235, 216, 0.9)),
-    url('/img/sfondo_header.webp');
-  background-size: cover;
+  border-top: 1px solid #4f432c;
+  background-image: 
+    url('/img/sfondo_header_1.webp');
+  background-size: contain;
   background-position: center;
-  background-repeat: no-repeat;
+  background-repeat: repeat;
 }

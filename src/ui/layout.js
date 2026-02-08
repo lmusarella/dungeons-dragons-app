@@ -10,9 +10,7 @@ export function renderLayout(container) {
           <div class="app-logo">
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
           </div>
-          <div>
-            <h1>Dungeons & Dragons</h1>
-            <p class="app-subtitle">Gestione personaggi</p>
+          <div>           
           </div>
         </div>
         <div class="app-header-right">
