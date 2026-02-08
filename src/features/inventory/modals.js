@@ -1,5 +1,5 @@
 import { createItem, updateItem } from './inventoryApi.js';
-import { buildInput, buildSelect, buildTextarea, createToast, openFormModal } from '../../ui/components.js';
+import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { armorTypes, bodyParts, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
 import { getEquipSlots, getWeightUnit, hasProficiencyForItem } from './utils.js';
 
@@ -353,6 +353,7 @@ export async function openItemModal(character, item, items, onSave) {
     shield_bonus: Number(formData.get('shield_bonus')) || 0
   };
 
+  setGlobalLoading(true);
   try {
     if (item) {
       await updateItem(item.id, payload);
@@ -361,9 +362,11 @@ export async function openItemModal(character, item, items, onSave) {
       await createItem(payload);
       createToast('Oggetto creato');
     }
-    onSave();
+    await onSave?.();
   } catch (error) {
     createToast('Errore salvataggio oggetto', 'error');
+  } finally {
+    setGlobalLoading(false);
   }
 }
 
