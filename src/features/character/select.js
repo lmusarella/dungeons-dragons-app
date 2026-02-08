@@ -30,18 +30,25 @@ export async function renderCharacterSelect(container) {
     container.innerHTML = `
     <section class="auth-screen character-select-view">
       <div class="card character-select-card">
-      <header class="character-select-header">
-        <div>
-          <p class="title-car-select">Seleziona o crea un personaggio</p>        
-        </div>
-        ${canCreateCharacter ? '<button class="icon-button icon-button--add character-select-add" type="button" data-create-character aria-label="Nuovo personaggio" title="Nuovo personaggio">+</button>' : ''}
-      </header>
+        <header class="character-select-header">
+          <div>
+            <p class="title-car-select">Seleziona o crea un personaggio</p>
+          </div>
+          ${canCreateCharacter ? '<button class="icon-button icon-button--add character-select-add" type="button" data-create-character aria-label="Nuovo personaggio" title="Nuovo personaggio">+</button>' : ''}
+        </header>
         <div class="character-card-grid">
-        ${characters.length
+          ${characters.length
     ? characters.map((character) => buildCharacterCard(character, character.id === activeCharacter?.id)).join('')
     : '<p>Non hai ancora creato un personaggio.</p>'}
         </div>
       </div>
+      <footer class="character-select-footer" aria-label="Crediti di sviluppo">
+        <p>
+          Sviluppato da <strong>Musarella Luca</strong>
+          ·
+          <a href="https://github.com/lmusarella/dungeons-dragons-app" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+        </p>
+      </footer>
     </section>
   `;
 

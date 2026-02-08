@@ -2932,17 +2932,27 @@ button:focus-visible,
   padding-left: clamp(8px, 1.5vw, 18px);
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   background-image:
     url('/img/sfondo_selezione.webp');
   background-size: cover;
   background-position: center;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.character-select-view::-webkit-scrollbar {
+  display: none;
 }
 
 .character-select-card {
   margin: 0 !important;
+  width: min(920px, 100%);
 }
 
 .character-select-header {
@@ -2958,6 +2968,30 @@ button:focus-visible,
   height: 36px;
   font-size: 1.6rem;
   box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.25);
+}
+
+.character-select-footer {
+  width: min(920px, 100%);
+  min-height: 69px;
+  padding: 12px 16px;
+  border-top: 1px solid #e6dcc8;
+  background: #fdf7ea;
+  color: #1c1b1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.character-select-footer p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.character-select-footer a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .character-card-grid {
