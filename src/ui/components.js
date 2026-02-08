@@ -19,8 +19,13 @@ export function setGlobalLoading(isLoading) {
 }
 
 export function createToast(message, type = 'info') {
+  const allowedTypes = new Set(['info', 'success', 'error']);
+  const resolvedType = allowedTypes.has(type) ? type : 'info';
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
+  toast.className = `toast toast-${resolvedType}`;
+  toast.setAttribute('role', resolvedType === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', resolvedType === 'error' ? 'assertive' : 'polite');
+  toast.setAttribute('aria-atomic', 'true');
   toast.textContent = message;
   const container = document.querySelector('[data-toast-container]');
   if (container) {
@@ -28,7 +33,8 @@ export function createToast(message, type = 'info') {
     setTimeout(() => toast.classList.add('visible'), 20);
     setTimeout(() => {
       toast.classList.remove('visible');
-      toast.addEventListener('transitionend', () => toast.remove());
+      toast.classList.add('toast-leaving');
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true });
     }, 3200);
   }
 }
