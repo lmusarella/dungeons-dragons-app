@@ -15,7 +15,7 @@ export function renderWalletSummary(wallet) {
               <span class="coin-avatar coin-avatar--${coin.key}" aria-hidden="true">
                 <img src="${coin.icon}" alt="" loading="lazy" />
               </span>
-              <span>${coin.label}</span>
+              <strong>${coin.label}</strong>
             </div>
             <strong>${wallet?.[coin.key] ?? 0}</strong>
           </div>
