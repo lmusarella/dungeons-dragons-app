@@ -161,6 +161,13 @@ export async function renderInventory(container) {
         const item = items.find((entry) => String(entry.id) === image.dataset.itemImage);
         if (item) openItemImageModal(item);
       }));
+    listEl.querySelectorAll('[data-item-preview]')
+      .forEach((button) => button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const item = items.find((entry) => String(entry.id) === button.dataset.itemPreview);
+        if (item) openItemImageModal(item);
+      }));
     listEl.querySelectorAll('[data-delete]')
       .forEach((btn) => btn.addEventListener('click', async () => {
         const item = items.find((entry) => entry.id === btn.dataset.delete);

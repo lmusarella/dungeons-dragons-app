@@ -14,6 +14,9 @@ export function renderLayout(container) {
           </div>
         </div>
         <div class="app-header-right">
+          <button class="icon-button" type="button" data-refresh-app aria-label="Aggiorna applicazione" title="Aggiorna applicazione">
+            <span aria-hidden="true">↻</span>
+          </button>
           <div class="header-meta" data-header-meta>
             <div class="header-meta-item" data-user-row>
               <div class="header-avatar" data-user-avatar></div>
@@ -133,6 +136,14 @@ export function renderLayout(container) {
     });
   }
 
+  const refreshButton = container.querySelector('[data-refresh-app]');
+  if (refreshButton) {
+    refreshButton.addEventListener('click', () => {
+      window.location.reload();
+    });
+  }
+
+
   const actionsFab = container.querySelector('[data-actions-fab]');
   const actionsToggle = container.querySelector('[data-actions-toggle]');
   if (actionsFab && actionsToggle) {
@@ -211,6 +222,7 @@ export function updateHeaderInfo() {
   if (menuButton) {
     menuButton.hidden = !user;
   }
+
 }
 
 function buildMenuContent() {

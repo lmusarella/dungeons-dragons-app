@@ -11,7 +11,7 @@ import {
 } from './journalApi.js';
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
-import { buildDrawerLayout, buildInput, buildTextarea, createToast, openDrawer, closeDrawer, openConfirmModal } from '../../ui/components.js';
+import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
 
 export async function renderJournal(container) {
   const state = getState();
@@ -45,9 +45,6 @@ export async function renderJournal(container) {
     return acc;
   }, {});
 
-  const pinned = entries.filter((entry) => entry.is_pinned);
-  const normal = entries.filter((entry) => !entry.is_pinned);
-
   container.innerHTML = `
     <div class="journal-layout">
       <section class="card journal-toolbar">
@@ -56,52 +53,58 @@ export async function renderJournal(container) {
             <p class="eyebrow">Diario</p>
             <h2>Appunti e sessioni</h2>
           </div>
-          <button class="primary" data-add-entry>Nuova voce</button>
+          <button class="icon-button icon-button--add" data-add-entry aria-label="Nuova voce" title="Nuova voce">
+            <span aria-hidden="true">+</span>
+          </button>
         </header>
-        <div class="filters">
-          <input type="search" placeholder="Cerca" data-search />
-          <button data-add-tag class="ghost-button">Nuovo tag</button>
+        <div class="filters journal-filters-row">
+          <input type="search" placeholder="Cerca per titolo o contenuto" data-search />
+          <button data-add-tag class="icon-button" aria-label="Nuovo tag" title="Nuovo tag">
+            <span aria-hidden="true">🏷️</span>
+          </button>
         </div>
       </section>
-      <div data-journal-list></div>
+      <section class="card journal-section-card">
+        <header class="card-header">
+          <p class="eyebrow">Voci</p>
+        </header>
+        <div data-journal-list></div>
+      </section>
+      <section class="card journal-section-card">
+        <header class="card-header">
+          <p class="eyebrow">Archivio file sessioni</p>
+          <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
+            <span aria-hidden="true">📎</span>
+          </button>
+        </header>
+        <p class="muted">Sezione predisposta: il caricamento locale è già disponibile, il salvataggio su Supabase verrà collegato quando sarà pronta la tabella.</p>
+        <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
+        <p class="muted" data-upload-feedback>Nessun file selezionato.</p>
+      </section>
     </div>
   `;
 
   const listEl = container.querySelector('[data-journal-list]');
   const searchInput = container.querySelector('[data-search]');
+  const uploadButton = container.querySelector('[data-upload-session-file]');
+  const uploadInput = container.querySelector('[data-session-file-input]');
+  const uploadFeedback = container.querySelector('[data-upload-feedback]');
 
   function renderList() {
-    const term = searchInput.value.toLowerCase();
-    const filteredPinned = filterEntries(pinned, term);
-    const filteredNormal = filterEntries(normal, term);
-    listEl.innerHTML = [
-      `
-        <section class="card journal-section-card">
-          <header class="card-header">
-            <p class="eyebrow">In evidenza</p>
-          </header>
-          ${filteredPinned.length
-    ? buildEntryList(filteredPinned, entryTagMap, tagMap)
-    : '<p class="muted">Nessuna voce in evidenza.</p>'}
-        </section>
-      `,
-      `
-        <section class="card journal-section-card">
-          <header class="card-header">
-            <p class="eyebrow">Voci</p>
-          </header>
-          ${filteredNormal.length
-    ? buildEntryList(filteredNormal, entryTagMap, tagMap)
-    : '<p class="muted">Nessuna voce.</p>'}
-        </section>
-      `
-    ].join('');
+    const term = searchInput.value.toLowerCase().trim();
+    const filteredEntries = filterEntries(entries, term);
+    listEl.innerHTML = filteredEntries.length
+      ? buildEntryList(filteredEntries, entryTagMap, tagMap)
+      : '<p class="muted">Nessuna voce trovata.</p>';
 
     listEl.querySelectorAll('[data-edit]')
-      .forEach((btn) => btn.addEventListener('click', () => {
+      .forEach((btn) => btn.addEventListener('click', async () => {
         const entry = entries.find((item) => item.id === btn.dataset.edit);
-        if (entry) openEntryDrawer(activeCharacter, entry, tags, entryTagMap[entry.id] ?? [], refresh);
+        if (entry) {
+          await openEntryModal(activeCharacter, entry, tags, entryTagMap[entry.id] ?? [], refresh);
+        }
       }));
+
     listEl.querySelectorAll('[data-delete]')
       .forEach((btn) => btn.addEventListener('click', async () => {
         const entry = entries.find((item) => item.id === btn.dataset.delete);
@@ -128,11 +131,24 @@ export async function renderJournal(container) {
 
   renderList();
   searchInput.addEventListener('input', renderList);
-  container.querySelector('[data-add-entry]').addEventListener('click', () => {
-    openEntryDrawer(activeCharacter, null, tags, [], refresh);
+  container.querySelector('[data-add-entry]').addEventListener('click', async () => {
+    await openEntryModal(activeCharacter, null, tags, [], refresh);
   });
-  container.querySelector('[data-add-tag]').addEventListener('click', () => {
-    openTagDrawer(activeCharacter, refresh);
+  container.querySelector('[data-add-tag]').addEventListener('click', async () => {
+    await openTagModal(activeCharacter, refresh);
+  });
+
+  uploadButton?.addEventListener('click', () => uploadInput?.click());
+  uploadInput?.addEventListener('change', () => {
+    const file = uploadInput.files?.[0];
+    if (!file) {
+      if (uploadFeedback) uploadFeedback.textContent = 'Nessun file selezionato.';
+      return;
+    }
+    if (uploadFeedback) {
+      uploadFeedback.textContent = `File pronto: ${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB).`;
+    }
+    createToast('File selezionato. Salvataggio remoto da collegare quando disponibile.');
   });
 }
 
@@ -147,8 +163,8 @@ function buildEntryList(entries, entryTagMap, tagMap) {
   return `
     <ul class="journal-entry-list">
       ${entries.map((entry) => {
-        const tagIds = entryTagMap[entry.id] ?? [];
-        return `
+    const tagIds = entryTagMap[entry.id] ?? [];
+    return `
           <li class="journal-entry-card">
             <div>
               <strong>${entry.title || 'Senza titolo'}</strong>
@@ -158,27 +174,32 @@ function buildEntryList(entries, entryTagMap, tagMap) {
               </div>
             </div>
             <div class="actions">
-              <button class="ghost-button" data-edit="${entry.id}">Modifica</button>
-              <button class="ghost-button" data-delete="${entry.id}">Elimina</button>
+              <button class="icon-button" data-edit="${entry.id}" aria-label="Modifica voce" title="Modifica">
+                <span aria-hidden="true">✏️</span>
+              </button>
+              <button class="icon-button icon-button--danger" data-delete="${entry.id}" aria-label="Elimina voce" title="Elimina">
+                <span aria-hidden="true">🗑️</span>
+              </button>
             </div>
           </li>
         `;
-      }).join('')}
+  }).join('')}
     </ul>
   `;
 }
 
-function openEntryDrawer(character, entry, tags, selectedTags, onSave) {
-  const form = document.createElement('form');
-  form.className = 'drawer-form';
-  form.appendChild(buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' }));
-  form.appendChild(buildInput({ label: 'Data', name: 'entry_date', type: 'date', value: entry?.entry_date ?? new Date().toISOString().split('T')[0] }));
-  form.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
-  form.appendChild(buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' }));
+async function openEntryModal(character, entry, tags, selectedTags, onSave) {
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid';
+  content.appendChild(buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' }));
+  content.appendChild(buildInput({ label: 'Data', name: 'entry_date', type: 'date', value: entry?.entry_date ?? new Date().toISOString().split('T')[0] }));
+  content.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
+  content.appendChild(buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' }));
+
   const pinnedField = document.createElement('label');
   pinnedField.className = 'checkbox';
-  pinnedField.innerHTML = '<input type="checkbox" name="is_pinned" /> <span>In evidenza</span>';
-  form.appendChild(pinnedField);
+  pinnedField.innerHTML = `<input type="checkbox" name="is_pinned" ${entry?.is_pinned ? 'checked' : ''} /> <span>In evidenza</span>`;
+  content.appendChild(pinnedField);
 
   const tagWrap = document.createElement('div');
   tagWrap.className = 'tag-selector';
@@ -189,84 +210,78 @@ function openEntryDrawer(character, entry, tags, selectedTags, onSave) {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.value = tag.id;
+    input.name = 'entry_tag';
     if (selectedTags.includes(tag.id)) input.checked = true;
     label.appendChild(input);
     label.append(tag.name);
     tagWrap.appendChild(label);
   });
-  form.appendChild(tagWrap);
+  content.appendChild(tagWrap);
 
-  const submit = document.createElement('button');
-  submit.className = 'primary';
-  submit.type = 'submit';
-  submit.textContent = entry ? 'Salva' : 'Crea';
-  form.appendChild(submit);
-
-  form.is_pinned.checked = entry?.is_pinned ?? false;
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(form);
-    const payload = {
-      user_id: character.user_id,
-      character_id: character.id,
-      title: formData.get('title'),
-      entry_date: formData.get('entry_date'),
-      session_no: Number(formData.get('session_no') || 0),
-      content: formData.get('content'),
-      is_pinned: formData.get('is_pinned') === 'on'
-    };
-
-    try {
-      const saved = entry
-        ? await updateEntry(entry.id, payload)
-        : await createEntry(payload);
-      const selected = Array.from(tagWrap.querySelectorAll('input[type="checkbox"]'))
-        .filter((input) => input.checked)
-        .map((input) => input.value);
-      if (entry) {
-        const toAdd = selected.filter((id) => !selectedTags.includes(id));
-        const toRemove = selectedTags.filter((id) => !selected.includes(id));
-        await Promise.all([
-          ...toAdd.map((id) => attachTag(saved.id, id)),
-          ...toRemove.map((id) => detachTag(saved.id, id))
-        ]);
-      } else {
-        await Promise.all(selected.map((id) => attachTag(saved.id, id)));
-      }
-      createToast('Voce salvata');
-      closeDrawer();
-      onSave();
-    } catch (error) {
-      createToast('Errore salvataggio voce', 'error');
-    }
+  const formData = await openFormModal({
+    title: entry ? 'Modifica voce' : 'Nuova voce',
+    submitLabel: entry ? 'Salva' : 'Crea',
+    content,
+    cardClass: 'modal-card--wide'
   });
 
-  openDrawer(buildDrawerLayout(entry ? 'Modifica voce' : 'Nuova voce', form));
+  if (!formData) return;
+
+  const payload = {
+    user_id: character.user_id,
+    character_id: character.id,
+    title: formData.get('title'),
+    entry_date: formData.get('entry_date'),
+    session_no: Number(formData.get('session_no') || 0),
+    content: formData.get('content'),
+    is_pinned: formData.get('is_pinned') === 'on'
+  };
+
+  try {
+    const saved = entry
+      ? await updateEntry(entry.id, payload)
+      : await createEntry(payload);
+
+    const selected = Array.from(tagWrap.querySelectorAll('input[type="checkbox"]'))
+      .filter((input) => input.checked)
+      .map((input) => input.value);
+
+    if (entry) {
+      const toAdd = selected.filter((id) => !selectedTags.includes(id));
+      const toRemove = selectedTags.filter((id) => !selected.includes(id));
+      await Promise.all([
+        ...toAdd.map((id) => attachTag(saved.id, id)),
+        ...toRemove.map((id) => detachTag(saved.id, id))
+      ]);
+    } else {
+      await Promise.all(selected.map((id) => attachTag(saved.id, id)));
+    }
+
+    createToast('Voce salvata');
+    onSave();
+  } catch (error) {
+    createToast('Errore salvataggio voce', 'error');
+  }
 }
 
-function openTagDrawer(character, onSave) {
-  const form = document.createElement('form');
-  form.className = 'drawer-form';
-  form.appendChild(buildInput({ label: 'Nome tag', name: 'name' }));
-  const submit = document.createElement('button');
-  submit.className = 'primary';
-  submit.type = 'submit';
-  submit.textContent = 'Crea';
-  form.appendChild(submit);
+async function openTagModal(character, onSave) {
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid';
+  content.appendChild(buildInput({ label: 'Nome tag', name: 'name' }));
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(form);
-    try {
-      await createTag({ user_id: character.user_id, name: formData.get('name') });
-      createToast('Tag creato');
-      closeDrawer();
-      onSave();
-    } catch (error) {
-      createToast('Errore tag', 'error');
-    }
+  const formData = await openFormModal({
+    title: 'Nuovo tag',
+    submitLabel: 'Crea',
+    content
   });
 
-  openDrawer(buildDrawerLayout('Nuovo tag', form));
+  if (!formData) return;
+
+  try {
+    await createTag({ user_id: character.user_id, name: formData.get('name') });
+    createToast('Tag creato');
+    onSave();
+  } catch (error) {
+    createToast('Errore tag', 'error');
+  }
 }

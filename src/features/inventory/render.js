@@ -38,6 +38,8 @@ function buildTransactionAmountLabel(amount) {
   return entries.map((entry) => `${entry.value} ${entry.coin}`).join(' · ');
 }
 
+const TRANSACTION_SCROLL_THRESHOLD = 8;
+
 export function buildTransactionList(transactions) {
   const wrapper = document.createElement('div');
   wrapper.className = 'transaction-list';
@@ -47,6 +49,7 @@ export function buildTransactionList(transactions) {
   }
   const list = document.createElement('ul');
   list.className = 'transaction-items';
+  const shouldScroll = transactions.length > TRANSACTION_SCROLL_THRESHOLD;
   transactions.forEach((transaction) => {
     const item = document.createElement('li');
     const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
@@ -73,6 +76,7 @@ export function buildTransactionList(transactions) {
     `;
     list.appendChild(item);
   });
+  wrapper.classList.toggle('transaction-list--scrollable', shouldScroll);
   wrapper.appendChild(list);
   return wrapper;
 }
@@ -138,7 +142,7 @@ export function buildItemList(items, weightUnit = 'lb') {
             <div class="inventory-table__cell inventory-table__cell--item">
               ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : ''}
               <div class="item-info-body">
-                <strong>${item.name}</strong>
+                <button class="item-name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
               </div>
             </div>
             <div class="inventory-table__cell">${getCategoryLabel(item.category)}</div>
