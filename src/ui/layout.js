@@ -59,9 +59,9 @@ export function renderLayout(container) {
       </div>
       <div class="actions-fab-backdrop" aria-hidden="true"></div>
       <nav class="bottom-nav" data-bottom-nav>
-        <a href="#/home" data-tab="home">Scheda Personaggio</a>
-        <a href="#/inventory" data-tab="inventory">Inventario</a>
-        <a href="#/journal" data-tab="journal">Diario</a>
+        <a href="#/home" data-tab="home"><span class="bottom-nav__pill">Scheda Personaggio</span></a>
+        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill">Inventario</span></a>
+        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill">Diario</span></a>
       </nav>
       <div class="drawer" data-drawer>
         <div class="drawer-overlay" data-drawer-close></div>

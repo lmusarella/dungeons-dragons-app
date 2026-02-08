@@ -71,6 +71,9 @@ async function renderRoute() {
     const view = routes.get(route) || routes.get('home');
     updateActiveTab(route);
     applyShellVisibility(hideShell, showFab);
+    if (!isAuthRoute) {
+      outlet.innerHTML = '';
+    }
     await view?.(outlet);
   } finally {
     setGlobalLoading(false);
