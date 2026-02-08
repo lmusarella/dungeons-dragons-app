@@ -215,6 +215,16 @@ export async function renderInventory(container) {
       button.addEventListener('click', async () => {
         const route = window.location.hash.replace('#/', '') || 'home';
         if (route !== 'inventory') return;
+        const latestState = getState();
+        const latestCharacterId = normalizeCharacterId(latestState.activeCharacterId);
+        const latestCharacter = latestState.characters
+          .find((char) => normalizeCharacterId(char.id) === latestCharacterId);
+        if (!latestCharacter) return;
+
+        wallet = latestState.cache.wallet;
+        const activeUserId = latestCharacter.user_id;
+        const activeCharacterId = latestCharacter.id;
+
         const direction = button.dataset.moneyAction;
         const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
         const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
@@ -222,8 +232,8 @@ export async function renderInventory(container) {
         if (!formData) return;
         if (!wallet) {
           wallet = {
-            user_id: activeCharacter.user_id,
-            character_id: activeCharacter.id,
+            user_id: activeUserId,
+            character_id: activeCharacterId,
             cp: 0,
             sp: 0,
             gp: 0,
@@ -246,15 +256,16 @@ export async function renderInventory(container) {
 
         await runWithGlobalLoader(async () => {
           try {
-            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+            const saved = await upsertWallet({ ...nextWallet, user_id: activeUserId, character_id: activeCharacterId });
             await createTransaction({
-              user_id: wallet.user_id,
-              character_id: wallet.character_id,
+              user_id: activeUserId,
+              character_id: activeCharacterId,
               direction,
               amount: signedDelta,
               reason: formData.get('reason'),
               occurred_on: formData.get('occurred_on')
             });
+            wallet = saved;
             updateCache('wallet', saved);
             await cacheSnapshot({ wallet: saved });
             createToast('Wallet aggiornato');
