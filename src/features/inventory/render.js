@@ -59,8 +59,8 @@ export function buildTransactionList(transactions) {
         <strong>${directionLabel}</strong>
         <p class="muted">${transaction.reason || 'Nessuna nota'}</p>
       </div>
+      <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
       <div class="transaction-meta">
-        <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
         <div class="transaction-actions">
           <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
