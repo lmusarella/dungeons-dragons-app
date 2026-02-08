@@ -270,6 +270,35 @@ export function exchangeFields({
   `;
 }
 
+export function walletEditFields(wallet = {}) {
+  const values = {
+    pp: Number(wallet.pp ?? 0),
+    gp: Number(wallet.gp ?? 0),
+    sp: Number(wallet.sp ?? 0),
+    cp: Number(wallet.cp ?? 0)
+  };
+  return `
+    <div class="money-grid compact-grid-fields">
+      <label class="field">
+        <span>Platino (PP)</span>
+        <input name="pp" type="number" value="${values.pp}" min="0" step="1" />
+      </label>
+      <label class="field">
+        <span>Oro (GP)</span>
+        <input name="gp" type="number" value="${values.gp}" min="0" step="1" />
+      </label>
+      <label class="field">
+        <span>Argento (SP)</span>
+        <input name="sp" type="number" value="${values.sp}" min="0" step="1" />
+      </label>
+      <label class="field">
+        <span>Rame (CP)</span>
+        <input name="cp" type="number" value="${values.cp}" min="0" step="1" />
+      </label>
+    </div>
+  `;
+}
+
 export function buildLootFields(weightStep) {
   return `
    <div class="compact-field-grid">
