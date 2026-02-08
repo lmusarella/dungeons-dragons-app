@@ -9,7 +9,12 @@ export default defineConfig(({ command }) => {
     plugins: [
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icons/icon.svg'],
+        includeAssets: [
+          'icons/icon.svg',
+          'icons/*.png',
+          'img/*.{png,jpg,jpeg,webp}',
+          'icons/*.mp3'
+        ],
         manifest: {
           name: 'Dungeon Dragon',
           short_name: 'DungeonDragon',

@@ -21,8 +21,11 @@ document.addEventListener('click', async (event) => {
   const target = event.target.closest('[data-logout]');
   if (target) {
     event.preventDefault();
-    await signOut();
-    window.location.hash = '#/login';
+    try {
+      await signOut();
+    } finally {
+      window.location.hash = '#/login';
+    }
   }
 });
 

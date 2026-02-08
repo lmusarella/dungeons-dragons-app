@@ -41,6 +41,18 @@ export function setStoredActiveCharacterId(userId, id) {
   }
 }
 
+export function clearStoredActiveCharacterIds(userId) {
+  if (typeof localStorage === 'undefined') return;
+  if (userId) {
+    localStorage.removeItem(getStorageKey(userId));
+  }
+
+  const prefixedKey = `${ACTIVE_CHARACTER_STORAGE_KEY}:`;
+  Object.keys(localStorage)
+    .filter((key) => key === ACTIVE_CHARACTER_STORAGE_KEY || key.startsWith(prefixedKey))
+    .forEach((key) => localStorage.removeItem(key));
+}
+
 export function getState() {
   return state;
 }
