@@ -2752,27 +2752,83 @@ button:focus-visible,
   bottom: 110px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   z-index: 30;
+  pointer-events: none;
 }
 
 .toast {
-  background: var(--accent);
-  color: #fff;
-  padding: 12px 16px;
-  border-radius: 12px;
+  --toast-color: #3b5d60;
+  --toast-accent: #74d3ca;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--toast-color) 92%, #101b22 8%) 0%, var(--toast-color) 100%);
+  color: #f8fffe;
+  padding: 12px 16px 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--toast-color) 55%, #ffffff 45%);
+  box-shadow:
+    0 10px 26px rgba(16, 27, 34, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  min-width: min(340px, calc(100vw - 28px));
+  max-width: min(420px, calc(100vw - 28px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  line-height: 1.35;
   opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(18px) scale(0.96);
+  transition:
+    opacity 0.3s ease,
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.34s ease;
+  filter: saturate(0.88);
+}
+
+.toast::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  flex: 0 0 11px;
+  background: var(--toast-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--toast-accent) 24%, transparent);
 }
 
 .toast.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  filter: saturate(1);
+}
+
+.toast.toast-leaving {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
 }
 
 .toast-error {
-  background: #b23a48;
+  --toast-color: #9f2d3e;
+  --toast-accent: #ff8ea1;
+}
+
+.toast-success {
+  --toast-color: #256c56;
+  --toast-accent: #7ce8c2;
+}
+
+@media (max-width: 860px) {
+  .toast-container {
+    right: 12px;
+    left: 12px;
+    bottom: 84px;
+  }
+
+  .toast {
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 .offline-banner {
