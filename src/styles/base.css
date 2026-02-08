@@ -210,7 +210,7 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-   background-color: bisque;
+  background-color: bisque;
 }
 
 .app-header {
@@ -446,7 +446,7 @@ button:focus-visible,
   z-index: 30;
 }
 
-.actions-fab.is-open + .actions-fab-backdrop {
+.actions-fab.is-open+.actions-fab-backdrop {
   opacity: 1;
   pointer-events: auto;
 }
@@ -797,7 +797,7 @@ button:focus-visible,
   padding: 6px 8px;
   border: 3px solid #eadfc9;
   border-radius: 16px;
-  background: #fff;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
   position: relative;
 }
 
@@ -1145,8 +1145,6 @@ button:focus-visible,
 }
 
 .resource-action-button {
-  border: 1px solid #c9b79f;
-  background: #fff;
   color: var(--accent);
   border-radius: 10px;
   min-height: 26px;
@@ -1264,7 +1262,6 @@ button:focus-visible,
 }
 
 .icon-button {
-  background: #fffaf1;
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -1297,7 +1294,6 @@ button:focus-visible,
 
 .icon-button--danger {
   border-color: rgba(178, 58, 72, 0.4);
-  background: rgba(178, 58, 72, 0.1);
 }
 
 .character-summary {
@@ -1854,7 +1850,7 @@ button:focus-visible,
   max-width: 260px;
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid  #3b5d60;
+  border: 1px solid #3b5d60;
   background: #fffaf1;
   color: #6a5540;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
@@ -1949,11 +1945,11 @@ button:focus-visible,
   background: #8aa0a2 !important;
 }
 
-.condition-modal__toggle input:checked + .diceov-toggle-track {
+.condition-modal__toggle input:checked+.diceov-toggle-track {
   background: #3b5d60 !important;
 }
 
-.condition-modal__toggle input:focus-visible + .diceov-toggle-track {
+.condition-modal__toggle input:focus-visible+.diceov-toggle-track {
   outline: 2px solid rgba(59, 93, 96, 0.5);
 }
 
@@ -2083,7 +2079,7 @@ button:focus-visible,
 }
 
 .stat-card {
-  background: #fdf7ea;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
   border: 3px solid #eadfc9;
   border-radius: 12px;
   padding: 8px;
@@ -2754,7 +2750,7 @@ button:focus-visible,
 
 .modal-toggle-field__label {
   font-weight: 600;
-  color:  #3b5d60;
+  color: #3b5d60;
 }
 
 .modal-card--form .modal-toggle-field .diceov-toggle {
@@ -2766,11 +2762,11 @@ button:focus-visible,
   background: #8aa0a2;
 }
 
-.modal-card--form .modal-toggle-field .diceov-toggle input:checked + .diceov-toggle-track {
+.modal-card--form .modal-toggle-field .diceov-toggle input:checked+.diceov-toggle-track {
   background: #3b5d60;
 }
 
-.modal-card--form .modal-toggle-field .diceov-toggle input:focus-visible + .diceov-toggle-track {
+.modal-card--form .modal-toggle-field .diceov-toggle input:focus-visible+.diceov-toggle-track {
   outline: 2px solid rgba(59, 93, 96, 0.5);
 }
 
@@ -2924,7 +2920,7 @@ button:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color:  #3b5d60;
+  color: #3b5d60;
   font-weight: 600;
   margin-bottom: 2px;
 }
@@ -2934,6 +2930,7 @@ button:focus-visible,
   justify-content: center;
   margin-top: 2px;
 }
+
 .login-view {
   flex: 1;
   display: flex;
@@ -2952,7 +2949,7 @@ button:focus-visible,
   flex: 1;
   min-height: 100%;
   background-image:
-      url('/img/sfondo_login.jpg');
+    url('/img/sfondo_login.jpg');
   background-size: cover, 180px 180px;
   background-position: center, center;
 }
@@ -3212,6 +3209,7 @@ button:focus-visible,
   border-radius: 999px;
   background: #7b6d53;
   font-size: 0.75rem;
+  color: white;
 }
 
 .pill--accent {
@@ -3235,7 +3233,7 @@ button:focus-visible,
 }
 
 .title-car-select {
-  color:  #3b5d60;
+  color: #3b5d60;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -3330,13 +3328,11 @@ button:focus-visible,
   border-radius: 16px;
   padding: 12px 14px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-  background-image: repeating-linear-gradient(
-    180deg,
-    rgba(214, 198, 173, 0.22) 0,
-    rgba(214, 198, 173, 0.22) 1px,
-    transparent 1px,
-    transparent 34px
-  );
+  background-image: repeating-linear-gradient(180deg,
+      rgba(214, 198, 173, 0.22) 0,
+      rgba(214, 198, 173, 0.22) 1px,
+      transparent 1px,
+      transparent 34px);
 }
 
 
@@ -3360,7 +3356,7 @@ button:focus-visible,
   padding: 10px;
   border: 2px solid rgba(139, 123, 99, 0.22);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
 }
 
 .transaction-info {
@@ -3446,13 +3442,11 @@ button:focus-visible,
 .inventory-transactions .transaction-ledger {
   padding: 8px 10px;
   border-radius: 14px;
-  background-image: repeating-linear-gradient(
-    180deg,
-    rgba(214, 198, 173, 0.2) 0,
-    rgba(214, 198, 173, 0.2) 1px,
-    transparent 1px,
-    transparent 30px
-  );
+  background-image: repeating-linear-gradient(180deg,
+      rgba(214, 198, 173, 0.2) 0,
+      rgba(214, 198, 173, 0.2) 1px,
+      transparent 1px,
+      transparent 30px);
 }
 
 .inventory-transactions .transaction-items {
@@ -4351,6 +4345,7 @@ button:focus-visible,
     grid-column: auto;
   }
 }
+
 @media (min-width: 1024px) {
   .home-layout {
     display: grid;

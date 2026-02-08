@@ -146,7 +146,7 @@ export function buildItemList(items, weightUnit = 'lb') {
             <div class="inventory-table__cell">${formatWeight(item.weight ?? 0, weightUnit)}</div>
             <div class="inventory-table__cell">${volumeValue}</div>
             <div class="inventory-table__cell inventory-table__cell--actions">
-              ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Usa</button>` : ''}
+              ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Consuma</button>` : ''}
               <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">
                 <span aria-hidden="true">✏️</span>
               </button>
