@@ -7,5 +7,18 @@ body {
 }
 
 .app-header {
-  background-image: linear-gradient(120deg, #fdf7ea, #f5ebd8);
+  background-image:
+    url('/img/sfondo_header_1.webp');
+  background-size: contain;
+  background-position: center;
+  background-repeat: repeat;
+}
+
+.bottom-nav {
+  border-top: 1px solid #4f432c;
+  background-image: 
+    url('/img/sfondo_header_1.webp');
+  background-size: contain;
+  background-position: center;
+  background-repeat: repeat;
 }
