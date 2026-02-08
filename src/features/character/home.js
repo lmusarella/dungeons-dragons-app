@@ -622,6 +622,15 @@ export async function renderHome(container) {
         if (item) openItemImageModal(item);
       });
     });
+  container.querySelectorAll('[data-item-preview]')
+    .forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const item = items?.find((entry) => String(entry.id) === button.dataset.itemPreview);
+        if (item) openItemImageModal(item);
+      });
+    });
   } finally {
     setGlobalLoading(false);
   }

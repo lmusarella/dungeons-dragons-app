@@ -466,7 +466,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
                     ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : ''}
                     <div class="item-info-body">
                       <div class="item-info-line">
-                        <strong class="attack-card__name">${item.name}</strong>
+                        <button class="item-name-button attack-card__name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
                         <span class="muted item-meta">
                           ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
                         </span>
