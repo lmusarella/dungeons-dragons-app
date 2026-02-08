@@ -388,7 +388,7 @@ export async function renderHome(container) {
       }
       try {
         await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
-        createToast('Equip aggiornato');
+        createToast('Equipaggiamento aggiornato');
         renderHome(container);
       } catch (error) {
         createToast('Errore aggiornamento equip', 'error');
@@ -402,7 +402,7 @@ export async function renderHome(container) {
       if (!item) return;
       try {
         await updateItem(item.id, { equip_slot: null, equip_slots: [] });
-        createToast('Equip rimosso');
+        createToast('Equipaggiamento rimosso');
         renderHome(container);
       } catch (error) {
         createToast('Errore aggiornamento equip', 'error');

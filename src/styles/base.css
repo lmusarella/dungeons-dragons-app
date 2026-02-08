@@ -192,6 +192,7 @@ button:focus-visible,
   letter-spacing: 0.12em;
   font-size: 0.62rem;
   margin: 0 0 4px;
+  font-weight: 600;
   color: #947b5a;
 }
 

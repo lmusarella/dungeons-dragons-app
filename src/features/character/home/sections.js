@@ -436,7 +436,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
     <section class="card home-card home-section home-scroll-panel">
       <header class="card-header">
         <div>
-          <p class="eyebrow">Equip</p>
+          <p class="eyebrow">Gestione Equipaggiamento</p>
           <div class="pill-row">
             <span class="pill pill--accent">Oggetti in sintonia: ${attunedCount}</span>
             <span class="pill">Carico totale: ${formatWeight(totalWeight, weightUnit)}</span>
