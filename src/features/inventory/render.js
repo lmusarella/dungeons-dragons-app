@@ -40,7 +40,7 @@ function buildTransactionAmountLabel(amount) {
 
 export function buildTransactionList(transactions) {
   const wrapper = document.createElement('div');
-  wrapper.className = 'transaction-list transaction-ledger';
+  wrapper.className = 'transaction-list';
   if (!transactions.length) {
     wrapper.innerHTML = '<p class="muted">Nessuna transazione registrata.</p>';
     return wrapper;
