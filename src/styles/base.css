@@ -2115,7 +2115,7 @@ button:focus-visible,
 .coin-avatar--gp img,
 .coin-avatar--sp img,
 .coin-avatar--cp img {
-  transform: scale(1.22);
+  transform: scale(1.72);
   transform-origin: center;
 }
 
@@ -3381,10 +3381,6 @@ button:focus-visible,
 
 .transaction-items li:last-child {
   border-bottom: none;
-}
-
-.transaction-info strong {
-  font-family: 'Fraunces', 'Inter', serif;
 }
 
 .transaction-amount {
