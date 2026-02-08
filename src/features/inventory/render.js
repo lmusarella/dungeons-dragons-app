@@ -1,6 +1,5 @@
 import { formatWeight } from '../../lib/format.js';
 import {
-  formatTransactionDate,
   getCategoryLabel,
   getItemStatusLabels,
   normalizeTransactionAmount
@@ -59,21 +58,20 @@ export function buildTransactionList(transactions) {
     const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
     const amountLabel = buildTransactionAmount(transaction.amount);
     const amountLabelText = buildTransactionAmountLabel(transaction.amount);
-    const dateLabel = formatTransactionDate(transaction.occurred_on || transaction.created_at);
     const directionClass = transaction.direction === 'pay' ? 'transaction-item--outgoing' : 'transaction-item--incoming';
     item.className = `transaction-item ${directionClass}`;
     item.innerHTML = `
       <div class="transaction-info">
         <strong>${directionLabel}</strong>
-        <p class="muted">${transaction.reason || 'Nessuna nota'} · ${dateLabel}</p>
+        <p class="muted">${transaction.reason || 'Nessuna nota'}</p>
       </div>
       <div class="transaction-meta">
         <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
         <div class="transaction-actions">
-          <button class="icon-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
+          <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
           </button>
-          <button class="icon-button icon-button--danger" type="button" data-delete-transaction="${transaction.id}" aria-label="Elimina transazione" title="Elimina">
+          <button class="icon-button icon-button--danger transaction-action-button transaction-action-button--danger" type="button" data-delete-transaction="${transaction.id}" aria-label="Elimina transazione" title="Elimina">
             <span aria-hidden="true">🗑️</span>
           </button>
         </div>

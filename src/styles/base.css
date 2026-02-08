@@ -3356,15 +3356,20 @@ button:focus-visible,
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .transaction-items li {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px dashed rgba(139, 123, 99, 0.2);
+  padding: 10px;
+  border: 1px solid rgba(139, 123, 99, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .transaction-meta {
@@ -3379,8 +3384,14 @@ button:focus-visible,
   gap: 6px;
 }
 
-.transaction-items li:last-child {
-  border-bottom: none;
+.transaction-action-button {
+  width: 24px;
+  height: 24px;
+  font-size: 1rem;
+}
+
+.transaction-action-button--danger {
+  border-color: rgba(178, 58, 72, 0.35);
 }
 
 .transaction-amount {
@@ -3446,8 +3457,12 @@ button:focus-visible,
   padding-bottom: 4px;
 }
 
+.inventory-transactions .transaction-items {
+  max-height: 300px;
+}
+
 .inventory-transactions .transaction-items li {
-  padding: 6px 0;
+  padding: 8px;
 }
 
 .inventory-transactions .transaction-info strong {
