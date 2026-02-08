@@ -61,3 +61,16 @@ export async function cacheSnapshot({ characters, items, resources, wallet, jour
     await db.entryTags.bulkPut(entryTags);
   }
 }
+
+
+export async function clearLocalCache() {
+  await Promise.all([
+    db.characters.clear(),
+    db.items.clear(),
+    db.resources.clear(),
+    db.wallet.clear(),
+    db.journal.clear(),
+    db.tags.clear(),
+    db.entryTags.clear()
+  ]);
+}

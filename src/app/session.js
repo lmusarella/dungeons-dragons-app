@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js';
-import { resetSessionState, setState } from './state.js';
+import { clearStoredActiveCharacterIds, getState, resetSessionState, setState } from './state.js';
+import { clearLocalCache } from '../lib/offline/cache.js';
 
 export async function initSession() {
   const { data } = await supabase.auth.getSession();
@@ -22,5 +23,12 @@ export async function ensureProfile(user) {
 }
 
 export async function signOut() {
-  await supabase.auth.signOut();
+  const userId = getState().user?.id;
+  try {
+    await supabase.auth.signOut();
+  } finally {
+    clearStoredActiveCharacterIds(userId);
+    await clearLocalCache();
+    resetSessionState();
+  }
 }
