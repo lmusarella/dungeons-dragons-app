@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { clearStoredActiveCharacterIds, getState, resetSessionState, setState } from './state.js';
 import { clearLocalCache } from '../lib/offline/cache.js';
+import { setGlobalLoading } from '../ui/components.js';
 
 export async function initSession() {
   const { data } = await supabase.auth.getSession();
@@ -16,10 +17,15 @@ export async function initSession() {
 
 export async function ensureProfile(user) {
   if (!user) return;
-  await supabase.from('profiles').upsert({
-    id: user.id,
-    display_name: user.user_metadata?.display_name ?? ''
-  });
+  setGlobalLoading(true);
+  try {
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      display_name: user.user_metadata?.display_name ?? ''
+    });
+  } finally {
+    setGlobalLoading(false);
+  }
 }
 
 export async function signOut() {
