@@ -14,9 +14,11 @@ export function renderLayout(container) {
           </div>
         </div>
         <div class="app-header-right">
-          <button class="icon-button" type="button" data-refresh-app aria-label="Aggiorna applicazione" title="Aggiorna applicazione">
-            <span aria-hidden="true">↻</span>
-          </button>
+          <div class="header-action-wrap">
+            <button class="icon-button header-refresh-button" type="button" data-refresh-app aria-label="Aggiorna applicazione" title="Aggiorna applicazione">
+              <span aria-hidden="true">↻</span>
+            </button>
+          </div>
           <div class="header-meta" data-header-meta>
             <div class="header-meta-item" data-user-row>
               <div class="header-avatar" data-user-avatar></div>
@@ -33,11 +35,13 @@ export function renderLayout(container) {
               </div>
             </div>
           </div>
-          <button class="menu-button" type="button" data-menu-button aria-label="Apri menu">
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
+          <div class="header-action-wrap">
+            <button class="menu-button" type="button" data-menu-button aria-label="Apri menu">
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
         </div>
       </header>
       <div class="offline-banner" data-offline-banner hidden>
