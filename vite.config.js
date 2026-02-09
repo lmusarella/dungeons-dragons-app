@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ command }) => {
-  const base = command === 'serve' ? '/' : '/dungeon-dragon-app/';
+  const base = command === 'serve' ? '/' : '/dungeons-dragons-app/';
 
   return {
     base,
