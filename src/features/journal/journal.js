@@ -134,12 +134,16 @@ export async function renderJournal(container) {
           confirmLabel: 'Elimina'
         });
         if (!shouldDelete) return;
+
+        setGlobalLoading(true);
         try {
           await deleteEntry(entry.id);
           createToast('Voce eliminata');
-          refresh();
+          await refresh();
         } catch (error) {
           createToast('Errore eliminazione', 'error');
+        } finally {
+          setGlobalLoading(false);
         }
       }));
   }
@@ -177,18 +181,23 @@ export async function renderJournal(container) {
       .forEach((button) => button.addEventListener('click', async () => {
         const fileRecord = sessionFiles.find((entry) => entry.id === button.dataset.previewFile);
         if (!fileRecord) return;
+
         setGlobalLoading(true);
+        let signedUrl = null;
         try {
-          const signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 600);
+          signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 600);
           if (!signedUrl) {
             createToast('Impossibile aprire l’anteprima', 'error');
             return;
           }
-          await openFilePreviewModal(fileRecord.file_name, signedUrl);
         } catch (error) {
           createToast('Errore apertura anteprima', 'error');
         } finally {
           setGlobalLoading(false);
+        }
+
+        if (signedUrl) {
+          await openFilePreviewModal(fileRecord.file_name, signedUrl);
         }
       }));
 
@@ -203,7 +212,7 @@ export async function renderJournal(container) {
             createToast('Impossibile scaricare il file', 'error');
             return;
           }
-          triggerFileDownload(signedUrl, fileRecord.file_name);
+          await triggerFileDownload(signedUrl, fileRecord.file_name);
         } catch (error) {
           createToast('Errore download file', 'error');
         } finally {
@@ -250,8 +259,18 @@ export async function renderJournal(container) {
       return;
     }
 
+    const uploadDetails = await openSessionFileUploadModal(file);
+    if (!uploadDetails) {
+      uploadInput.value = '';
+      if (uploadFeedback) {
+        uploadFeedback.textContent = 'Caricamento annullato.';
+      }
+      return;
+    }
+
+    const resolvedFileName = uploadDetails.displayName || file.name;
     if (uploadFeedback) {
-      uploadFeedback.textContent = `Upload in corso: ${file.name}...`;
+      uploadFeedback.textContent = `Upload in corso: ${resolvedFileName}...`;
     }
 
     setGlobalLoading(true);
@@ -265,18 +284,21 @@ export async function renderJournal(container) {
       await createSessionFile({
         user_id: activeCharacter.user_id,
         character_id: activeCharacter.id,
-        file_name: file.name,
+        file_name: resolvedFileName,
         file_path: filePath,
         mime_type: file.type || 'application/pdf',
         size_bytes: file.size,
+        session_no: uploadDetails.sessionNo,
+        notes: uploadDetails.notes,
         metadata: {
-          original_name: file.name
+          original_name: file.name,
+          display_name: resolvedFileName
         }
       });
 
       createToast('File caricato con successo', 'success');
       if (uploadFeedback) {
-        uploadFeedback.textContent = `Caricato: ${file.name}`;
+        uploadFeedback.textContent = `Caricato: ${resolvedFileName}`;
       }
       uploadInput.value = '';
       await refresh();
@@ -335,6 +357,8 @@ function buildFileList(files) {
           <div>
             <strong>${file.file_name}</strong>
             <p class="muted">${formatFileSize(file.size_bytes)} · ${file.mime_type || 'application/pdf'}</p>
+            ${file.session_no !== null && file.session_no !== undefined ? `<p class="muted">Sessione ${file.session_no}</p>` : ''}
+            ${file.notes ? `<p class="muted">${file.notes}</p>` : ''}
             <p class="muted">${formatDate(file.created_at)}</p>
           </div>
           <div class="actions">
@@ -374,32 +398,117 @@ function formatDate(value) {
   });
 }
 
-function triggerFileDownload(url, fileName) {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName || 'session-file.pdf';
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+async function triggerFileDownload(url, fileName) {
+  const resolvedFileName = fileName || 'session-file.pdf';
+
+  try {
+    const response = await fetch(url, { credentials: 'omit' });
+    if (!response.ok) {
+      throw new Error(`Download HTTP error: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = resolvedFileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+    return;
+  } catch (error) {
+    const fallbackLink = document.createElement('a');
+    fallbackLink.href = url;
+    fallbackLink.download = resolvedFileName;
+    fallbackLink.rel = 'noopener';
+    document.body.appendChild(fallbackLink);
+    fallbackLink.click();
+    fallbackLink.remove();
+  }
 }
 
 async function openFilePreviewModal(fileName, signedUrl) {
-  const preview = document.createElement('div');
-  preview.className = 'journal-file-preview';
-  preview.innerHTML = `
-    <p class="muted">Anteprima: ${fileName}</p>
-    <iframe class="journal-file-preview__frame" src="${signedUrl}" title="Anteprima ${fileName}"></iframe>
-    <a class="ghost-button" href="${signedUrl}" target="_blank" rel="noopener noreferrer">Apri in nuova scheda</a>
-  `;
+  const previewUrl = `${signedUrl}#pagemode=none`;
 
   await openFormModal({
     title: fileName,
-    content: preview,
+    content: `
+      <div class="journal-file-preview">
+        <p class="muted">Anteprima: ${fileName}</p>
+        <div class="journal-file-preview__status" data-preview-loading>Caricamento anteprima...</div>
+        <iframe
+          class="journal-file-preview__frame"
+          src="${previewUrl}"
+          title="Anteprima ${fileName}"
+          loading="lazy"
+          data-preview-frame
+        ></iframe>
+      </div>
+    `,
     submitLabel: 'Chiudi',
     cancelLabel: null,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable']
+    cardClass: ['modal-card--wide', 'modal-card--scrollable'],
+    onOpen: ({ fieldsEl, modal }) => {
+      const frame = fieldsEl?.querySelector('[data-preview-frame]');
+      const loadingStatus = fieldsEl?.querySelector('[data-preview-loading]');
+      const footerEl = modal?.querySelector('.modal-footer');
+      if (!frame || !loadingStatus) return undefined;
+
+      const openInNewTabLink = document.createElement('a');
+      openInNewTabLink.className = 'ghost-button ghost-button--compact';
+      openInNewTabLink.href = previewUrl;
+      openInNewTabLink.target = '_blank';
+      openInNewTabLink.rel = 'noopener noreferrer';
+      openInNewTabLink.textContent = 'Apri in nuova scheda';
+      footerEl?.prepend(openInNewTabLink);
+
+      const hideStatus = () => {
+        loadingStatus.hidden = true;
+      };
+      const showFallback = () => {
+        if (!loadingStatus.hidden) {
+          loadingStatus.textContent = 'Il documento è pesante: attendi o apri in nuova scheda.';
+        }
+      };
+
+      frame.addEventListener('load', hideStatus, { once: true });
+      const timeoutId = window.setTimeout(showFallback, 2000);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+        openInNewTabLink.remove();
+      };
+    }
   });
+}
+
+async function openSessionFileUploadModal(file) {
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid';
+  content.appendChild(buildInput({ label: 'Nome file visibile', name: 'display_name', value: file.name }));
+  content.appendChild(buildInput({ label: 'Sessione (opzionale)', name: 'session_no', type: 'number' }));
+  content.appendChild(buildTextarea({ label: 'Note (opzionale)', name: 'notes', placeholder: 'Aggiungi contesto o descrizione del file' }));
+
+  const formData = await openFormModal({
+    title: 'Dettagli file sessione',
+    submitLabel: 'Carica file',
+    content
+  });
+
+  if (!formData) return null;
+
+  const sessionNoRaw = formData.get('session_no');
+  const sessionNo = Number(sessionNoRaw);
+  const parsedSessionNo = Number.isFinite(sessionNo) && sessionNo >= 0 ? sessionNo : null;
+  const displayName = String(formData.get('display_name') || '').trim();
+  const notes = String(formData.get('notes') || '').trim();
+
+  return {
+    displayName,
+    sessionNo: parsedSessionNo,
+    notes: notes || null
+  };
 }
 
 async function openEntryModal(character, entry, tags, selectedTags, onSave) {
@@ -451,6 +560,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     is_pinned: formData.get('is_pinned') === 'on'
   };
 
+  setGlobalLoading(true);
   try {
     const saved = entry
       ? await updateEntry(entry.id, payload)
@@ -472,9 +582,11 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     }
 
     createToast('Voce salvata');
-    onSave();
+    await onSave();
   } catch (error) {
     createToast('Errore salvataggio voce', 'error');
+  } finally {
+    setGlobalLoading(false);
   }
 }
 

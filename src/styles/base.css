@@ -126,6 +126,12 @@ button:focus-visible,
   justify-content: center;
 }
 
+.ghost-button--compact {
+  padding: 6px 10px;
+  min-height: 32px;
+  font-size: 0.85rem;
+}
+
 .card {
   background: #fffaf1;
   border: 1px solid #4f432c;
@@ -4018,6 +4024,14 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.journal-file-preview__status {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f7edd5;
+  color: #5c4d32;
+  font-size: 0.9rem;
 }
 
 .journal-file-preview__frame {
