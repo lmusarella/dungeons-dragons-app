@@ -126,6 +126,12 @@ button:focus-visible,
   justify-content: center;
 }
 
+.ghost-button--compact {
+  padding: 6px 10px;
+  min-height: 32px;
+  font-size: 0.85rem;
+}
+
 .card {
   background: #fffaf1;
   border: 1px solid #4f432c;

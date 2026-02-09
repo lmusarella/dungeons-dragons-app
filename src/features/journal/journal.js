@@ -134,12 +134,16 @@ export async function renderJournal(container) {
           confirmLabel: 'Elimina'
         });
         if (!shouldDelete) return;
+
+        setGlobalLoading(true);
         try {
           await deleteEntry(entry.id);
           createToast('Voce eliminata');
-          refresh();
+          await refresh();
         } catch (error) {
           createToast('Errore eliminazione', 'error');
+        } finally {
+          setGlobalLoading(false);
         }
       }));
   }
@@ -405,6 +409,8 @@ function triggerFileDownload(url, fileName) {
 }
 
 async function openFilePreviewModal(fileName, signedUrl) {
+  const previewUrl = `${signedUrl}#pagemode=none`;
+
   await openFormModal({
     title: fileName,
     content: `
@@ -413,21 +419,29 @@ async function openFilePreviewModal(fileName, signedUrl) {
         <div class="journal-file-preview__status" data-preview-loading>Caricamento anteprima...</div>
         <iframe
           class="journal-file-preview__frame"
-          src="${signedUrl}"
+          src="${previewUrl}"
           title="Anteprima ${fileName}"
           loading="lazy"
           data-preview-frame
         ></iframe>
-        <a class="ghost-button" href="${signedUrl}" target="_blank" rel="noopener noreferrer">Apri in nuova scheda</a>
       </div>
     `,
     submitLabel: 'Chiudi',
     cancelLabel: null,
     cardClass: ['modal-card--wide', 'modal-card--scrollable'],
-    onOpen: ({ fieldsEl }) => {
+    onOpen: ({ fieldsEl, modal }) => {
       const frame = fieldsEl?.querySelector('[data-preview-frame]');
       const loadingStatus = fieldsEl?.querySelector('[data-preview-loading]');
+      const footerEl = modal?.querySelector('.modal-footer');
       if (!frame || !loadingStatus) return undefined;
+
+      const openInNewTabLink = document.createElement('a');
+      openInNewTabLink.className = 'ghost-button ghost-button--compact';
+      openInNewTabLink.href = previewUrl;
+      openInNewTabLink.target = '_blank';
+      openInNewTabLink.rel = 'noopener noreferrer';
+      openInNewTabLink.textContent = 'Apri in nuova scheda';
+      footerEl?.prepend(openInNewTabLink);
 
       const hideStatus = () => {
         loadingStatus.hidden = true;
@@ -443,6 +457,7 @@ async function openFilePreviewModal(fileName, signedUrl) {
 
       return () => {
         window.clearTimeout(timeoutId);
+        openInNewTabLink.remove();
       };
     }
   });
@@ -525,6 +540,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     is_pinned: formData.get('is_pinned') === 'on'
   };
 
+  setGlobalLoading(true);
   try {
     const saved = entry
       ? await updateEntry(entry.id, payload)
@@ -546,9 +562,11 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     }
 
     createToast('Voce salvata');
-    onSave();
+    await onSave();
   } catch (error) {
     createToast('Errore salvataggio voce', 'error');
+  } finally {
+    setGlobalLoading(false);
   }
 }
 
