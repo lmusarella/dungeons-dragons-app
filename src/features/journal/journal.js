@@ -61,7 +61,7 @@ export async function renderJournal(container) {
 
   container.innerHTML = `
     <div class="journal-layout">
-      <section class="card journal-toolbar">
+      <section class="card journal-section-card journal-section-card--entries">
         <header class="card-header">
           <div>
             <p class="eyebrow">Diario</p>
@@ -77,28 +77,20 @@ export async function renderJournal(container) {
             <span aria-hidden="true">🏷️</span>
           </button>
         </div>
+        <div data-journal-list></div>
       </section>
 
-      <div class="journal-columns">
-        <section class="card journal-section-card journal-section-card--entries">
-          <header class="card-header">
-            <p class="eyebrow">Voci</p>
-          </header>
-          <div data-journal-list></div>
-        </section>
-
-        <section class="card journal-section-card journal-section-card--files">
-          <header class="card-header">
-            <p class="eyebrow">File sessioni</p>
-            <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
-              <span aria-hidden="true">📎</span>
-            </button>
-          </header>
-          <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
-          <p class="muted" data-upload-feedback>${state.offline ? 'Modalità offline: upload non disponibile.' : 'Carica un PDF di sessione per salvarlo nel diario.'}</p>
-          <div data-session-files-list></div>
-        </section>
-      </div>
+      <section class="card journal-section-card journal-section-card--files">
+        <header class="card-header">
+          <p class="eyebrow">File sessioni</p>
+          <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
+            <span aria-hidden="true">📎</span>
+          </button>
+        </header>
+        <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
+        <p class="muted" data-upload-feedback>${state.offline ? 'Modalità offline: upload non disponibile.' : 'Carica un PDF di sessione per salvarlo nel diario.'}</p>
+        <div data-session-files-list></div>
+      </section>
     </div>
   `;
 
