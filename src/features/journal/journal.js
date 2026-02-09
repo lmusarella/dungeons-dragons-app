@@ -177,18 +177,23 @@ export async function renderJournal(container) {
       .forEach((button) => button.addEventListener('click', async () => {
         const fileRecord = sessionFiles.find((entry) => entry.id === button.dataset.previewFile);
         if (!fileRecord) return;
+
         setGlobalLoading(true);
+        let signedUrl = null;
         try {
-          const signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 600);
+          signedUrl = await getSessionFileSignedUrl(fileRecord.file_path, 600);
           if (!signedUrl) {
             createToast('Impossibile aprire l’anteprima', 'error');
             return;
           }
-          await openFilePreviewModal(fileRecord.file_name, signedUrl);
         } catch (error) {
           createToast('Errore apertura anteprima', 'error');
         } finally {
           setGlobalLoading(false);
+        }
+
+        if (signedUrl) {
+          await openFilePreviewModal(fileRecord.file_name, signedUrl);
         }
       }));
 
@@ -250,8 +255,18 @@ export async function renderJournal(container) {
       return;
     }
 
+    const uploadDetails = await openSessionFileUploadModal(file);
+    if (!uploadDetails) {
+      uploadInput.value = '';
+      if (uploadFeedback) {
+        uploadFeedback.textContent = 'Caricamento annullato.';
+      }
+      return;
+    }
+
+    const resolvedFileName = uploadDetails.displayName || file.name;
     if (uploadFeedback) {
-      uploadFeedback.textContent = `Upload in corso: ${file.name}...`;
+      uploadFeedback.textContent = `Upload in corso: ${resolvedFileName}...`;
     }
 
     setGlobalLoading(true);
@@ -265,18 +280,21 @@ export async function renderJournal(container) {
       await createSessionFile({
         user_id: activeCharacter.user_id,
         character_id: activeCharacter.id,
-        file_name: file.name,
+        file_name: resolvedFileName,
         file_path: filePath,
         mime_type: file.type || 'application/pdf',
         size_bytes: file.size,
+        session_no: uploadDetails.sessionNo,
+        notes: uploadDetails.notes,
         metadata: {
-          original_name: file.name
+          original_name: file.name,
+          display_name: resolvedFileName
         }
       });
 
       createToast('File caricato con successo', 'success');
       if (uploadFeedback) {
-        uploadFeedback.textContent = `Caricato: ${file.name}`;
+        uploadFeedback.textContent = `Caricato: ${resolvedFileName}`;
       }
       uploadInput.value = '';
       await refresh();
@@ -335,6 +353,8 @@ function buildFileList(files) {
           <div>
             <strong>${file.file_name}</strong>
             <p class="muted">${formatFileSize(file.size_bytes)} · ${file.mime_type || 'application/pdf'}</p>
+            ${file.session_no !== null && file.session_no !== undefined ? `<p class="muted">Sessione ${file.session_no}</p>` : ''}
+            ${file.notes ? `<p class="muted">${file.notes}</p>` : ''}
             <p class="muted">${formatDate(file.created_at)}</p>
           </div>
           <div class="actions">
@@ -385,21 +405,75 @@ function triggerFileDownload(url, fileName) {
 }
 
 async function openFilePreviewModal(fileName, signedUrl) {
-  const preview = document.createElement('div');
-  preview.className = 'journal-file-preview';
-  preview.innerHTML = `
-    <p class="muted">Anteprima: ${fileName}</p>
-    <iframe class="journal-file-preview__frame" src="${signedUrl}" title="Anteprima ${fileName}"></iframe>
-    <a class="ghost-button" href="${signedUrl}" target="_blank" rel="noopener noreferrer">Apri in nuova scheda</a>
-  `;
-
   await openFormModal({
     title: fileName,
-    content: preview,
+    content: `
+      <div class="journal-file-preview">
+        <p class="muted">Anteprima: ${fileName}</p>
+        <div class="journal-file-preview__status" data-preview-loading>Caricamento anteprima...</div>
+        <iframe
+          class="journal-file-preview__frame"
+          src="${signedUrl}"
+          title="Anteprima ${fileName}"
+          loading="lazy"
+          data-preview-frame
+        ></iframe>
+        <a class="ghost-button" href="${signedUrl}" target="_blank" rel="noopener noreferrer">Apri in nuova scheda</a>
+      </div>
+    `,
     submitLabel: 'Chiudi',
     cancelLabel: null,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable']
+    cardClass: ['modal-card--wide', 'modal-card--scrollable'],
+    onOpen: ({ fieldsEl }) => {
+      const frame = fieldsEl?.querySelector('[data-preview-frame]');
+      const loadingStatus = fieldsEl?.querySelector('[data-preview-loading]');
+      if (!frame || !loadingStatus) return undefined;
+
+      const hideStatus = () => {
+        loadingStatus.hidden = true;
+      };
+      const showFallback = () => {
+        if (!loadingStatus.hidden) {
+          loadingStatus.textContent = 'Il documento è pesante: attendi o apri in nuova scheda.';
+        }
+      };
+
+      frame.addEventListener('load', hideStatus, { once: true });
+      const timeoutId = window.setTimeout(showFallback, 2000);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
   });
+}
+
+async function openSessionFileUploadModal(file) {
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid';
+  content.appendChild(buildInput({ label: 'Nome file visibile', name: 'display_name', value: file.name }));
+  content.appendChild(buildInput({ label: 'Sessione (opzionale)', name: 'session_no', type: 'number' }));
+  content.appendChild(buildTextarea({ label: 'Note (opzionale)', name: 'notes', placeholder: 'Aggiungi contesto o descrizione del file' }));
+
+  const formData = await openFormModal({
+    title: 'Dettagli file sessione',
+    submitLabel: 'Carica file',
+    content
+  });
+
+  if (!formData) return null;
+
+  const sessionNoRaw = formData.get('session_no');
+  const sessionNo = Number(sessionNoRaw);
+  const parsedSessionNo = Number.isFinite(sessionNo) && sessionNo >= 0 ? sessionNo : null;
+  const displayName = String(formData.get('display_name') || '').trim();
+  const notes = String(formData.get('notes') || '').trim();
+
+  return {
+    displayName,
+    sessionNo: parsedSessionNo,
+    notes: notes || null
+  };
 }
 
 async function openEntryModal(character, entry, tags, selectedTags, onSave) {
