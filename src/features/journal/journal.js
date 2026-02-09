@@ -212,7 +212,7 @@ export async function renderJournal(container) {
             createToast('Impossibile scaricare il file', 'error');
             return;
           }
-          triggerFileDownload(signedUrl, fileRecord.file_name);
+          await triggerFileDownload(signedUrl, fileRecord.file_name);
         } catch (error) {
           createToast('Errore download file', 'error');
         } finally {
@@ -398,14 +398,34 @@ function formatDate(value) {
   });
 }
 
-function triggerFileDownload(url, fileName) {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName || 'session-file.pdf';
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+async function triggerFileDownload(url, fileName) {
+  const resolvedFileName = fileName || 'session-file.pdf';
+
+  try {
+    const response = await fetch(url, { credentials: 'omit' });
+    if (!response.ok) {
+      throw new Error(`Download HTTP error: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = resolvedFileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+    return;
+  } catch (error) {
+    const fallbackLink = document.createElement('a');
+    fallbackLink.href = url;
+    fallbackLink.download = resolvedFileName;
+    fallbackLink.rel = 'noopener';
+    document.body.appendChild(fallbackLink);
+    fallbackLink.click();
+    fallbackLink.remove();
+  }
 }
 
 async function openFilePreviewModal(fileName, signedUrl) {
