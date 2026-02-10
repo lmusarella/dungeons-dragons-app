@@ -4,11 +4,13 @@ import { ensureProfile } from '../../app/session.js';
 import { setState } from '../../app/state.js';
 
 export function renderLogin(container) {
+  const baseUrl = import.meta.env.BASE_URL;
+
   container.innerHTML = `
     <section class="login-view auth-screen">
       <div class="card login-card">
         <div class="login-header">
-          <img class="login-logo" src="/icons/logo_dd.png" alt="Dungeon & Dragon" />
+          <img class="login-logo" src="${baseUrl}icons/logo_dd.png" alt="Dungeon & Dragon" />
           <div>
             <p class="eyebrow">Dungeons &amp; Dragons</p>
             <p class="login-title">Gestionale Personaggi</p>
