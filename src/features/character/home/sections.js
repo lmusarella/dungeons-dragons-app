@@ -678,6 +678,20 @@ export function buildSpellSection(character) {
       const prepState = spell.prep_state || 'known';
       return prepState === 'prepared' || prepState === 'always';
     });
+  const cantrips = spells.filter((spell) => (Number(spell.level) || 0) === 0);
+  const alwaysKnownSpells = preparedSpells.filter((spell) => (spell.prep_state || 'known') === 'always');
+  const preparedOnlySpells = preparedSpells.filter((spell) => (spell.prep_state || 'known') !== 'always');
+
+  const renderSpellQuickItem = (spell, prepLabel = '') => {
+    const level = Number(spell.level) || 0;
+    return `
+      <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
+        <span class="spell-prepared-list__name">${spell.name}</span>
+        ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : '<span class="chip chip--small">Trucchetto</span>'}
+        ${prepLabel ? `<span class="chip chip--small">${prepLabel}</span>` : ''}
+      </button>
+    `;
+  };
   return `
     ${summaryChipRow}
     <div class="detail-section">
@@ -702,25 +716,33 @@ export function buildSpellSection(character) {
   }).join('')}
           </div>
         </div>
+        <div class="spell-prepared-list">
+          <span class="spell-slots__title">Trucchetti</span>
+          ${cantrips.length
+    ? `
+            <div class="spell-prepared-list__items">
+              ${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}
+            </div>
+          `
+    : '<p class="muted">Nessun trucchetto disponibile.</p>'}
+        </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
       </div>
       <div class="spell-prepared-list">
         <span class="spell-slots__title">Incantesimi pronti al lancio</span>
         ${preparedSpells.length
     ? `
-          <div class="spell-prepared-list__items">
-            ${preparedSpells.map((spell) => {
-      const level = Number(spell.level) || 0;
-      const prepState = spell.prep_state || 'known';
-      const prepLabel = prepState === 'always' ? 'Sempre preparato' : 'Preparato';
-      return `
-                <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-                  <span class="spell-prepared-list__name">${spell.name}</span>
-                  <span class="chip chip--small">${level}°</span>
-                  <span class="chip chip--small">${prepLabel}</span>
-                </button>
-              `;
-    }).join('')}
+          <div class="spell-prepared-list__group">
+            <span class="spell-prepared-list__group-title">Preparati</span>
+            ${preparedOnlySpells.length
+      ? `<div class="spell-prepared-list__items">${preparedOnlySpells.map((spell) => renderSpellQuickItem(spell, 'Preparato')).join('')}</div>`
+      : '<p class="muted">Nessun incantesimo preparato.</p>'}
+          </div>
+          <div class="spell-prepared-list__group">
+            <span class="spell-prepared-list__group-title">Sempre conosciuti</span>
+            ${alwaysKnownSpells.length
+      ? `<div class="spell-prepared-list__items">${alwaysKnownSpells.map((spell) => renderSpellQuickItem(spell, 'Sempre preparato')).join('')}</div>`
+      : '<p class="muted">Nessun incantesimo sempre conosciuto.</p>'}
           </div>
         `
     : '<p class="muted">Nessun incantesimo preparato disponibile.</p>'}
