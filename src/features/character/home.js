@@ -508,7 +508,8 @@ export async function renderHome(container) {
           notation: overlayConfig.notation,
           modifier: overlayConfig.modifier,
           rollType: 'DMG',
-          characterId: activeCharacter?.id
+          characterId: activeCharacter?.id,
+          historyLabel: spell.name || null
         });
         return;
       }

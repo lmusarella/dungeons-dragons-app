@@ -52,7 +52,8 @@ function openSpellDamageOverlay(character, spell) {
     notation: overlayConfig.notation,
     modifier: overlayConfig.modifier,
     rollType: 'DMG',
-    characterId: character?.id
+    characterId: character?.id,
+    historyLabel: spell?.name || null
   });
 }
 
