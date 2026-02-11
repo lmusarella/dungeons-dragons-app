@@ -2391,6 +2391,11 @@ button:focus-visible,
   gap: 6px;
 }
 
+.spell-prepared-list__card {
+  width: 100%;
+  padding: 6px 8px;
+}
+
 .spell-prepared-list__group {
   display: grid;
   gap: 6px;
@@ -2412,17 +2417,26 @@ button:focus-visible,
   align-items: center;
   gap: 6px;
   width: 100%;
-  border: 2px solid #eadbc6;
+  border: none;
   border-radius: 10px;
-  background: #fffaf1;
-  padding: 8px 10px;
+  background: transparent;
+  padding: 2px 0;
   text-align: left;
   cursor: pointer;
 }
 
 .spell-prepared-list__item:hover,
 .spell-prepared-list__item:focus-visible {
+  outline: none;
+}
+
+.spell-prepared-list__card:hover,
+.spell-prepared-list__card:focus-within {
   border-color: #c7a174;
+}
+
+.spell-card-actions {
+  flex-shrink: 0;
 }
 
 .spell-prepared-list__name {
