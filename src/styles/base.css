@@ -2456,8 +2456,9 @@ button:focus-visible,
 }
 
 .spell-prepared-list__name {
+  font-size: 13px;
   font-weight: 600;
-  color: #5a381f;
+  color: black;
   margin-right: auto;
 }
 
