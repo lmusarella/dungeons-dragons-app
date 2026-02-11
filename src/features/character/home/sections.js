@@ -17,7 +17,8 @@ import {
   getEquipSlots,
   normalizeNumber,
   parseProficiencyNotes,
-  parseProficiencyNotesSections
+  parseProficiencyNotesSections,
+  sortSpellsByLevel
 } from './utils.js';
 import { calcTotalWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
@@ -635,6 +636,7 @@ export function buildAttackSection(character, items = []) {
 export function buildSpellSection(character) {
   const data = character.data || {};
   const notes = data.spell_notes || '';
+  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
   const spellcasting = data.spellcasting || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const abilityKey = spellcasting.ability;
@@ -668,6 +670,13 @@ export function buildSpellSection(character) {
   const summaryChipRow = summaryChips.length
     ? `<div class="tag-row">${summaryChips.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '';
+  const preparedSpells = spells
+    .filter((spell) => {
+      const level = Number(spell.level) || 0;
+      if (level < 1) return false;
+      const prepState = spell.prep_state || 'known';
+      return prepState === 'prepared' || prepState === 'always';
+    });
   return `
     ${summaryChipRow}
     <div class="detail-section">
@@ -693,6 +702,27 @@ export function buildSpellSection(character) {
           </div>
         </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
+      </div>
+      <div class="spell-prepared-list">
+        <span class="spell-slots__title">Incantesimi pronti al lancio</span>
+        ${preparedSpells.length
+    ? `
+          <div class="spell-prepared-list__items">
+            ${preparedSpells.map((spell) => {
+      const level = Number(spell.level) || 0;
+      const prepState = spell.prep_state || 'known';
+      const prepLabel = prepState === 'always' ? 'Sempre preparato' : 'Preparato';
+      return `
+                <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
+                  <span class="spell-prepared-list__name">${spell.name}</span>
+                  <span class="chip chip--small">${level}°</span>
+                  <span class="chip chip--small">${prepLabel}</span>
+                </button>
+              `;
+    }).join('')}
+          </div>
+        `
+    : '<p class="muted">Nessun incantesimo preparato disponibile.</p>'}
       </div>
       <div class="spell-list-actions">
         <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>

@@ -28,7 +28,8 @@ import {
   openResourceDetail,
   openResourceDrawer,
   openSpellDrawer,
-  openSpellListModal
+  openSpellListModal,
+  openSpellQuickDetailModal
 } from './home/modals.js';
 import { saveCharacterData } from './home/data.js';
 import { abilityShortLabel, conditionList, savingThrowList, skillList } from './home/constants.js';
@@ -182,11 +183,16 @@ export async function renderHome(container) {
             <div>
               <p class="eyebrow">Incantesimi</p>
             </div>
-            ${activeCharacter && canEditCharacter ? `
-              <button class="icon-button icon-button--add" data-add-spell aria-label="Aggiungi incantesimo">
-                <span aria-hidden="true">+</span>
+            <div class="actions">
+              <button class="icon-button icon-button--dice" data-open-dice="spell-attack" aria-label="Lancia dado tiro per colpire incantesimi">
+                <span aria-hidden="true">🎲</span>
               </button>
-            ` : ''}
+              ${activeCharacter && canEditCharacter ? `
+                <button class="icon-button icon-button--add" data-add-spell aria-label="Aggiungi incantesimo">
+                  <span aria-hidden="true">+</span>
+                </button>
+              ` : ''}
+            </div>
           </header>
           <div class="home-scroll-body">
             ${buildSpellSection(activeCharacter)}
@@ -251,6 +257,16 @@ export async function renderHome(container) {
       openSpellListModal(activeCharacter, () => renderHome(container));
     });
   }
+
+  container.querySelectorAll('[data-spell-quick-open]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const spellId = button.dataset.spellQuickOpen;
+      if (!spellId || !activeCharacter) return;
+      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      openSpellQuickDetailModal(activeCharacter, spell, () => renderHome(container));
+    }));
 
   const backgroundButton = container.querySelector('[data-show-background]');
   if (backgroundButton) {
@@ -1024,6 +1040,25 @@ function buildAttackRollOptions(character, items = []) {
   return options;
 }
 
+function buildSpellAttackRollOptions(character) {
+  const data = character.data || {};
+  const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const spellcasting = data.spellcasting || {};
+  const spellAbilityKey = spellcasting.ability;
+  const spellAbilityScore = spellAbilityKey ? data.abilities?.[spellAbilityKey] : null;
+  const spellAbilityMod = getAbilityModifier(spellAbilityScore);
+  if (!spellAbilityKey || spellAbilityMod === null || proficiencyBonus === null) {
+    return [];
+  }
+  const attackBonus = spellAbilityMod + proficiencyBonus;
+  return [{
+    value: 'spell-attack',
+    label: `Incantesimi (${formatSigned(attackBonus)})`,
+    shortLabel: 'Incantesimi',
+    modifier: attackBonus
+  }];
+}
+
 function handleDiceAction(type) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   const items = getState().cache.items || [];
@@ -1066,9 +1101,21 @@ function handleDiceAction(type) {
         ? { label: 'Attacco', options: buildAttackRollOptions(activeCharacter, items) }
         : null
     },
+    'spell-attack': {
+      title: 'Tiro per Colpire Incantesimi',
+      mode: 'd20',
+      rollType: 'TC',
+      selection: activeCharacter
+        ? { label: 'Incantesimi', options: buildSpellAttackRollOptions(activeCharacter) }
+        : null
+    },
     roller: { title: 'Lancia Dadi generico', mode: 'generic', rollType: 'GEN' }
   };
   const config = configs[type] ?? { title: 'Lancia dadi', mode: 'generic' };
+  if (type === 'spell-attack' && (!config.selection?.options?.length)) {
+    createToast('Configura abilità da incantatore e bonus competenza per usare questo tiro.', 'error');
+    return;
+  }
   openDiceRollerModal({
     ...config,
     allowInspiration,
