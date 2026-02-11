@@ -702,27 +702,27 @@ export function buildSpellSection(character) {
           </div>
         </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
-        <div class="spell-prepared-list">
-          <span class="spell-slots__title">Incantesimi pronti al lancio</span>
-          ${preparedSpells.length
+      </div>
+      <div class="spell-prepared-list">
+        <span class="spell-slots__title">Incantesimi pronti al lancio</span>
+        ${preparedSpells.length
     ? `
-            <div class="spell-prepared-list__items">
-              ${preparedSpells.map((spell) => {
+          <div class="spell-prepared-list__items">
+            ${preparedSpells.map((spell) => {
       const level = Number(spell.level) || 0;
       const prepState = spell.prep_state || 'known';
       const prepLabel = prepState === 'always' ? 'Sempre preparato' : 'Preparato';
       return `
-                  <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-                    <span class="spell-prepared-list__name">${spell.name}</span>
-                    <span class="chip chip--small">${level}°</span>
-                    <span class="chip chip--small">${prepLabel}</span>
-                  </button>
-                `;
+                <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
+                  <span class="spell-prepared-list__name">${spell.name}</span>
+                  <span class="chip chip--small">${level}°</span>
+                  <span class="chip chip--small">${prepLabel}</span>
+                </button>
+              `;
     }).join('')}
-            </div>
-          `
+          </div>
+        `
     : '<p class="muted">Nessun incantesimo preparato disponibile.</p>'}
-        </div>
       </div>
       <div class="spell-list-actions">
         <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>
