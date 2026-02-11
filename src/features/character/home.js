@@ -195,7 +195,7 @@ export async function renderHome(container) {
             </div>
           </header>
           <div class="home-scroll-body">
-            ${buildSpellSection(activeCharacter)}
+            ${buildSpellSection(activeCharacter, canEditCharacter)}
           </div>
         </section>
         ` : ''}
@@ -250,6 +250,36 @@ export async function renderHome(container) {
       openSpellDrawer(activeCharacter, () => renderHome(container));
     });
   }
+
+  container.querySelectorAll('[data-edit-spell]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const spellId = button.dataset.editSpell;
+      if (!spellId || !activeCharacter) return;
+      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      openSpellDrawer(activeCharacter, () => renderHome(container), spell);
+    }));
+
+  container.querySelectorAll('[data-delete-spell]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      const spellId = button.dataset.deleteSpell;
+      if (!spellId || !activeCharacter) return;
+      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      const shouldDelete = await openConfirmModal({
+        title: 'Conferma eliminazione incantesimo',
+        message: `Stai per eliminare l'incantesimo "${spell.name}" dalla scheda del personaggio. Questa azione non può essere annullata.`,
+        confirmLabel: 'Elimina'
+      });
+      if (!shouldDelete) return;
+      const nextData = {
+        ...(activeCharacter.data || {}),
+        spells: spells.filter((entry) => entry.id !== spell.id)
+      };
+      await saveCharacterData(activeCharacter, nextData, 'Incantesimo eliminato', () => renderHome(container));
+    }));
 
   const spellListButton = container.querySelector('[data-spell-list]');
   if (spellListButton) {

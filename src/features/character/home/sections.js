@@ -633,7 +633,7 @@ export function buildAttackSection(character, items = []) {
   `;
 }
 
-export function buildSpellSection(character) {
+export function buildSpellSection(character, canManageSpells = false) {
   const data = character.data || {};
   const notes = data.spell_notes || '';
   const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
@@ -685,11 +685,19 @@ export function buildSpellSection(character) {
   const renderSpellQuickItem = (spell, prepLabel = '') => {
     const level = Number(spell.level) || 0;
     return `
-      <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-        <span class="spell-prepared-list__name">${spell.name}</span>
-        ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : '<span class="chip chip--small">Trucchetto</span>'}
-        ${prepLabel ? `<span class="chip chip--small">${prepLabel}</span>` : ''}
-      </button>
+      <div class="modifier-card attack-card resource-card spell-prepared-list__card">
+        <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
+          <span class="spell-prepared-list__name">${spell.name}</span>
+          ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : '<span class="chip chip--small">Trucchetto</span>'}
+          ${prepLabel ? `<span class="chip chip--small">${prepLabel}</span>` : ''}
+        </button>
+        ${canManageSpells ? `
+          <div class="resource-card-actions spell-card-actions">
+            <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
+            <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
+          </div>
+        ` : ''}
+      </div>
     `;
   };
   return `
