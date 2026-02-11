@@ -684,11 +684,14 @@ export function buildSpellSection(character, canManageSpells = false) {
 
   const renderSpellQuickItem = (spell, prepLabel = '') => {
     const level = Number(spell.level) || 0;
+    const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
+    const castTimeClass = getResourceCastTimeClass(castTimeLabel);
     return `
       <div class="modifier-card attack-card resource-card spell-prepared-list__card">
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
           <span class="spell-prepared-list__name">${spell.name}</span>
           ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : '<span class="chip chip--small">Trucchetto</span>'}
+          ${castTimeLabel ? `<span class="resource-chip ${castTimeClass}">${castTimeLabel}</span>` : ''}
           ${prepLabel ? `<span class="chip chip--small">${prepLabel}</span>` : ''}
         </button>
         ${canManageSpells ? `
@@ -765,15 +768,29 @@ export function buildSpellSection(character, canManageSpells = false) {
   `;
 }
 
+
+function normalizeCastTimeLabel(castTime) {
+  const rawValue = castTime?.toString().trim();
+  if (!rawValue) return '';
+  const normalized = rawValue.toLowerCase();
+  if (normalized.includes('bonus')) return 'Azione Bonus';
+  if (normalized.includes('reaz')) return 'Reazione';
+  if (normalized.includes('azion')) return 'Azione';
+  const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
+  return exactMatch?.label ?? '';
+}
+
 function getResourceCastTimeRank(castTime) {
   if (!castTime) return RESOURCE_CAST_TIME_ORDER.length;
-  const matchIndex = RESOURCE_CAST_TIME_ORDER.findIndex((entry) => entry.label === castTime);
+  const normalizedCastTime = normalizeCastTimeLabel(castTime);
+  const matchIndex = RESOURCE_CAST_TIME_ORDER.findIndex((entry) => entry.label === normalizedCastTime);
   return matchIndex === -1 ? RESOURCE_CAST_TIME_ORDER.length : matchIndex;
 }
 
 function getResourceCastTimeClass(castTime) {
   if (!castTime) return '';
-  return RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label === castTime)?.className ?? '';
+  const normalizedCastTime = normalizeCastTimeLabel(castTime);
+  return RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label === normalizedCastTime)?.className ?? '';
 }
 
 function sortResourcesByCastTime(resources) {
@@ -798,7 +815,7 @@ export function buildResourceList(
     <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
         <li class="modifier-card attack-card resource-card" data-resource-card="${res.id}">
-          ${showCastTime && res.cast_time ? `<span class="resource-chip resource-chip--floating ${getResourceCastTimeClass(res.cast_time)}">${res.cast_time}</span>` : ''}
+          ${showCastTime && normalizeCastTimeLabel(res.cast_time) ? `<span class="resource-chip resource-chip--floating ${getResourceCastTimeClass(res.cast_time)}">${normalizeCastTimeLabel(res.cast_time)}</span>` : ''}
           <div class="attack-card__body resource-card__body">
             <div class="attack-card__title resource-card__title">
               <strong class="attack-card__name">${res.name}</strong>
