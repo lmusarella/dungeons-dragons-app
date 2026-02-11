@@ -2478,6 +2478,18 @@ button:focus-visible,
   font-size: 0.75rem;
 }
 
+.spell-list-button--prepare {
+  background: #3b5d60;
+  border-color: #3b5d60;
+  color: #fffaf1;
+}
+
+.spell-list-button--prepare:hover,
+.spell-list-button--prepare:focus-visible {
+  background: #324f52;
+  border-color: #324f52;
+}
+
 .spell-list-modal {
   display: grid;
   gap: 16px;
