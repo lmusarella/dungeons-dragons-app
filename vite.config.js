@@ -16,8 +16,8 @@ export default defineConfig(({ command }) => {
           'icons/*.mp3'
         ],
         manifest: {
-          name: 'Dungeon Dragon',
-          short_name: 'DungeonDragon',
+          name: 'D&D - Gestionale Personaggi',
+          short_name: 'D&D Personaggi',
           description: 'Tablet-first D&D character manager',
           theme_color: '#6f4e37',
           background_color: '#f6f1e7',
@@ -25,10 +25,10 @@ export default defineConfig(({ command }) => {
           start_url: './#/',
           icons: [
             {
-              src: './icons/icon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
-              purpose: 'any'
+              src: './icons/logo_dd.png',
+              sizes: '500x500',
+              type: 'image/png',
+              purpose: 'any maskable'
             }
           ]
         }

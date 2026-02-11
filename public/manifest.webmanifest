@@ -1,6 +1,6 @@
 {
-  "name": "D&D - Gestionale",
-  "short_name": "D&D - Gestionale",
+  "name": "D&D - Gestionale Personaggi",
+  "short_name": "D&D Personaggi",
   "description": "Tablet-first D&D character manager",
   "start_url": "./#/",
   "display": "standalone",
@@ -10,7 +10,7 @@
     {
       "src": "./icons/logo_dd.png",
       "sizes": "500x500",
-      "type": "image/webp",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
