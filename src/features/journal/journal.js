@@ -189,7 +189,7 @@ export async function renderJournal(container) {
         }
 
         if (signedUrl) {
-          await openFilePreviewModal(fileRecord.file_name, signedUrl);
+          openFileInNewTab(signedUrl);
         }
       }));
 
@@ -420,59 +420,18 @@ async function triggerFileDownload(url, fileName) {
   }
 }
 
-async function openFilePreviewModal(fileName, signedUrl) {
-  const previewUrl = `${signedUrl}#pagemode=none`;
 
-  await openFormModal({
-    title: fileName,
-    content: `
-      <div class="journal-file-preview">
-        <p class="muted">Anteprima: ${fileName}</p>
-        <div class="journal-file-preview__status" data-preview-loading>Caricamento anteprima...</div>
-        <iframe
-          class="journal-file-preview__frame"
-          src="${previewUrl}"
-          title="Anteprima ${fileName}"
-          loading="lazy"
-          data-preview-frame
-        ></iframe>
-      </div>
-    `,
-    submitLabel: 'Chiudi',
-    cancelLabel: null,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable'],
-    onOpen: ({ fieldsEl, modal }) => {
-      const frame = fieldsEl?.querySelector('[data-preview-frame]');
-      const loadingStatus = fieldsEl?.querySelector('[data-preview-loading]');
-      const footerEl = modal?.querySelector('.modal-footer');
-      if (!frame || !loadingStatus) return undefined;
+function openFileInNewTab(url) {
+  const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+  if (newWindow) return;
 
-      const openInNewTabLink = document.createElement('a');
-      openInNewTabLink.className = 'ghost-button ghost-button--compact';
-      openInNewTabLink.href = previewUrl;
-      openInNewTabLink.target = '_blank';
-      openInNewTabLink.rel = 'noopener noreferrer';
-      openInNewTabLink.textContent = 'Apri in nuova scheda';
-      footerEl?.prepend(openInNewTabLink);
-
-      const hideStatus = () => {
-        loadingStatus.hidden = true;
-      };
-      const showFallback = () => {
-        if (!loadingStatus.hidden) {
-          loadingStatus.textContent = 'Il documento è pesante: attendi o apri in nuova scheda.';
-        }
-      };
-
-      frame.addEventListener('load', hideStatus, { once: true });
-      const timeoutId = window.setTimeout(showFallback, 2000);
-
-      return () => {
-        window.clearTimeout(timeoutId);
-        openInNewTabLink.remove();
-      };
-    }
-  });
+  const fallbackLink = document.createElement('a');
+  fallbackLink.href = url;
+  fallbackLink.target = '_blank';
+  fallbackLink.rel = 'noopener noreferrer';
+  document.body.appendChild(fallbackLink);
+  fallbackLink.click();
+  fallbackLink.remove();
 }
 
 async function openSessionFileUploadModal(file) {

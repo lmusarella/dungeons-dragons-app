@@ -341,11 +341,6 @@ button:focus-visible,
   align-items: center;
 }
 
-.header-refresh-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-}
 
 .menu-button {
   width: 44px;
