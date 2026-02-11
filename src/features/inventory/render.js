@@ -280,7 +280,7 @@ export function walletEditFields(wallet = {}) {
         <input name="pp" type="number" value="${values.pp}" min="0" step="1" />
       </label>
       <label class="field">
-        <span>Oro)</span>
+        <span>Oro</span>
         <input name="gp" type="number" value="${values.gp}" min="0" step="1" />
       </label>
       <label class="field">
