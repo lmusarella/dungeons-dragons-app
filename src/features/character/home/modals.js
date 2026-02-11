@@ -9,7 +9,8 @@ import {
   openFormModal
 } from '../../../ui/components.js';
 import { consumeSpellSlot, saveCharacterData } from './data.js';
-import { formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
+import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
+import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
 import { conditionList } from './constants.js';
 
 function getPrepStateLabel(state) {
@@ -21,6 +22,20 @@ function getPrepStateLabel(state) {
     default:
       return 'Conosciuto';
   }
+}
+
+function openSpellDamageOverlay(character, spell) {
+  const overlayConfig = buildSpellDamageOverlayConfig(spell);
+  if (!overlayConfig) return;
+  openDiceOverlay({
+    keepOpen: true,
+    title: overlayConfig.title,
+    mode: 'generic',
+    notation: overlayConfig.notation,
+    modifier: overlayConfig.modifier,
+    rollType: 'DMG',
+    characterId: character?.id
+  });
 }
 
 export function openBackgroundModal(character) {
@@ -269,9 +284,9 @@ export function openSpellListModal(character, onRender) {
       const level = Number(spell.level) || 0;
       if (level < 1) return;
       const consumed = await consumeSpellSlot(character, level, onRender);
-      if (consumed) {
-        closeModal();
-      }
+      if (!consumed) return;
+      closeModal();
+      openSpellDamageOverlay(character, spell);
     }));
 
   content.querySelectorAll('[data-spell-edit]')
@@ -312,6 +327,17 @@ export function openSpellListModal(character, onRender) {
     .forEach((description) => {
       description.hidden = true;
     });
+
+  content.querySelectorAll('[data-spell-item]')
+    .forEach((card) => card.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      const spell = spells.find((entry) => entry.id === card.dataset.spellItem);
+      if (!spell) return;
+      closeModal();
+      setTimeout(() => {
+        openSpellQuickDetailModal(character, spell, onRender);
+      }, 0);
+    }));
 
   content.querySelectorAll('[data-spell-delete]')
     .forEach((button) => button.addEventListener('click', async () => {
@@ -554,7 +580,9 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     showFooter: true
   }).then(async (formData) => {
     if (!formData || !isCastable) return;
-    await consumeSpellSlot(character, level, onRender);
+    const consumed = await consumeSpellSlot(character, level, onRender);
+    if (!consumed) return;
+    openSpellDamageOverlay(character, spell);
   });
 }
 export function openPreparedSpellsModal(character, onSave) {
