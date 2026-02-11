@@ -64,8 +64,7 @@ export async function renderJournal(container) {
       <section class="card journal-section-card journal-section-card--entries">
         <header class="card-header">
           <div>
-            <p class="eyebrow">Diario</p>
-            <h2>Appunti e sessioni</h2>
+            <p class="eyebrow">Diario</p>         
           </div>
           <button class="icon-button icon-button--add" data-add-entry aria-label="Nuova voce" title="Nuova voce">
             <span aria-hidden="true">+</span>

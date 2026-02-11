@@ -4142,6 +4142,7 @@ button:focus-visible,
 
 .journal-layout {
   display: grid;
+  padding: 12px;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 12px;
   align-items: start;
@@ -4187,7 +4188,7 @@ button:focus-visible,
 
 .journal-entry-card {
   background: linear-gradient(135deg, #fff8e8, #fdf1d6);
-  border: 1px solid #eadfc9;
+  border: 3px solid #eadfc9;
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 8px 18px rgba(22, 20, 18, 0.06);
