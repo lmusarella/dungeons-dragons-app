@@ -2397,6 +2397,7 @@ button:focus-visible,
 
 
 .spell-prepared-list {
+  margin-top: 6px;
   display: grid;
   gap: 8px;
 }
@@ -2494,7 +2495,7 @@ button:focus-visible,
 
 .spell-list-actions {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
@@ -2502,7 +2503,7 @@ button:focus-visible,
 }
 
 .spell-list-button {
-  min-height: 40px;
+  font-size: x-small;
   padding: 10px 16px;
 }
 

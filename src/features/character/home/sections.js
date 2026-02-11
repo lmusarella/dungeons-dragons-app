@@ -617,7 +617,7 @@ export function buildAttackSection(character, items = []) {
                 </div>
                 <div class="attack-card__meta">
                   <span class="attack-card__damage">${damageText}</span>
-                  <span class="chip chip--small">Trucchetto</span>
+                 
                   ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
                 </div>
               </div>
@@ -690,9 +690,9 @@ export function buildSpellSection(character, canManageSpells = false) {
       <div class="modifier-card attack-card resource-card spell-prepared-list__card">
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
           <span class="spell-prepared-list__name">${spell.name}</span>
-          ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : '<span class="chip chip--small">Trucchetto</span>'}
+          ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
           ${castTimeLabel ? `<span class="resource-chip ${castTimeClass}">${castTimeLabel}</span>` : ''}
-          ${prepLabel ? `<span class="chip chip--small">${prepLabel}</span>` : ''}
+        
         </button>
         ${canManageSpells ? `
           <div class="resource-card-actions spell-card-actions">
@@ -730,7 +730,7 @@ export function buildSpellSection(character, canManageSpells = false) {
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
       </div>
       <div class="spell-prepared-list">
-        <span class="spell-slots__title">Trucchetti</span>
+        <span class="spell-prepared-list__group-title">Trucchetti</span>
         ${cantrips.length
     ? `
           <div class="spell-prepared-list__items">
@@ -740,7 +740,7 @@ export function buildSpellSection(character, canManageSpells = false) {
     : '<p class="muted">Nessun trucchetto disponibile.</p>'}
       </div>
       <div class="spell-prepared-list">
-        <span class="spell-slots__title">Incantesimi pronti al lancio</span>
+       
         ${preparedSpells.length
     ? `
           <div class="spell-prepared-list__group">
