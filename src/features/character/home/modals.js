@@ -11,7 +11,25 @@ import {
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
-import { conditionList } from './constants.js';
+import { RESOURCE_CAST_TIME_ORDER, conditionList } from './constants.js';
+
+const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione'];
+
+function normalizeSpellCastTime(castTime) {
+  const rawValue = castTime?.toString().trim();
+  if (!rawValue) return '';
+  const normalized = rawValue.toLowerCase();
+  if (normalized.includes('bonus')) return 'Azione Bonus';
+  if (normalized.includes('reaz')) return 'Reazione';
+  if (normalized.includes('azion')) return 'Azione';
+  const matchingOption = SPELL_CAST_TIME_OPTIONS.find((option) => option.toLowerCase() === normalized);
+  return matchingOption || '';
+}
+
+function getCastTimeChipClass(castTime) {
+  if (!castTime) return '';
+  return RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label === castTime)?.className ?? '';
+}
 
 function getPrepStateLabel(state) {
   switch (state) {
@@ -34,7 +52,8 @@ function openSpellDamageOverlay(character, spell) {
     notation: overlayConfig.notation,
     modifier: overlayConfig.modifier,
     rollType: 'DMG',
-    characterId: character?.id
+    characterId: character?.id,
+    historyLabel: spell?.name || null
   });
 }
 
@@ -164,12 +183,15 @@ export function openSpellListModal(character, onRender) {
     const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
     const prepState = canPrepare ? spell.prep_state || 'known' : null;
     const description = spell.description?.trim();
+    const castTime = normalizeSpellCastTime(spell.cast_time);
+    const castTimeClass = getCastTimeChipClass(castTime);
     return `
               <div class="spell-list-modal__item" data-spell-item="${spell.id}">
                 <div class="spell-list-modal__item-info">
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
                     <span class="chip chip--small">${typeLabel}</span>
+                    ${castTime ? `<span class="resource-chip ${castTimeClass}">${castTime}</span>` : ''}
                     ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
                   </div>
                   <div class="spell-list-modal__item-meta">
@@ -416,22 +438,33 @@ export function openSpellDrawer(character, onSave, spell = null) {
   }
   form.appendChild(buildRow([spellKindField, levelField, prepStateField], 'compact'));
   form.appendChild(buildRow([nameField], 'balanced'));
-  form.appendChild(buildRow([buildInput({
-    label: 'Tempo di lancio',
-    name: 'spell_cast_time',
-    placeholder: 'Es. 1 azione',
-    value: spell?.cast_time ?? ''
-  }), buildInput({
-    label: 'Durata',
-    name: 'spell_duration',
-    placeholder: 'Es. 1 minuto',
-    value: spell?.duration ?? ''
-  }), buildInput({
-    label: 'Range',
-    name: 'spell_range',
-    placeholder: 'Es. 18 m',
-    value: spell?.range ?? ''
-  })], 'compact'));
+  const castTimeField = document.createElement('label');
+  castTimeField.className = 'field';
+  castTimeField.innerHTML = '<span>Tipo di lancio</span>';
+  const castTimeSelect = buildSelect(
+    [
+      { value: '', label: 'Seleziona tipo' },
+      ...SPELL_CAST_TIME_OPTIONS.map((value) => ({ value, label: value }))
+    ],
+    normalizeSpellCastTime(spell?.cast_time)
+  );
+  castTimeSelect.name = 'spell_cast_time';
+  castTimeField.appendChild(castTimeSelect);
+  form.appendChild(buildRow([
+    castTimeField,
+    buildInput({
+      label: 'Durata',
+      name: 'spell_duration',
+      placeholder: 'Es. 1 minuto',
+      value: spell?.duration ?? ''
+    }),
+    buildInput({
+      label: 'Range',
+      name: 'spell_range',
+      placeholder: 'Es. 18 m',
+      value: spell?.range ?? ''
+    })
+  ], 'compact'));
   const concentrationField = document.createElement('label');
   concentrationField.className = 'checkbox';
   concentrationField.innerHTML = '<input type="checkbox" name="spell_concentration" /> <span>Concentrazione</span>';
@@ -514,7 +547,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
       name,
       level,
       kind: selectedKind || (level === 0 ? 'cantrip' : 'spell'),
-      cast_time: formData.get('spell_cast_time')?.trim() || null,
+      cast_time: formData.get('spell_cast_time') || null,
       duration: formData.get('spell_duration')?.trim() || null,
       range: formData.get('spell_range')?.trim() || null,
       concentration: formData.has('spell_concentration'),

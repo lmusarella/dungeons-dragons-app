@@ -950,6 +950,15 @@ button:focus-visible,
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2);
   transform: translateY(-1px);
 }
+.resource-card:hover,
+.resource-card:focus-within,
+.inventory-item-card:hover,
+.inventory-item-card:focus-within {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
+}
+
 
 .resource-card__body {
   flex: 1;
@@ -3922,6 +3931,13 @@ button:focus-visible,
 .attack-card {
   align-items: flex-start;
   gap: 10px;
+}
+
+.attack-card:hover,
+.attack-card:focus-within {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
 }
 
 .attack-card__body {
