@@ -160,10 +160,10 @@ function moneyFields() {
       <label class="field">
         <span>Tipo moneta</span>
         <select name="coin">
-          <option value="pp">Platino (PP)</option>
-          <option value="gp">Oro (GP)</option>
-          <option value="sp">Argento (SP)</option>
-          <option value="cp">Rame (CP)</option>
+          <option value="pp">Platino</option>
+          <option value="gp">Oro</option>
+          <option value="sp">Argento</option>
+          <option value="cp">Rame</option>
         </select>
       </label>
     </div>
