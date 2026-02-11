@@ -572,39 +572,58 @@ export function openPreparedSpellsModal(character, onSave) {
     createToast('Nessun incantesimo preparabile.', 'info');
     return;
   }
-  const prepared = selectable.filter((entry) => (entry.prep_state || 'known') === 'prepared');
-  const known = selectable.filter((entry) => (entry.prep_state || 'known') !== 'prepared');
+  const preparedIds = new Set(
+    selectable
+      .filter((entry) => (entry.prep_state || 'known') === 'prepared')
+      .map((entry) => entry.id)
+  );
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
     <p class="muted">Seleziona gli incantesimi da preparare per oggi.</p>
-    ${prepared.length ? `
-      <div class="prepared-spells-modal__section">
-        <h4>Preparati</h4>
-        <div class="prepared-spells-modal__list">
-          ${prepared.map((entry) => `
-            <label class="checkbox">
-              <input type="checkbox" name="prepared_${entry.id}" checked />
-              <span>${entry.name}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-    ${known.length ? `
-      <div class="prepared-spells-modal__section">
-        <h4>Disponibili</h4>
-        <div class="prepared-spells-modal__list">
-          ${known.map((entry) => `
-            <label class="checkbox">
-              <input type="checkbox" name="prepared_${entry.id}" />
-              <span>${entry.name}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
+    <div class="prepared-spells-modal__list prepared-spells-modal__list--toggle">
+      ${selectable.map((entry) => {
+    const isPrepared = preparedIds.has(entry.id);
+    const level = Number(entry.level) || 0;
+    return `
+          <button
+            class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
+            type="button"
+            data-prepared-toggle="${entry.id}"
+            aria-pressed="${isPrepared}"
+          >
+            <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
+            <span class="chip chip--small">${level}°</span>
+          </button>
+        `;
+  }).join('')}
+    </div>
   `;
+
+  const syncPreparedState = () => {
+    content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
+      const spellId = button.dataset.preparedToggle;
+      if (!spellId) return;
+      const isPrepared = preparedIds.has(spellId);
+      button.classList.toggle('is-active', isPrepared);
+      button.setAttribute('aria-pressed', String(isPrepared));
+    });
+  };
+
+  content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const spellId = button.dataset.preparedToggle;
+      if (!spellId) return;
+      if (preparedIds.has(spellId)) {
+        preparedIds.delete(spellId);
+      } else {
+        preparedIds.add(spellId);
+      }
+      syncPreparedState();
+    });
+  });
+
+  syncPreparedState();
 
   openFormModal({
     title: 'Incantesimi preparati',
@@ -618,7 +637,7 @@ export function openPreparedSpellsModal(character, onSave) {
       const prepState = entry.prep_state || 'known';
       if (prepState === 'always') return entry;
       if (Number(entry.level) === 0) return entry;
-      const isPrepared = formData.has(`prepared_${entry.id}`);
+      const isPrepared = preparedIds.has(entry.id);
       return {
         ...entry,
         prep_state: isPrepared ? 'prepared' : 'known'
