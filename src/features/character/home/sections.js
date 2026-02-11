@@ -716,17 +716,17 @@ export function buildSpellSection(character) {
   }).join('')}
           </div>
         </div>
-        <div class="spell-prepared-list">
-          <span class="spell-slots__title">Trucchetti</span>
-          ${cantrips.length
-    ? `
-            <div class="spell-prepared-list__items">
-              ${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}
-            </div>
-          `
-    : '<p class="muted">Nessun trucchetto disponibile.</p>'}
-        </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
+      </div>
+      <div class="spell-prepared-list">
+        <span class="spell-slots__title">Trucchetti</span>
+        ${cantrips.length
+    ? `
+          <div class="spell-prepared-list__items">
+            ${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}
+          </div>
+        `
+    : '<p class="muted">Nessun trucchetto disponibile.</p>'}
       </div>
       <div class="spell-prepared-list">
         <span class="spell-slots__title">Incantesimi pronti al lancio</span>
@@ -749,7 +749,7 @@ export function buildSpellSection(character) {
       </div>
       <div class="spell-list-actions">
         ${canPrepareSpells
-    ? '<button class="secondary spell-list-button" type="button" data-open-prepared-spells>Prepara Incantesimi</button>'
+    ? '<button class="secondary spell-list-button spell-list-button--prepare" type="button" data-open-prepared-spells>Prepara Incantesimi</button>'
     : ''}
         <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>
       </div>
