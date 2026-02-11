@@ -638,6 +638,7 @@ export function buildSpellSection(character) {
   const notes = data.spell_notes || '';
   const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
   const spellcasting = data.spellcasting || {};
+  const canPrepareSpells = Boolean(spellcasting.can_prepare);
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const abilityKey = spellcasting.ability;
   const abilityScore = abilityKey ? data.abilities?.[abilityKey] : null;
@@ -725,6 +726,9 @@ export function buildSpellSection(character) {
     : '<p class="muted">Nessun incantesimo preparato disponibile.</p>'}
       </div>
       <div class="spell-list-actions">
+        ${canPrepareSpells
+    ? '<button class="secondary spell-list-button" type="button" data-open-prepared-spells>Prepara Incantesimi</button>'
+    : ''}
         <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>
       </div>
     </div>

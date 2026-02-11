@@ -258,6 +258,13 @@ export async function renderHome(container) {
     });
   }
 
+  const preparedSpellsButton = container.querySelector('[data-open-prepared-spells]');
+  if (preparedSpellsButton) {
+    preparedSpellsButton.addEventListener('click', () => {
+      openPreparedSpellsModal(activeCharacter, () => renderHome(container));
+    });
+  }
+
   container.querySelectorAll('[data-spell-quick-open]')
     .forEach((button) => button.addEventListener('click', () => {
       const spellId = button.dataset.spellQuickOpen;
