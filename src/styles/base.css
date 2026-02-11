@@ -2307,6 +2307,12 @@ button:focus-visible,
   margin-top: 0;
 }
 
+.hp-shortcut-fields__max {
+  margin-top: 0;
+  margin-bottom: 0;
+  flex: 1;
+}
+
 .chip {
   display: inline-flex;
   padding: 4px 8px;
@@ -2496,21 +2502,8 @@ button:focus-visible,
 }
 
 .spell-list-button {
-  min-height: 36px;
-  padding: 8px 14px;
-  font-size: 0.75rem;
-}
-
-.spell-list-button--prepare {
-  background: #3b5d60;
-  border-color: #3b5d60;
-  color: #fffaf1;
-}
-
-.spell-list-button--prepare:hover,
-.spell-list-button--prepare:focus-visible {
-  background: #324f52;
-  border-color: #324f52;
+  min-height: 40px;
+  padding: 10px 16px;
 }
 
 .spell-list-modal {
@@ -3386,6 +3379,25 @@ button:focus-visible,
   grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
   gap: 8px;
 }
+
+
+.wallet-edit-field {
+  margin-bottom: 0;
+}
+
+.wallet-edit-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-edit-field__label .coin-avatar {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-width: 1px;
+}
+
 
 .pill {
   padding: 4px 10px;

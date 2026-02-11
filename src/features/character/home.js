@@ -28,7 +28,6 @@ import {
   openResourceDetail,
   openResourceDrawer,
   openSpellDrawer,
-  openSpellListModal,
   openSpellQuickDetailModal
 } from './home/modals.js';
 import { saveCharacterData } from './home/data.js';
@@ -280,13 +279,6 @@ export async function renderHome(container) {
       };
       await saveCharacterData(activeCharacter, nextData, 'Incantesimo eliminato', () => renderHome(container));
     }));
-
-  const spellListButton = container.querySelector('[data-spell-list]');
-  if (spellListButton) {
-    spellListButton.addEventListener('click', () => {
-      openSpellListModal(activeCharacter, () => renderHome(container));
-    });
-  }
 
   const preparedSpellsButton = container.querySelector('[data-open-prepared-spells]');
   if (preparedSpellsButton) {
@@ -1369,11 +1361,12 @@ function buildHpShortcutFields(
         type: 'number',
         value: ''
       });
+      maxHpField.classList.add('hp-shortcut-fields__max');
       const maxInput = maxHpField.querySelector('input');
       if (maxInput) {
         maxInput.min = '1';
       }
-      wrapper.appendChild(maxHpField);
+      primaryRow.appendChild(maxHpField);
     }
     return wrapper;
   }

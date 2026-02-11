@@ -760,9 +760,8 @@ export function buildSpellSection(character, canManageSpells = false) {
       </div>
       <div class="spell-list-actions">
         ${canPrepareSpells
-    ? '<button class="secondary spell-list-button spell-list-button--prepare" type="button" data-open-prepared-spells>Prepara Incantesimi</button>'
+    ? '<button class="primary spell-list-button" type="button" data-open-prepared-spells>Prepara Incantesimi</button>'
     : ''}
-        <button class="primary spell-list-button" type="button" data-spell-list>Lista Incantesimi</button>
       </div>
     </div>
   `;

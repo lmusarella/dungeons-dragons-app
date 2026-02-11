@@ -40,6 +40,22 @@ function buildTransactionAmountLabel(amount) {
 
 const TRANSACTION_SCROLL_THRESHOLD = 8;
 
+
+function buildCoinField(label, name, value, iconSrc, coinClass) {
+  return `
+      <label class="field wallet-edit-field">
+        <span class="wallet-edit-field__label">
+          <span class="coin-avatar ${coinClass}" aria-hidden="true">
+            <img src="${iconSrc}" alt="" loading="lazy" />
+          </span>
+          <span>${label}</span>
+        </span>
+        <input name="${name}" type="number" value="${value}" min="0" step="1" />
+      </label>
+  `;
+}
+
+
 export function buildTransactionList(transactions) {
   const wrapper = document.createElement('div');
   wrapper.className = 'transaction-list';
@@ -267,6 +283,13 @@ export function exchangeFields({
 }
 
 export function walletEditFields(wallet = {}) {
+  const baseUrl = import.meta.env.BASE_URL;
+  const coinIcons = {
+    pp: `${baseUrl}icons/moneta_platino.png`,
+    gp: `${baseUrl}icons/moneta_oro.png`,
+    sp: `${baseUrl}icons/moneta_argento.png`,
+    cp: `${baseUrl}icons/moneta_rame.png`
+  };
   const values = {
     pp: Number(wallet.pp ?? 0),
     gp: Number(wallet.gp ?? 0),
@@ -275,22 +298,10 @@ export function walletEditFields(wallet = {}) {
   };
   return `
     <div class="money-grid compact-grid-fields">
-      <label class="field">
-        <span>Platino</span>
-        <input name="pp" type="number" value="${values.pp}" min="0" step="1" />
-      </label>
-      <label class="field">
-        <span>Oro</span>
-        <input name="gp" type="number" value="${values.gp}" min="0" step="1" />
-      </label>
-      <label class="field">
-        <span>Argento</span>
-        <input name="sp" type="number" value="${values.sp}" min="0" step="1" />
-      </label>
-      <label class="field">
-        <span>Rame</span>
-        <input name="cp" type="number" value="${values.cp}" min="0" step="1" />
-      </label>
+      ${buildCoinField('Platino', 'pp', values.pp, coinIcons.pp, 'coin-avatar--pp')}
+      ${buildCoinField('Oro', 'gp', values.gp, coinIcons.gp, 'coin-avatar--gp')}
+      ${buildCoinField('Argento', 'sp', values.sp, coinIcons.sp, 'coin-avatar--sp')}
+      ${buildCoinField('Rame', 'cp', values.cp, coinIcons.cp, 'coin-avatar--cp')}
     </div>
   `;
 }
