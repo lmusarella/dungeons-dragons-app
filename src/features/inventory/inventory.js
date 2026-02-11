@@ -331,7 +331,7 @@ export async function renderInventory(container) {
     exchangeButton.dataset.bound = 'true';
     exchangeButton.addEventListener('click', async () => {
       const coinValues = { cp: 1, sp: 10, gp: 100, pp: 1000 };
-      const coinLabels = { cp: 'Rame (CP)', sp: 'Argento (SP)', gp: 'Oro (GP)', pp: 'Platino (PP)' };
+      const coinLabels = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
       const available = {
         cp: Number(wallet?.cp ?? 0),
         sp: Number(wallet?.sp ?? 0),
