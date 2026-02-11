@@ -28,7 +28,8 @@ import {
   openResourceDetail,
   openResourceDrawer,
   openSpellDrawer,
-  openSpellListModal
+  openSpellListModal,
+  openSpellQuickDetailModal
 } from './home/modals.js';
 import { saveCharacterData } from './home/data.js';
 import { abilityShortLabel, conditionList, savingThrowList, skillList } from './home/constants.js';
@@ -251,6 +252,16 @@ export async function renderHome(container) {
       openSpellListModal(activeCharacter, () => renderHome(container));
     });
   }
+
+  container.querySelectorAll('[data-spell-quick-open]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const spellId = button.dataset.spellQuickOpen;
+      if (!spellId || !activeCharacter) return;
+      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      openSpellQuickDetailModal(activeCharacter, spell, () => renderHome(container));
+    }));
 
   const backgroundButton = container.querySelector('[data-show-background]');
   if (backgroundButton) {

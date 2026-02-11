@@ -511,6 +511,52 @@ export function openSpellDrawer(character, onSave, spell = null) {
   });
 }
 
+
+
+export function openSpellQuickDetailModal(character, spell, onRender) {
+  if (!character || !spell) return;
+  const level = Math.max(0, Number(spell.level) || 0);
+  const typeLabel = getSpellTypeLabel(spell);
+  const prepState = spell.prep_state || 'known';
+  const prepLabel = getPrepStateLabel(prepState);
+  const damageModifier = Number(spell.damage_modifier) || 0;
+  const damageText = spell.damage_die
+    ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
+    : null;
+  const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
+  const isCastable = level > 0;
+
+  const content = document.createElement('div');
+  content.className = 'spell-quick-detail';
+  content.innerHTML = `
+    <div class="detail-card detail-card--text spell-quick-detail__card">
+      <div class="spell-quick-detail__meta">
+        <span class="chip chip--small">${typeLabel}</span>
+        <span class="chip chip--small">${level === 0 ? 'Trucchetto' : `${level}° livello`}</span>
+        <span class="chip chip--small">${prepLabel}</span>
+      </div>
+      <div class="spell-quick-detail__stats">
+        ${spell.attack_roll ? '<span>Tiro per colpire</span>' : ''}
+        ${damageText ? `<span>Danni ${damageText}</span>` : ''}
+        ${spell.duration ? `<span>Durata ${spell.duration}</span>` : ''}
+        ${spell.range ? `<span>Gittata ${spell.range}</span>` : ''}
+      </div>
+      <p class="spell-quick-detail__description">${description}</p>
+    </div>
+  `;
+
+  openFormModal({
+    title: spell.name || 'Incantesimo',
+    submitLabel: isCastable ? 'Lancia' : 'Chiudi',
+    cancelLabel: isCastable ? 'Chiudi' : null,
+    content,
+    cardClass: ['modal-card--form', 'spell-quick-detail-modal'],
+    showFooter: true
+  }).then(async (formData) => {
+    if (!formData || !isCastable) return;
+    await consumeSpellSlot(character, level, onRender);
+  });
+}
 export function openPreparedSpellsModal(character, onSave) {
   if (!character) return;
   const data = character.data || {};
