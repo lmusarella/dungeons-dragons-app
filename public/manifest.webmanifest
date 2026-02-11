@@ -1,6 +1,6 @@
 {
-  "name": "Dungeon Dragon",
-  "short_name": "DungeonDragon",
+  "name": "D&D - Gestionale",
+  "short_name": "D&D - Gestionale",
   "description": "Tablet-first D&D character manager",
   "start_url": "./#/",
   "display": "standalone",
@@ -8,10 +8,10 @@
   "theme_color": "#6f4e37",
   "icons": [
     {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "./icons/logo_dd.png",
+      "sizes": "500x500",
+      "type": "image/webp",
+      "purpose": "any maskable"
     }
   ]
 }

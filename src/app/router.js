@@ -37,6 +37,7 @@ async function renderRoute() {
   if (appShell) {
     appShell.classList.toggle('app-shell--auth', isAuthRoute);
   }
+  document.body.classList.toggle('no-route-scroll', isAuthRoute);
   const applyShellVisibility = (shouldHide, shouldShowFab) => {
     const { offline } = getState();
     if (bottomNav) bottomNav.hidden = shouldHide;
