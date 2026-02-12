@@ -221,6 +221,7 @@ function buildMenuContent() {
   wrapper.className = 'menu-list';
   wrapper.innerHTML = `
     <a class="menu-item" href="#/characters" data-drawer-close>Seleziona personaggi</a>
+    <a class="menu-item" href="#/settings" data-drawer-close>Impostazioni</a>
     <button class="menu-item menu-item--danger" type="button" data-logout data-drawer-close>Logout</button>
   `;
   return wrapper;

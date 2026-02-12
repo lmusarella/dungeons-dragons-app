@@ -30,7 +30,7 @@ import {
   openSpellDrawer,
   openSpellQuickDetailModal
 } from './home/modals.js';
-import { saveCharacterData } from './home/data.js';
+import { consumeSpellSlot, saveCharacterData } from './home/data.js';
 import { abilityShortLabel, conditionList, savingThrowList, skillList } from './home/constants.js';
 import {
   applyRestRecovery,
@@ -50,7 +50,12 @@ import { applyMoneyDelta } from '../../lib/calc.js';
 let fabHandlersBound = false;
 let lastHomeContainer = null;
 
+function shouldAutoUsageDice(character) {
+  return character?.data?.settings?.auto_usage_dice !== false;
+}
+
 export async function renderHome(container) {
+
   lastHomeContainer = container;
   const state = getState();
   const { user, offline } = state;
@@ -529,7 +534,7 @@ export async function renderHome(container) {
     if (!notation) return;
     const parsed = parseDamageDice(notation);
     if (!parsed?.notation) {
-      createToast('Notazione dado non valida per questa abilità', 'error');
+      createToast('Notazione dado non valida per questa risorsa', 'error');
       return;
     }
     openDiceOverlay({
@@ -550,7 +555,9 @@ export async function renderHome(container) {
     try {
       await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
       createToast('Risorsa usata');
-      openResourceRollOverlay(resource);
+      if (shouldAutoUsageDice(activeCharacter)) {
+        openResourceRollOverlay(resource);
+      }
       renderHome(container);
     } catch (error) {
       createToast('Errore utilizzo risorsa', 'error');
@@ -584,6 +591,60 @@ export async function renderHome(container) {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
       await useResource(resource);
+    }));
+
+  container.querySelectorAll('[data-use-skill]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter || !shouldAutoUsageDice(activeCharacter)) return;
+      const skillKey = button.dataset.useSkill;
+      if (!skillKey) return;
+      const option = buildSkillRollOptions(activeCharacter, items || [])
+        .find((entry) => entry.value === skillKey);
+      if (!option) return;
+      openDiceRollerModal({
+        title: `Tiro abilità • ${option.shortLabel || option.label}`,
+        mode: 'd20',
+        rollType: 'TA',
+        selection: {
+          label: 'Abilità',
+          options: [option],
+          value: option.value
+        },
+        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+        characterId: activeCharacter.id,
+        historyLabel: option.shortLabel || option.label
+      });
+    }));
+
+  container.querySelectorAll('[data-use-spell]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      if (!activeCharacter) return;
+      const spellId = button.dataset.useSpell;
+      if (!spellId) return;
+      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      const level = Number(spell.level) || 0;
+      if (level < 1) return;
+      const consumed = await consumeSpellSlot(activeCharacter, level, () => renderHome(container));
+      if (!consumed) return;
+      if (!shouldAutoUsageDice(activeCharacter)) return;
+      const overlayConfig = buildSpellDamageOverlayConfig(spell);
+      if (!overlayConfig) {
+        createToast('Danno non calcolabile per questo incantesimo.', 'error');
+        return;
+      }
+      openDiceOverlay({
+        keepOpen: true,
+        title: overlayConfig.title,
+        mode: 'generic',
+        notation: overlayConfig.notation,
+        modifier: overlayConfig.modifier,
+        rollType: 'DMG',
+        characterId: activeCharacter.id,
+        historyLabel: spell.name || null
+      });
     }));
 
   container.querySelectorAll('[data-delete-resource]')

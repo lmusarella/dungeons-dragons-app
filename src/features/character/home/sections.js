@@ -327,6 +327,7 @@ export function buildSkillList(character) {
               </div>
             </div>
             <div class="modifier-value">${formatSigned(total)}</div>
+            <button class="resource-cta-button resource-cta-button--label" type="button" data-use-skill="${skill.key}">Usa</button>
           </div>
         `;
   }).join('')}
@@ -694,12 +695,13 @@ export function buildSpellSection(character, canManageSpells = false) {
           ${castTimeLabel ? `<span class="resource-chip ${castTimeClass}">${castTimeLabel}</span>` : ''}
         
         </button>
-        ${canManageSpells ? `
-          <div class="resource-card-actions spell-card-actions">
+        <div class="resource-card-actions spell-card-actions">
+          ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
+          ${canManageSpells ? `
             <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
             <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
-          </div>
-        ` : ''}
+          ` : ''}
+        </div>
       </div>
     `;
   };
@@ -862,7 +864,7 @@ export function buildResourceSections(resources, canManageResources) {
     ? `
       <div class="resource-section resource-section--active">
         <div class="resource-section__body">
-          ${buildResourceList(activeResources, canManageResources, { showUseButton: false })}
+          ${buildResourceList(activeResources, canManageResources, { showUseButton: true })}
         </div>
       </div>
     `
