@@ -45,7 +45,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const buildEditGroup = (title, sections) => {
     const group = document.createElement('section');
     group.className = 'character-edit-group';
-    group.innerHTML = `<h3>${title}</h3>`;
+  
     const content = document.createElement('div');
     content.className = 'character-edit-group__content';
     sections.forEach((section) => {
@@ -58,7 +58,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const mainSection = document.createElement('div');
   mainSection.className = 'character-edit-section';
-  mainSection.innerHTML = '<h4>Dati principali</h4>';
+ 
   const identityRow = document.createElement('div');
   identityRow.className = 'character-edit-grid character-edit-grid--identity';
   const nameField = buildInput({ label: 'Nome', name: 'name', placeholder: 'Es. Aria', value: character?.name ?? '' });
@@ -89,7 +89,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const statsSection = document.createElement('div');
   statsSection.className = 'character-edit-section';
-  statsSection.innerHTML = '<h4>Statistiche base</h4>';
+
   const statsGrid = document.createElement('div');
   statsGrid.className = 'character-edit-grid';
   statsGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? '' }));
