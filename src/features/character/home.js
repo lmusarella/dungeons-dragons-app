@@ -476,6 +476,54 @@ export async function renderHome(container) {
       handleDiceAction(button.dataset.openDice);
     }));
 
+  container.querySelectorAll('[data-saving-throw-card]')
+    .forEach((card) => card.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const saveKey = card.dataset.savingThrowCard;
+      if (!saveKey) return;
+      const options = buildSavingThrowRollOptions(activeCharacter);
+      const selected = options.find((entry) => entry.value === saveKey);
+      if (!selected) return;
+      openDiceRollerModal({
+        title: `Tiro salvezza • ${selected.shortLabel || selected.label}`,
+        mode: 'd20',
+        rollType: 'TS',
+        selection: {
+          label: 'Tiro salvezza',
+          options,
+          value: selected.value
+        },
+        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+        characterId: activeCharacter.id,
+        historyLabel: selected.shortLabel || selected.label
+      });
+    }));
+
+  container.querySelectorAll('[data-skill-card]')
+    .forEach((card) => card.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const skillKey = card.dataset.skillCard;
+      if (!skillKey) return;
+      const options = buildSkillRollOptions(activeCharacter, items || []);
+      const selected = options.find((entry) => entry.value === skillKey);
+      if (!selected) return;
+      openDiceRollerModal({
+        title: `Tiro abilità • ${selected.shortLabel || selected.label}`,
+        mode: 'd20',
+        rollType: 'TA',
+        selection: {
+          label: 'Abilità',
+          options,
+          value: selected.value
+        },
+        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+        characterId: activeCharacter.id,
+        historyLabel: selected.shortLabel || selected.label
+      });
+    }));
+
   container.querySelectorAll('[data-edit-resource]')
     .forEach((button) => button.addEventListener('click', () => {
       const resource = resources.find((entry) => entry.id === button.dataset.editResource);
@@ -591,30 +639,6 @@ export async function renderHome(container) {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
       await useResource(resource);
-    }));
-
-  container.querySelectorAll('[data-use-skill]')
-    .forEach((button) => button.addEventListener('click', () => {
-      if (!activeCharacter || !shouldAutoUsageDice(activeCharacter)) return;
-      const skillKey = button.dataset.useSkill;
-      if (!skillKey) return;
-      const option = buildSkillRollOptions(activeCharacter, items || [])
-        .find((entry) => entry.value === skillKey);
-      if (!option) return;
-      openDiceRollerModal({
-        title: `Tiro abilità • ${option.shortLabel || option.label}`,
-        mode: 'd20',
-        rollType: 'TA',
-        selection: {
-          label: 'Abilità',
-          options: [option],
-          value: option.value
-        },
-        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
-        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
-        characterId: activeCharacter.id,
-        historyLabel: option.shortLabel || option.label
-      });
     }));
 
   container.querySelectorAll('[data-use-spell]')

@@ -319,7 +319,7 @@ export function buildSkillList(character) {
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
     return `
-          <div class="modifier-card ${statusClass}">
+          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-skill-card="${skill.key}" aria-label="Tira abilità ${skill.label}">
             <div>
               <div class="modifier-title">
                 <strong>${skill.label}</strong>
@@ -327,8 +327,7 @@ export function buildSkillList(character) {
               </div>
             </div>
             <div class="modifier-value">${formatSigned(total)}</div>
-            <button class="resource-cta-button resource-cta-button--label" type="button" data-use-skill="${skill.key}">Usa</button>
-          </div>
+          </button>
         `;
   }).join('')}
       </div>
@@ -350,14 +349,14 @@ export function buildSavingThrowSection(character) {
     const total = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
     const statusClass = proficient ? 'modifier-card--proficiency' : '';
     return `
-          <div class="modifier-card ${statusClass}">
+          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-saving-throw-card="${save.key}" aria-label="Tira salvezza ${save.label}">
             <div>
               <div class="modifier-title">
                 <strong>${save.label}</strong>
               </div>
             </div>
             <div class="modifier-value">${formatSigned(total)}</div>
-          </div>
+          </button>
         `;
   }).join('')}
       </div>
