@@ -447,8 +447,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
     prepStateSelect.name = 'spell_prep_state';
     prepStateField.appendChild(prepStateSelect);
   }
-  form.appendChild(buildRow([spellKindField, levelField, prepStateField], 'compact'));
-  form.appendChild(buildRow([nameField], 'balanced'));
+  form.appendChild(buildRow([nameField, spellKindField, levelField], 'compact'));
   const castTimeField = document.createElement('label');
   castTimeField.className = 'field';
   castTimeField.innerHTML = '<span>Tipo di lancio</span>';
@@ -476,21 +475,33 @@ export function openSpellDrawer(character, onSave, spell = null) {
       value: spell?.range ?? ''
     })
   ], 'compact'));
-  const concentrationField = document.createElement('label');
-  concentrationField.className = 'checkbox';
-  concentrationField.innerHTML = '<input type="checkbox" name="spell_concentration" /> <span>Concentrazione</span>';
-  const attackRollField = document.createElement('label');
-  attackRollField.className = 'checkbox';
-  attackRollField.innerHTML = '<input type="checkbox" name="spell_attack_roll" /> <span>Tiro per colpire (targhet)</span>';
-  form.appendChild(buildRow([concentrationField, attackRollField], 'balanced'));
+  const concentrationField = document.createElement('div');
+  concentrationField.className = 'modal-toggle-field';
+  concentrationField.innerHTML = `
+    <span class="modal-toggle-field__label">Concentrazione</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="spell_concentration" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const attackRollField = document.createElement('div');
+  attackRollField.className = 'modal-toggle-field';
+  attackRollField.innerHTML = `
+    <span class="modal-toggle-field__label">Tiro per colpire</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="spell_attack_roll" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  form.appendChild(buildRow([concentrationField, attackRollField, prepStateField], 'compact'));
   const damageDieField = buildInput({
-    label: 'Dado danno',
+    label: 'Notazione dado',
     name: 'spell_damage_die',
     placeholder: 'Es. 1d10',
     value: spell?.damage_die ?? ''
   });
   const damageModifierField = buildInput({
-    label: 'Modificatore danni',
+    label: 'Modificatore',
     name: 'spell_damage_modifier',
     type: 'number',
     value: spell?.damage_modifier ?? ''
