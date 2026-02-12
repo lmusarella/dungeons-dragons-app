@@ -647,13 +647,17 @@ button:focus-visible,
 
 
 .number-stepper {
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
-.number-stepper input[type="number"] {
-  flex: 1;
+.field .number-stepper input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   text-align: center;
 }
 
@@ -2330,7 +2334,7 @@ button:focus-visible,
 }
 
 .hit-dice-count input {
-  max-width: 120px;
+  max-width: none;
 }
 
 .hp-shortcut-fields {

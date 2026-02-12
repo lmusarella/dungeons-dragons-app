@@ -495,8 +495,7 @@ export async function renderHome(container) {
         },
         allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
         weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
-        characterId: activeCharacter.id,
-        historyLabel: selected.shortLabel || selected.label
+        characterId: activeCharacter.id
       });
     }));
 
@@ -519,8 +518,7 @@ export async function renderHome(container) {
         },
         allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
         weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
-        characterId: activeCharacter.id,
-        historyLabel: selected.shortLabel || selected.label
+        characterId: activeCharacter.id
       });
     }));
 

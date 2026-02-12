@@ -161,6 +161,14 @@ function hasInvalidRolls(notation) {
   return rolls.some((value) => typeof value === 'number' && value < 0);
 }
 
+function normalizeHistoryLabel(value) {
+  return (value || '')
+    .toString()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
 const HISTORY_KEY = 'diceRollHistory';
 const HISTORY_LIMIT = 12;
 
@@ -867,10 +875,12 @@ export function openDiceOverlay({
     if (state.lastRoll) {
       const summary = summarizeRoll(state.lastRoll);
       if (summary) {
+        const subtype = getSelectionLabel();
+        const hasDuplicatedContext = normalizeHistoryLabel(subtype) && normalizeHistoryLabel(subtype) === normalizeHistoryLabel(historyLabel);
         addHistoryEntry({
           type: rollType || 'GEN',
-          subtype: getSelectionLabel(),
-          context: historyLabel,
+          subtype,
+          context: hasDuplicatedContext ? null : historyLabel,
           inspired: state.inspirationConsumed,
           rollModeLabel: getHistoryRollModeLabel(),
           value: summary.value,
