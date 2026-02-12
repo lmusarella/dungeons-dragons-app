@@ -2447,7 +2447,7 @@ button:focus-visible,
 
 .spell-prepared-list__card {
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 8px !important;
 }
 
 .spell-prepared-list__group {
@@ -2507,19 +2507,16 @@ button:focus-visible,
 
 .spell-quick-detail__card {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 14px;
+  align-items: start;
 }
 
-.spell-quick-detail__meta,
-.spell-quick-detail__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.spell-quick-detail__stats {
-  color: #6a5540;
-  font-size: 0.75rem;
+.spell-quick-detail__card .resource-detail-image {
+  width: 100%;
+  max-width: 180px;
+  max-height: 180px;
+  margin-bottom: 0;
 }
 
 .spell-quick-detail__description {
@@ -2531,6 +2528,18 @@ button:focus-visible,
 .spell-quick-detail-modal {
   max-width: 520px;
 }
+
+@media (max-width: 720px) {
+  .spell-quick-detail__card {
+    grid-template-columns: 1fr;
+  }
+
+  .spell-quick-detail__card .resource-detail-image {
+    max-width: 100%;
+    max-height: 180px;
+  }
+}
+
 
 .spell-list-actions {
   display: flex;

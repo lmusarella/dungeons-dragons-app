@@ -14,7 +14,7 @@ import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
 import { RESOURCE_CAST_TIME_ORDER, conditionList } from './constants.js';
 
-const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione'];
+const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita'];
 
 function normalizeSpellCastTime(castTime) {
   const rawValue = castTime?.toString().trim();
@@ -193,7 +193,7 @@ export function openSpellListModal(character, onRender) {
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
                     <span class="chip chip--small">${typeLabel}</span>
-                    ${castTime ? `<span class="resource-chip ${castTimeClass}">${castTime}</span>` : ''}
+                    ${castTime ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTime}</span>` : ''}
                     ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
                   </div>
                   <div class="spell-list-modal__item-meta">
@@ -500,12 +500,19 @@ export function openSpellDrawer(character, onSave, spell = null) {
     placeholder: 'Es. 1d10',
     value: spell?.damage_die ?? ''
   });
+  const imageField = buildInput({
+    label: 'Foto (URL)',
+    name: 'spell_image_url',
+    placeholder: 'https://.../incantesimo.png',
+    value: spell?.image_url ?? ''
+  });
   const damageModifierField = buildInput({
     label: 'Modificatore',
     name: 'spell_damage_modifier',
     type: 'number',
     value: spell?.damage_modifier ?? ''
   });
+  form.appendChild(buildRow([imageField], 'compact'));
   form.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
@@ -579,6 +586,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
       range: formData.get('spell_range')?.trim() || null,
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
+      image_url: formData.get('spell_image_url')?.trim() || null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
       description: formData.get('spell_description')?.trim() || null,
@@ -602,31 +610,23 @@ export function openSpellDrawer(character, onSave, spell = null) {
 export function openSpellQuickDetailModal(character, spell, onRender) {
   if (!character || !spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
-  const typeLabel = getSpellTypeLabel(spell);
-  const prepState = spell.prep_state || 'known';
-  const prepLabel = getPrepStateLabel(prepState);
-  const damageModifier = Number(spell.damage_modifier) || 0;
-  const damageText = spell.damage_die
-    ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
-    : null;
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
   const isCastable = level > 0;
+  const placeholderImage = `${import.meta.env.BASE_URL}icons/icon.svg`;
+  const imageUrl = spell.image_url?.trim() || placeholderImage;
+  const hasCustomImage = Boolean(spell.image_url?.trim());
+  const imageAlt = hasCustomImage
+    ? `Immagine di ${spell.name}`
+    : `Immagine placeholder per ${spell.name}`;
+  const imageClass = hasCustomImage
+    ? 'resource-detail-image'
+    : 'resource-detail-image resource-detail-image--placeholder';
 
   const content = document.createElement('div');
   content.className = 'spell-quick-detail';
   content.innerHTML = `
     <div class="detail-card detail-card--text spell-quick-detail__card">
-      <div class="spell-quick-detail__meta">
-        <span class="chip chip--small">${typeLabel}</span>
-        <span class="chip chip--small">${level === 0 ? 'Trucchetto' : `${level}° livello`}</span>
-        <span class="chip chip--small">${prepLabel}</span>
-      </div>
-      <div class="spell-quick-detail__stats">
-        ${spell.attack_roll ? '<span>Tiro per colpire</span>' : ''}
-        ${damageText ? `<span>Danni ${damageText}</span>` : ''}
-        ${spell.duration ? `<span>Durata ${spell.duration}</span>` : ''}
-        ${spell.range ? `<span>Gittata ${spell.range}</span>` : ''}
-      </div>
+      <img class="${imageClass}" src="${imageUrl}" alt="${imageAlt}" />
       <p class="spell-quick-detail__description">${description}</p>
     </div>
   `;
@@ -637,7 +637,7 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     cancelLabel: isCastable ? 'Chiudi' : null,
     content,
     cardClass: ['modal-card--form', 'spell-quick-detail-modal'],
-    showFooter: true
+    showFooter: isCastable
   }).then(async (formData) => {
     if (!formData || !isCastable) return;
     const consumed = await consumeSpellSlot(character, level, onRender);
