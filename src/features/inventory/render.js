@@ -297,11 +297,15 @@ export function walletEditFields(wallet = {}) {
     cp: Number(wallet.cp ?? 0)
   };
   return `
-    <div class="money-grid compact-grid-fields">
-      ${buildCoinField('Platino', 'pp', values.pp, coinIcons.pp, 'coin-avatar--pp')}
-      ${buildCoinField('Oro', 'gp', values.gp, coinIcons.gp, 'coin-avatar--gp')}
-      ${buildCoinField('Argento', 'sp', values.sp, coinIcons.sp, 'coin-avatar--sp')}
-      ${buildCoinField('Rame', 'cp', values.cp, coinIcons.cp, 'coin-avatar--cp')}
+    <div class="wallet-edit-grid compact-grid-fields">
+      <div class="compact-field-grid">
+        ${buildCoinField('Platino', 'pp', values.pp, coinIcons.pp, 'coin-avatar--pp')}
+        ${buildCoinField('Oro', 'gp', values.gp, coinIcons.gp, 'coin-avatar--gp')}
+      </div>
+      <div class="compact-field-grid">
+        ${buildCoinField('Argento', 'sp', values.sp, coinIcons.sp, 'coin-avatar--sp')}
+        ${buildCoinField('Rame', 'cp', values.cp, coinIcons.cp, 'coin-avatar--cp')}
+      </div>
     </div>
   `;
 }

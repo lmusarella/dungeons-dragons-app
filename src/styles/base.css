@@ -3421,6 +3421,11 @@ button:focus-visible,
 }
 
 
+.wallet-edit-grid {
+  display: grid;
+  gap: 8px;
+}
+
 .wallet-edit-field {
   margin-bottom: 0;
 }
