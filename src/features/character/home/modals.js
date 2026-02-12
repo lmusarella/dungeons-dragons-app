@@ -495,13 +495,13 @@ export function openSpellDrawer(character, onSave, spell = null) {
   `;
   form.appendChild(buildRow([concentrationField, attackRollField, prepStateField], 'compact'));
   const damageDieField = buildInput({
-    label: 'Dado danno',
+    label: 'Notazione dado',
     name: 'spell_damage_die',
     placeholder: 'Es. 1d10',
     value: spell?.damage_die ?? ''
   });
   const damageModifierField = buildInput({
-    label: 'Modificatore danni',
+    label: 'Modificatore',
     name: 'spell_damage_modifier',
     type: 'number',
     value: spell?.damage_modifier ?? ''
