@@ -6,7 +6,8 @@ import {
   buildSelect,
   buildTextarea,
   createToast,
-  openFormModal
+  openFormModal,
+  attachNumberStepper
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
@@ -30,6 +31,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
   const currentSpells = Array.isArray(characterData.spells) ? sortSpellsByLevel(characterData.spells) : [];
+  const enhanceNumericFields = (root) => {
+    root?.querySelectorAll('input[type="number"]').forEach((input) => {
+      const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+      attachNumberStepper(input, {
+        decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
+        incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
+      });
+    });
+  };
   const form = document.createElement('div');
   form.className = 'character-edit-form';
   const buildEditGroup = (title, sections) => {
@@ -519,6 +529,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
   modalCard?.classList.add('modal-card--wide');
+  enhanceNumericFields(form);
+
   const formData = await openFormModal({
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',

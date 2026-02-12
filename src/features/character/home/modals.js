@@ -385,6 +385,15 @@ export function openSpellListModal(character, onRender) {
 
 export function openSpellDrawer(character, onSave, spell = null) {
   if (!character) return;
+  const enhanceSpellNumericField = (field) => {
+    const input = field?.querySelector('input[type="number"]');
+    if (!input) return;
+    const fieldLabel = field.querySelector('span')?.textContent?.trim();
+    attachNumberStepper(input, {
+      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
+      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
+    });
+  };
   const canPrepare = Boolean(character.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form';
@@ -523,6 +532,11 @@ export function openSpellDrawer(character, onSave, spell = null) {
   };
   spellKindSelect.addEventListener('change', syncSpellKind);
   syncSpellKind();
+
+  form.querySelectorAll('input[type="number"]').forEach((input) => {
+    const field = input.closest('.field');
+    enhanceSpellNumericField(field);
+  });
 
   openFormModal({
     title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',

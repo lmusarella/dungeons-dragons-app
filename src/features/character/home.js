@@ -823,6 +823,19 @@ function closeFabMenu() {
   actionsToggle?.setAttribute('aria-expanded', 'false');
 }
 
+
+
+function attachSteppersToNumberInputs(root, labels = {}) {
+  if (!root) return;
+  root.querySelectorAll('input[type="number"]').forEach((input) => {
+    const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+    attachNumberStepper(input, {
+      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : (labels.decrementLabel || 'Diminuisci valore'),
+      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : (labels.incrementLabel || 'Aumenta valore')
+    });
+  });
+}
+
 function getHomeContext() {
   const state = getState();
   const { user, offline, characters, activeCharacterId } = state;
@@ -861,7 +874,10 @@ async function handleLootAction(container) {
   const formData = await openFormModal({
     title: 'Aggiungi loot rapido',
     submitLabel: 'Aggiungi',
-    content: buildLootFields(weightStep)
+    content: buildLootFields(weightStep),
+    onOpen: ({ fieldsEl }) => {
+      attachSteppersToNumberInputs(fieldsEl);
+    }
   });
   if (!formData) return;
   try {
@@ -912,7 +928,14 @@ async function handleMoneyAction(direction, container) {
   }
   const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
   const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
-  const formData = await openFormModal({ title, submitLabel, content: moneyFields({ direction }) });
+  const formData = await openFormModal({
+    title,
+    submitLabel,
+    content: moneyFields({ direction }),
+    onOpen: ({ fieldsEl }) => {
+      attachSteppersToNumberInputs(fieldsEl);
+    }
+  });
   if (!formData) return;
   if (!wallet) {
     wallet = {
