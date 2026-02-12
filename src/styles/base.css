@@ -2944,11 +2944,26 @@ button:focus-visible,
   margin-top: 16px;
 }
 
+.modal-actions--with-center {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
 .modal-actions__left,
 .modal-actions__right {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.modal-actions__right {
+  justify-content: flex-end;
+}
+
+.modal-actions__center {
+  display: flex;
+  justify-content: center;
 }
 
 .modal-form-grid {
@@ -3902,6 +3917,10 @@ button:focus-visible,
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.character-edit-stepper-actions--footer {
+  justify-content: center;
 }
 
 .character-edit-grid {

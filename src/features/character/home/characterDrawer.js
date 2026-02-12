@@ -453,6 +453,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   stepperContent.className = 'character-edit-stepper-content';
   const stepperActions = document.createElement('div');
   stepperActions.className = 'character-edit-stepper-actions';
+  stepperActions.classList.add('character-edit-stepper-actions--footer');
   const backButton = document.createElement('button');
   backButton.type = 'button';
   backButton.className = 'secondary';
@@ -539,8 +540,16 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     onOpen: ({ modal }) => {
       const footer = modal.querySelector('.modal-footer');
       if (!footer) return null;
-      footer.prepend(stepperActions);
+      const modalActions = footer.querySelector('.modal-actions');
+      if (!modalActions) return null;
+      const centeredActions = document.createElement('div');
+      centeredActions.className = 'modal-actions__center';
+      centeredActions.appendChild(stepperActions);
+      modalActions.classList.add('modal-actions--with-center');
+      modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
       return () => {
+        centeredActions.remove();
+        modalActions.classList.remove('modal-actions--with-center');
         stepper.appendChild(stepperActions);
       };
     }
