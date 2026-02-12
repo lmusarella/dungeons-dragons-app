@@ -105,6 +105,60 @@ export function buildInput({ label, name, type = 'text', value = '', placeholder
   return wrapper;
 }
 
+export function attachNumberStepper(input, {
+  decrementLabel = 'Diminuisci valore',
+  incrementLabel = 'Aumenta valore'
+} = {}) {
+  if (!(input instanceof HTMLInputElement) || input.type !== 'number') return null;
+  if (input.closest('.number-stepper')) return input.closest('.number-stepper');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'number-stepper';
+
+  const decrementButton = document.createElement('button');
+  decrementButton.type = 'button';
+  decrementButton.className = 'number-stepper__button';
+  decrementButton.setAttribute('aria-label', decrementLabel);
+  decrementButton.textContent = '−';
+
+  const incrementButton = document.createElement('button');
+  incrementButton.type = 'button';
+  incrementButton.className = 'number-stepper__button';
+  incrementButton.setAttribute('aria-label', incrementLabel);
+  incrementButton.textContent = '+';
+
+  const parent = input.parentNode;
+  if (!parent) return null;
+  parent.insertBefore(wrapper, input);
+  wrapper.append(decrementButton, input, incrementButton);
+
+  const updateButtonState = () => {
+    const disabled = input.disabled || input.readOnly;
+    decrementButton.disabled = disabled;
+    incrementButton.disabled = disabled;
+  };
+
+  const stepValue = (direction) => {
+    if (input.disabled || input.readOnly) return;
+    if (!Number.isFinite(input.valueAsNumber) && input.value === '') {
+      input.value = input.min || '0';
+    }
+    if (direction < 0) input.stepDown();
+    if (direction > 0) input.stepUp();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  decrementButton.addEventListener('click', () => stepValue(-1));
+  incrementButton.addEventListener('click', () => stepValue(1));
+
+  const observer = new MutationObserver(updateButtonState);
+  observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
+
+  updateButtonState();
+  return wrapper;
+}
+
 export function buildTextarea({ label, name, value = '', placeholder = '' }) {
   const wrapper = document.createElement('label');
   wrapper.className = 'field';

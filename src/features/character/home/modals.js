@@ -6,7 +6,8 @@ import {
   buildTextarea,
   createToast,
   openConfirmModal,
-  openFormModal
+  openFormModal,
+  attachNumberStepper
 } from '../../../ui/components.js';
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
@@ -21,6 +22,7 @@ function normalizeSpellCastTime(castTime) {
   const normalized = rawValue.toLowerCase();
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
+  if (normalized.includes('gratuit')) return 'Azione Gratuita';
   if (normalized.includes('azion')) return 'Azione';
   const matchingOption = SPELL_CAST_TIME_OPTIONS.find((option) => option.toLowerCase() === normalized);
   return matchingOption || '';
@@ -383,6 +385,15 @@ export function openSpellListModal(character, onRender) {
 
 export function openSpellDrawer(character, onSave, spell = null) {
   if (!character) return;
+  const enhanceSpellNumericField = (field) => {
+    const input = field?.querySelector('input[type="number"]');
+    if (!input) return;
+    const fieldLabel = field.querySelector('span')?.textContent?.trim();
+    attachNumberStepper(input, {
+      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
+      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
+    });
+  };
   const canPrepare = Boolean(character.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form';
@@ -521,6 +532,11 @@ export function openSpellDrawer(character, onSave, spell = null) {
   };
   spellKindSelect.addEventListener('change', syncSpellKind);
   syncSpellKind();
+
+  form.querySelectorAll('input[type="number"]').forEach((input) => {
+    const field = input.closest('.field');
+    enhanceSpellNumericField(field);
+  });
 
   openFormModal({
     title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',
@@ -736,6 +752,11 @@ export function openAvatarModal(character) {
 
 export function openResourceDrawer(character, onSave, resource = null) {
   if (!character) return;
+  const enhanceNumericField = (field, labels = {}) => {
+    const input = field?.querySelector('input[type="number"]');
+    if (!input) return;
+    attachNumberStepper(input, labels);
+  };
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid';
   const buildRow = (elements, variant = 'balanced') => {
@@ -778,7 +799,9 @@ export function openResourceDrawer(character, onSave, resource = null) {
   `;
 
   const maxUsesField = buildInput({ label: 'Cariche massime', name: 'max_uses', type: 'number', value: resource?.max_uses ?? 1 });
+  enhanceNumericField(maxUsesField, { decrementLabel: 'Riduci cariche massime', incrementLabel: 'Aumenta cariche massime' });
   const usedField = buildInput({ label: 'Cariche consumate', name: 'used', type: 'number', value: resource?.used ?? 0 });
+  enhanceNumericField(usedField, { decrementLabel: 'Riduci cariche consumate', incrementLabel: 'Aumenta cariche consumate' });
 
   form.appendChild(buildRow([passiveField, maxUsesField, usedField], 'compact'));
 
@@ -788,6 +811,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
     type: 'number',
     value: resource?.recovery_short ?? ''
   })
+  enhanceNumericField(inputRiposoCorto, { decrementLabel: 'Riduci recupero riposo breve', incrementLabel: 'Aumenta recupero riposo breve' });
 
   const inputRiposoLungo = buildInput({
     label: 'Recupero riposo lungo',
@@ -795,6 +819,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
     type: 'number',
     value: resource?.recovery_long ?? ''
   })
+  enhanceNumericField(inputRiposoLungo, { decrementLabel: 'Riduci recupero riposo lungo', incrementLabel: 'Aumenta recupero riposo lungo' });
 
   const resetField = document.createElement('label');
   resetField.className = 'field';
@@ -819,6 +844,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
     type: 'number',
     value: resource?.damage_modifier ?? ''
   });
+  enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
   form.appendChild(buildRow([damageDiceNotationField, damageModifierField], 'compact'));
 
   form.appendChild(buildTextarea({

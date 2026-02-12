@@ -1,9 +1,18 @@
 import { createItem, updateItem } from './inventoryApi.js';
-import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading } from '../../ui/components.js';
+import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { armorTypes, bodyParts, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
 import { getEquipSlots, getWeightUnit, hasProficiencyForItem } from './utils.js';
 
 export async function openItemModal(character, item, items, onSave) {
+  const enhanceNumericFields = (root) => {
+    root?.querySelectorAll('input[type="number"]').forEach((input) => {
+      const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+      attachNumberStepper(input, {
+        decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
+        incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
+      });
+    });
+  };
   const fields = document.createElement('div');
   fields.className = 'drawer-form modal-form-grid';
   const buildRow = (elements, variant = 'balanced') => {
@@ -292,6 +301,8 @@ export async function openItemModal(character, item, items, onSave) {
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
   updateEquipmentFields();
+
+  enhanceNumericFields(fields);
 
   const formData = await openFormModal({
     title: item ? 'Modifica oggetto' : 'Nuovo oggetto',

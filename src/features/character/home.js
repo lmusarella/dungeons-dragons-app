@@ -1,7 +1,7 @@
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
@@ -495,8 +495,7 @@ export async function renderHome(container) {
         },
         allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
         weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
-        characterId: activeCharacter.id,
-        historyLabel: selected.shortLabel || selected.label
+        characterId: activeCharacter.id
       });
     }));
 
@@ -519,8 +518,7 @@ export async function renderHome(container) {
         },
         allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
         weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
-        characterId: activeCharacter.id,
-        historyLabel: selected.shortLabel || selected.label
+        characterId: activeCharacter.id
       });
     }));
 
@@ -825,6 +823,19 @@ function closeFabMenu() {
   actionsToggle?.setAttribute('aria-expanded', 'false');
 }
 
+
+
+function attachSteppersToNumberInputs(root, labels = {}) {
+  if (!root) return;
+  root.querySelectorAll('input[type="number"]').forEach((input) => {
+    const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+    attachNumberStepper(input, {
+      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : (labels.decrementLabel || 'Diminuisci valore'),
+      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : (labels.incrementLabel || 'Aumenta valore')
+    });
+  });
+}
+
 function getHomeContext() {
   const state = getState();
   const { user, offline, characters, activeCharacterId } = state;
@@ -863,7 +874,10 @@ async function handleLootAction(container) {
   const formData = await openFormModal({
     title: 'Aggiungi loot rapido',
     submitLabel: 'Aggiungi',
-    content: buildLootFields(weightStep)
+    content: buildLootFields(weightStep),
+    onOpen: ({ fieldsEl }) => {
+      attachSteppersToNumberInputs(fieldsEl);
+    }
   });
   if (!formData) return;
   try {
@@ -914,7 +928,14 @@ async function handleMoneyAction(direction, container) {
   }
   const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
   const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
-  const formData = await openFormModal({ title, submitLabel, content: moneyFields({ direction }) });
+  const formData = await openFormModal({
+    title,
+    submitLabel,
+    content: moneyFields({ direction }),
+    onOpen: ({ fieldsEl }) => {
+      attachSteppersToNumberInputs(fieldsEl);
+    }
+  });
   if (!formData) return;
   if (!wallet) {
     wallet = {
@@ -1409,10 +1430,16 @@ function buildHpShortcutFields(
     allowMaxOverride = false
   } = {}
 ) {
+  const enhanceNumericField = (field, labels = {}) => {
+    const input = field?.querySelector('input[type="number"]');
+    if (!input) return;
+    attachNumberStepper(input, labels);
+  };
   const wrapper = document.createElement('div');
   wrapper.className = 'modal-form-grid hp-shortcut-fields';
   const amountField = buildInput({ label: 'Valore', name: 'amount', type: 'number', value: '1' });
   amountField.classList.add('hp-shortcut-fields__amount');
+  enhanceNumericField(amountField, { decrementLabel: 'Riduci valore PF', incrementLabel: 'Aumenta valore PF' });
   const amountInput = amountField.querySelector('input');
   if (amountInput) {
     amountInput.min = '1';
@@ -1447,6 +1474,7 @@ function buildHpShortcutFields(
         value: ''
       });
       maxHpField.classList.add('hp-shortcut-fields__max');
+      enhanceNumericField(maxHpField, { decrementLabel: 'Riduci PF massimi', incrementLabel: 'Aumenta PF massimi' });
       const maxInput = maxHpField.querySelector('input');
       if (maxInput) {
         maxInput.min = '1';
@@ -1480,6 +1508,7 @@ function buildHpShortcutFields(
     <span>Numero dadi vita</span>
     <input type="number" name="hit_dice_count" min="1" max="${remaining}" value="1" />
   `;
+  enhanceNumericField(hitDiceCountField, { decrementLabel: 'Riduci dadi vita', incrementLabel: 'Aumenta dadi vita' });
 
   const hitDiceRow = document.createElement('div');
   hitDiceRow.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';

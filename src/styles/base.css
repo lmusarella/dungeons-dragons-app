@@ -645,6 +645,44 @@ button:focus-visible,
   font-size: 0.85rem;
 }
 
+
+.number-stepper {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.field .number-stepper input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  text-align: center;
+}
+
+.number-stepper__button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid #d6c6ad;
+  border-radius: 12px;
+  background: #fff;
+  color: #3b5d60;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.number-stepper__button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.12);
+}
+
+.number-stepper__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -2116,8 +2154,8 @@ button:focus-visible,
 }
 
 .coin-avatar {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   margin: 0 auto 6px;
   border: 1px solid #eadfc9;
@@ -2296,7 +2334,7 @@ button:focus-visible,
 }
 
 .hit-dice-count input {
-  max-width: 120px;
+  max-width: none;
 }
 
 .hp-shortcut-fields {
@@ -3383,6 +3421,11 @@ button:focus-visible,
 }
 
 
+.wallet-edit-grid {
+  display: grid;
+  gap: 8px;
+}
+
 .wallet-edit-field {
   margin-bottom: 0;
 }
@@ -3569,6 +3612,7 @@ button:focus-visible,
 }
 
 .transaction-items li {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3587,14 +3631,36 @@ button:focus-visible,
 
 .transaction-meta {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 4px;
 }
 
 .transaction-actions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+
+.transaction-direction-chip {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+}
+
+.transaction-direction-chip--incoming {
+  background: rgba(47, 125, 83, 0.28);
+  color: #1f7a4f;
+}
+
+.transaction-direction-chip--outgoing {
+  background: rgba(179, 59, 47, 0.28);
+  color: #b33b2f;
 }
 
 .transaction-action-button {

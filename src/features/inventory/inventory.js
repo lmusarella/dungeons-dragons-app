@@ -3,7 +3,7 @@ import { getState, normalizeCharacterId, updateCache } from '../../app/state.js'
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
 import { formatWeight } from '../../lib/format.js';
-import { createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
+import { createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import {
   fetchWallet,
   upsertWallet,
@@ -26,6 +26,17 @@ export async function renderInventory(container) {
     container.innerHTML = '<section class="card"><p>Nessun personaggio selezionato.</p></section>';
     return;
   }
+
+  const attachSteppersToNumberInputs = (root) => {
+    if (!root) return;
+    root.querySelectorAll('input[type="number"]').forEach((input) => {
+      const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+      attachNumberStepper(input, {
+        decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
+        incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
+      });
+    });
+  };
 
   const runWithGlobalLoader = async (action) => {
     setGlobalLoading(true);
@@ -301,7 +312,10 @@ export async function renderInventory(container) {
       const formData = await openFormModal({
         title: 'Modifica monete',
         submitLabel: 'Salva',
-        content: walletEditFields(wallet)
+        content: walletEditFields(wallet),
+        onOpen: ({ fieldsEl }) => {
+          attachSteppersToNumberInputs(fieldsEl);
+        }
       });
       if (!formData) return;
       const nextWallet = {
@@ -352,6 +366,7 @@ export async function renderInventory(container) {
         }),
         onOpen: ({ fieldsEl }) => {
           if (!fieldsEl) return null;
+          attachSteppersToNumberInputs(fieldsEl);
           const sourceSelect = fieldsEl.querySelector('select[name="source"]');
           const targetSelect = fieldsEl.querySelector('select[name="target"]');
           const amountInput = fieldsEl.querySelector('input[name="amount"]');
@@ -530,7 +545,10 @@ export async function renderInventory(container) {
           occurredOn: formatDateValue(transaction.occurred_on || transaction.created_at),
           direction: transaction.direction,
           includeDirection: true
-        })
+        }),
+        onOpen: ({ fieldsEl }) => {
+          attachSteppersToNumberInputs(fieldsEl);
+        }
       });
       if (!formData) return;
       const nextDirection = formData.get('direction') || transaction.direction;

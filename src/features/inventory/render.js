@@ -75,11 +75,11 @@ export function buildTransactionList(transactions) {
     item.className = `transaction-item ${directionClass}`;
     item.innerHTML = `
       <div class="transaction-info">
-        <strong>${directionLabel}</strong>
         <p class="muted">${transaction.reason || 'Nessuna nota'}</p>
       </div>
       <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
       <div class="transaction-meta">
+        <span class="resource-chip transaction-direction-chip ${transaction.direction === 'pay' ? 'transaction-direction-chip--outgoing' : 'transaction-direction-chip--incoming'}">${directionLabel}</span>
         <div class="transaction-actions">
           <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
@@ -205,18 +205,25 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
     </label>
     </div>
     ${includeDirection ? `
+      <div class="money-grid compact-grid-fields">
+        <label class="field">
+          <span>Direzione</span>
+          <select name="direction">
+            <option value="receive" ${direction === 'receive' ? 'selected' : ''}>Entrata</option>
+            <option value="pay" ${direction === 'pay' ? 'selected' : ''}>Pagamento</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Motivo</span>
+          <input name="reason" placeholder="Motivo" value="${reason}" />
+        </label>
+      </div>
+    ` : `
       <label class="field">
-        <span>Direzione</span>
-        <select name="direction">
-          <option value="receive" ${direction === 'receive' ? 'selected' : ''}>Entrata</option>
-          <option value="pay" ${direction === 'pay' ? 'selected' : ''}>Pagamento</option>
-        </select>
+        <span>Motivo</span>
+        <input name="reason" placeholder="Motivo" value="${reason}" />
       </label>
-    ` : ''}
-    <label class="field">
-      <span>Motivo</span>
-      <input name="reason" placeholder="Motivo" value="${reason}" />
-    </label>
+    `}
    
   `;
 }
@@ -297,11 +304,15 @@ export function walletEditFields(wallet = {}) {
     cp: Number(wallet.cp ?? 0)
   };
   return `
-    <div class="money-grid compact-grid-fields">
-      ${buildCoinField('Platino', 'pp', values.pp, coinIcons.pp, 'coin-avatar--pp')}
-      ${buildCoinField('Oro', 'gp', values.gp, coinIcons.gp, 'coin-avatar--gp')}
-      ${buildCoinField('Argento', 'sp', values.sp, coinIcons.sp, 'coin-avatar--sp')}
-      ${buildCoinField('Rame', 'cp', values.cp, coinIcons.cp, 'coin-avatar--cp')}
+    <div class="wallet-edit-grid compact-grid-fields">
+      <div class="compact-field-grid">
+        ${buildCoinField('Platino', 'pp', values.pp, coinIcons.pp, 'coin-avatar--pp')}
+        ${buildCoinField('Oro', 'gp', values.gp, coinIcons.gp, 'coin-avatar--gp')}
+      </div>
+      <div class="compact-field-grid">
+        ${buildCoinField('Argento', 'sp', values.sp, coinIcons.sp, 'coin-avatar--sp')}
+        ${buildCoinField('Rame', 'cp', values.cp, coinIcons.cp, 'coin-avatar--cp')}
+      </div>
     </div>
   `;
 }
