@@ -545,7 +545,10 @@ export async function renderInventory(container) {
           occurredOn: formatDateValue(transaction.occurred_on || transaction.created_at),
           direction: transaction.direction,
           includeDirection: true
-        })
+        }),
+        onOpen: ({ fieldsEl }) => {
+          attachSteppersToNumberInputs(fieldsEl);
+        }
       });
       if (!formData) return;
       const nextDirection = formData.get('direction') || transaction.direction;
