@@ -3635,7 +3635,7 @@ button:focus-visible,
   align-items: flex-end;
   justify-content: flex-start;
   gap: 6px;
-  padding-top: 18px;
+  padding-top: 4px;
 }
 
 .transaction-actions {
