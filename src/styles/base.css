@@ -645,6 +645,40 @@ button:focus-visible,
   font-size: 0.85rem;
 }
 
+
+.number-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.number-stepper input[type="number"] {
+  flex: 1;
+  text-align: center;
+}
+
+.number-stepper__button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid #d6c6ad;
+  border-radius: 12px;
+  background: #fff;
+  color: #3b5d60;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.number-stepper__button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.12);
+}
+
+.number-stepper__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .field input,
 .field select,
 .field textarea {

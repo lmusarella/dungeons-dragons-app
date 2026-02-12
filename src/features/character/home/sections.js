@@ -775,6 +775,7 @@ function normalizeCastTimeLabel(castTime) {
   const normalized = rawValue.toLowerCase();
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
+  if (normalized.includes('gratuit')) return 'Azione Gratuita';
   if (normalized.includes('azion')) return 'Azione';
   const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
   return exactMatch?.label ?? '';
