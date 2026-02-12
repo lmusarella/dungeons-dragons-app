@@ -2154,8 +2154,8 @@ button:focus-visible,
 }
 
 .coin-avatar {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   margin: 0 auto 6px;
   border: 1px solid #eadfc9;
@@ -3647,20 +3647,19 @@ button:focus-visible,
 
 .transaction-direction-chip {
   position: absolute;
-  top: 8px;
+  top: -7px;
   right: 8px;
-  font-size: 0.68rem;
+  font-size: 0.55rem;
   text-transform: uppercase;
-  z-index: 1;
 }
 
 .transaction-direction-chip--incoming {
-  background: rgba(47, 125, 83, 0.18);
+  background: rgba(47, 125, 83, 0.28);
   color: #1f7a4f;
 }
 
 .transaction-direction-chip--outgoing {
-  background: rgba(179, 59, 47, 0.18);
+  background: rgba(179, 59, 47, 0.28);
   color: #b33b2f;
 }
 
