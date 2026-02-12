@@ -79,7 +79,7 @@ export function buildTransactionList(transactions) {
       </div>
       <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
       <div class="transaction-meta">
-        <span class="resource-chip resource-chip--floating transaction-direction-chip ${transaction.direction === 'pay' ? 'transaction-direction-chip--outgoing' : 'transaction-direction-chip--incoming'}">${directionLabel}</span>
+        <span class="resource-chip transaction-direction-chip ${transaction.direction === 'pay' ? 'transaction-direction-chip--outgoing' : 'transaction-direction-chip--incoming'}">${directionLabel}</span>
         <div class="transaction-actions">
           <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>

@@ -3612,6 +3612,7 @@ button:focus-visible,
 }
 
 .transaction-items li {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3634,6 +3635,7 @@ button:focus-visible,
   align-items: flex-end;
   justify-content: flex-start;
   gap: 6px;
+  padding-top: 18px;
 }
 
 .transaction-actions {
@@ -3644,7 +3646,12 @@ button:focus-visible,
 
 
 .transaction-direction-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   font-size: 0.68rem;
+  text-transform: uppercase;
+  z-index: 1;
 }
 
 .transaction-direction-chip--incoming {
