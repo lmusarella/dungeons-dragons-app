@@ -45,7 +45,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const buildEditGroup = (title, sections) => {
     const group = document.createElement('section');
     group.className = 'character-edit-group';
-    group.innerHTML = `<h3>${title}</h3>`;
+  
     const content = document.createElement('div');
     content.className = 'character-edit-group__content';
     sections.forEach((section) => {
@@ -58,19 +58,21 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const mainSection = document.createElement('div');
   mainSection.className = 'character-edit-section';
-  mainSection.innerHTML = '<h4>Dati principali</h4>';
+ 
+  const identityRow = document.createElement('div');
+  identityRow.className = 'character-edit-grid character-edit-grid--identity';
   const nameField = buildInput({ label: 'Nome', name: 'name', placeholder: 'Es. Aria', value: character?.name ?? '' });
   nameField.querySelector('input').required = true;
-  mainSection.appendChild(nameField);
-  mainSection.appendChild(buildInput({ label: 'Sistema', name: 'system', placeholder: 'Es. D&D 5e', value: character?.system ?? '' }));
+  identityRow.appendChild(nameField);
+  identityRow.appendChild(buildInput({ label: 'Classe', name: 'class_name', value: characterData.class_name ?? characterData.class_archetype ?? '' }));
+  identityRow.appendChild(buildInput({ label: 'Archetipo', name: 'archetype', value: characterData.archetype ?? '' }));
+  mainSection.appendChild(identityRow);
   const mainGrid = document.createElement('div');
   mainGrid.className = 'character-edit-grid';
   mainGrid.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: characterData.level ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Allineamento', name: 'alignment', value: characterData.alignment ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' }));
-  mainGrid.appendChild(buildInput({ label: 'Classe', name: 'class_name', value: characterData.class_name ?? characterData.class_archetype ?? '' }));
-  mainGrid.appendChild(buildInput({ label: 'Archetipo', name: 'archetype', value: characterData.archetype ?? '' }));
   mainSection.appendChild(mainGrid);
   mainSection.appendChild(buildInput({
     label: 'Foto (URL)',
@@ -87,12 +89,18 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const statsSection = document.createElement('div');
   statsSection.className = 'character-edit-section';
-  statsSection.innerHTML = '<h4>Statistiche base</h4>';
+
   const statsGrid = document.createElement('div');
   statsGrid.className = 'character-edit-grid';
   statsGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? '' }));
   statsGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? '' }));
   statsGrid.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? '' }));
+  statsGrid.appendChild(buildInput({
+    label: 'Modificatore CA totale',
+    name: 'ac_bonus',
+    type: 'number',
+    value: characterData.ac_bonus ?? 0
+  }));
   statsGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? '' }));
   statsGrid.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? '' }));
   statsGrid.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? '' }));
@@ -122,13 +130,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       `).join('')}
     </div>
   `;
-  acSection.appendChild(buildInput({
-    label: 'Modificatore CA totale',
-    name: 'ac_bonus',
-    type: 'number',
-    value: characterData.ac_bonus ?? 0
-  }));
-
   const abilitySection = document.createElement('div');
   abilitySection.className = 'character-edit-section';
   abilitySection.innerHTML = '<h4>Caratteristiche</h4>';
@@ -146,13 +147,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   skillSection.className = 'character-edit-section';
   skillSection.innerHTML = `
     <h4>Competenze e maestria</h4>
-    <div class="character-skill-grid">
+    <div class="character-skill-grid character-skill-grid--three-columns">
       ${skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
     return `
-        <div class="character-skill-row">
-          <div>
+        <div class="character-skill-row character-skill-row--compact">
+          <div class="character-skill-row__meta">
             <strong>${skill.label}</strong>
             <span class="muted">${abilityShortLabel[skill.ability]}</span>
           </div>
@@ -452,6 +453,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   stepperContent.className = 'character-edit-stepper-content';
   const stepperActions = document.createElement('div');
   stepperActions.className = 'character-edit-stepper-actions';
+  stepperActions.classList.add('character-edit-stepper-actions--footer');
   const backButton = document.createElement('button');
   backButton.type = 'button';
   backButton.className = 'secondary';
@@ -522,7 +524,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   form.addEventListener('input', updateStepperState);
   form.addEventListener('change', updateStepperState);
 
-  stepper.append(stepperNav, stepperContent, stepperActions);
+  stepper.append(stepperNav, stepperContent);
   form.appendChild(stepper);
   updateStepperState();
 
@@ -534,7 +536,23 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const formData = await openFormModal({
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',
-    content: form
+    content: form,
+    onOpen: ({ modal }) => {
+      const footer = modal.querySelector('.modal-footer');
+      if (!footer) return null;
+      const modalActions = footer.querySelector('.modal-actions');
+      if (!modalActions) return null;
+      const centeredActions = document.createElement('div');
+      centeredActions.className = 'modal-actions__center';
+      centeredActions.appendChild(stepperActions);
+      modalActions.classList.add('modal-actions--with-center');
+      modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
+      return () => {
+        centeredActions.remove();
+        modalActions.classList.remove('modal-actions--with-center');
+        stepper.appendChild(stepperActions);
+      };
+    }
   });
   modalCard?.classList.remove('modal-card--wide');
   if (!formData) return;
@@ -635,7 +653,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   };
   const payload = {
     name,
-    system: formData.get('system')?.trim() || null,
+    system: character ? (character.system?.trim() || '5e') : '5e',
     data: nextData
   };
 

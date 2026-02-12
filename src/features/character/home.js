@@ -191,6 +191,11 @@ export async function renderHome(container) {
               <button class="icon-button icon-button--dice" data-open-dice="spell-attack" aria-label="Lancia dado tiro per colpire incantesimi">
                 <span aria-hidden="true">🎲</span>
               </button>
+              ${activeCharacter?.data?.spellcasting?.can_prepare ? `
+                <button class="icon-button icon-button--spell-prepare" type="button" data-open-prepared-spells aria-label="Prepara incantesimi" title="Prepara incantesimi">
+                  <span aria-hidden="true">📖</span>
+                </button>
+              ` : ''}
               ${activeCharacter && canEditCharacter ? `
                 <button class="icon-button icon-button--add" data-add-spell aria-label="Aggiungi incantesimo">
                   <span aria-hidden="true">+</span>
