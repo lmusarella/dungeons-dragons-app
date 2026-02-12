@@ -147,7 +147,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   skillSection.className = 'character-edit-section';
   skillSection.innerHTML = `
     <h4>Competenze e maestria</h4>
-    <div class="character-skill-grid character-skill-grid--two-columns">
+    <div class="character-skill-grid character-skill-grid--three-columns">
       ${skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
@@ -523,7 +523,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   form.addEventListener('input', updateStepperState);
   form.addEventListener('change', updateStepperState);
 
-  stepper.append(stepperNav, stepperContent, stepperActions);
+  stepper.append(stepperNav, stepperContent);
   form.appendChild(stepper);
   updateStepperState();
 
@@ -535,7 +535,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const formData = await openFormModal({
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',
-    content: form
+    content: form,
+    onOpen: ({ modal }) => {
+      const footer = modal.querySelector('.modal-footer');
+      if (!footer) return null;
+      footer.prepend(stepperActions);
+      return () => {
+        stepper.appendChild(stepperActions);
+      };
+    }
   });
   modalCard?.classList.remove('modal-card--wide');
   if (!formData) return;
