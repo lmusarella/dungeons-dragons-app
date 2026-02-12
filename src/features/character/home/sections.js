@@ -691,7 +691,7 @@ export function buildSpellSection(character, canManageSpells = false) {
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
           <span class="spell-prepared-list__name">${spell.name}</span>
           ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
-          ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
+        
         
         </button>
         <div class="resource-card-actions spell-card-actions">
@@ -700,6 +700,7 @@ export function buildSpellSection(character, canManageSpells = false) {
             <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
             <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
           ` : ''}
+            ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
       </div>
     `;

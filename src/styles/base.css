@@ -2447,7 +2447,7 @@ button:focus-visible,
 
 .spell-prepared-list__card {
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 8px !important;
 }
 
 .spell-prepared-list__group {
