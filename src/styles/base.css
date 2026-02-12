@@ -1347,6 +1347,10 @@ button:focus-visible,
   color: var(--accent);
 }
 
+.icon-button--spell-prepare {
+  color: #8b5cf6;
+}
+
 .icon-button--swap {
   color: var(--accent);
 }
@@ -3906,9 +3910,17 @@ button:focus-visible,
   gap: 10px;
 }
 
+.character-edit-grid--identity {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .character-skill-grid {
   display: grid;
   gap: 10px;
+}
+
+.character-skill-grid--two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .character-skill-row {
@@ -3920,6 +3932,23 @@ button:focus-visible,
   border-radius: 12px;
   border: 1px solid #eadfc9;
   background: #fdf7ea;
+}
+
+.character-skill-row--compact {
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+}
+
+.character-skill-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.character-skill-row__meta strong {
+  font-size: 0.86rem;
 }
 
 .character-skill-row>div {
@@ -3966,6 +3995,13 @@ button:focus-visible,
   border: 1px solid #d8c5a5;
   background: #fff7e4;
   font-size: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .character-edit-grid--identity,
+  .character-skill-grid--two-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 .toggle-pill input {
