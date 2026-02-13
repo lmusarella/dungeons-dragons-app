@@ -40,13 +40,43 @@ export async function renderJournal(container) {
   let sessionFiles = [];
   if (!state.offline) {
     try {
-      entries = await fetchEntries(activeCharacter.id);
-      tags = await fetchTags(activeCharacter.user_id);
-      entryTags = await fetchEntryTags(entries.map((entry) => entry.id));
-      sessionFiles = await fetchSessionFiles(activeCharacter.id);
-      updateCache('journal', entries);
-      updateCache('tags', tags);
-      await cacheSnapshot({ journal: entries, tags, entryTags });
+      const [entriesResult, tagsResult, sessionFilesResult] = await Promise.allSettled([
+        fetchEntries(activeCharacter.id),
+        fetchTags(activeCharacter.user_id),
+        fetchSessionFiles(activeCharacter.id)
+      ]);
+
+      if (entriesResult.status === 'fulfilled') {
+        entries = entriesResult.value;
+        updateCache('journal', entries);
+      } else {
+        createToast('Errore caricamento voci diario', 'error');
+      }
+
+      if (tagsResult.status === 'fulfilled') {
+        tags = tagsResult.value;
+        updateCache('tags', tags);
+      } else {
+        createToast('Errore caricamento tag', 'error');
+      }
+
+      if (sessionFilesResult.status === 'fulfilled') {
+        sessionFiles = sessionFilesResult.value;
+      } else {
+        createToast('Errore caricamento file sessione', 'error');
+      }
+
+      if (entries.length) {
+        try {
+          entryTags = await fetchEntryTags(entries.map((entry) => entry.id));
+          await cacheSnapshot({ journal: entries, tags, entryTags });
+        } catch (error) {
+          createToast('Errore caricamento associazioni tag', 'error');
+          await cacheSnapshot({ journal: entries, tags });
+        }
+      } else {
+        await cacheSnapshot({ journal: entries, tags });
+      }
     } catch (error) {
       createToast('Errore caricamento diario', 'error');
     }

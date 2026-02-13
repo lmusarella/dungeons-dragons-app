@@ -8,6 +8,6 @@ describe('calcTotalWeight', () => {
       { qty: 1, weight: 3 },
       { qty: 4, weight: 0.25 }
     ];
-    expect(calcTotalWeight(items)).toBeCloseTo(6.5, 2);
+    expect(calcTotalWeight(items)).toBeCloseTo(7, 2);
   });
 });

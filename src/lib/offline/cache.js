@@ -5,7 +5,7 @@ import {
   normalizeCharacterId,
   setActiveCharacter,
   setState,
-  updateCache
+  setCache
 } from '../../app/state.js';
 
 export async function loadCachedData() {
@@ -30,11 +30,13 @@ export async function loadCachedData() {
       db.wallet.where('character_id').equals(activeCharacterId).first(),
       db.tags.where('user_id').equals(user.id).toArray()
     ]);
-    updateCache('items', items);
-    updateCache('resources', resources);
-    updateCache('journal', journal);
-    updateCache('wallet', wallet ?? null);
-    updateCache('tags', tags);
+    setCache({
+      items,
+      resources,
+      journal,
+      wallet: wallet ?? null,
+      tags
+    });
   }
 }
 
