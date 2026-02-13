@@ -89,6 +89,19 @@ export function resetSessionState() {
 }
 
 export function updateCache(section, data) {
-  state.cache[section] = data;
-  listeners.forEach((cb) => cb(state));
+  setState({
+    cache: {
+      ...state.cache,
+      [section]: data
+    }
+  });
+}
+
+export function setCache(patch) {
+  setState({
+    cache: {
+      ...state.cache,
+      ...patch
+    }
+  });
 }
