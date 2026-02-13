@@ -820,6 +820,7 @@ button:focus-visible,
   display: grid;
   gap: 8px;
   width: 100%;
+    margin-bottom: 6px;
 }
 
 .inventory-table__header,
@@ -828,9 +829,10 @@ button:focus-visible,
   grid-template-columns: minmax(260px, 2.4fr) repeat(4, minmax(90px, 1fr)) minmax(160px, 1fr);
   align-items: center;
   gap: 4px;
-}
+} 
 
 .inventory-table__header {
+  margin-top: 6px;
   padding: 8px 12px;
   border-radius: 12px;
   background: #fdf7ea;
