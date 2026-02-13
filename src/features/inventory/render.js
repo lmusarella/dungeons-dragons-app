@@ -116,7 +116,26 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
         : '';
     return `
       <div class="inventory-group">
-        <p class="eyebrow">${container.name}${volumeLabel ? ` · <span class="muted">${volumeLabel}</span>` : ''}</p>
+        <div class="inventory-table__row">
+          <div class="inventory-table__cell inventory-table__cell--item">
+            <div class="item-info-body">
+              <strong>${container.name}</strong>
+              ${volumeLabel ? `<span class="muted">${volumeLabel}</span>` : ''}
+            </div>
+          </div>
+          <div class="inventory-table__cell">${getCategoryLabel(container.category)}</div>
+          <div class="inventory-table__cell">${container.qty}</div>
+          <div class="inventory-table__cell">${formatWeight(container.weight ?? 0, weightUnit)}</div>
+          <div class="inventory-table__cell">${container.max_volume ?? '-'}</div>
+          <div class="inventory-table__cell inventory-table__cell--actions">
+            <button class="resource-action-button icon-button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
+              <span aria-hidden="true">✏️</span>
+            </button>
+            <button class="resource-action-button icon-button" data-delete="${container.id}" aria-label="Elimina" title="Elimina">
+              <span aria-hidden="true">🗑️</span>
+            </button>
+          </div>
+        </div>
         ${buildItemList(children, weightUnit)}
       </div>
     `;

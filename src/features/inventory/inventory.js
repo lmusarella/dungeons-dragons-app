@@ -183,16 +183,25 @@ export async function renderInventory(container) {
       .forEach((btn) => btn.addEventListener('click', async () => {
         const item = items.find((entry) => entry.id === btn.dataset.delete);
         if (!item) return;
+        const isContainer = item.category === 'container';
+        const containedItems = isContainer
+          ? items.filter((entry) => entry.container_item_id === item.id)
+          : [];
         const shouldDelete = await openConfirmModal({
           title: 'Conferma eliminazione oggetto',
-          message: `Stai per eliminare l'oggetto "${item.name}" dall'inventario. Questa azione non può essere annullata.`,
+          message: isContainer
+            ? `Stai per eliminare il contenitore "${item.name}". Gli oggetti al suo interno resteranno nell'inventario senza contenitore. Questa azione non può essere annullata.`
+            : `Stai per eliminare l'oggetto "${item.name}" dall'inventario. Questa azione non può essere annullata.`,
           confirmLabel: 'Elimina'
         });
         if (!shouldDelete) return;
         await runWithGlobalLoader(async () => {
           try {
+            if (containedItems.length) {
+              await Promise.all(containedItems.map((entry) => updateItem(entry.id, { container_item_id: null })));
+            }
             await deleteItem(item.id);
-            createToast('Oggetto eliminato');
+            createToast(isContainer ? 'Contenitore eliminato' : 'Oggetto eliminato');
             renderInventory(container);
           } catch (error) {
             createToast('Errore eliminazione', 'error');
