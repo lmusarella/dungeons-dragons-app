@@ -31,6 +31,24 @@ export async function openItemModal(character, item, items, onSave) {
     elements.filter(Boolean).forEach((element) => row.appendChild(element));
     return row;
   };
+  const buildToggleField = ({ name, label, checked = false, type = 'checkbox', value = '' }) => {
+    const field = document.createElement('label');
+    field.className = 'condition-modal__item item-modal-toggle-field';
+    const valueAttribute = value ? ` value="${value}"` : '';
+    field.innerHTML = `
+      <span class="condition-modal__item-label"><strong>${label}</strong></span>
+      <span class="diceov-toggle condition-modal__toggle">
+        <input type="${type}" name="${name}"${valueAttribute} ${checked ? 'checked' : ''} />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </span>
+    `;
+    const input = field.querySelector('input');
+    field.classList.toggle('is-selected', Boolean(input?.checked));
+    input?.addEventListener('change', () => {
+      field.classList.toggle('is-selected', input.checked);
+    });
+    return { field, input };
+  };
   const nameField = buildInput({ label: 'Nome', name: 'name', value: item?.name ?? '' });
   const imageField = buildInput({
     label: 'Foto (URL)',
@@ -107,16 +125,32 @@ export async function openItemModal(character, item, items, onSave) {
   const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'balanced');
   basicSection.appendChild(categoryRow);
 
-  const equipableWrapper = document.createElement('div');
-  equipableWrapper.className = 'compact-field-grid';
-  const equipableField = document.createElement('label');
-  equipableField.className = 'checkbox';
-  equipableField.innerHTML = '<input type="checkbox" name="equipable" /> <span>Equipaggiabile</span>';
-  const equipableInput = equipableField.querySelector('input');
-  const overlayableField = document.createElement('label');
-  overlayableField.className = 'checkbox';
-  overlayableField.innerHTML = '<input type="checkbox" name="sovrapponibile" /> <span>Sovrapponibile</span>';
-  const overlayableInput = overlayableField.querySelector('input');
+  const equipToggleList = document.createElement('div');
+  equipToggleList.className = 'condition-modal__list item-modal-toggle-list';
+  const { field: equipableField, input: equipableInput } = buildToggleField({
+    name: 'equipable',
+    label: 'Equipaggiabile',
+    checked: item?.equipable ?? false
+  });
+  const { field: overlayableField, input: overlayableInput } = buildToggleField({
+    name: 'sovrapponibile',
+    label: 'Sovrapponibile',
+    checked: item?.sovrapponibile ?? false
+  });
+  const { field: attunement, input: attunementInput } = buildToggleField({
+    name: 'attunement_active',
+    label: 'Sintonia attiva',
+    checked: item?.attunement_active ?? false
+  });
+  const { field: magicField, input: magicInput } = buildToggleField({
+    name: 'is_magic',
+    label: 'Magico',
+    checked: item?.is_magic ?? false
+  });
+  equipToggleList.appendChild(equipableField);
+  equipToggleList.appendChild(overlayableField);
+  equipToggleList.appendChild(attunement);
+  equipToggleList.appendChild(magicField);
   const equipSlotsField = document.createElement('fieldset');
   equipSlotsField.className = 'equip-slot-field';
   equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
@@ -135,20 +169,7 @@ export async function openItemModal(character, item, items, onSave) {
     return input;
   });
   equipSlotsField.appendChild(equipSlotList);
-  equipableWrapper.appendChild(equipableField);
-  equipableWrapper.appendChild(overlayableField);
-  const attunement = document.createElement('label');
-  attunement.className = 'checkbox';
-  attunement.innerHTML = '<input type="checkbox" name="attunement_active" /> <span>Sintonia attiva</span>';
-  const attunementInput = attunement.querySelector('input');
-  const magicField = document.createElement('label');
-  magicField.className = 'checkbox';
-  magicField.innerHTML = '<input type="checkbox" name="is_magic" /> <span>Magico</span>';
-  const magicInput = magicField.querySelector('input');
-  const equipmentSection = buildSection('Equipaggiamento', [
-    buildRow([equipableWrapper, attunement, magicField], 'balanced'),
-    equipSlotsField
-  ]);
+  const equipmentSection = buildSection('Equipaggiamento', [equipToggleList, equipSlotsField]);
 
   const notesSection = buildSection('Dettagli', [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })]);
 
@@ -225,10 +246,11 @@ export async function openItemModal(character, item, items, onSave) {
   armorTypeSelect.name = 'armor_type';
   armorTypeField.appendChild(armorTypeSelect);
 
-  const shieldField = document.createElement('label');
-  shieldField.className = 'checkbox';
-  shieldField.innerHTML = '<input type="checkbox" name="is_shield" /> <span>Scudo</span>';
-  const shieldInput = shieldField.querySelector('input');
+  const { field: shieldField, input: shieldInput } = buildToggleField({
+    name: 'is_shield',
+    label: 'Scudo',
+    checked: item?.is_shield ?? false
+  });
 
   const armorClassField = buildInput({
     label: 'Classe armatura base',
@@ -255,8 +277,8 @@ export async function openItemModal(character, item, items, onSave) {
   const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced');
   const weaponDamageRow = buildRow([damageDieField, attackModifierField, damageModifierField], 'compact');
   const weaponThrownRow = buildRow([thrownField], 'compact');
-  const armorPrimaryRow = buildRow([armorTypeField, shieldField, armorClassField], 'balanced');
-  const armorBonusRow = buildRow([armorBonusField, shieldBonusField], 'compact');
+  const armorPrimaryRow = buildRow([armorTypeField, armorClassField], 'balanced');
+  const armorBonusRow = buildRow([armorBonusField, shieldBonusField, shieldField], 'compact');
   proficiencySection.appendChild(weaponPrimaryRow);
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(weaponThrownRow);
@@ -269,21 +291,6 @@ export async function openItemModal(character, item, items, onSave) {
   fields.appendChild(combatSection);
   fields.appendChild(notesSection);
 
-  if (attunementInput) {
-    attunementInput.checked = item?.attunement_active ?? false;
-  }
-  if (magicInput) {
-    magicInput.checked = item?.is_magic ?? false;
-  }
-  if (equipableInput) {
-    equipableInput.checked = item?.equipable ?? false;
-  }
-  if (overlayableInput) {
-    overlayableInput.checked = item?.sovrapponibile ?? false;
-  }
-  if (shieldInput) {
-    shieldInput.checked = item?.is_shield ?? false;
-  }
   if (thrownInput) {
     thrownInput.checked = item?.is_thrown ?? false;
   }
@@ -333,6 +340,7 @@ export async function openItemModal(character, item, items, onSave) {
       if (!equipableEnabled) {
         overlayableInput.checked = false;
       }
+      overlayableInput.closest('.condition-modal__item')?.classList.toggle('is-selected', overlayableInput.checked);
     }
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
