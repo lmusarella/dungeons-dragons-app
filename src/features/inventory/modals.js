@@ -15,6 +15,16 @@ export async function openItemModal(character, item, items, onSave) {
   };
   const fields = document.createElement('div');
   fields.className = 'drawer-form modal-form-grid';
+  const buildSection = (title, elements = []) => {
+    const section = document.createElement('section');
+    section.className = 'item-modal-section';
+    const heading = document.createElement('h4');
+    heading.className = 'item-modal-section__title';
+    heading.textContent = title;
+    section.appendChild(heading);
+    elements.filter(Boolean).forEach((element) => section.appendChild(element));
+    return section;
+  };
   const buildRow = (elements, variant = 'balanced') => {
     const row = document.createElement('div');
     row.className = `modal-form-row modal-form-row--${variant}`;
@@ -28,7 +38,7 @@ export async function openItemModal(character, item, items, onSave) {
     placeholder: 'https://.../oggetto.png',
     value: item?.image_url ?? ''
   });
-  fields.appendChild(buildRow([nameField, imageField], 'balanced'));
+  const basicSection = buildSection('Dati principali', [buildRow([nameField, imageField], 'balanced')]);
   const qtyField = buildInput({ label: 'Quantità', name: 'qty', type: 'number', value: item?.qty ?? 1 });
   const weightField = buildInput({ label: 'Peso', name: 'weight', type: 'number', value: item?.weight ?? 0 });
   const weightInput = weightField.querySelector('input');
@@ -39,7 +49,7 @@ export async function openItemModal(character, item, items, onSave) {
   }
   const volumeField = buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 });
   const valueField = buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
-  fields.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
+  basicSection.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
   const categorySelect = buildSelect(
     [{ value: '', label: 'Seleziona' }, ...itemCategories],
     item?.category ?? ''
@@ -69,7 +79,32 @@ export async function openItemModal(character, item, items, onSave) {
     value: item?.max_volume ?? ''
   });
   const maxVolumeInput = maxVolumeField.querySelector('input');
-  fields.appendChild(buildRow([categoryField, containerField, maxVolumeField], 'balanced'));
+  const categoryKindField = document.createElement('div');
+  categoryKindField.className = 'item-modal-kind';
+  categoryKindField.innerHTML = '<span class="item-modal-kind__label">Tipologia rapida</span>';
+  const categoryKindList = document.createElement('div');
+  categoryKindList.className = 'condition-modal__list item-modal-kind__list';
+  const kindOptions = [
+    { value: 'generic', label: 'Oggetto' },
+    { value: 'weapon', label: 'Arma' },
+    { value: 'armor', label: 'Armatura' }
+  ];
+  const kindInputs = kindOptions.map((option) => {
+    const optionLabel = document.createElement('label');
+    optionLabel.className = 'condition-modal__item item-modal-kind__item';
+    optionLabel.innerHTML = `
+      <span class="condition-modal__item-label"><strong>${option.label}</strong></span>
+      <span class="diceov-toggle condition-modal__toggle">
+        <input type="radio" name="item_kind" value="${option.value}" />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </span>
+    `;
+    categoryKindList.appendChild(optionLabel);
+    return optionLabel.querySelector('input');
+  });
+  categoryKindField.appendChild(categoryKindList);
+  basicSection.appendChild(categoryKindField);
+  basicSection.appendChild(buildRow([categoryField, containerField, maxVolumeField], 'balanced'));
 
   const equipableWrapper = document.createElement('div');
   equipableWrapper.className = 'compact-field-grid';
@@ -109,10 +144,12 @@ export async function openItemModal(character, item, items, onSave) {
   magicField.className = 'checkbox';
   magicField.innerHTML = '<input type="checkbox" name="is_magic" /> <span>Magico</span>';
   const magicInput = magicField.querySelector('input');
-  fields.appendChild(buildRow([equipableWrapper, attunement, magicField], 'balanced'));
-  fields.appendChild(equipSlotsField);
+  const equipmentSection = buildSection('Equipaggiamento', [
+    buildRow([equipableWrapper, attunement, magicField], 'balanced'),
+    equipSlotsField
+  ]);
 
-  fields.appendChild(buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' }));
+  const notesSection = buildSection('Dettagli', [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })]);
 
   const proficiencySection = document.createElement('div');
   proficiencySection.className = 'drawer-form modal-form-grid';
@@ -220,7 +257,11 @@ export async function openItemModal(character, item, items, onSave) {
   proficiencySection.appendChild(rangeGrid);
   proficiencySection.appendChild(buildRow([armorTypeField, shieldField, armorClassField], 'balanced'));
   proficiencySection.appendChild(buildRow([armorBonusField, shieldBonusField], 'compact'));
-  fields.appendChild(proficiencySection);
+  const combatSection = buildSection('Statistiche arma / armatura', [proficiencySection]);
+  fields.appendChild(basicSection);
+  fields.appendChild(equipmentSection);
+  fields.appendChild(combatSection);
+  fields.appendChild(notesSection);
 
   if (attunementInput) {
     attunementInput.checked = item?.attunement_active ?? false;
@@ -240,6 +281,34 @@ export async function openItemModal(character, item, items, onSave) {
   if (thrownInput) {
     thrownInput.checked = item?.is_thrown ?? false;
   }
+  const getKindFromCategory = (categoryValue) => {
+    if (categoryValue === 'weapon') return 'weapon';
+    if (categoryValue === 'armor') return 'armor';
+    return 'generic';
+  };
+  const syncKindWithCategory = () => {
+    const selectedKind = getKindFromCategory(categorySelect.value);
+    kindInputs.forEach((input) => {
+      if (!input) return;
+      const isActive = input.value === selectedKind;
+      input.checked = isActive;
+      input.closest('.condition-modal__item')?.classList.toggle('is-selected', isActive);
+    });
+  };
+  kindInputs.forEach((input) => {
+    input?.addEventListener('change', () => {
+      if (!input.checked) return;
+      if (input.value === 'weapon') {
+        categorySelect.value = 'weapon';
+      } else if (input.value === 'armor') {
+        categorySelect.value = 'armor';
+      } else if (categorySelect.value === 'weapon' || categorySelect.value === 'armor') {
+        categorySelect.value = 'gear';
+      }
+      syncKindWithCategory();
+      updateEquipmentFields();
+    });
+  });
   const updateEquipmentFields = () => {
     const equipableEnabled = equipableInput?.checked ?? false;
     equipSlotInputs.forEach((input) => {
@@ -297,9 +366,13 @@ export async function openItemModal(character, item, items, onSave) {
     }
   };
   equipableInput?.addEventListener('change', updateEquipmentFields);
-  categorySelect.addEventListener('change', updateEquipmentFields);
+  categorySelect.addEventListener('change', () => {
+    syncKindWithCategory();
+    updateEquipmentFields();
+  });
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
+  syncKindWithCategory();
   updateEquipmentFields();
 
   enhanceNumericFields(fields);
