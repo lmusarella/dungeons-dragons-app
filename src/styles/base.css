@@ -2552,10 +2552,7 @@ button:focus-visible,
 .spell-quick-detail__chips {
   margin-top: 0;
   margin-bottom: 0;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding-bottom: 2px;
+  flex-wrap: wrap;
 }
 
 .detail-rich-text {
@@ -2582,7 +2579,7 @@ button:focus-visible,
 }
 
 .spell-quick-detail-modal {
-  max-width: 520px;
+  max-width: min(860px, 96vw);
 }
 
 @media (max-width: 720px) {
