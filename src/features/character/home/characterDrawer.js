@@ -15,7 +15,7 @@ import {
   savingThrowList,
   skillList
 } from './constants.js';
-import { getAbilityModifier, normalizeNumber, sortSpellsByLevel, getSpellTypeLabel } from './utils.js';
+import { getAbilityModifier, normalizeNumber } from './utils.js';
 
 export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
@@ -30,7 +30,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
-  const currentSpells = Array.isArray(characterData.spells) ? sortSpellsByLevel(characterData.spells) : [];
   const enhanceNumericFields = (root) => {
     root?.querySelectorAll('input[type="number"]').forEach((input) => {
       const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
@@ -243,9 +242,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.damage_bonus_ranged ?? characterData.damage_bonus ?? 0
   }));
   combatSection.appendChild(combatGrid);
-  const spellcasterField = document.createElement('label');
-  spellcasterField.className = 'checkbox';
-  spellcasterField.innerHTML = '<input type="checkbox" name="is_spellcaster" /> <span>Incantatore</span>';
+  const spellcasterField = document.createElement('div');
+  spellcasterField.className = 'modal-toggle-field';
+  spellcasterField.innerHTML = `
+    <span class="modal-toggle-field__label">Incantatore</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="is_spellcaster" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
   const spellcasterInput = spellcasterField.querySelector('input');
   if (spellcasterInput) {
     spellcasterInput.checked = Boolean(characterData.is_spellcaster);
@@ -317,43 +322,21 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   slotRechargeSelect.name = 'spell_slot_recharge';
   slotRechargeField.appendChild(slotRechargeSelect);
   spellcastingSection.appendChild(slotRechargeField);
-  const canPrepareField = document.createElement('label');
-  canPrepareField.className = 'checkbox';
-  canPrepareField.innerHTML = '<input type="checkbox" name="spell_can_prepare" /> <span>Incantatore con preparazione</span>';
+  const canPrepareField = document.createElement('div');
+  canPrepareField.className = 'modal-toggle-field';
+  canPrepareField.innerHTML = `
+    <span class="modal-toggle-field__label">Incantatore con preparazione</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="spell_can_prepare" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
   const canPrepareInput = canPrepareField.querySelector('input');
   if (canPrepareInput) {
     canPrepareInput.checked = Boolean(spellcasting.can_prepare);
   }
   spellcastingSection.appendChild(canPrepareField);
-  spellcastingSection.appendChild(buildTextarea({
-    label: 'Incantesimi (note)',
-    name: 'spell_notes',
-    placeholder: 'Descrivi gli incantesimi noti/preparati e gli slot principali.',
-    value: characterData.spell_notes ?? ''
-  }));
-  const spellListSection = document.createElement('div');
-  spellListSection.className = 'character-edit-section';
-  spellListSection.innerHTML = `
-    <h4>Gestione incantesimi</h4>
-    ${currentSpells.length
-    ? `
-      <p class="muted">Seleziona gli incantesimi da rimuovere.</p>
-      <div class="character-edit-spell-list">
-        ${currentSpells.map((spell) => `
-          <label class="character-edit-spell-row">
-            <input type="checkbox" name="remove_spell_${spell.id}" />
-            <span>
-              <strong>${spell.name}</strong>
-              <small>${getSpellTypeLabel(spell)} • Livello ${Number(spell.level) || 0}</small>
-            </span>
-          </label>
-        `).join('')}
-      </div>
-    `
-    : '<p class="muted">Nessun incantesimo configurato.</p>'}
-  `;
   combatSection.appendChild(spellcastingSection);
-  combatSection.appendChild(spellListSection);
   const abilityInputs = {
     str: abilitySection.querySelector('input[name="ability_str"]'),
     dex: abilitySection.querySelector('input[name="ability_dex"]'),
@@ -631,13 +614,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     damage_bonus_ranged: toNumberOrNull(formData.get('damage_bonus_ranged')) ?? 0,
     ac_bonus: toNumberOrNull(formData.get('ac_bonus')) ?? 0,
     is_spellcaster: isSpellcaster,
-    spell_notes: formData.get('spell_notes')?.trim() || null,
     spellcasting: nextSpellcasting,
     ac_ability_modifiers: nextAcModifiers,
     proficiency_notes: formData.get('proficiency_notes')?.trim() || null,
     language_proficiencies: formData.get('language_proficiencies')?.trim() || null,
     talents: formData.get('talents')?.trim() || null,
-    spells: currentSpells.filter((spell) => !formData.has(`remove_spell_${spell.id}`)),
     abilities: {
       str: toNumberOrNull(formData.get('ability_str')),
       dex: toNumberOrNull(formData.get('ability_dex')),

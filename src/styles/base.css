@@ -2538,6 +2538,11 @@ button:focus-visible,
   margin-bottom: 0;
 }
 
+.spell-quick-detail__content {
+  display: grid;
+  gap: 10px;
+}
+
 .spell-quick-detail__description {
   margin: 0;
   color: #5a381f;
@@ -2546,7 +2551,11 @@ button:focus-visible,
 
 .spell-quick-detail__chips {
   margin-top: 0;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 2px;
 }
 
 .detail-rich-text {
