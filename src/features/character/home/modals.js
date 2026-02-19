@@ -466,6 +466,12 @@ export function openSpellDrawer(character, onSave, spell = null) {
       name: 'spell_range',
       placeholder: 'Es. 18 m',
       value: spell?.range ?? ''
+    }),
+    buildInput({
+      label: 'Componenti',
+      name: 'spell_components',
+      placeholder: 'Es. V, S, M',
+      value: spell?.components ?? ''
     })
   ], 'compact'));
   const concentrationField = document.createElement('div');
@@ -577,6 +583,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
       cast_time: formData.get('spell_cast_time') || null,
       duration: formData.get('spell_duration')?.trim() || null,
       range: formData.get('spell_range')?.trim() || null,
+      components: formData.get('spell_components')?.trim() || null,
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
       image_url: formData.get('spell_image_url')?.trim() || null,
@@ -603,6 +610,16 @@ export function openSpellDrawer(character, onSave, spell = null) {
 export function openSpellQuickDetailModal(character, spell, onRender) {
   if (!character || !spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
+  const castTime = normalizeSpellCastTime(spell.cast_time) || '-';
+  const levelLabel = level === 0 ? 'Trucchetto' : `${level}° livello`;
+  const detailChips = [
+    `Livello: ${levelLabel}`,
+    `Range: ${spell.range?.trim() || '-'}`,
+    `Durata: ${spell.duration?.trim() || '-'}`,
+    `Componenti: ${spell.components?.trim() || '-'}`,
+    `Concentrazione: ${spell.concentration ? 'Sì' : 'No'}`,
+    `Tempo di lancio: ${castTime}`
+  ];
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
   const isCastable = level > 0;
   const hasDisplayImage = hasUsableDetailImage(spell.image_url);
@@ -613,6 +630,7 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
   content.innerHTML = `
     <div class="detail-card detail-card--text spell-quick-detail__card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
       ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(spell.name || 'incantesimo')}" />` : ''}
+      <div class="tag-row spell-quick-detail__chips">${detailChips.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}</div>
       <div class="detail-rich-text spell-quick-detail__description">${renderDetailText(description)}</div>
     </div>
   `;
