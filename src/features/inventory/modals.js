@@ -104,7 +104,8 @@ export async function openItemModal(character, item, items, onSave) {
   });
   categoryKindField.appendChild(categoryKindList);
   basicSection.appendChild(categoryKindField);
-  basicSection.appendChild(buildRow([categoryField, containerField, maxVolumeField], 'balanced'));
+  const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'balanced');
+  basicSection.appendChild(categoryRow);
 
   const equipableWrapper = document.createElement('div');
   equipableWrapper.className = 'compact-field-grid';
@@ -251,12 +252,17 @@ export async function openItemModal(character, item, items, onSave) {
   });
   const shieldBonusInput = shieldBonusField.querySelector('input');
 
-  proficiencySection.appendChild(buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced'));
-  proficiencySection.appendChild(buildRow([damageDieField, attackModifierField, damageModifierField], 'compact'));
-  proficiencySection.appendChild(buildRow([thrownField], 'compact'));
+  const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced');
+  const weaponDamageRow = buildRow([damageDieField, attackModifierField, damageModifierField], 'compact');
+  const weaponThrownRow = buildRow([thrownField], 'compact');
+  const armorPrimaryRow = buildRow([armorTypeField, shieldField, armorClassField], 'balanced');
+  const armorBonusRow = buildRow([armorBonusField, shieldBonusField], 'compact');
+  proficiencySection.appendChild(weaponPrimaryRow);
+  proficiencySection.appendChild(weaponDamageRow);
+  proficiencySection.appendChild(weaponThrownRow);
   proficiencySection.appendChild(rangeGrid);
-  proficiencySection.appendChild(buildRow([armorTypeField, shieldField, armorClassField], 'balanced'));
-  proficiencySection.appendChild(buildRow([armorBonusField, shieldBonusField], 'compact'));
+  proficiencySection.appendChild(armorPrimaryRow);
+  proficiencySection.appendChild(armorBonusRow);
   const combatSection = buildSection('Statistiche arma / armatura', [proficiencySection]);
   fields.appendChild(basicSection);
   fields.appendChild(equipmentSection);
@@ -309,6 +315,10 @@ export async function openItemModal(character, item, items, onSave) {
       updateEquipmentFields();
     });
   });
+  const toggleFieldVisibility = (element, visible) => {
+    if (!element) return;
+    element.hidden = !visible;
+  };
   const updateEquipmentFields = () => {
     const equipableEnabled = equipableInput?.checked ?? false;
     equipSlotInputs.forEach((input) => {
@@ -327,6 +337,7 @@ export async function openItemModal(character, item, items, onSave) {
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isContainer = categorySelect.value === 'container';
+    const itemKind = getKindFromCategory(categorySelect.value);
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
@@ -358,6 +369,17 @@ export async function openItemModal(character, item, items, onSave) {
     if (shieldBonusInput) {
       shieldBonusInput.disabled = !isArmor || !(shieldInput?.checked ?? false);
     }
+
+    const showWeaponFields = itemKind === 'weapon';
+    const showArmorFields = itemKind === 'armor';
+    toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
+    toggleFieldVisibility(weaponDamageRow, showWeaponFields);
+    toggleFieldVisibility(weaponThrownRow, showWeaponFields);
+    toggleFieldVisibility(rangeGrid, showWeaponFields);
+    toggleFieldVisibility(armorPrimaryRow, showArmorFields);
+    toggleFieldVisibility(armorBonusRow, showArmorFields);
+    toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
+    toggleFieldVisibility(maxVolumeField, isContainer);
     if (maxVolumeInput) {
       maxVolumeInput.disabled = !isContainer;
       if (!isContainer) {
