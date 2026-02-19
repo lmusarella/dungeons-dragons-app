@@ -11,6 +11,8 @@ import {
   updateEntry,
   deleteEntry,
   createTag,
+  deleteTag,
+  unlinkTagFromAllEntries,
   attachTag,
   detachTag
 } from './journalApi.js';
@@ -102,7 +104,7 @@ export async function renderJournal(container) {
         </header>
         <div class="filters journal-filters-row">
           <input type="search" placeholder="Cerca per titolo o contenuto" data-search />
-          <button data-add-tag class="icon-button" aria-label="Nuovo tag" title="Nuovo tag">
+          <button data-add-tag class="icon-button" aria-label="Gestisci tag" title="Gestisci tag">
             <span aria-hidden="true">🏷️</span>
           </button>
         </div>
@@ -166,6 +168,23 @@ export async function renderJournal(container) {
         } finally {
           setGlobalLoading(false);
         }
+      }));
+
+    listEl.querySelectorAll('[data-toggle-entry]')
+      .forEach((button) => button.addEventListener('click', () => {
+        const card = button.closest('[data-entry-card]');
+        const content = card?.querySelector('[data-entry-content]');
+        if (!card || !content) return;
+        const isOpen = card.classList.toggle('is-open');
+        content.hidden = !isOpen;
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      }));
+
+    listEl.querySelectorAll('[data-quick-append]')
+      .forEach((button) => button.addEventListener('click', async () => {
+        const entry = entries.find((item) => item.id === button.dataset.quickAppend);
+        if (!entry) return;
+        await openQuickAppendModal(entry, refresh);
       }));
   }
 
@@ -254,7 +273,7 @@ export async function renderJournal(container) {
     await openEntryModal(activeCharacter, null, tags, [], refresh);
   });
   container.querySelector('[data-add-tag]').addEventListener('click', async () => {
-    await openTagModal(activeCharacter, refresh);
+    await openTagModal(activeCharacter, tags, refresh);
   });
 
   if (state.offline) {
@@ -346,28 +365,78 @@ function buildEntryList(entries, entryTagMap, tagMap) {
     <ul class="journal-entry-list">
       ${entries.map((entry) => {
     const tagIds = entryTagMap[entry.id] ?? [];
+    const formattedContent = renderPrettyContent(entry.content || '');
     return `
-          <li class="journal-entry-card">
-            <div>
-              <strong>${entry.title || 'Senza titolo'}</strong>
-              <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
-              <div class="tag-row">
-                ${tagIds.map((id) => `<span class="chip">${tagMap.get(id)?.name ?? ''}</span>`).join('')}
+          <li class="journal-entry-card journal-entry-card--entry" data-entry-card>
+            <div class="journal-entry-card__header">
+              <button class="journal-entry-card__toggle" type="button" data-toggle-entry aria-expanded="false">
+                <span>
+                  <strong>${entry.title || 'Senza titolo'}</strong>
+                  <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
+                </span>
+                <span aria-hidden="true">▾</span>
+              </button>
+              <div class="actions">
+                <button class="icon-button" data-quick-append="${entry.id}" aria-label="Aggiunta rapida" title="Aggiunta rapida testo">
+                  <span aria-hidden="true">➕</span>
+                </button>
+                <button class="icon-button" data-edit="${entry.id}" aria-label="Modifica voce" title="Modifica">
+                  <span aria-hidden="true">✏️</span>
+                </button>
+                <button class="icon-button icon-button--danger" data-delete="${entry.id}" aria-label="Elimina voce" title="Elimina">
+                  <span aria-hidden="true">🗑️</span>
+                </button>
               </div>
             </div>
-            <div class="actions">
-              <button class="icon-button" data-edit="${entry.id}" aria-label="Modifica voce" title="Modifica">
-                <span aria-hidden="true">✏️</span>
-              </button>
-              <button class="icon-button icon-button--danger" data-delete="${entry.id}" aria-label="Elimina voce" title="Elimina">
-                <span aria-hidden="true">🗑️</span>
-              </button>
+            <div class="tag-row">
+              ${tagIds.map((id) => `<span class="chip">${tagMap.get(id)?.name ?? ''}</span>`).join('')}
+            </div>
+            <div class="journal-entry-card__content" data-entry-content hidden>
+              ${formattedContent || '<p class="muted">Nessun contenuto.</p>'}
             </div>
           </li>
         `;
   }).join('')}
     </ul>
   `;
+}
+
+function renderPrettyContent(rawText) {
+  const escaped = escapeHtml(rawText || '');
+  const lines = escaped.split('\n');
+  const rendered = lines.map((line) => {
+    let html = line;
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+    if (html.startsWith('# ')) return `<h4>${html.slice(2)}</h4>`;
+    if (html.startsWith('- ')) return `<li>${html.slice(2)}</li>`;
+    if (html.startsWith('&gt; ')) return `<blockquote>${html.slice(5)}</blockquote>`;
+    return `<p>${html || '<br />'}</p>`;
+  });
+
+  let inList = false;
+  return rendered.map((chunk) => {
+    if (chunk.startsWith('<li>')) {
+      if (!inList) {
+        inList = true;
+        return `<ul>${chunk}`;
+      }
+      return chunk;
+    }
+    if (inList) {
+      inList = false;
+      return `</ul>${chunk}`;
+    }
+    return chunk;
+  }).join('') + (inList ? '</ul>' : '');
+}
+
+function escapeHtml(text) {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }
 
 function buildFileList(files) {
@@ -682,21 +751,116 @@ function unprefixLine(textarea, prefix) {
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-async function openTagModal(character, onSave) {
+
+async function openQuickAppendModal(entry, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid';
-  content.appendChild(buildInput({ label: 'Nome tag', name: 'name' }));
+  content.appendChild(buildTextarea({
+    label: `Aggiungi testo a "${entry.title || 'Senza titolo'}"`,
+    name: 'append_content',
+    placeholder: 'Scrivi qui appunti veloci da aggiungere alla voce...'
+  }));
 
   const formData = await openFormModal({
-    title: 'Nuovo tag',
-    submitLabel: 'Crea',
+    title: 'Aggiunta rapida al diario',
+    submitLabel: 'Aggiungi',
     content
   });
 
   if (!formData) return;
 
+  const appendContent = String(formData.get('append_content') || '').trim();
+  if (!appendContent) {
+    createToast('Nessun testo da aggiungere', 'info');
+    return;
+  }
+
+  const mergedContent = entry.content?.trim()
+    ? `${entry.content.trim()}
+
+${appendContent}`
+    : appendContent;
+
+  setGlobalLoading(true);
   try {
-    await createTag({ user_id: character.user_id, name: formData.get('name') });
+    await updateEntry(entry.id, {
+      user_id: entry.user_id,
+      character_id: entry.character_id,
+      title: entry.title,
+      entry_date: entry.entry_date,
+      session_no: entry.session_no,
+      is_pinned: entry.is_pinned,
+      content: mergedContent
+    });
+    createToast('Testo aggiunto alla voce');
+    await onSave();
+  } catch (error) {
+    createToast('Errore aggiunta rapida', 'error');
+  } finally {
+    setGlobalLoading(false);
+  }
+}
+
+async function openTagModal(character, tags, onSave) {
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid journal-tag-manager';
+  content.appendChild(buildInput({ label: 'Nome nuovo tag', name: 'name' }));
+
+  const existing = document.createElement('div');
+  existing.className = 'journal-tag-manager__list';
+  existing.innerHTML = tags.length
+    ? tags.map((tag) => `
+      <div class="journal-tag-manager__item">
+        <span class="chip">${tag.name}</span>
+        <button type="button" class="icon-button icon-button--danger" data-remove-tag="${tag.id}" aria-label="Elimina tag ${tag.name}" title="Elimina tag">
+          <span aria-hidden="true">🗑️</span>
+        </button>
+      </div>
+    `).join('')
+    : '<p class="muted">Nessun tag disponibile.</p>';
+  content.appendChild(existing);
+
+  const formData = await openFormModal({
+    title: 'Gestione tag diario',
+    submitLabel: 'Crea tag',
+    content,
+    onOpen: ({ fieldsEl }) => {
+      fieldsEl.querySelectorAll('[data-remove-tag]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const tagId = button.dataset.removeTag;
+          const tag = tags.find((item) => item.id === tagId);
+          if (!tag) return;
+          const shouldDelete = await openConfirmModal({
+            title: 'Elimina tag',
+            message: `Vuoi eliminare il tag "${tag.name}"? Sarà rimosso da tutte le voci.`,
+            confirmLabel: 'Elimina'
+          });
+          if (!shouldDelete) return;
+
+          setGlobalLoading(true);
+          try {
+            await unlinkTagFromAllEntries(tagId);
+            await deleteTag(tagId);
+            createToast('Tag eliminato');
+            await onSave();
+            document.querySelector('[data-form-cancel]')?.click();
+          } catch (error) {
+            createToast('Errore eliminazione tag', 'error');
+          } finally {
+            setGlobalLoading(false);
+          }
+        });
+      });
+    }
+  });
+
+  if (!formData) return;
+
+  const name = String(formData.get('name') || '').trim();
+  if (!name) return;
+
+  try {
+    await createTag({ user_id: character.user_id, name });
     createToast('Tag creato');
     onSave();
   } catch (error) {
