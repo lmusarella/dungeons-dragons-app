@@ -367,7 +367,8 @@ header {
 }
 
 .diceov-generic-row .diceov-field--modifier {
-  flex: 0 1 65px;
+  flex: 0 1 130px;
+  min-width: 120px;
 }
 
 .diceov-generic-row .diceov-field--modifier input[type="number"] {
@@ -690,7 +691,7 @@ header {
 
 .diceov-stage {
   padding: 10px 10px 12px;
-  width: min(650px, 96vw);
+  width: min(1040px, 98vw);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
@@ -716,3 +717,32 @@ header {
 
 /* (opzionale) se hai messo z-index altissimi altrove */
 #dice-overlay .diceov-backdrop { z-index: 0; }
+
+#dice-overlay .diceov-field--modifier .number-stepper {
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  gap: 4px;
+}
+
+
+#dice-overlay .diceov-generic-row .diceov-field--modifier .number-stepper {
+  width: 100%;
+}
+
+#dice-overlay .diceov-generic-row .diceov-field--modifier .number-stepper input[type="number"] {
+  min-width: 0;
+}
+
+#dice-overlay .diceov-field--modifier .number-stepper__button {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+  border-color: #3a3a3a;
+  background: #1e1e1e;
+  color: #f1f1f1;
+  font-size: 0.9rem;
+}
+
+#dice-overlay .diceov-field--modifier .number-stepper__button:hover {
+  border-color: #ffdc7a;
+  box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.2);
+}

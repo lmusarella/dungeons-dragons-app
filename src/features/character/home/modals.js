@@ -511,8 +511,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
     type: 'number',
     value: spell?.damage_modifier ?? ''
   });
-  form.appendChild(buildRow([imageField], 'compact'));
-  form.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
+  form.appendChild(buildRow([damageDieField, damageModifierField, imageField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
     name: 'spell_description',
@@ -630,8 +629,10 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
   content.innerHTML = `
     <div class="detail-card detail-card--text spell-quick-detail__card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
       ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(spell.name || 'incantesimo')}" />` : ''}
-      <div class="tag-row spell-quick-detail__chips">${detailChips.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}</div>
-      <div class="detail-rich-text spell-quick-detail__description">${renderDetailText(description)}</div>
+      <div class="spell-quick-detail__content">
+        <div class="tag-row spell-quick-detail__chips">${detailChips.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}</div>
+        <div class="detail-rich-text spell-quick-detail__description">${renderDetailText(description)}</div>
+      </div>
     </div>
   `;
 

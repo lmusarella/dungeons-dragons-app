@@ -1,4 +1,5 @@
 import { normalizeCharacterId } from '../../../app/state.js';
+import { attachNumberStepper } from '../../../ui/components.js';
 
 let overlayEl = null;
 
@@ -327,6 +328,19 @@ export function openDiceOverlay({
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
   const historyPanel = overlayEl.querySelector('[data-dice-history-panel]');
   const historyList = overlayEl.querySelector('[data-dice-history]');
+
+  if (modifierInput) {
+    attachNumberStepper(modifierInput, {
+      decrementLabel: 'Riduci modificatore',
+      incrementLabel: 'Aumenta modificatore'
+    });
+  }
+  if (genericModifierInput) {
+    attachNumberStepper(genericModifierInput, {
+      decrementLabel: 'Riduci modificatore',
+      incrementLabel: 'Aumenta modificatore'
+    });
+  }
 
   const state = {
     lastRoll: null,
