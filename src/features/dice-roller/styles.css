@@ -691,7 +691,7 @@ header {
 
 .diceov-stage {
   padding: 10px 10px 12px;
-  width: min(1040px, 98vw);
+  width: min(770px, 98vw);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
