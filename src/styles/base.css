@@ -4341,6 +4341,71 @@ button:focus-visible,
   flex: 1;
 }
 
+
+.journal-entry-modal {
+  gap: 10px;
+}
+
+.journal-entry-modal__meta {
+  align-items: end;
+}
+
+.journal-entry-modal__pin-toggle {
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.journal-entry-modal__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.journal-entry-modal__toolbar .icon-button {
+  min-width: 34px;
+  height: 34px;
+  padding: 6px 8px;
+  font-weight: 700;
+}
+
+.journal-entry-modal__content-field textarea.journal-entry-modal__textarea {
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  tab-size: 2;
+}
+
+.journal-entry-modal__preview {
+  display: grid;
+  gap: 4px;
+}
+
+.journal-entry-modal__preview pre {
+  margin: 0;
+  min-height: 88px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #eadfc9;
+  border-radius: 10px;
+  background: #fff9ea;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  color: #5e5138;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.journal-entry-modal__tag-selector {
+  display: grid;
+  gap: 8px;
+}
+
+.journal-entry-modal__tag-item {
+  min-height: 36px;
+}
+
 .journal-entry-list {
   display: grid;
   gap: 10px;

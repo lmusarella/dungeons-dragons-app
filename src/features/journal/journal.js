@@ -493,30 +493,47 @@ async function openSessionFileUploadModal(file) {
 
 async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const content = document.createElement('div');
-  content.className = 'drawer-form modal-form-grid';
+  content.className = 'drawer-form modal-form-grid journal-entry-modal';
   content.appendChild(buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' }));
-  content.appendChild(buildInput({ label: 'Data', name: 'entry_date', type: 'date', value: entry?.entry_date ?? new Date().toISOString().split('T')[0] }));
-  content.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
-  content.appendChild(buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' }));
 
-  const pinnedField = document.createElement('label');
-  pinnedField.className = 'checkbox';
-  pinnedField.innerHTML = `<input type="checkbox" name="is_pinned" ${entry?.is_pinned ? 'checked' : ''} /> <span>In evidenza</span>`;
-  content.appendChild(pinnedField);
+  const metaRow = document.createElement('div');
+  metaRow.className = 'modal-form-row modal-form-row--compact journal-entry-modal__meta';
+  metaRow.appendChild(buildInput({
+    label: 'Data',
+    name: 'entry_date',
+    type: 'date',
+    value: entry?.entry_date ?? new Date().toISOString().split('T')[0]
+  }));
+  metaRow.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
+  metaRow.appendChild(buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) }));
+  content.appendChild(metaRow);
+
+  const editorField = buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' });
+  editorField.classList.add('journal-entry-modal__content-field');
+  const textarea = editorField.querySelector('textarea');
+  textarea?.classList.add('journal-entry-modal__textarea');
+  content.appendChild(buildEditorToolbar(textarea));
+  content.appendChild(editorField);
+  content.appendChild(buildWhitespacePreview(textarea));
 
   const tagWrap = document.createElement('div');
-  tagWrap.className = 'tag-selector';
+  tagWrap.className = 'tag-selector journal-entry-modal__tag-selector';
   tagWrap.innerHTML = '<span>Tag</span>';
   tags.forEach((tag) => {
     const label = document.createElement('label');
-    label.className = 'checkbox';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = tag.id;
-    input.name = 'entry_tag';
-    if (selectedTags.includes(tag.id)) input.checked = true;
-    label.appendChild(input);
-    label.append(tag.name);
+    const isChecked = selectedTags.includes(tag.id);
+    label.className = `condition-modal__item journal-entry-modal__tag-item ${isChecked ? 'is-selected' : ''}`;
+    label.innerHTML = `
+      <span class="condition-modal__item-label"><strong>${tag.name}</strong></span>
+      <span class="diceov-toggle condition-modal__toggle">
+        <input type="checkbox" name="entry_tag" value="${tag.id}" ${isChecked ? 'checked' : ''} />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </span>
+    `;
+    const checkbox = label.querySelector('input[type="checkbox"]');
+    checkbox?.addEventListener('change', () => {
+      label.classList.toggle('is-selected', checkbox.checked);
+    });
     tagWrap.appendChild(label);
   });
   content.appendChild(tagWrap);
@@ -524,8 +541,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const formData = await openFormModal({
     title: entry ? 'Modifica voce' : 'Nuova voce',
     submitLabel: entry ? 'Salva' : 'Crea',
-    content,
-    cardClass: 'modal-card--wide'
+    content
   });
 
   if (!formData) return;
@@ -568,6 +584,102 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   } finally {
     setGlobalLoading(false);
   }
+}
+
+function buildToggleField({ label, name, checked = false }) {
+  const field = document.createElement('label');
+  field.className = 'modal-toggle-field journal-entry-modal__pin-toggle';
+  field.innerHTML = `
+    <span class="modal-toggle-field__label">${label}</span>
+    <span class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="${name}" ${checked ? 'checked' : ''} />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </span>
+  `;
+  return field;
+}
+
+function buildEditorToolbar(textarea) {
+  const tools = [
+    { label: 'B', title: 'Grassetto', action: () => wrapSelection(textarea, '**', '**') },
+    { label: 'I', title: 'Corsivo', action: () => wrapSelection(textarea, '_', '_') },
+    { label: 'H1', title: 'Titolo', action: () => prefixLine(textarea, '# ') },
+    { label: '•', title: 'Elenco', action: () => prefixLine(textarea, '- ') },
+    { label: '❝', title: 'Citazione', action: () => prefixLine(textarea, '> ') },
+    { label: '</>', title: 'Codice inline', action: () => wrapSelection(textarea, '`', '`') },
+    { label: '⇥', title: 'Aumenta rientro', action: () => prefixLine(textarea, '  ') },
+    { label: '⇤', title: 'Riduci rientro', action: () => unprefixLine(textarea, '  ') }
+  ];
+  const toolbar = document.createElement('div');
+  toolbar.className = 'journal-entry-modal__toolbar';
+  tools.forEach((tool) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-button';
+    button.title = tool.title;
+    button.textContent = tool.label;
+    button.addEventListener('click', tool.action);
+    toolbar.appendChild(button);
+  });
+  return toolbar;
+}
+
+function buildWhitespacePreview(textarea) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'journal-entry-modal__preview';
+  wrapper.innerHTML = '<span class="modal-toggle-field__label">Anteprima (spazi e a capo visibili)</span><pre></pre>';
+  const pre = wrapper.querySelector('pre');
+  const renderPreview = () => {
+    const value = textarea?.value || '';
+    pre.textContent = value
+      .replace(/ /g, '·')
+      .replace(/\t/g, '⇥')
+      .replace(/\n/g, '↵\n');
+  };
+  textarea?.addEventListener('input', renderPreview);
+  renderPreview();
+  return wrapper;
+}
+
+function wrapSelection(textarea, prefix, suffix) {
+  if (!textarea) return;
+  textarea.focus();
+  const { selectionStart, selectionEnd, value } = textarea;
+  const selected = value.slice(selectionStart, selectionEnd);
+  textarea.setRangeText(`${prefix}${selected}${suffix}`, selectionStart, selectionEnd, 'end');
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function prefixLine(textarea, prefix) {
+  if (!textarea) return;
+  textarea.focus();
+  const { selectionStart, selectionEnd, value } = textarea;
+  const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+  const nextLineBreak = value.indexOf('\n', selectionEnd);
+  const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;
+  const segment = value.slice(lineStart, lineEnd);
+  const updated = segment
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
+  textarea.setRangeText(updated, lineStart, lineEnd, 'end');
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function unprefixLine(textarea, prefix) {
+  if (!textarea) return;
+  textarea.focus();
+  const { selectionStart, selectionEnd, value } = textarea;
+  const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+  const nextLineBreak = value.indexOf('\n', selectionEnd);
+  const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;
+  const segment = value.slice(lineStart, lineEnd);
+  const updated = segment
+    .split('\n')
+    .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
+    .join('\n');
+  textarea.setRangeText(updated, lineStart, lineEnd, 'end');
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 async function openTagModal(character, onSave) {
