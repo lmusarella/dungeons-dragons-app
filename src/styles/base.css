@@ -4390,13 +4390,15 @@ button:focus-visible,
   display: grid;
   gap: 8px;
   cursor: pointer;
+  width: 100%;
 }
 
 .journal-entry-card__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 
 .journal-entry-card__summary {
@@ -4462,6 +4464,9 @@ button:focus-visible,
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 8px 18px rgba(22, 20, 18, 0.06);
+}
+
+.journal-entry-card:not(.journal-entry-card--entry) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
