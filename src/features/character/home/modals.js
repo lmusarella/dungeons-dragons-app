@@ -134,20 +134,13 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
-  const placeholderImage = `${import.meta.env.BASE_URL}icons/icon.svg`;
-  const imageUrl = resource.image_url?.trim() || placeholderImage;
-  const hasCustomImage = Boolean(resource.image_url?.trim());
-  const imageAlt = hasCustomImage
-    ? `Immagine di ${resource.name}`
-    : `Immagine placeholder per ${resource.name}`;
-  const imageClass = hasCustomImage
-    ? 'resource-detail-image'
-    : 'resource-detail-image resource-detail-image--placeholder';
+  const hasDisplayImage = hasUsableDetailImage(resource.image_url);
+  const imageUrl = resource.image_url?.trim() || '';
 
   detail.innerHTML = `
-    <div class="detail-card detail-card--text resource-detail-card">
-      <img class="${imageClass}" src="${imageUrl}" alt="${imageAlt}" />
-      <p>${description}</p>
+    <div class="detail-card detail-card--text resource-detail-card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
+      ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'risorsa')}" />` : ''}
+      <div class="detail-rich-text">${renderDetailText(description)}</div>
     </div>
   `;
 
@@ -612,22 +605,15 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
   const level = Math.max(0, Number(spell.level) || 0);
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
   const isCastable = level > 0;
-  const placeholderImage = `${import.meta.env.BASE_URL}icons/icon.svg`;
-  const imageUrl = spell.image_url?.trim() || placeholderImage;
-  const hasCustomImage = Boolean(spell.image_url?.trim());
-  const imageAlt = hasCustomImage
-    ? `Immagine di ${spell.name}`
-    : `Immagine placeholder per ${spell.name}`;
-  const imageClass = hasCustomImage
-    ? 'resource-detail-image'
-    : 'resource-detail-image resource-detail-image--placeholder';
+  const hasDisplayImage = hasUsableDetailImage(spell.image_url);
+  const imageUrl = spell.image_url?.trim() || '';
 
   const content = document.createElement('div');
   content.className = 'spell-quick-detail';
   content.innerHTML = `
-    <div class="detail-card detail-card--text spell-quick-detail__card">
-      <img class="${imageClass}" src="${imageUrl}" alt="${imageAlt}" />
-      <p class="spell-quick-detail__description">${description}</p>
+    <div class="detail-card detail-card--text spell-quick-detail__card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
+      ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(spell.name || 'incantesimo')}" />` : ''}
+      <div class="detail-rich-text spell-quick-detail__description">${renderDetailText(description)}</div>
     </div>
   `;
 
@@ -645,6 +631,53 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     openSpellDamageOverlay(character, spell);
   });
 }
+
+function hasUsableDetailImage(imageUrl) {
+  const value = String(imageUrl || '').trim();
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return !normalized.endsWith('/icons/icon.svg') && !normalized.endsWith('icons/icon.svg');
+}
+
+function renderDetailText(text) {
+  const escaped = escapeHtml(String(text || ''));
+  const lines = escaped.split('\n');
+  const rendered = lines.map((line) => {
+    let html = line;
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+    if (html.startsWith('# ')) return `<h4>${html.slice(2)}</h4>`;
+    if (html.startsWith('- ')) return `<li>${html.slice(2)}</li>`;
+    if (html.startsWith('&gt; ')) return `<blockquote>${html.slice(5)}</blockquote>`;
+    return `<p>${html || '<br />'}</p>`;
+  });
+
+  let inList = false;
+  return rendered.map((chunk) => {
+    if (chunk.startsWith('<li>')) {
+      if (!inList) {
+        inList = true;
+        return `<ul>${chunk}`;
+      }
+      return chunk;
+    }
+    if (inList) {
+      inList = false;
+      return `</ul>${chunk}`;
+    }
+    return chunk;
+  }).join('') + (inList ? '</ul>' : '');
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
 export function openPreparedSpellsModal(character, onSave) {
   if (!character) return;
   const data = character.data || {};

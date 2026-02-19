@@ -152,3 +152,20 @@ export async function detachTag(entryId, tagId) {
     .eq('tag_id', tagId);
   if (error) throw error;
 }
+
+
+export async function unlinkTagFromAllEntries(tagId) {
+  const { error } = await supabase
+    .from('journal_entry_tags')
+    .delete()
+    .eq('tag_id', tagId);
+  if (error) throw error;
+}
+
+export async function deleteTag(tagId) {
+  const { error } = await supabase
+    .from('journal_tags')
+    .delete()
+    .eq('id', tagId);
+  if (error) throw error;
+}
