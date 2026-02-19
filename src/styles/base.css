@@ -4376,27 +4376,6 @@ button:focus-visible,
   tab-size: 2;
 }
 
-.journal-entry-modal__preview {
-  display: grid;
-  gap: 4px;
-}
-
-.journal-entry-modal__preview pre {
-  margin: 0;
-  min-height: 88px;
-  max-height: 180px;
-  overflow: auto;
-  border: 1px solid #eadfc9;
-  border-radius: 10px;
-  background: #fff9ea;
-  padding: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.82rem;
-  color: #5e5138;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .journal-entry-modal__tag-selector {
   display: grid;
   gap: 8px;
@@ -4410,6 +4389,7 @@ button:focus-visible,
 .journal-entry-card--entry {
   display: grid;
   gap: 8px;
+  cursor: pointer;
 }
 
 .journal-entry-card__header {
@@ -4419,29 +4399,20 @@ button:focus-visible,
   gap: 8px;
 }
 
-.journal-entry-card__toggle {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  flex: 1;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  color: inherit;
-  cursor: pointer;
+.journal-entry-card__summary {
+  min-width: 0;
 }
 
-.journal-entry-card__toggle[aria-expanded="true"] span[aria-hidden="true"] {
-  transform: rotate(180deg);
+.journal-entry-card__actions {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .journal-entry-card__content {
   border-top: 1px solid rgba(59, 93, 96, 0.2);
   padding-top: 8px;
   color: #3d3627;
+  white-space: break-spaces;
 }
 
 .journal-entry-card__content p,

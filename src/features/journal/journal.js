@@ -140,7 +140,8 @@ export async function renderJournal(container) {
       : '<p class="muted">Nessuna voce trovata.</p>';
 
     listEl.querySelectorAll('[data-edit]')
-      .forEach((btn) => btn.addEventListener('click', async () => {
+      .forEach((btn) => btn.addEventListener('click', async (event) => {
+        event.stopPropagation();
         const entry = entries.find((item) => item.id === btn.dataset.edit);
         if (entry) {
           await openEntryModal(activeCharacter, entry, tags, entryTagMap[entry.id] ?? [], refresh);
@@ -148,7 +149,8 @@ export async function renderJournal(container) {
       }));
 
     listEl.querySelectorAll('[data-delete]')
-      .forEach((btn) => btn.addEventListener('click', async () => {
+      .forEach((btn) => btn.addEventListener('click', async (event) => {
+        event.stopPropagation();
         const entry = entries.find((item) => item.id === btn.dataset.delete);
         if (!entry) return;
         const shouldDelete = await openConfirmModal({
@@ -170,18 +172,17 @@ export async function renderJournal(container) {
         }
       }));
 
-    listEl.querySelectorAll('[data-toggle-entry]')
-      .forEach((button) => button.addEventListener('click', () => {
-        const card = button.closest('[data-entry-card]');
-        const content = card?.querySelector('[data-entry-content]');
-        if (!card || !content) return;
+    listEl.querySelectorAll('[data-entry-card]')
+      .forEach((card) => card.addEventListener('click', () => {
+        const content = card.querySelector('[data-entry-content]');
+        if (!content) return;
         const isOpen = card.classList.toggle('is-open');
         content.hidden = !isOpen;
-        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       }));
 
     listEl.querySelectorAll('[data-quick-append]')
-      .forEach((button) => button.addEventListener('click', async () => {
+      .forEach((button) => button.addEventListener('click', async (event) => {
+        event.stopPropagation();
         const entry = entries.find((item) => item.id === button.dataset.quickAppend);
         if (!entry) return;
         await openQuickAppendModal(entry, refresh);
@@ -369,14 +370,11 @@ function buildEntryList(entries, entryTagMap, tagMap) {
     return `
           <li class="journal-entry-card journal-entry-card--entry" data-entry-card>
             <div class="journal-entry-card__header">
-              <button class="journal-entry-card__toggle" type="button" data-toggle-entry aria-expanded="false">
-                <span>
-                  <strong>${entry.title || 'Senza titolo'}</strong>
-                  <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
-                </span>
-                <span aria-hidden="true">▾</span>
-              </button>
-              <div class="actions">
+              <div class="journal-entry-card__summary">
+                <strong>${entry.title || 'Senza titolo'}</strong>
+                <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
+              </div>
+              <div class="actions journal-entry-card__actions">
                 <button class="icon-button" data-quick-append="${entry.id}" aria-label="Aggiunta rapida" title="Aggiunta rapida testo">
                   <span aria-hidden="true">➕</span>
                 </button>
@@ -583,7 +581,6 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   textarea?.classList.add('journal-entry-modal__textarea');
   content.appendChild(buildEditorToolbar(textarea));
   content.appendChild(editorField);
-  content.appendChild(buildWhitespacePreview(textarea));
 
   const tagWrap = document.createElement('div');
   tagWrap.className = 'tag-selector journal-entry-modal__tag-selector';
@@ -691,23 +688,6 @@ function buildEditorToolbar(textarea) {
     toolbar.appendChild(button);
   });
   return toolbar;
-}
-
-function buildWhitespacePreview(textarea) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'journal-entry-modal__preview';
-  wrapper.innerHTML = '<span class="modal-toggle-field__label">Anteprima (spazi e a capo visibili)</span><pre></pre>';
-  const pre = wrapper.querySelector('pre');
-  const renderPreview = () => {
-    const value = textarea?.value || '';
-    pre.textContent = value
-      .replace(/ /g, '·')
-      .replace(/\t/g, '⇥')
-      .replace(/\n/g, '↵\n');
-  };
-  textarea?.addEventListener('input', renderPreview);
-  renderPreview();
-  return wrapper;
 }
 
 function wrapSelection(textarea, prefix, suffix) {
@@ -830,12 +810,6 @@ async function openTagModal(character, tags, onSave) {
           const tagId = button.dataset.removeTag;
           const tag = tags.find((item) => item.id === tagId);
           if (!tag) return;
-          const shouldDelete = await openConfirmModal({
-            title: 'Elimina tag',
-            message: `Vuoi eliminare il tag "${tag.name}"? Sarà rimosso da tutte le voci.`,
-            confirmLabel: 'Elimina'
-          });
-          if (!shouldDelete) return;
 
           setGlobalLoading(true);
           try {
