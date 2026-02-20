@@ -561,10 +561,12 @@ async function openSessionFileUploadModal(file) {
 async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid journal-entry-modal';
-  content.appendChild(buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' }));
+  const titleField = buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' });
+  titleField.classList.add('journal-entry-modal__title-field');
 
   const metaRow = document.createElement('div');
-  metaRow.className = 'modal-form-row modal-form-row--compact journal-entry-modal__meta';
+  metaRow.className = 'modal-form-row journal-entry-modal__meta';
+  metaRow.appendChild(titleField);
   metaRow.appendChild(buildInput({
     label: 'Data',
     name: 'entry_date',
@@ -572,8 +574,8 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     value: entry?.entry_date ?? new Date().toISOString().split('T')[0]
   }));
   metaRow.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
-  metaRow.appendChild(buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) }));
   content.appendChild(metaRow);
+  content.appendChild(buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) }));
 
   const editorField = buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' });
   editorField.classList.add('journal-entry-modal__content-field');
@@ -607,7 +609,8 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const formData = await openFormModal({
     title: entry ? 'Modifica voce' : 'Nuova voce',
     submitLabel: entry ? 'Salva' : 'Crea',
-    content
+    content,
+    cardClass: 'modal-card--wide'
   });
 
   if (!formData) return;
