@@ -637,7 +637,7 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     submitLabel: isCastable ? 'Lancia' : 'Chiudi',
     cancelLabel: isCastable ? 'Chiudi' : null,
     content,
-    cardClass: ['modal-card--form', 'spell-quick-detail-modal'],
+    cardClass: ['spell-quick-detail-modal'],
     showFooter: isCastable
   }).then(async (formData) => {
     if (!formData || !isCastable) return;
