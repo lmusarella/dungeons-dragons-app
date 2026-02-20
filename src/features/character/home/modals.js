@@ -177,7 +177,6 @@ export function openSpellListModal(character, onRender) {
       ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
       : null;
     const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
-    const ritualLabel = spell.is_ritual ? 'Rituale' : null;
     const prepState = canPrepare ? spell.prep_state || 'known' : null;
     const description = spell.description?.trim();
     const castTime = normalizeSpellCastTime(spell.cast_time);
@@ -188,9 +187,10 @@ export function openSpellListModal(character, onRender) {
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
                     <span class="chip chip--small">${typeLabel}</span>
+                    ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
+                    ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
                     ${castTime ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTime}</span>` : ''}
                     ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
-                    ${ritualLabel ? '<span class="chip chip--small">Rituale</span>' : ''}
                   </div>
                   <div class="spell-list-modal__item-meta">
                     ${attackLabel ? `<span>${attackLabel}</span>` : ''}

@@ -700,7 +700,7 @@ export function buildSpellSection(character, canManageSpells = false) {
             <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
           ` : ''}
             ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
-            ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--always">R</span>' : ''}
+            ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
             ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
       </div>

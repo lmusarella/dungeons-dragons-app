@@ -1301,6 +1301,10 @@ button:focus-visible,
   background: #0f766e;
 }
 
+.resource-chip--floating.resource-chip--ritual {
+  background: #7a3f9d;
+}
+
 .resource-chip--floating.resource-chip--magic {
   background: #2563eb;
 }
