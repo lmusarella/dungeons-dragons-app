@@ -609,15 +609,11 @@ export function openSpellDrawer(character, onSave, spell = null) {
 export function openSpellQuickDetailModal(character, spell, onRender) {
   if (!character || !spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
-  const castTime = normalizeSpellCastTime(spell.cast_time) || '-';
-  const levelLabel = level === 0 ? 'Trucchetto' : `${level}° livello`;
   const detailChips = [
-    `Livello: ${levelLabel}`,
     `Range: ${spell.range?.trim() || '-'}`,
     `Durata: ${spell.duration?.trim() || '-'}`,
     `Componenti: ${spell.components?.trim() || '-'}`,
-    `Concentrazione: ${spell.concentration ? 'Sì' : 'No'}`,
-    `Tempo di lancio: ${castTime}`
+    ...(spell.concentration ? ['Concentrazione: Sì'] : [])
   ];
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
   const isCastable = level > 0;
