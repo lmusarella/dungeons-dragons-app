@@ -562,7 +562,6 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid journal-entry-modal';
   const titleField = buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' });
-  titleField.classList.add('journal-entry-modal__title-field');
 
   const metaRow = document.createElement('div');
   metaRow.className = 'modal-form-row journal-entry-modal__meta';

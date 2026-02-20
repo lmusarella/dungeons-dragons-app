@@ -773,7 +773,7 @@ function normalizeCastTimeLabel(castTime) {
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
   if (normalized.includes('gratuit')) return 'Azione Gratuita';
-  if (normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return "Più di un'azione";
+  if (normalized.includes('durata') || normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return 'Durata';
   if (normalized.includes('azion')) return 'Azione';
   const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
   return exactMatch?.label ?? '';

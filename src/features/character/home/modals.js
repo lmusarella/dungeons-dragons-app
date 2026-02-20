@@ -14,7 +14,7 @@ import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
 import { RESOURCE_CAST_TIME_ORDER, conditionList } from './constants.js';
 
-const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', "Più di un'azione"];
+const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 
 function normalizeSpellCastTime(castTime) {
   const rawValue = castTime?.toString().trim();
@@ -23,7 +23,7 @@ function normalizeSpellCastTime(castTime) {
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
   if (normalized.includes('gratuit')) return 'Azione Gratuita';
-  if (normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return "Più di un'azione";
+  if (normalized.includes('durata') || normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return 'Durata';
   if (normalized.includes('azion')) return 'Azione';
   const matchingOption = SPELL_CAST_TIME_OPTIONS.find((option) => option.toLowerCase() === normalized);
   return matchingOption || '';
@@ -858,7 +858,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
     { value: 'Reazione', label: 'Reazione' },
     { value: 'Azione Bonus', label: 'Azione Bonus' },
     { value: 'Azione Gratuita', label: 'Azione Gratuita' },
-    { value: "Più di un'azione", label: "Più di un'azione" }
+    { value: 'Durata', label: 'Durata' }
   ], resource?.cast_time ?? 'Azione');
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
