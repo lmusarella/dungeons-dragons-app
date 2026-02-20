@@ -687,11 +687,14 @@ export function buildSpellSection(character, canManageSpells = false) {
     const castTimeClass = getResourceCastTimeClass(castTimeLabel);
     return `
       <div class="modifier-card attack-card resource-card spell-prepared-list__card">
+        <div class="resource-card__badges spell-card__badges">
+          ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
+          ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
+          ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
+        </div>
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
           <span class="spell-prepared-list__name">${spell.name}</span>
           ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
-        
-        
         </button>
         <div class="resource-card-actions spell-card-actions">
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
@@ -699,8 +702,6 @@ export function buildSpellSection(character, canManageSpells = false) {
             <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
             <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
           ` : ''}
-            ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
-            ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
       </div>
     `;
@@ -772,6 +773,7 @@ function normalizeCastTimeLabel(castTime) {
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
   if (normalized.includes('gratuit')) return 'Azione Gratuita';
+  if (normalized.includes('durata') || normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return 'Durata';
   if (normalized.includes('azion')) return 'Azione';
   const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
   return exactMatch?.label ?? '';

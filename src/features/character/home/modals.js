@@ -14,7 +14,7 @@ import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
 import { RESOURCE_CAST_TIME_ORDER, conditionList } from './constants.js';
 
-const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita'];
+const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 
 function normalizeSpellCastTime(castTime) {
   const rawValue = castTime?.toString().trim();
@@ -23,6 +23,7 @@ function normalizeSpellCastTime(castTime) {
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
   if (normalized.includes('gratuit')) return 'Azione Gratuita';
+  if (normalized.includes('durata') || normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return 'Durata';
   if (normalized.includes('azion')) return 'Azione';
   const matchingOption = SPELL_CAST_TIME_OPTIONS.find((option) => option.toLowerCase() === normalized);
   return matchingOption || '';
@@ -492,7 +493,16 @@ export function openSpellDrawer(character, onSave, spell = null) {
       <span class="diceov-toggle-track" aria-hidden="true"></span>
     </label>
   `;
-  form.appendChild(buildRow([concentrationField, attackRollField, prepStateField], 'compact'));
+  const ritualField = document.createElement('div');
+  ritualField.className = 'modal-toggle-field';
+  ritualField.innerHTML = `
+    <span class="modal-toggle-field__label">Rituale</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="spell_is_ritual" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  form.appendChild(buildRow([concentrationField, attackRollField, ritualField, prepStateField], 'compact'));
   const damageDieField = buildInput({
     label: 'Notazione dado',
     name: 'spell_damage_die',
@@ -526,6 +536,10 @@ export function openSpellDrawer(character, onSave, spell = null) {
   const attackRollInput = form.querySelector('input[name="spell_attack_roll"]');
   if (attackRollInput) {
     attackRollInput.checked = Boolean(spell?.attack_roll);
+  }
+  const ritualInput = form.querySelector('input[name="spell_is_ritual"]');
+  if (ritualInput) {
+    ritualInput.checked = Boolean(spell?.is_ritual);
   }
 
   const syncSpellKind = () => {
@@ -585,6 +599,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
       components: formData.get('spell_components')?.trim() || null,
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
+      is_ritual: formData.has('spell_is_ritual'),
       image_url: formData.get('spell_image_url')?.trim() || null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
@@ -613,7 +628,8 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     `Range: ${spell.range?.trim() || '-'}`,
     `Durata: ${spell.duration?.trim() || '-'}`,
     `Componenti: ${spell.components?.trim() || '-'}`,
-    ...(spell.concentration ? ['Concentrazione: Sì'] : [])
+    ...(spell.concentration ? ['Concentrazione: Sì'] : []),
+    ...(spell.is_ritual ? ['Rituale: Sì'] : [])
   ];
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
   const isCastable = level > 0;
@@ -839,7 +855,8 @@ export function openResourceDrawer(character, onSave, resource = null) {
     { value: 'Azione', label: 'Azione' },
     { value: 'Reazione', label: 'Reazione' },
     { value: 'Azione Bonus', label: 'Azione Bonus' },
-    { value: 'Azione Gratuita', label: 'Azione Gratuita' }
+    { value: 'Azione Gratuita', label: 'Azione Gratuita' },
+    { value: 'Durata', label: 'Durata' }
   ], resource?.cast_time ?? 'Azione');
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);

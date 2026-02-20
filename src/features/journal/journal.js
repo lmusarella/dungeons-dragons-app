@@ -562,7 +562,6 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid journal-entry-modal';
   const titleField = buildInput({ label: 'Titolo', name: 'title', value: entry?.title ?? '' });
-  titleField.classList.add('journal-entry-modal__title-field');
 
   const metaRow = document.createElement('div');
   metaRow.className = 'modal-form-row journal-entry-modal__meta';
@@ -575,13 +574,19 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   }));
   metaRow.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
   content.appendChild(metaRow);
-  content.appendChild(buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) }));
+  const pinnedToggle = buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) });
+  pinnedToggle.classList.add('journal-entry-modal__pin-toggle-inline');
 
   const editorField = buildTextarea({ label: 'Contenuto', name: 'content', value: entry?.content ?? '' });
   editorField.classList.add('journal-entry-modal__content-field');
   const textarea = editorField.querySelector('textarea');
   textarea?.classList.add('journal-entry-modal__textarea');
-  content.appendChild(buildEditorToolbar(textarea));
+
+  const editorHeader = document.createElement('div');
+  editorHeader.className = 'journal-entry-modal__editor-header';
+  editorHeader.appendChild(buildEditorToolbar(textarea));
+  editorHeader.appendChild(pinnedToggle);
+  content.appendChild(editorHeader);
   content.appendChild(editorField);
 
   const tagWrap = document.createElement('div');
