@@ -187,8 +187,6 @@ export function openSpellListModal(character, onRender) {
                   <div class="spell-list-modal__item-title">
                     <strong>${spell.name}</strong>
                     <span class="chip chip--small">${typeLabel}</span>
-                    ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
-                    ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
                     ${castTime ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTime}</span>` : ''}
                     ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
                   </div>
