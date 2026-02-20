@@ -3070,6 +3070,22 @@ button:focus-visible,
   margin: 0;
 }
 
+
+.item-modal-toggle-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.item-modal-toggle-field--compact {
+  width: auto;
+  justify-self: start;
+  min-width: 170px;
+}
+
+.item-modal-row--armor-bonus {
+  grid-template-columns: repeat(2, minmax(140px, 1fr)) auto;
+  align-items: center;
+}
+
 .modal-toggle-field {
   display: flex;
   flex-direction: column;

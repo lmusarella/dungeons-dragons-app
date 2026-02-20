@@ -125,6 +125,22 @@ export async function openItemModal(character, item, items, onSave) {
   const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'balanced');
   basicSection.appendChild(categoryRow);
 
+  const basicToggleList = document.createElement('div');
+  basicToggleList.className = 'condition-modal__list item-modal-toggle-list';
+  const { field: attunement, input: attunementInput } = buildToggleField({
+    name: 'attunement_active',
+    label: 'Sintonia attiva',
+    checked: item?.attunement_active ?? false
+  });
+  const { field: magicField, input: magicInput } = buildToggleField({
+    name: 'is_magic',
+    label: 'Magico',
+    checked: item?.is_magic ?? false
+  });
+  basicToggleList.appendChild(attunement);
+  basicToggleList.appendChild(magicField);
+  basicSection.appendChild(basicToggleList);
+
   const equipToggleList = document.createElement('div');
   equipToggleList.className = 'condition-modal__list item-modal-toggle-list';
   const { field: equipableField, input: equipableInput } = buildToggleField({
@@ -137,20 +153,8 @@ export async function openItemModal(character, item, items, onSave) {
     label: 'Sovrapponibile',
     checked: item?.sovrapponibile ?? false
   });
-  const { field: attunement, input: attunementInput } = buildToggleField({
-    name: 'attunement_active',
-    label: 'Sintonia attiva',
-    checked: item?.attunement_active ?? false
-  });
-  const { field: magicField, input: magicInput } = buildToggleField({
-    name: 'is_magic',
-    label: 'Magico',
-    checked: item?.is_magic ?? false
-  });
   equipToggleList.appendChild(equipableField);
   equipToggleList.appendChild(overlayableField);
-  equipToggleList.appendChild(attunement);
-  equipToggleList.appendChild(magicField);
   const equipSlotsField = document.createElement('fieldset');
   equipSlotsField.className = 'equip-slot-field';
   equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
@@ -211,16 +215,18 @@ export async function openItemModal(character, item, items, onSave) {
     type: 'number',
     value: item?.damage_modifier ?? 0
   });
-  const thrownField = document.createElement('label');
-  thrownField.className = 'checkbox';
-  thrownField.innerHTML = '<input type="checkbox" name="is_thrown" /> <span>Proprietà lancio</span>';
-  const thrownInput = thrownField.querySelector('input');
+  const { field: thrownField, input: thrownInput } = buildToggleField({
+    name: 'is_thrown',
+    label: 'Proprietà lancio',
+    checked: item?.is_thrown ?? false
+  });
   const rangeGrid = document.createElement('div');
   rangeGrid.className = 'compact-field-grid';
   const meleeRangeField = buildInput({
     label: 'Portata arma (m)',
     name: 'melee_range',
-    type: 'number',
+    type: 'text',
+    placeholder: 'Es. 1,5',
     value: item?.melee_range ?? 1.5
   });
   const rangeNormalField = buildInput({
@@ -251,6 +257,7 @@ export async function openItemModal(character, item, items, onSave) {
     label: 'Scudo',
     checked: item?.is_shield ?? false
   });
+  shieldField.classList.add('item-modal-toggle-field--compact');
 
   const armorClassField = buildInput({
     label: 'Classe armatura base',
@@ -279,6 +286,7 @@ export async function openItemModal(character, item, items, onSave) {
   const weaponThrownRow = buildRow([thrownField], 'compact');
   const armorPrimaryRow = buildRow([armorTypeField, armorClassField], 'balanced');
   const armorBonusRow = buildRow([armorBonusField, shieldBonusField, shieldField], 'compact');
+  armorBonusRow.classList.add('item-modal-row--armor-bonus');
   proficiencySection.appendChild(weaponPrimaryRow);
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(weaponThrownRow);
@@ -291,9 +299,6 @@ export async function openItemModal(character, item, items, onSave) {
   fields.appendChild(combatSection);
   fields.appendChild(notesSection);
 
-  if (thrownInput) {
-    thrownInput.checked = item?.is_thrown ?? false;
-  }
   const getKindFromCategory = (categoryValue) => {
     if (categoryValue === 'weapon') return 'weapon';
     if (categoryValue === 'armor') return 'armor';
@@ -342,6 +347,7 @@ export async function openItemModal(character, item, items, onSave) {
       }
       overlayableInput.closest('.condition-modal__item')?.classList.toggle('is-selected', overlayableInput.checked);
     }
+    toggleFieldVisibility(equipSlotsField, equipableEnabled);
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isContainer = categorySelect.value === 'container';
@@ -354,6 +360,7 @@ export async function openItemModal(character, item, items, onSave) {
     damageModifierField.querySelector('input').disabled = !isWeapon;
     if (thrownInput) {
       thrownInput.disabled = !isWeapon;
+      thrownInput.closest('.condition-modal__item')?.classList.toggle('is-selected', thrownInput.checked);
     }
     const rangeInputs = rangeGrid.querySelectorAll('input');
     rangeInputs.forEach((input) => {
@@ -367,6 +374,7 @@ export async function openItemModal(character, item, items, onSave) {
     armorTypeSelect.disabled = !isArmor;
     if (shieldInput) {
       shieldInput.disabled = !isArmor;
+      shieldInput.closest('.condition-modal__item')?.classList.toggle('is-selected', shieldInput.checked);
     }
     if (armorClassInput) {
       armorClassInput.disabled = !isArmor;
@@ -457,7 +465,12 @@ export async function openItemModal(character, item, items, onSave) {
     attack_modifier: Number(formData.get('attack_modifier')) || 0,
     damage_modifier: Number(formData.get('damage_modifier')) || 0,
     is_thrown: formData.get('is_thrown') === 'on',
-    melee_range: formData.get('melee_range') === '' ? null : Number(formData.get('melee_range')),
+    melee_range: (() => {
+      const meleeRange = String(formData.get('melee_range') ?? '').trim().replace(',', '.');
+      if (!meleeRange) return null;
+      const parsed = Number(meleeRange);
+      return Number.isNaN(parsed) ? null : parsed;
+    })(),
     range_normal: Number(formData.get('range_normal')) || null,
     range_disadvantage: Number(formData.get('range_disadvantage')) || null,
     armor_type: formData.get('armor_type') || null,
