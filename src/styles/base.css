@@ -2472,9 +2472,13 @@ button:focus-visible,
   gap: 6px;
 }
 
+.spell-card__badges {
+  top: -8px;
+}
+
 .spell-prepared-list__card {
   width: 100%;
-  padding: 6px 8px !important;
+  padding: 12px 8px 6px !important;
 }
 
 .spell-prepared-list__group {
