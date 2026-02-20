@@ -3033,6 +3033,59 @@ button:focus-visible,
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.item-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(59, 93, 96, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  margin-bottom: 8px;
+}
+
+.item-modal-section__title {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #2f4d50;
+}
+
+.item-modal-kind {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-modal-kind__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3b5d60;
+}
+
+.item-modal-kind__list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.item-modal-kind__item {
+  margin: 0;
+}
+
+
+.item-modal-toggle-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.item-modal-toggle-field--compact {
+  width: auto;
+  justify-self: start;
+  min-width: 170px;
+}
+
+.item-modal-row--armor-bonus {
+  grid-template-columns: repeat(2, minmax(140px, 1fr)) auto;
+  align-items: center;
+}
+
 .modal-toggle-field {
   display: flex;
   flex-direction: column;

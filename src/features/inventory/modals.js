@@ -15,11 +15,39 @@ export async function openItemModal(character, item, items, onSave) {
   };
   const fields = document.createElement('div');
   fields.className = 'drawer-form modal-form-grid';
+  const buildSection = (title, elements = []) => {
+    const section = document.createElement('section');
+    section.className = 'item-modal-section';
+    const heading = document.createElement('h4');
+    heading.className = 'item-modal-section__title';
+    heading.textContent = title;
+    section.appendChild(heading);
+    elements.filter(Boolean).forEach((element) => section.appendChild(element));
+    return section;
+  };
   const buildRow = (elements, variant = 'balanced') => {
     const row = document.createElement('div');
     row.className = `modal-form-row modal-form-row--${variant}`;
     elements.filter(Boolean).forEach((element) => row.appendChild(element));
     return row;
+  };
+  const buildToggleField = ({ name, label, checked = false, type = 'checkbox', value = '' }) => {
+    const field = document.createElement('label');
+    field.className = 'condition-modal__item item-modal-toggle-field';
+    const valueAttribute = value ? ` value="${value}"` : '';
+    field.innerHTML = `
+      <span class="condition-modal__item-label"><strong>${label}</strong></span>
+      <span class="diceov-toggle condition-modal__toggle">
+        <input type="${type}" name="${name}"${valueAttribute} ${checked ? 'checked' : ''} />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </span>
+    `;
+    const input = field.querySelector('input');
+    field.classList.toggle('is-selected', Boolean(input?.checked));
+    input?.addEventListener('change', () => {
+      field.classList.toggle('is-selected', input.checked);
+    });
+    return { field, input };
   };
   const nameField = buildInput({ label: 'Nome', name: 'name', value: item?.name ?? '' });
   const imageField = buildInput({
@@ -28,7 +56,7 @@ export async function openItemModal(character, item, items, onSave) {
     placeholder: 'https://.../oggetto.png',
     value: item?.image_url ?? ''
   });
-  fields.appendChild(buildRow([nameField, imageField], 'balanced'));
+  const basicSection = buildSection('Dati principali', [buildRow([nameField, imageField], 'balanced')]);
   const qtyField = buildInput({ label: 'Quantità', name: 'qty', type: 'number', value: item?.qty ?? 1 });
   const weightField = buildInput({ label: 'Peso', name: 'weight', type: 'number', value: item?.weight ?? 0 });
   const weightInput = weightField.querySelector('input');
@@ -39,7 +67,7 @@ export async function openItemModal(character, item, items, onSave) {
   }
   const volumeField = buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 });
   const valueField = buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
-  fields.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
+  basicSection.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
   const categorySelect = buildSelect(
     [{ value: '', label: 'Seleziona' }, ...itemCategories],
     item?.category ?? ''
@@ -69,18 +97,64 @@ export async function openItemModal(character, item, items, onSave) {
     value: item?.max_volume ?? ''
   });
   const maxVolumeInput = maxVolumeField.querySelector('input');
-  fields.appendChild(buildRow([categoryField, containerField, maxVolumeField], 'balanced'));
+  const categoryKindField = document.createElement('div');
+  categoryKindField.className = 'item-modal-kind';
+  categoryKindField.innerHTML = '<span class="item-modal-kind__label">Tipologia rapida</span>';
+  const categoryKindList = document.createElement('div');
+  categoryKindList.className = 'condition-modal__list item-modal-kind__list';
+  const kindOptions = [
+    { value: 'generic', label: 'Oggetto' },
+    { value: 'weapon', label: 'Arma' },
+    { value: 'armor', label: 'Armatura' }
+  ];
+  const kindInputs = kindOptions.map((option) => {
+    const optionLabel = document.createElement('label');
+    optionLabel.className = 'condition-modal__item item-modal-kind__item';
+    optionLabel.innerHTML = `
+      <span class="condition-modal__item-label"><strong>${option.label}</strong></span>
+      <span class="diceov-toggle condition-modal__toggle">
+        <input type="radio" name="item_kind" value="${option.value}" />
+        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      </span>
+    `;
+    categoryKindList.appendChild(optionLabel);
+    return optionLabel.querySelector('input');
+  });
+  categoryKindField.appendChild(categoryKindList);
+  basicSection.appendChild(categoryKindField);
+  const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'balanced');
+  basicSection.appendChild(categoryRow);
 
-  const equipableWrapper = document.createElement('div');
-  equipableWrapper.className = 'compact-field-grid';
-  const equipableField = document.createElement('label');
-  equipableField.className = 'checkbox';
-  equipableField.innerHTML = '<input type="checkbox" name="equipable" /> <span>Equipaggiabile</span>';
-  const equipableInput = equipableField.querySelector('input');
-  const overlayableField = document.createElement('label');
-  overlayableField.className = 'checkbox';
-  overlayableField.innerHTML = '<input type="checkbox" name="sovrapponibile" /> <span>Sovrapponibile</span>';
-  const overlayableInput = overlayableField.querySelector('input');
+  const basicToggleList = document.createElement('div');
+  basicToggleList.className = 'condition-modal__list item-modal-toggle-list';
+  const { field: attunement, input: attunementInput } = buildToggleField({
+    name: 'attunement_active',
+    label: 'Sintonia attiva',
+    checked: item?.attunement_active ?? false
+  });
+  const { field: magicField, input: magicInput } = buildToggleField({
+    name: 'is_magic',
+    label: 'Magico',
+    checked: item?.is_magic ?? false
+  });
+  basicToggleList.appendChild(attunement);
+  basicToggleList.appendChild(magicField);
+  basicSection.appendChild(basicToggleList);
+
+  const equipToggleList = document.createElement('div');
+  equipToggleList.className = 'condition-modal__list item-modal-toggle-list';
+  const { field: equipableField, input: equipableInput } = buildToggleField({
+    name: 'equipable',
+    label: 'Equipaggiabile',
+    checked: item?.equipable ?? false
+  });
+  const { field: overlayableField, input: overlayableInput } = buildToggleField({
+    name: 'sovrapponibile',
+    label: 'Sovrapponibile',
+    checked: item?.sovrapponibile ?? false
+  });
+  equipToggleList.appendChild(equipableField);
+  equipToggleList.appendChild(overlayableField);
   const equipSlotsField = document.createElement('fieldset');
   equipSlotsField.className = 'equip-slot-field';
   equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
@@ -99,20 +173,9 @@ export async function openItemModal(character, item, items, onSave) {
     return input;
   });
   equipSlotsField.appendChild(equipSlotList);
-  equipableWrapper.appendChild(equipableField);
-  equipableWrapper.appendChild(overlayableField);
-  const attunement = document.createElement('label');
-  attunement.className = 'checkbox';
-  attunement.innerHTML = '<input type="checkbox" name="attunement_active" /> <span>Sintonia attiva</span>';
-  const attunementInput = attunement.querySelector('input');
-  const magicField = document.createElement('label');
-  magicField.className = 'checkbox';
-  magicField.innerHTML = '<input type="checkbox" name="is_magic" /> <span>Magico</span>';
-  const magicInput = magicField.querySelector('input');
-  fields.appendChild(buildRow([equipableWrapper, attunement, magicField], 'balanced'));
-  fields.appendChild(equipSlotsField);
+  const equipmentSection = buildSection('Equipaggiamento', [equipToggleList, equipSlotsField]);
 
-  fields.appendChild(buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' }));
+  const notesSection = buildSection('Dettagli', [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })]);
 
   const proficiencySection = document.createElement('div');
   proficiencySection.className = 'drawer-form modal-form-grid';
@@ -152,16 +215,18 @@ export async function openItemModal(character, item, items, onSave) {
     type: 'number',
     value: item?.damage_modifier ?? 0
   });
-  const thrownField = document.createElement('label');
-  thrownField.className = 'checkbox';
-  thrownField.innerHTML = '<input type="checkbox" name="is_thrown" /> <span>Proprietà lancio</span>';
-  const thrownInput = thrownField.querySelector('input');
+  const { field: thrownField, input: thrownInput } = buildToggleField({
+    name: 'is_thrown',
+    label: 'Proprietà lancio',
+    checked: item?.is_thrown ?? false
+  });
   const rangeGrid = document.createElement('div');
   rangeGrid.className = 'compact-field-grid';
   const meleeRangeField = buildInput({
     label: 'Portata arma (m)',
     name: 'melee_range',
-    type: 'number',
+    type: 'text',
+    placeholder: 'Es. 1,5',
     value: item?.melee_range ?? 1.5
   });
   const rangeNormalField = buildInput({
@@ -187,10 +252,12 @@ export async function openItemModal(character, item, items, onSave) {
   armorTypeSelect.name = 'armor_type';
   armorTypeField.appendChild(armorTypeSelect);
 
-  const shieldField = document.createElement('label');
-  shieldField.className = 'checkbox';
-  shieldField.innerHTML = '<input type="checkbox" name="is_shield" /> <span>Scudo</span>';
-  const shieldInput = shieldField.querySelector('input');
+  const { field: shieldField, input: shieldInput } = buildToggleField({
+    name: 'is_shield',
+    label: 'Scudo',
+    checked: item?.is_shield ?? false
+  });
+  shieldField.classList.add('item-modal-toggle-field--compact');
 
   const armorClassField = buildInput({
     label: 'Classe armatura base',
@@ -214,32 +281,56 @@ export async function openItemModal(character, item, items, onSave) {
   });
   const shieldBonusInput = shieldBonusField.querySelector('input');
 
-  proficiencySection.appendChild(buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced'));
-  proficiencySection.appendChild(buildRow([damageDieField, attackModifierField, damageModifierField], 'compact'));
-  proficiencySection.appendChild(buildRow([thrownField], 'compact'));
+  const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced');
+  const weaponDamageRow = buildRow([damageDieField, attackModifierField, damageModifierField], 'compact');
+  const weaponThrownRow = buildRow([thrownField], 'compact');
+  const armorPrimaryRow = buildRow([armorTypeField, armorClassField], 'balanced');
+  const armorBonusRow = buildRow([armorBonusField, shieldBonusField, shieldField], 'compact');
+  armorBonusRow.classList.add('item-modal-row--armor-bonus');
+  proficiencySection.appendChild(weaponPrimaryRow);
+  proficiencySection.appendChild(weaponDamageRow);
+  proficiencySection.appendChild(weaponThrownRow);
   proficiencySection.appendChild(rangeGrid);
-  proficiencySection.appendChild(buildRow([armorTypeField, shieldField, armorClassField], 'balanced'));
-  proficiencySection.appendChild(buildRow([armorBonusField, shieldBonusField], 'compact'));
-  fields.appendChild(proficiencySection);
+  proficiencySection.appendChild(armorPrimaryRow);
+  proficiencySection.appendChild(armorBonusRow);
+  const combatSection = buildSection('Statistiche arma / armatura', [proficiencySection]);
+  fields.appendChild(basicSection);
+  fields.appendChild(equipmentSection);
+  fields.appendChild(combatSection);
+  fields.appendChild(notesSection);
 
-  if (attunementInput) {
-    attunementInput.checked = item?.attunement_active ?? false;
-  }
-  if (magicInput) {
-    magicInput.checked = item?.is_magic ?? false;
-  }
-  if (equipableInput) {
-    equipableInput.checked = item?.equipable ?? false;
-  }
-  if (overlayableInput) {
-    overlayableInput.checked = item?.sovrapponibile ?? false;
-  }
-  if (shieldInput) {
-    shieldInput.checked = item?.is_shield ?? false;
-  }
-  if (thrownInput) {
-    thrownInput.checked = item?.is_thrown ?? false;
-  }
+  const getKindFromCategory = (categoryValue) => {
+    if (categoryValue === 'weapon') return 'weapon';
+    if (categoryValue === 'armor') return 'armor';
+    return 'generic';
+  };
+  const syncKindWithCategory = () => {
+    const selectedKind = getKindFromCategory(categorySelect.value);
+    kindInputs.forEach((input) => {
+      if (!input) return;
+      const isActive = input.value === selectedKind;
+      input.checked = isActive;
+      input.closest('.condition-modal__item')?.classList.toggle('is-selected', isActive);
+    });
+  };
+  kindInputs.forEach((input) => {
+    input?.addEventListener('change', () => {
+      if (!input.checked) return;
+      if (input.value === 'weapon') {
+        categorySelect.value = 'weapon';
+      } else if (input.value === 'armor') {
+        categorySelect.value = 'armor';
+      } else if (categorySelect.value === 'weapon' || categorySelect.value === 'armor') {
+        categorySelect.value = 'gear';
+      }
+      syncKindWithCategory();
+      updateEquipmentFields();
+    });
+  });
+  const toggleFieldVisibility = (element, visible) => {
+    if (!element) return;
+    element.hidden = !visible;
+  };
   const updateEquipmentFields = () => {
     const equipableEnabled = equipableInput?.checked ?? false;
     equipSlotInputs.forEach((input) => {
@@ -254,10 +345,13 @@ export async function openItemModal(character, item, items, onSave) {
       if (!equipableEnabled) {
         overlayableInput.checked = false;
       }
+      overlayableInput.closest('.condition-modal__item')?.classList.toggle('is-selected', overlayableInput.checked);
     }
+    toggleFieldVisibility(equipSlotsField, equipableEnabled);
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isContainer = categorySelect.value === 'container';
+    const itemKind = getKindFromCategory(categorySelect.value);
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
@@ -266,6 +360,7 @@ export async function openItemModal(character, item, items, onSave) {
     damageModifierField.querySelector('input').disabled = !isWeapon;
     if (thrownInput) {
       thrownInput.disabled = !isWeapon;
+      thrownInput.closest('.condition-modal__item')?.classList.toggle('is-selected', thrownInput.checked);
     }
     const rangeInputs = rangeGrid.querySelectorAll('input');
     rangeInputs.forEach((input) => {
@@ -279,6 +374,7 @@ export async function openItemModal(character, item, items, onSave) {
     armorTypeSelect.disabled = !isArmor;
     if (shieldInput) {
       shieldInput.disabled = !isArmor;
+      shieldInput.closest('.condition-modal__item')?.classList.toggle('is-selected', shieldInput.checked);
     }
     if (armorClassInput) {
       armorClassInput.disabled = !isArmor;
@@ -289,6 +385,17 @@ export async function openItemModal(character, item, items, onSave) {
     if (shieldBonusInput) {
       shieldBonusInput.disabled = !isArmor || !(shieldInput?.checked ?? false);
     }
+
+    const showWeaponFields = itemKind === 'weapon';
+    const showArmorFields = itemKind === 'armor';
+    toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
+    toggleFieldVisibility(weaponDamageRow, showWeaponFields);
+    toggleFieldVisibility(weaponThrownRow, showWeaponFields);
+    toggleFieldVisibility(rangeGrid, showWeaponFields);
+    toggleFieldVisibility(armorPrimaryRow, showArmorFields);
+    toggleFieldVisibility(armorBonusRow, showArmorFields);
+    toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
+    toggleFieldVisibility(maxVolumeField, isContainer);
     if (maxVolumeInput) {
       maxVolumeInput.disabled = !isContainer;
       if (!isContainer) {
@@ -297,9 +404,13 @@ export async function openItemModal(character, item, items, onSave) {
     }
   };
   equipableInput?.addEventListener('change', updateEquipmentFields);
-  categorySelect.addEventListener('change', updateEquipmentFields);
+  categorySelect.addEventListener('change', () => {
+    syncKindWithCategory();
+    updateEquipmentFields();
+  });
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
+  syncKindWithCategory();
   updateEquipmentFields();
 
   enhanceNumericFields(fields);
@@ -354,7 +465,12 @@ export async function openItemModal(character, item, items, onSave) {
     attack_modifier: Number(formData.get('attack_modifier')) || 0,
     damage_modifier: Number(formData.get('damage_modifier')) || 0,
     is_thrown: formData.get('is_thrown') === 'on',
-    melee_range: formData.get('melee_range') === '' ? null : Number(formData.get('melee_range')),
+    melee_range: (() => {
+      const meleeRange = String(formData.get('melee_range') ?? '').trim().replace(',', '.');
+      if (!meleeRange) return null;
+      const parsed = Number(meleeRange);
+      return Number.isNaN(parsed) ? null : parsed;
+    })(),
     range_normal: Number(formData.get('range_normal')) || null,
     range_disadvantage: Number(formData.get('range_disadvantage')) || null,
     armor_type: formData.get('armor_type') || null,
