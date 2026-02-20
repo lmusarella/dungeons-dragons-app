@@ -700,6 +700,7 @@ export function buildSpellSection(character, canManageSpells = false) {
             <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
           ` : ''}
             ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
+            ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--always">R</span>' : ''}
             ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
       </div>
@@ -772,6 +773,7 @@ function normalizeCastTimeLabel(castTime) {
   if (normalized.includes('bonus')) return 'Azione Bonus';
   if (normalized.includes('reaz')) return 'Reazione';
   if (normalized.includes('gratuit')) return 'Azione Gratuita';
+  if (normalized.includes('più') || normalized.includes('piu') || normalized.includes('superiore')) return "Più di un'azione";
   if (normalized.includes('azion')) return 'Azione';
   const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
   return exactMatch?.label ?? '';

@@ -124,5 +124,6 @@ export const RESOURCE_CAST_TIME_ORDER = [
   { label: 'Azione Gratuita', className: 'resource-chip--free' },
   { label: 'Azione Bonus', className: 'resource-chip--bonus' },
   { label: 'Reazione', className: 'resource-chip--reaction' },
-  { label: 'Azione', className: 'resource-chip--action' }
+  { label: 'Azione', className: 'resource-chip--action' },
+  { label: "Più di un'azione", className: 'resource-chip--slow' }
 ];
