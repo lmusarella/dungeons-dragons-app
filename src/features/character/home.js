@@ -1,7 +1,7 @@
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
@@ -830,17 +830,6 @@ function closeFabMenu() {
 
 
 
-function attachSteppersToNumberInputs(root, labels = {}) {
-  if (!root) return;
-  root.querySelectorAll('input[type="number"]').forEach((input) => {
-    const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
-    attachNumberStepper(input, {
-      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : (labels.decrementLabel || 'Diminuisci valore'),
-      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : (labels.incrementLabel || 'Aumenta valore')
-    });
-  });
-}
-
 function getHomeContext() {
   const state = getState();
   const { user, offline, characters, activeCharacterId } = state;
@@ -881,7 +870,7 @@ async function handleLootAction(container) {
     submitLabel: 'Aggiungi',
     content: buildLootFields(weightStep),
     onOpen: ({ fieldsEl }) => {
-      attachSteppersToNumberInputs(fieldsEl);
+      attachNumberSteppers(fieldsEl);
     }
   });
   if (!formData) return;
@@ -938,7 +927,7 @@ async function handleMoneyAction(direction, container) {
     submitLabel,
     content: moneyFields({ direction }),
     onOpen: ({ fieldsEl }) => {
-      attachSteppersToNumberInputs(fieldsEl);
+      attachNumberSteppers(fieldsEl);
     }
   });
   if (!formData) return;

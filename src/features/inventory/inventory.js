@@ -3,7 +3,7 @@ import { getState, normalizeCharacterId, updateCache } from '../../app/state.js'
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
 import { formatWeight } from '../../lib/format.js';
-import { createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
+import { createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberSteppers } from '../../ui/components.js';
 import {
   fetchWallet,
   upsertWallet,
@@ -18,6 +18,22 @@ import { openItemImageModal, openItemModal } from './modals.js';
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields, walletEditFields } from './render.js';
 import { getWeightUnit, normalizeTransactionAmount } from './utils.js';
 
+
+const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
+const COIN_LABELS = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
+
+function ensureWallet(wallet, character) {
+  if (wallet) return wallet;
+  return {
+    user_id: character.user_id,
+    character_id: character.id,
+    cp: 0,
+    sp: 0,
+    gp: 0,
+    pp: 0
+  };
+}
+
 export async function renderInventory(container) {
   const state = getState();
   const normalizedActiveId = normalizeCharacterId(state.activeCharacterId);
@@ -26,17 +42,6 @@ export async function renderInventory(container) {
     container.innerHTML = '<section class="card"><p>Nessun personaggio selezionato.</p></section>';
     return;
   }
-
-  const attachSteppersToNumberInputs = (root) => {
-    if (!root) return;
-    root.querySelectorAll('input[type="number"]').forEach((input) => {
-      const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
-      attachNumberStepper(input, {
-        decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
-        incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
-      });
-    });
-  };
 
   const runWithGlobalLoader = async (action) => {
     setGlobalLoading(true);
@@ -308,22 +313,13 @@ export async function renderInventory(container) {
   if (editWalletButton && !editWalletButton.dataset.bound) {
     editWalletButton.dataset.bound = 'true';
     editWalletButton.addEventListener('click', async () => {
-      if (!wallet) {
-        wallet = {
-          user_id: activeCharacter.user_id,
-          character_id: activeCharacter.id,
-          cp: 0,
-          sp: 0,
-          gp: 0,
-          pp: 0
-        };
-      }
+      wallet = ensureWallet(wallet, activeCharacter);
       const formData = await openFormModal({
         title: 'Modifica monete',
         submitLabel: 'Salva',
         content: walletEditFields(wallet),
         onOpen: ({ fieldsEl }) => {
-          attachSteppersToNumberInputs(fieldsEl);
+          attachNumberSteppers(fieldsEl);
         }
       });
       if (!formData) return;
@@ -353,8 +349,6 @@ export async function renderInventory(container) {
   if (exchangeButton && !exchangeButton.dataset.bound) {
     exchangeButton.dataset.bound = 'true';
     exchangeButton.addEventListener('click', async () => {
-      const coinValues = { cp: 1, sp: 10, gp: 100, pp: 1000 };
-      const coinLabels = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
       const available = {
         cp: Number(wallet?.cp ?? 0),
         sp: Number(wallet?.sp ?? 0),
@@ -375,7 +369,7 @@ export async function renderInventory(container) {
         }),
         onOpen: ({ fieldsEl }) => {
           if (!fieldsEl) return null;
-          attachSteppersToNumberInputs(fieldsEl);
+          attachNumberSteppers(fieldsEl);
           const sourceSelect = fieldsEl.querySelector('select[name="source"]');
           const targetSelect = fieldsEl.querySelector('select[name="target"]');
           const amountInput = fieldsEl.querySelector('input[name="amount"]');
@@ -384,8 +378,8 @@ export async function renderInventory(container) {
           const availableHint = fieldsEl.querySelector('[data-exchange-available]');
 
           const clampExchange = (source, target, amount) => {
-            const sourceValue = coinValues[source];
-            const targetValue = coinValues[target];
+            const sourceValue = COIN_VALUES[source];
+            const targetValue = COIN_VALUES[target];
             if (!sourceValue || !targetValue) {
               return { amount: 0, targetAmount: 0 };
             }
@@ -403,7 +397,7 @@ export async function renderInventory(container) {
               availableHint.textContent = 'Nessuna moneta disponibile';
               return;
             }
-            const label = coinLabels[source] ?? source;
+            const label = COIN_LABELS[source] ?? source;
             availableHint.textContent = `Disponibili: ${available[source] ?? 0} ${label}`;
           };
 
@@ -458,22 +452,13 @@ export async function renderInventory(container) {
         }
       });
       if (!formData) return;
-      if (!wallet) {
-        wallet = {
-          user_id: activeCharacter.user_id,
-          character_id: activeCharacter.id,
-          cp: 0,
-          sp: 0,
-          gp: 0,
-          pp: 0
-        };
-      }
+      wallet = ensureWallet(wallet, activeCharacter);
       const amount = Number(formData.get('amount') || 0);
       const source = formData.get('source');
       const target = formData.get('target');
       const availableAmount = Number(wallet[source] || 0);
-      const sourceValue = coinValues[source];
-      const targetValue = coinValues[target];
+      const sourceValue = COIN_VALUES[source];
+      const targetValue = COIN_VALUES[target];
       const normalizedAmount = Math.min(amount, availableAmount);
       const totalCp = normalizedAmount * sourceValue;
       const targetAmount = Math.floor(totalCp / targetValue);
@@ -556,7 +541,7 @@ export async function renderInventory(container) {
           includeDirection: true
         }),
         onOpen: ({ fieldsEl }) => {
-          attachSteppersToNumberInputs(fieldsEl);
+          attachNumberSteppers(fieldsEl);
         }
       });
       if (!formData) return;

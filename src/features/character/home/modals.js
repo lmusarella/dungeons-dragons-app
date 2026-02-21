@@ -5,14 +5,13 @@ import {
   buildSelect,
   buildTextarea,
   createToast,
-  openConfirmModal,
   openFormModal,
   attachNumberStepper
 } from '../../../ui/components.js';
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
-import { buildSpellDamageOverlayConfig, formatSigned, getSpellTypeLabel, sortSpellsByLevel } from './utils.js';
-import { RESOURCE_CAST_TIME_ORDER, conditionList } from './constants.js';
+import { buildSpellDamageOverlayConfig, sortSpellsByLevel } from './utils.js';
+import { conditionList } from './constants.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 
@@ -29,21 +28,6 @@ function normalizeSpellCastTime(castTime) {
   return matchingOption || '';
 }
 
-function getCastTimeChipClass(castTime) {
-  if (!castTime) return '';
-  return RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label === castTime)?.className ?? '';
-}
-
-function getPrepStateLabel(state) {
-  switch (state) {
-    case 'prepared':
-      return 'Preparato';
-    case 'always':
-      return 'Sempre preparato';
-    default:
-      return 'Conosciuto';
-  }
-}
 
 function openSpellDamageOverlay(character, spell) {
   const overlayConfig = buildSpellDamageOverlayConfig(spell);
@@ -163,218 +147,6 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
       await onUse();
     }
   });
-}
-
-export function openSpellListModal(character, onRender) {
-  if (!character) return;
-  const data = character.data || {};
-  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
-  const canPrepare = Boolean(data.spellcasting?.can_prepare);
-  const renderSpellItem = (spell, level) => {
-    const typeLabel = getSpellTypeLabel(spell);
-    const damageModifier = Number(spell.damage_modifier) || 0;
-    const damageText = spell.damage_die
-      ? `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`
-      : null;
-    const attackLabel = spell.attack_roll ? 'Tiro per colpire' : null;
-    const prepState = canPrepare ? spell.prep_state || 'known' : null;
-    const description = spell.description?.trim();
-    const castTime = normalizeSpellCastTime(spell.cast_time);
-    const castTimeClass = getCastTimeChipClass(castTime);
-    return `
-              <div class="spell-list-modal__item" data-spell-item="${spell.id}">
-                <div class="spell-list-modal__item-info">
-                  <div class="spell-list-modal__item-title">
-                    <strong>${spell.name}</strong>
-                    <span class="chip chip--small">${typeLabel}</span>
-                    ${castTime ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTime}</span>` : ''}
-                    ${prepState ? `<span class="chip chip--small">${getPrepStateLabel(prepState)}</span>` : ''}
-                  </div>
-                  <div class="spell-list-modal__item-meta">
-                    ${attackLabel ? `<span>${attackLabel}</span>` : ''}
-                    ${damageText ? `<span>Danni ${damageText}</span>` : ''}
-                  </div>
-                  ${description ? `
-                  <button class="spell-list-modal__toggle" type="button" data-spell-toggle="${spell.id}" aria-expanded="false">
-                    Mostra descrizione
-                  </button>
-                  <div class="spell-list-modal__item-description" data-spell-description="${spell.id}">
-                    ${description}
-                  </div>
-                  ` : ''}
-                </div>
-                <div class="spell-list-modal__item-actions">
-                  <button class="icon-button" type="button" data-spell-edit="${spell.id}" aria-label="Modifica incantesimo" title="Modifica">
-                    <span aria-hidden="true">✏️</span>
-                  </button>
-                  <button class="icon-button icon-button--danger" type="button" data-spell-delete="${spell.id}" aria-label="Elimina incantesimo" title="Elimina">
-                    <span aria-hidden="true">🗑️</span>
-                  </button>
-                  ${level > 0
-        ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-spell-cast="${spell.id}">Lancia</button>`
-        : ''}
-                </div>
-              </div>
-            `;
-  };
-  const content = document.createElement('div');
-  content.className = 'spell-list-modal';
-  if (!spells.length) {
-    content.innerHTML = '<p class="muted">Nessun incantesimo configurato.</p>';
-  } else {
-    const grouped = spells.reduce((acc, spell) => {
-      const level = Number(spell.level) || 0;
-      acc[level] = acc[level] || [];
-      acc[level].push(spell);
-      return acc;
-    }, {});
-    const levels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-    const nav = `
-      <nav class="spell-list-modal__nav" aria-label="Livelli incantesimo">
-        ${levels.map((level, index) => {
-      const label = level === 0 ? 'Trucchetti' : `${level} Livello`;
-      return `
-          <button class="spell-list-modal__nav-button${index === 0 ? ' is-active' : ''}" type="button" data-spell-level="${level}">
-            ${label}
-          </button>
-        `;
-    }).join('')}
-      </nav>
-    `;
-    content.innerHTML = `${nav}${levels.map((level, index) => {
-      const title = level === 0 ? 'Trucchetti' : `Incantesimi di livello ${level}°`;
-      const isSplitView = canPrepare && level > 0;
-      const preparedSpells = isSplitView
-        ? grouped[level].filter((spell) => (spell.prep_state || 'known') === 'prepared')
-        : [];
-      const knownSpells = isSplitView
-        ? grouped[level].filter((spell) => (spell.prep_state || 'known') !== 'prepared')
-        : [];
-      return `
-        <section class="spell-list-modal__section${index === 0 ? '' : ' is-hidden'}" data-spell-section="${level}">
-          <h4>${title}</h4>
-          ${isSplitView ? `
-          <div class="spell-list-modal__split">
-            <div class="spell-list-modal__subsection">
-              <h5 class="spell-list-modal__subsection-title">Incantesimi preparati</h5>
-              <div class="spell-list-modal__items">
-                ${preparedSpells.length
-            ? preparedSpells.map((spell) => renderSpellItem(spell, level)).join('')
-            : '<p class="muted">Nessun incantesimo preparato.</p>'}
-              </div>
-            </div>
-            <div class="spell-list-modal__subsection">
-              <h5 class="spell-list-modal__subsection-title">Incantesimi conosciuti da preparare</h5>
-              <div class="spell-list-modal__items">
-                ${knownSpells.length
-            ? knownSpells.map((spell) => renderSpellItem(spell, level)).join('')
-            : '<p class="muted">Nessun incantesimo da preparare.</p>'}
-              </div>
-            </div>
-          </div>
-          ` : `
-          <div class="spell-list-modal__items">
-            ${grouped[level].map((spell) => renderSpellItem(spell, level)).join('')}
-          </div>
-          `}
-        </section>
-      `;
-    }).join('')}`;
-  }
-
-  openFormModal({
-    title: 'Lista incantesimi',
-    submitLabel: 'Chiudi',
-    cancelLabel: null,
-    content,
-    cardClass: 'spell-list-modal-card'
-  });
-
-  const modal = document.querySelector('[data-form-modal]');
-  const closeModal = () => {
-    modal?.querySelector('[data-form-submit]')?.click();
-  };
-
-  content.querySelectorAll('[data-spell-cast]')
-    .forEach((button) => button.addEventListener('click', async () => {
-      const spell = spells.find((entry) => entry.id === button.dataset.spellCast);
-      if (!spell) return;
-      const level = Number(spell.level) || 0;
-      if (level < 1) return;
-      const consumed = await consumeSpellSlot(character, level, onRender);
-      if (!consumed) return;
-      closeModal();
-      openSpellDamageOverlay(character, spell);
-    }));
-
-  content.querySelectorAll('[data-spell-edit]')
-    .forEach((button) => button.addEventListener('click', () => {
-      const spell = spells.find((entry) => entry.id === button.dataset.spellEdit);
-      if (!spell) return;
-      closeModal();
-      setTimeout(() => {
-        openSpellDrawer(character, () => onRender?.(), spell);
-      }, 0);
-    }));
-
-  content.querySelectorAll('[data-spell-level]')
-    .forEach((button) => button.addEventListener('click', () => {
-      const level = button.dataset.spellLevel;
-      if (!level) return;
-      content.querySelectorAll('[data-spell-level]').forEach((navButton) => {
-        navButton.classList.toggle('is-active', navButton === button);
-      });
-      content.querySelectorAll('[data-spell-section]').forEach((section) => {
-        section.classList.toggle('is-hidden', section.dataset.spellSection !== level);
-      });
-    }));
-
-  content.querySelectorAll('[data-spell-toggle]')
-    .forEach((button) => button.addEventListener('click', () => {
-      const spellId = button.dataset.spellToggle;
-      const item = content.querySelector(`[data-spell-item="${spellId}"]`);
-      const description = content.querySelector(`[data-spell-description="${spellId}"]`);
-      if (!item || !description) return;
-      const isExpanded = item.classList.toggle('is-expanded');
-      button.setAttribute('aria-expanded', String(isExpanded));
-      button.textContent = isExpanded ? 'Nascondi descrizione' : 'Mostra descrizione';
-      description.hidden = !isExpanded;
-    }));
-
-  content.querySelectorAll('[data-spell-description]')
-    .forEach((description) => {
-      description.hidden = true;
-    });
-
-  content.querySelectorAll('[data-spell-item]')
-    .forEach((card) => card.addEventListener('click', (event) => {
-      if (event.target.closest('button')) return;
-      const spell = spells.find((entry) => entry.id === card.dataset.spellItem);
-      if (!spell) return;
-      closeModal();
-      setTimeout(() => {
-        openSpellQuickDetailModal(character, spell, onRender);
-      }, 0);
-    }));
-
-  content.querySelectorAll('[data-spell-delete]')
-    .forEach((button) => button.addEventListener('click', async () => {
-      const spell = spells.find((entry) => entry.id === button.dataset.spellDelete);
-      if (!spell) return;
-      const shouldDelete = await openConfirmModal({
-        title: 'Conferma eliminazione incantesimo',
-        message: `Stai per eliminare l'incantesimo "${spell.name}" dalla scheda del personaggio. Questa azione non può essere annullata.`,
-        confirmLabel: 'Elimina'
-      });
-      if (!shouldDelete) return;
-      const nextSpells = spells.filter((entry) => entry.id !== spell.id);
-      const nextData = {
-        ...character.data,
-        spells: nextSpells
-      };
-      await saveCharacterData(character, nextData, 'Incantesimo eliminato', () => onRender?.());
-      closeModal();
-    }));
 }
 
 export function openSpellDrawer(character, onSave, spell = null) {
