@@ -159,6 +159,17 @@ export function attachNumberStepper(input, {
   return wrapper;
 }
 
+export function attachNumberSteppers(root, labels = {}) {
+  if (!root) return;
+  root.querySelectorAll('input[type="number"]').forEach((input) => {
+    const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
+    attachNumberStepper(input, {
+      decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : (labels.decrementLabel || 'Diminuisci valore'),
+      incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : (labels.incrementLabel || 'Aumenta valore')
+    });
+  });
+}
+
 export function buildTextarea({ label, name, value = '', placeholder = '' }) {
   const wrapper = document.createElement('label');
   wrapper.className = 'field';
