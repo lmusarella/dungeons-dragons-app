@@ -2632,13 +2632,31 @@ button:focus-visible,
   color: #5a381f;
 }
 
+.prepared-spells-modal__group-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-spells-modal__group {
+  display: grid;
+  gap: 8px;
+}
+
 .prepared-spells-modal__list {
   display: grid;
   gap: 8px;
 }
 
-.prepared-spells-modal__list--toggle {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+.prepared-spells-modal__spell {
+  display: grid;
+  gap: 6px;
+}
+
+.prepared-spells-modal__spell-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .prepared-spells-modal__toggle {
@@ -2672,6 +2690,19 @@ button:focus-visible,
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+
+.prepared-spells-modal__description {
+  border: 1px solid #eadbc6;
+  border-radius: 10px;
+  background: #fffaf1;
+  padding: 10px 12px;
+}
+
+.prepared-spells-modal__description .detail-rich-text {
+  font-size: 0.78rem;
+}
+
 
 .accordion-stack {
   display: grid;

@@ -501,24 +501,65 @@ export function openPreparedSpellsModal(character, onSave) {
       .filter((entry) => (entry.prep_state || 'known') === 'prepared')
       .map((entry) => entry.id)
   );
+  const groupedByLevel = selectable.reduce((acc, entry) => {
+    const level = Math.max(1, Number(entry.level) || 1);
+    if (!acc.has(level)) acc.set(level, []);
+    acc.get(level).push(entry);
+    return acc;
+  }, new Map());
+  const levelOrder = Array.from(groupedByLevel.keys()).sort((a, b) => a - b);
+
+  const getLevelLabel = (level) => {
+    if (level === 1) return '1° livello';
+    return `${level}° livello`;
+  };
+
+  const getSpellDescription = (entry) => {
+    const description = String(entry.description || '').trim();
+    return description || 'Nessuna descrizione disponibile.';
+  };
+
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
     <p class="muted">Seleziona gli incantesimi da preparare per oggi.</p>
-    <div class="prepared-spells-modal__list prepared-spells-modal__list--toggle">
-      ${selectable.map((entry) => {
-    const isPrepared = preparedIds.has(entry.id);
-    const level = Number(entry.level) || 0;
+    <div class="prepared-spells-modal__group-stack">
+      ${levelOrder.map((level) => {
+    const entries = groupedByLevel.get(level) || [];
     return `
-          <button
-            class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
-            type="button"
-            data-prepared-toggle="${entry.id}"
-            aria-pressed="${isPrepared}"
-          >
-            <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
-            <span class="chip chip--small">${level}°</span>
-          </button>
+          <section class="prepared-spells-modal__group" data-level-group="${level}">
+            <h4>${getLevelLabel(level)}</h4>
+            <div class="prepared-spells-modal__list">
+              ${entries.map((entry) => {
+      const isPrepared = preparedIds.has(entry.id);
+      return `
+                  <article class="prepared-spells-modal__spell" data-prepared-item="${entry.id}">
+                    <div class="prepared-spells-modal__spell-actions">
+                      <button
+                        class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
+                        type="button"
+                        data-prepared-toggle="${entry.id}"
+                        aria-pressed="${isPrepared}"
+                      >
+                        <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
+                      </button>
+                      <button
+                        class="button button--ghost button--small"
+                        type="button"
+                        data-prepared-description-toggle="${entry.id}"
+                        aria-expanded="false"
+                      >
+                        Descrizione
+                      </button>
+                    </div>
+                    <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
+                      <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
+                    </div>
+                  </article>
+                `;
+    }).join('')}
+            </div>
+          </section>
         `;
   }).join('')}
     </div>
@@ -544,6 +585,18 @@ export function openPreparedSpellsModal(character, onSave) {
         preparedIds.add(spellId);
       }
       syncPreparedState();
+    });
+  });
+
+  content.querySelectorAll('[data-prepared-description-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const spellId = button.dataset.preparedDescriptionToggle;
+      if (!spellId) return;
+      const detail = content.querySelector(`[data-prepared-description="${spellId}"]`);
+      if (!detail) return;
+      const isExpanded = !detail.hidden;
+      detail.hidden = isExpanded;
+      button.setAttribute('aria-expanded', String(!isExpanded));
     });
   });
 
