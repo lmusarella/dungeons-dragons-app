@@ -519,16 +519,44 @@ export function openPreparedSpellsModal(character, onSave) {
     return description || 'Nessuna descrizione disponibile.';
   };
 
+  const initialLevel = levelOrder[0] || 1;
+
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
     <p class="muted">Seleziona gli incantesimi da preparare per oggi.</p>
+    <div class="tab-bar prepared-spells-modal__tabs" role="tablist" aria-label="Livelli incantesimo">
+      ${levelOrder.map((level) => {
+    const isActive = level === initialLevel;
+    return `
+          <button
+            class="tab-bar__button prepared-spells-modal__tab ${isActive ? 'is-active' : ''}"
+            type="button"
+            role="tab"
+            data-prepared-level-tab="${level}"
+            aria-selected="${isActive}"
+            aria-controls="prepared-spells-level-${level}"
+            id="prepared-spells-tab-${level}"
+            tabindex="${isActive ? '0' : '-1'}"
+          >
+            ${getLevelLabel(level)}
+          </button>
+        `;
+  }).join('')}
+    </div>
     <div class="prepared-spells-modal__group-stack">
       ${levelOrder.map((level) => {
     const entries = groupedByLevel.get(level) || [];
+    const isActive = level === initialLevel;
     return `
-          <section class="prepared-spells-modal__group" data-level-group="${level}">
-            <h4>${getLevelLabel(level)}</h4>
+          <section
+            class="prepared-spells-modal__group tab-panel ${isActive ? 'is-active' : ''}"
+            data-level-group="${level}"
+            data-prepared-level-panel="${level}"
+            role="tabpanel"
+            id="prepared-spells-level-${level}"
+            aria-labelledby="prepared-spells-tab-${level}"
+          >
             <div class="prepared-spells-modal__list">
               ${entries.map((entry) => {
       const isPrepared = preparedIds.has(entry.id);
@@ -544,12 +572,13 @@ export function openPreparedSpellsModal(character, onSave) {
                         <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
                       </button>
                       <button
-                        class="button button--ghost button--small"
+                        class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
                         type="button"
                         data-prepared-description-toggle="${entry.id}"
                         aria-expanded="false"
+                        aria-label="Mostra descrizione ${entry.name}"
                       >
-                        Descrizione
+                        🔍
                       </button>
                     </div>
                     <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
@@ -597,6 +626,27 @@ export function openPreparedSpellsModal(character, onSave) {
       const isExpanded = !detail.hidden;
       detail.hidden = isExpanded;
       button.setAttribute('aria-expanded', String(!isExpanded));
+    });
+  });
+
+  const setActiveLevel = (nextLevel) => {
+    content.querySelectorAll('[data-prepared-level-tab]').forEach((tabButton) => {
+      const isActive = tabButton.dataset.preparedLevelTab === String(nextLevel);
+      tabButton.classList.toggle('is-active', isActive);
+      tabButton.setAttribute('aria-selected', String(isActive));
+      tabButton.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+    content.querySelectorAll('[data-prepared-level-panel]').forEach((panel) => {
+      const isActive = panel.dataset.preparedLevelPanel === String(nextLevel);
+      panel.classList.toggle('is-active', isActive);
+    });
+  };
+
+  content.querySelectorAll('[data-prepared-level-tab]').forEach((tabButton) => {
+    tabButton.addEventListener('click', () => {
+      const level = tabButton.dataset.preparedLevelTab;
+      if (!level) return;
+      setActiveLevel(level);
     });
   });
 
