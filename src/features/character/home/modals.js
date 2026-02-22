@@ -560,6 +560,10 @@ export function openPreparedSpellsModal(character, onSave) {
             <div class="prepared-spells-modal__list">
               ${entries.map((entry) => {
       const isPrepared = preparedIds.has(entry.id);
+      const range = escapeHtml(entry.range?.trim() || '-');
+      const duration = escapeHtml(entry.duration?.trim() || '-');
+      const components = escapeHtml(entry.components?.trim() || '-');
+      const castTime = escapeHtml(entry.cast_time?.trim() || '-');
       return `
                   <article class="prepared-spells-modal__spell" data-prepared-item="${entry.id}">
                     <div class="prepared-spells-modal__spell-actions">
@@ -571,6 +575,12 @@ export function openPreparedSpellsModal(character, onSave) {
                       >
                         <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
                       </button>
+                      <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
+                        <div class="prepared-spells-modal__meta-item"><dt>Range</dt><dd>${range}</dd></div>
+                        <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
+                        <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
+                        <div class="prepared-spells-modal__meta-item"><dt>Lancio</dt><dd>${castTime}</dd></div>
+                      </dl>
                       <button
                         class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
                         type="button"
