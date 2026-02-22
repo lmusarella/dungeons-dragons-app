@@ -476,6 +476,18 @@ export async function renderHome(container) {
     });
   }
 
+  const concentrationButton = container.querySelector('[data-toggle-concentration]');
+  if (concentrationButton && activeCharacter && canEditCharacter) {
+    concentrationButton.addEventListener('click', async () => {
+      const currentData = activeCharacter.data || {};
+      const nextData = {
+        ...currentData,
+        concentration_active: !currentData.concentration_active
+      };
+      await saveCharacterData(activeCharacter, nextData, 'Concentrazione aggiornata', () => renderHome(container));
+    });
+  }
+
   container.querySelectorAll('[data-open-dice]')
     .forEach((button) => button.addEventListener('click', () => {
       handleDiceAction(button.dataset.openDice);
@@ -656,7 +668,19 @@ export async function renderHome(container) {
       if (level < 1) return;
       const consumed = await consumeSpellSlot(activeCharacter, level, () => renderHome(container));
       if (!consumed) return;
-      if (!shouldAutoUsageDice(activeCharacter)) return;
+      if (spell.concentration) {
+        const currentData = activeCharacter.data || {};
+        if (!currentData.concentration_active) {
+          await saveCharacterData(activeCharacter, {
+            ...currentData,
+            concentration_active: true
+          }, 'Concentrazione attiva', null);
+        }
+      }
+      if (!shouldAutoUsageDice(activeCharacter)) {
+        renderHome(container);
+        return;
+      }
       const overlayConfig = buildSpellDamageOverlayConfig(spell);
       if (!overlayConfig) {
         createToast('Danno non calcolabile per questo incantesimo.', 'error');
@@ -1379,6 +1403,28 @@ async function handleHpAction(action, container) {
   const message = action === 'heal'
     ? `${useTempHp ? 'HP temporanei +' : 'PF curati +'}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
     : `Danno ${amount}`;
+  const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
+  const saveOnComplete = async () => {
+    if (container) renderHome(container);
+    if (!shouldOpenConcentrationSave) return;
+    const options = buildSavingThrowRollOptions(activeCharacter);
+    const conSave = options.find((entry) => entry.value === 'con');
+    if (!conSave || conSave.disabled) return;
+    openDiceRollerModal({
+      title: 'Tiro salvezza concentrazione • COS',
+      mode: 'd20',
+      rollType: 'TS',
+      selection: {
+        label: 'Tiro salvezza',
+        options,
+        value: conSave.value
+      },
+      allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+      weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+      characterId: activeCharacter.id,
+      historyLabel: 'TS concentrazione'
+    });
+  };
   await saveCharacterData(activeCharacter, {
     ...activeCharacter.data,
     hp: {
@@ -1388,7 +1434,7 @@ async function handleHpAction(action, container) {
       max: maxOverrideValue !== null && maxOverrideValue !== undefined ? maxOverrideValue : maxHp
     },
     hit_dice: nextHitDice
-  }, message, container ? () => renderHome(container) : null);
+  }, message, saveOnComplete);
 }
 
 function openDiceRollerModal({

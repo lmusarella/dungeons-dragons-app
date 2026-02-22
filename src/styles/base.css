@@ -1505,6 +1505,28 @@ button:focus-visible,
   cursor: not-allowed;
 }
 
+
+.concentration-chip {
+  background: #ece9ff;
+  border-color: #d8d0ff;
+}
+
+.concentration-toggle {
+  background: #f0edff;
+  border-color: #bdb0ff;
+  color: #4c3ea0;
+}
+
+.concentration-toggle:hover:not(:disabled) {
+  box-shadow: 0 4px 10px rgba(76, 62, 160, 0.22);
+}
+
+.concentration-toggle[aria-pressed="true"] {
+  background: #8c7ae6;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
 .stat-panel {
   background: #fffaf1;
   border: 1px solid #eadfc9;

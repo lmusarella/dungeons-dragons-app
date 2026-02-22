@@ -48,6 +48,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const hasInspiration = Boolean(data.inspiration);
+  const hasConcentration = Boolean(data.concentration_active);
   const initiativeBonus = data.initiative ?? getAbilityModifier(abilities.dex);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
@@ -157,6 +158,19 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
               ${canEditCharacter ? '' : 'disabled'}
             >
               <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
+            </button>
+          </div>
+          <div class="inspiration-chip concentration-chip">
+            <span>Concentrazione</span>
+            <button
+              class="inspiration-toggle concentration-toggle"
+              type="button"
+              data-toggle-concentration
+              aria-pressed="${hasConcentration}"
+              aria-label="Imposta concentrazione"
+              ${canEditCharacter ? '' : 'disabled'}
+            >
+              <span class="inspiration-toggle__icon" aria-hidden="true">🧠</span>
             </button>
           </div>
           <button class="ghost-button background-button" type="button" data-show-background>
