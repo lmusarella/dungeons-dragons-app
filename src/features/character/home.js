@@ -668,16 +668,20 @@ export async function renderHome(container) {
       if (level < 1) return;
       const consumed = await consumeSpellSlot(activeCharacter, level, () => renderHome(container));
       if (!consumed) return;
+
+      const refreshedCharacter = getState().characters.find((char) => normalizeCharacterId(char.id) === normalizeCharacterId(activeCharacter.id)) || activeCharacter;
+
       if (spell.concentration) {
-        const currentData = activeCharacter.data || {};
+        const currentData = refreshedCharacter.data || {};
         if (!currentData.concentration_active) {
-          await saveCharacterData(activeCharacter, {
+          await saveCharacterData(refreshedCharacter, {
             ...currentData,
             concentration_active: true
-          }, 'Concentrazione attiva', null);
+          }, 'Concentrazione attiva', () => renderHome(container));
         }
       }
-      if (!shouldAutoUsageDice(activeCharacter)) {
+
+      if (!shouldAutoUsageDice(refreshedCharacter)) {
         renderHome(container);
         return;
       }
