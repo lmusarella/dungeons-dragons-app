@@ -2626,10 +2626,22 @@ button:focus-visible,
   gap: 16px;
 }
 
-.prepared-spells-modal__section h4 {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
-  color: #5a381f;
+.prepared-spells-modal__group-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.prepared-spells-modal__group {
+  display: grid;
+  gap: 8px;
+}
+
+.prepared-spells-modal__tabs {
+  margin-bottom: 4px;
+}
+
+.prepared-spells-modal__tab {
+  font-size: 0.78rem;
 }
 
 .prepared-spells-modal__list {
@@ -2637,8 +2649,49 @@ button:focus-visible,
   gap: 8px;
 }
 
-.prepared-spells-modal__list--toggle {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+.prepared-spells-modal__spell {
+  display: grid;
+  gap: 6px;
+}
+
+.prepared-spells-modal__spell-actions {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, auto) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.prepared-spells-modal__meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  font-size: 0.68rem;
+  color: #6a5540;
+}
+
+.prepared-spells-modal__meta-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.prepared-spells-modal__meta-item dt {
+  font-weight: 700;
+}
+
+.prepared-spells-modal__meta-item dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prepared-spells-modal__description-toggle {
+  font-size: 1rem;
 }
 
 .prepared-spells-modal__toggle {
@@ -2672,6 +2725,32 @@ button:focus-visible,
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+
+@media (max-width: 900px) {
+  .prepared-spells-modal__spell-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .prepared-spells-modal__meta {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 8px;
+  }
+}
+
+.prepared-spells-modal__description {
+  border: 1px solid #eadbc6;
+  border-radius: 10px;
+  background: #fffaf1;
+  padding: 10px 12px;
+}
+
+.prepared-spells-modal__description .detail-rich-text {
+  font-size: 0.78rem;
+}
+
 
 .accordion-stack {
   display: grid;
