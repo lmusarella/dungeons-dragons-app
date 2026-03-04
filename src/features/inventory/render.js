@@ -115,8 +115,8 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
         ? `Volume ${usedVolume}`
         : '';
     return `
-      <div class="inventory-group">
-        <div class="inventory-table__row">
+      <div class="inventory-group inventory-group--container">
+        <div class="inventory-table__row inventory-table__row--container">
           <div class="inventory-table__cell inventory-table__cell--item">
             <div class="item-info-body">
               <strong>${container.name}</strong>
@@ -136,7 +136,10 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
             </button>
           </div>
         </div>
-        ${buildItemList(children, weightUnit)}
+        <div class="inventory-group__children">
+          <p class="inventory-group__label">Contenuto del contenitore</p>
+          ${buildItemList(children, weightUnit, { nested: true, emptyLabel: 'Nessun oggetto nel contenitore.' })}
+        </div>
       </div>
     `;
   }).join('');
@@ -144,17 +147,18 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
   return `
     ${containerSections}
     <div class="inventory-group">
+      <p class="inventory-group__label">Oggetti non contenuti</p>
       ${buildItemList(topLevel, weightUnit)}
     </div>
   `;
 }
 
-export function buildItemList(items, weightUnit = 'lb') {
+export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyLabel = 'Nessun oggetto.' } = {}) {
   if (!items.length) {
-    return '<p class="muted eyebrow">Nessun oggetto.</p>';
+    return `<p class="muted eyebrow">${emptyLabel}</p>`;
   }
   return `
-    <div class="inventory-table">
+    <div class="inventory-table ${nested ? 'inventory-table--nested' : ''}">
       <div class="inventory-table__header">
         <span>Oggetto</span>
         <span>Categoria</span>
