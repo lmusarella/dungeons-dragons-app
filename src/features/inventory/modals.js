@@ -58,6 +58,11 @@ export async function openItemModal(character, item, items, onSave) {
   });
   const basicSection = buildSection('Dati principali', [buildRow([nameField, imageField], 'balanced')]);
   const qtyField = buildInput({ label: 'Quantità', name: 'qty', type: 'number', value: item?.qty ?? 1 });
+  const qtyInput = qtyField.querySelector('input');
+  if (qtyInput) {
+    qtyInput.min = '0';
+    qtyInput.step = 'any';
+  }
   const weightField = buildInput({ label: 'Peso', name: 'weight', type: 'number', value: item?.weight ?? 0 });
   const weightInput = weightField.querySelector('input');
   if (weightInput) {
@@ -66,6 +71,11 @@ export async function openItemModal(character, item, items, onSave) {
     weightInput.step = unit === 'kg' ? '0.1' : '1';
   }
   const volumeField = buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 });
+  const volumeInput = volumeField.querySelector('input');
+  if (volumeInput) {
+    volumeInput.min = '0';
+    volumeInput.step = 'any';
+  }
   const valueField = buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
   basicSection.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
   const categorySelect = buildSelect(

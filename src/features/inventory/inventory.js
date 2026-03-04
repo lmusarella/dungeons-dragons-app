@@ -153,13 +153,60 @@ export async function renderInventory(container) {
     const category = categorySelect.value;
     const equipableOnly = equipableFilter?.checked ?? false;
     const magicOnly = magicFilter?.checked ?? false;
-    const filtered = items.filter((item) => {
+    const directlyMatched = items.filter((item) => {
       const matchesTerm = item.name.toLowerCase().includes(term);
       const matchesCategory = !category || item.category === category;
       const matchesEquipable = !equipableOnly || item.equipable;
       const matchesMagic = !magicOnly || item.is_magic;
       return matchesTerm && matchesCategory && matchesEquipable && matchesMagic;
     });
+
+    const itemById = new Map(items.map((item) => [String(item.id), item]));
+    const childrenByContainer = new Map();
+    items.forEach((item) => {
+      const containerId = item.container_item_id;
+      if (!containerId) return;
+      const key = String(containerId);
+      if (!childrenByContainer.has(key)) {
+        childrenByContainer.set(key, []);
+      }
+      childrenByContainer.get(key).push(item);
+    });
+
+    const visibleIds = new Set(directlyMatched.map((item) => String(item.id)));
+    const includeAncestors = (item) => {
+      let cursor = item;
+      while (cursor?.container_item_id) {
+        const parent = itemById.get(String(cursor.container_item_id));
+        if (!parent) break;
+        const parentId = String(parent.id);
+        if (visibleIds.has(parentId)) break;
+        visibleIds.add(parentId);
+        cursor = parent;
+      }
+    };
+    const includeDescendants = (item) => {
+      const stack = [...(childrenByContainer.get(String(item.id)) || [])];
+      while (stack.length) {
+        const child = stack.pop();
+        const childId = String(child.id);
+        if (visibleIds.has(childId)) continue;
+        visibleIds.add(childId);
+        const nested = childrenByContainer.get(childId);
+        if (nested?.length) {
+          stack.push(...nested);
+        }
+      }
+    };
+
+    directlyMatched.forEach((item) => {
+      includeAncestors(item);
+      if (item.category === 'container') {
+        includeDescendants(item);
+      }
+    });
+
+    const filtered = items.filter((item) => visibleIds.has(String(item.id)));
 
     listEl.innerHTML = buildInventoryTree(filtered, weightUnit);
     if (carryTotalEl) {

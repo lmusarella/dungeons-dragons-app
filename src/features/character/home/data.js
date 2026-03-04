@@ -52,3 +52,32 @@ export async function consumeSpellSlot(character, level, onRender) {
   }, 'Slot incantesimo consumato', onRender);
   return true;
 }
+
+
+export async function restoreSpellSlot(character, level, onRender) {
+  if (!character) return false;
+  const data = character.data || {};
+  const spellcasting = data.spellcasting || {};
+  const slots = { ...(spellcasting.slots || {}) };
+  const slotsMax = { ...(spellcasting.slots_max || {}) };
+  const current = Math.max(0, Number(slots[level]) || 0);
+  const currentMax = Math.max(0, Number(slotsMax[level]) || 0);
+  if (!currentMax) {
+    createToast('Nessuno slot massimo configurato per questo livello', 'error');
+    return false;
+  }
+  if (current >= currentMax) {
+    createToast('Slot già al massimo');
+    return false;
+  }
+  slots[level] = Math.min(current + 1, currentMax);
+  await saveCharacterData(character, {
+    ...data,
+    spellcasting: {
+      ...spellcasting,
+      slots,
+      slots_max: slotsMax
+    }
+  }, 'Slot incantesimo ripristinato', onRender);
+  return true;
+}

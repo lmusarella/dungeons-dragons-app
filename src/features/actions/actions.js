@@ -54,15 +54,15 @@ export async function renderActions(container) {
         </label>
         <label class="field">
           <span>Quantità</span>
-          <input name="qty" type="number" value="1" />
+          <input name="qty" type="number" value="1" min="0" step="any" />
         </label>
         <label class="field">
           <span>Peso</span>
-          <input name="weight" type="number" value="0" />
+          <input name="weight" type="number" value="0" min="0" step="any" />
         </label>
         <label class="field">
           <span>Volume</span>
-          <input name="volume" type="number" value="0" />
+          <input name="volume" type="number" value="0" min="0" step="any" />
         </label>
         <label class="field">
           <span>Valore (cp)</span>
