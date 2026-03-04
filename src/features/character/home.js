@@ -30,7 +30,7 @@ import {
   openSpellDrawer,
   openSpellQuickDetailModal
 } from './home/modals.js';
-import { consumeSpellSlot, saveCharacterData } from './home/data.js';
+import { consumeSpellSlot, restoreSpellSlot, saveCharacterData } from './home/data.js';
 import { abilityShortLabel, conditionList, savingThrowList, skillList } from './home/constants.js';
 import {
   applyRestRecovery,
@@ -702,6 +702,14 @@ export async function renderHome(container) {
       });
     }));
 
+
+  container.querySelectorAll('[data-restore-spell-slot]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      if (!activeCharacter) return;
+      const level = Number(button.dataset.restoreSpellSlot);
+      if (!Number.isFinite(level) || level < 1) return;
+      await restoreSpellSlot(activeCharacter, level, () => renderHome(container));
+    }));
   container.querySelectorAll('[data-delete-resource]')
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.deleteResource);
@@ -920,9 +928,6 @@ async function handleLootAction(container) {
       max_volume: null
     });
     createToast('Loot aggiunto');
-    if (container) {
-      renderHome(container);
-    }
   } catch (error) {
     createToast('Errore loot', 'error');
   }

@@ -730,8 +730,12 @@ export function buildSpellSection(character, canManageSpells = false) {
             ${slotEntries.map((entry) => {
     const baseIndicatorClass = recharge === 'short_rest' ? 'charge-indicator' : 'charge-indicator charge-indicator--long';
     const charges = Array.from({ length: entry.max }, (_, index) => {
-      const usedClass = index >= entry.count ? 'charge-indicator--used' : '';
+      const isUsed = index >= entry.count;
+      const usedClass = isUsed ? 'charge-indicator--used' : '';
       const classes = [baseIndicatorClass, usedClass].filter(Boolean).join(' ');
+      if (canManageSpells && isUsed) {
+        return `<button type="button" class="${classes}" data-restore-spell-slot="${entry.level}" aria-label="Ripristina uno slot di livello ${entry.level}"></button>`;
+      }
       return `<span class="${classes}"></span>`;
     }).join('');
     return `
