@@ -218,20 +218,58 @@ function formatModifier(value) {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
-function playCriticalAudio(type) {
-  if (typeof window === 'undefined' || !window.AudioContext) return;
+const CRITICAL_AUDIO_FILES = {
+  TS: {
+    busted: null,
+    fatality: null
+  },
+  TA: {
+    busted: null,
+    fatality: null
+  },
+  TC: {
+    busted: null,
+    fatality: null
+  }
+};
+
+function playCriticalAudio(type, currentRollType) {
+  if (typeof window === 'undefined') return;
+  const filePath = CRITICAL_AUDIO_FILES[currentRollType]?.[type] || null;
+  if (filePath) {
+    const audio = new window.Audio(filePath);
+    void audio.play().catch(() => { });
+    return;
+  }
+  if (!window.AudioContext) return;
+
   const context = new window.AudioContext();
   const now = context.currentTime;
-  const notes = type === 'fatality'
-    ? [523.25, 659.25, 783.99]
-    : [220, 164.81, 130.81];
+  const rollTypePresets = {
+    TS: {
+      fatality: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      busted: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
+    },
+    TA: {
+      fatality: { notes: [659.25, 830.61, 987.77], wave: 'square' },
+      busted: { notes: [196, 146.83, 110], wave: 'triangle' }
+    },
+    TC: {
+      fatality: { notes: [587.33, 739.99, 880], wave: 'sine' },
+      busted: { notes: [246.94, 185, 138.59], wave: 'square' }
+    }
+  };
 
-  notes.forEach((frequency, index) => {
+  const preset = rollTypePresets[currentRollType]?.[type]
+    || rollTypePresets.TC[type]
+    || { notes: [220, 164.81, 130.81], wave: 'triangle' };
+
+  preset.notes.forEach((frequency, index) => {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     const start = now + (index * 0.09);
     const duration = 0.16;
-    oscillator.type = type === 'fatality' ? 'triangle' : 'sawtooth';
+    oscillator.type = preset.wave;
     oscillator.frequency.setValueAtTime(frequency, start);
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
@@ -358,6 +396,12 @@ export function openDiceOverlay({
   const historyPanel = overlayEl.querySelector('[data-dice-history-panel]');
   const historyList = overlayEl.querySelector('[data-dice-history]');
 
+  if (criticalBanner) {
+    criticalBanner.setAttribute('hidden', '');
+    criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+    criticalBanner.textContent = '';
+  }
+
   if (modifierInput) {
     attachNumberStepper(modifierInput, {
       decrementLabel: 'Riduci modificatore',
@@ -380,7 +424,7 @@ export function openDiceOverlay({
     history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null,
-    criticalBannerTimeoutId: null
+    lastCriticalSignature: null
   };
 
   const normalizedWeakPoints = Math.max(0, Number(weakPoints) || 0);
@@ -425,28 +469,25 @@ export function openDiceOverlay({
     modifierField.toggleAttribute('hidden', hidePrimaryModifier);
   }
 
+  function clearCriticalBanner() {
+    if (!criticalBanner) return;
+    criticalBanner.setAttribute('hidden', '');
+    criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+    criticalBanner.textContent = '';
+  }
+
   function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
     if (resultValue) resultValue.textContent = label;
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
     state.lastBuff = null;
-    if (criticalBanner) {
-      criticalBanner.setAttribute('hidden', '');
-      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
-      criticalBanner.textContent = '';
-    }
   }
 
-  function showCriticalBanner(type) {
+  function showCriticalBanner(type, { playAudio = false, signature = null } = {}) {
     if (!criticalBanner) return;
-    if (state.criticalBannerTimeoutId) {
-      window.clearTimeout(state.criticalBannerTimeoutId);
-      state.criticalBannerTimeoutId = null;
-    }
     if (!type) {
-      criticalBanner.setAttribute('hidden', '');
-      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
-      criticalBanner.textContent = '';
+      clearCriticalBanner();
+      state.lastCriticalSignature = null;
       return;
     }
     const isBusted = type === 'busted';
@@ -454,13 +495,10 @@ export function openDiceOverlay({
     criticalBanner.classList.toggle('diceov-critical-banner--busted', isBusted);
     criticalBanner.classList.toggle('diceov-critical-banner--fatality', !isBusted);
     criticalBanner.removeAttribute('hidden');
-    playCriticalAudio(type);
-    state.criticalBannerTimeoutId = window.setTimeout(() => {
-      criticalBanner.setAttribute('hidden', '');
-      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
-      criticalBanner.textContent = '';
-      state.criticalBannerTimeoutId = null;
-    }, 2400);
+    if (playAudio && signature && signature !== state.lastCriticalSignature) {
+      playCriticalAudio(type, rollType);
+    }
+    state.lastCriticalSignature = signature;
   }
 
   function getCriticalType(info) {
@@ -723,7 +761,7 @@ export function openDiceOverlay({
   }
 
   function updateModifier() {
-    if (state.lastRoll) renderRollResult(state.lastRoll);
+    if (state.lastRoll) renderRollResult(state.lastRoll, { playCriticalSound: false });
   }
 
   async function consumeInspiration() {
@@ -736,7 +774,7 @@ export function openDiceOverlay({
     }
   }
 
-  function renderRollResult(notation) {
+  function renderRollResult(notation, { playCriticalSound = false } = {}) {
     if (hasInvalidRolls(notation)) {
       resetResult('—', 'Lancio non valido, rilancia i dadi.');
       return;
@@ -749,7 +787,11 @@ export function openDiceOverlay({
         resetResult();
         return;
       }
-      showCriticalBanner(getCriticalType(info));
+      const criticalType = getCriticalType(info);
+      const criticalSignature = criticalType
+        ? `${rollType || 'GEN'}:${criticalType}:${info.rollMode}:${info.baseRolls.join(',')}:${info.picked}`
+        : null;
+      showCriticalBanner(criticalType, { playAudio: playCriticalSound, signature: criticalSignature });
       const buffDelta = info.buff?.delta || 0;
       const total = (info.picked ?? 0) + modifier + buffDelta;
       const rollLabel = info.rollMode === 'advantage'
@@ -772,7 +814,7 @@ export function openDiceOverlay({
       return;
     }
 
-    showCriticalBanner(null);
+    showCriticalBanner(null, { signature: null });
 
     const info = getGenericRollInfo(notation);
     state.lastBuff = info.buff;
@@ -956,7 +998,7 @@ export function openDiceOverlay({
         return;
       }
       void consumeInspiration();
-      renderRollResult(state.lastRoll);
+      renderRollResult(state.lastRoll, { playCriticalSound: true });
     }
     if (state.lastRoll) {
       const summary = summarizeRoll(state.lastRoll);
