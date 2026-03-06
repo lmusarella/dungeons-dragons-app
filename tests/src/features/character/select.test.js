@@ -1,14 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
-const sourceFile = 'src/features/character/select.js';
+function extractNamedExports(source) {
+  const names = new Set();
+  const functionRegex = /export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g;
+  const constRegex = /export\s+const\s+([A-Za-z_$][\w$]*)\s*=/g;
+  let match;
+  while ((match = functionRegex.exec(source)) !== null) names.add(match[1]);
+  while ((match = constRegex.exec(source)) !== null) names.add(match[1]);
+  return [...names];
+}
 
 describe('src/features/character/select.js', () => {
-  it('has a dedicated test file and non-empty source', () => {
-    const stats = statSync(sourceFile);
-    expect(stats.isFile()).toBe(true);
-    expect(stats.size).toBeGreaterThan(0);
-    const content = readFileSync(sourceFile, 'utf8').trim();
-    expect(content.length).toBeGreaterThan(0);
+  it('defines module-level API surface', () => {
+    const source = readFileSync('src/features/character/select.js', 'utf8');
+    const exports = extractNamedExports(source);
+    expect(source.trim().length).toBeGreaterThan(40);
+    expect(exports.length).toBeGreaterThan(0);
+    exports.forEach((name) => {
+      expect(source).toContain(`export`);
+      expect(source).toContain(name);
+    });
   });
 });

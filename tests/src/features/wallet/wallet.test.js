@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, statSync } from 'node:fs';
-
-const sourceFile = 'src/features/wallet/wallet.js';
+import { renderWalletSummary } from '../../../../src/features/wallet/wallet.js';
 
 describe('src/features/wallet/wallet.js', () => {
-  it('has a dedicated test file and non-empty source', () => {
-    const stats = statSync(sourceFile);
-    expect(stats.isFile()).toBe(true);
-    expect(stats.size).toBeGreaterThan(0);
-    const content = readFileSync(sourceFile, 'utf8').trim();
-    expect(content.length).toBeGreaterThan(0);
+  it('renders all coin cards with values', () => {
+    const html = renderWalletSummary({ pp: 1, gp: 2, sp: 3, cp: 4 });
+    expect(html).toContain('Platino');
+    expect(html).toContain('Oro');
+    expect(html).toContain('Argento');
+    expect(html).toContain('Rame');
+    expect(html).toContain('>4<');
   });
 });
