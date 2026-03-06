@@ -130,6 +130,7 @@ function buildOverlayMarkup() {
           <p class="diceov-result-value" data-dice-result>—</p>
           <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
         </div>
+        <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
     </section>
     ${buildDiceMarkup()}
@@ -215,6 +216,33 @@ function formatHistoryDate(timestamp) {
 function formatModifier(value) {
   if (!value) return '+0';
   return value > 0 ? `+${value}` : `${value}`;
+}
+
+function playCriticalAudio(type) {
+  if (typeof window === 'undefined' || !window.AudioContext) return;
+  const context = new window.AudioContext();
+  const now = context.currentTime;
+  const notes = type === 'fatality'
+    ? [523.25, 659.25, 783.99]
+    : [220, 164.81, 130.81];
+
+  notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const start = now + (index * 0.09);
+    const duration = 0.16;
+    oscillator.type = type === 'fatality' ? 'triangle' : 'sawtooth';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+  });
+
+  window.setTimeout(() => context.close(), 700);
 }
 
 function getRollMode(overlay) {
@@ -319,6 +347,7 @@ export function openDiceOverlay({
   const selectInput = overlayEl.querySelector('select[name="dice-roll-select"]');
   const resultValue = overlayEl.querySelector('[data-dice-result]');
   const resultDetail = overlayEl.querySelector('[data-dice-detail]');
+  const criticalBanner = overlayEl.querySelector('[data-dice-critical-banner]');
   const buffWrapperD20 = overlayEl.querySelector('[data-dice-buff="d20"]');
   const buffSelectD20 = overlayEl.querySelector('select[name="dice-buff-d20"]');
   const buffWrapperDamage = overlayEl.querySelector('[data-dice-buff="damage"]');
@@ -350,7 +379,8 @@ export function openDiceOverlay({
     selectionOptions: Array.isArray(selection?.options) ? selection.options : [],
     history: loadHistory(characterId),
     selectionRollMode: null,
-    selectionRollModeReason: null
+    selectionRollModeReason: null,
+    criticalBannerTimeoutId: null
   };
 
   const normalizedWeakPoints = Math.max(0, Number(weakPoints) || 0);
@@ -400,6 +430,45 @@ export function openDiceOverlay({
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
     state.lastBuff = null;
+    if (criticalBanner) {
+      criticalBanner.setAttribute('hidden', '');
+      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+      criticalBanner.textContent = '';
+    }
+  }
+
+  function showCriticalBanner(type) {
+    if (!criticalBanner) return;
+    if (state.criticalBannerTimeoutId) {
+      window.clearTimeout(state.criticalBannerTimeoutId);
+      state.criticalBannerTimeoutId = null;
+    }
+    if (!type) {
+      criticalBanner.setAttribute('hidden', '');
+      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+      criticalBanner.textContent = '';
+      return;
+    }
+    const isBusted = type === 'busted';
+    criticalBanner.textContent = isBusted ? '💥 BUSTED' : '☠️ FATALITY';
+    criticalBanner.classList.toggle('diceov-critical-banner--busted', isBusted);
+    criticalBanner.classList.toggle('diceov-critical-banner--fatality', !isBusted);
+    criticalBanner.removeAttribute('hidden');
+    playCriticalAudio(type);
+    state.criticalBannerTimeoutId = window.setTimeout(() => {
+      criticalBanner.setAttribute('hidden', '');
+      criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+      criticalBanner.textContent = '';
+      state.criticalBannerTimeoutId = null;
+    }, 2400);
+  }
+
+  function getCriticalType(info) {
+    if (!['TS', 'TA', 'TC'].includes(rollType)) return null;
+    if (typeof info?.picked !== 'number') return null;
+    if (info.picked === 1) return 'busted';
+    if (info.picked === 20) return 'fatality';
+    return null;
   }
 
   function renderHistory() {
@@ -680,6 +749,7 @@ export function openDiceOverlay({
         resetResult();
         return;
       }
+      showCriticalBanner(getCriticalType(info));
       const buffDelta = info.buff?.delta || 0;
       const total = (info.picked ?? 0) + modifier + buffDelta;
       const rollLabel = info.rollMode === 'advantage'
@@ -701,6 +771,8 @@ export function openDiceOverlay({
       }
       return;
     }
+
+    showCriticalBanner(null);
 
     const info = getGenericRollInfo(notation);
     state.lastBuff = info.buff;

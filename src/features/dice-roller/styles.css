@@ -746,3 +746,45 @@ header {
   border-color: #ffdc7a;
   box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.2);
 }
+
+.diceov-critical-banner {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: diceovCriticalPulse 0.35s ease-in-out 2;
+}
+
+.diceov-critical-banner--busted {
+  color: #ffd6d6;
+  background: rgba(120, 0, 0, 0.45);
+  border-color: rgba(255, 100, 100, 0.8);
+}
+
+.diceov-critical-banner--fatality {
+  color: #ffe9bd;
+  background: rgba(112, 72, 0, 0.4);
+  border-color: rgba(255, 214, 122, 0.9);
+}
+
+@keyframes diceovCriticalPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.55;
+  }
+
+  70% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
