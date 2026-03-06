@@ -220,33 +220,38 @@ function formatModifier(value) {
 
 const CRITICAL_AUDIO_FILES = {
   TS: {
-    criticalFailure: '/audio/fallimento_critico.mp3',
-    poor: '/audio/tiro_pessimo.mp3',
-    mediocre: '/audio/tiro_medriocre.mp3',
-    excellent: '/audio/tiro_ottimo.mp3',
-    criticalSuccess: '/audio/successo_critico.mp3'
+    criticalFailure: 'audio/fallimento_critico.mp3',
+    poor: 'audio/tiro_pessimo.mp3',
+    mediocre: 'audio/tiro_medriocre.mp3',
+    excellent: 'audio/tiro_ottimo.mp3',
+    criticalSuccess: 'audio/successo_critico.mp3'
   },
   TA: {
-    criticalFailure: '/audio/fallimento_critico.mp3',
-    poor: '/audio/tiro_pessimo.mp3',
-    mediocre: '/audio/tiro_medriocre.mp3',
-    excellent: '/audio/tiro_ottimo.mp3',
-    criticalSuccess: '/audio/successo_critico.mp3'
+    criticalFailure: 'audio/fallimento_critico.mp3',
+    poor: 'audio/tiro_pessimo.mp3',
+    mediocre: 'audio/tiro_medriocre.mp3',
+    excellent: 'audio/tiro_ottimo.mp3',
+    criticalSuccess: 'audio/successo_critico.mp3'
   },
   TC: {
-    criticalFailure: '/audio/fallimento_critico.mp3',
-    poor: '/audio/tiro_pessimo.mp3',
-    mediocre: '/audio/tiro_medriocre.mp3',
-    excellent: '/audio/tiro_ottimo.mp3',
-    criticalSuccess: '/audio/successo_critico.mp3'
+    criticalFailure: 'audio/fallimento_critico.mp3',
+    poor: 'audio/tiro_pessimo.mp3',
+    mediocre: 'audio/tiro_medriocre.mp3',
+    excellent: 'audio/tiro_ottimo.mp3',
+    criticalSuccess: 'audio/successo_critico.mp3'
   }
 };
+
+function toPublicAssetUrl(relativePath) {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  return new URL(relativePath, window.location.origin + baseUrl).toString();
+}
 
 function playCriticalAudio(type, currentRollType) {
   if (typeof window === 'undefined') return;
   const filePath = CRITICAL_AUDIO_FILES[currentRollType]?.[type] || null;
   if (filePath) {
-    const audio = new window.Audio(filePath);
+    const audio = new window.Audio(toPublicAssetUrl(filePath));
     void audio.play().catch(() => { });
     return;
   }
