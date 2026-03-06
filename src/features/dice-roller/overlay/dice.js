@@ -220,16 +220,25 @@ function formatModifier(value) {
 
 const CRITICAL_AUDIO_FILES = {
   TS: {
-    busted: null,
-    fatality: null
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
   },
   TA: {
-    busted: null,
-    fatality: null
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
   },
   TC: {
-    busted: null,
-    fatality: null
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
   }
 };
 
@@ -247,16 +256,25 @@ function playCriticalAudio(type, currentRollType) {
   const now = context.currentTime;
   const rollTypePresets = {
     TS: {
-      fatality: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
-      busted: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
+      criticalSuccess: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      excellent: { notes: [440, 554.37, 659.25], wave: 'sine' },
+      mediocre: { notes: [293.66, 329.63, 293.66], wave: 'triangle' },
+      poor: { notes: [246.94, 220, 196], wave: 'sawtooth' },
+      criticalFailure: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
     },
     TA: {
-      fatality: { notes: [659.25, 830.61, 987.77], wave: 'square' },
-      busted: { notes: [196, 146.83, 110], wave: 'triangle' }
+      criticalSuccess: { notes: [659.25, 830.61, 987.77], wave: 'square' },
+      excellent: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      mediocre: { notes: [329.63, 293.66, 261.63], wave: 'triangle' },
+      poor: { notes: [220, 196, 174.61], wave: 'sine' },
+      criticalFailure: { notes: [196, 146.83, 110], wave: 'triangle' }
     },
     TC: {
-      fatality: { notes: [587.33, 739.99, 880], wave: 'sine' },
-      busted: { notes: [246.94, 185, 138.59], wave: 'square' }
+      criticalSuccess: { notes: [587.33, 739.99, 880], wave: 'sine' },
+      excellent: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
+      mediocre: { notes: [311.13, 293.66, 261.63], wave: 'square' },
+      poor: { notes: [261.63, 233.08, 207.65], wave: 'sawtooth' },
+      criticalFailure: { notes: [246.94, 185, 138.59], wave: 'square' }
     }
   };
 
@@ -398,7 +416,7 @@ export function openDiceOverlay({
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
@@ -472,7 +490,7 @@ export function openDiceOverlay({
   function clearCriticalBanner() {
     if (!criticalBanner) return;
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--busted', 'diceov-critical-banner--fatality');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
@@ -483,29 +501,58 @@ export function openDiceOverlay({
     state.lastBuff = null;
   }
 
-  function showCriticalBanner(type, { playAudio = false, signature = null } = {}) {
+  function showCriticalBanner(tier, { playAudio = false, signature = null } = {}) {
     if (!criticalBanner) return;
-    if (!type) {
+    if (!tier) {
       clearCriticalBanner();
       state.lastCriticalSignature = null;
       return;
     }
-    const isBusted = type === 'busted';
-    criticalBanner.textContent = isBusted ? '💥 BUSTED' : '☠️ FATALITY';
-    criticalBanner.classList.toggle('diceov-critical-banner--busted', isBusted);
-    criticalBanner.classList.toggle('diceov-critical-banner--fatality', !isBusted);
+    const tierPresentation = {
+      criticalFailure: {
+        message: '☠️ Fallimento critico',
+        className: 'diceov-critical-banner--critical-failure'
+      },
+      poor: {
+        message: '💀 Pessimo',
+        className: 'diceov-critical-banner--poor'
+      },
+      mediocre: {
+        message: '😐 Mediocre',
+        className: 'diceov-critical-banner--mediocre'
+      },
+      excellent: {
+        message: '✨ Ottimo',
+        className: 'diceov-critical-banner--excellent'
+      },
+      criticalSuccess: {
+        message: '🌟 Successo critico',
+        className: 'diceov-critical-banner--critical-success'
+      }
+    };
+    const presentation = tierPresentation[tier];
+    if (!presentation) {
+      clearCriticalBanner();
+      return;
+    }
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.textContent = presentation.message;
+    criticalBanner.classList.add(presentation.className);
     criticalBanner.removeAttribute('hidden');
     if (playAudio && signature && signature !== state.lastCriticalSignature) {
-      playCriticalAudio(type, rollType);
+      playCriticalAudio(tier, rollType);
     }
     state.lastCriticalSignature = signature;
   }
 
-  function getCriticalType(info) {
+  function getCriticalTier(info) {
     if (!['TS', 'TA', 'TC'].includes(rollType)) return null;
     if (typeof info?.picked !== 'number') return null;
-    if (info.picked === 1) return 'busted';
-    if (info.picked === 20) return 'fatality';
+    if (info.picked === 1) return 'criticalFailure';
+    if (info.picked >= 2 && info.picked <= 5) return 'poor';
+    if (info.picked >= 6 && info.picked <= 14) return 'mediocre';
+    if (info.picked >= 15 && info.picked <= 19) return 'excellent';
+    if (info.picked === 20) return 'criticalSuccess';
     return null;
   }
 
@@ -787,11 +834,11 @@ export function openDiceOverlay({
         resetResult();
         return;
       }
-      const criticalType = getCriticalType(info);
-      const criticalSignature = criticalType
-        ? `${rollType || 'GEN'}:${criticalType}:${info.rollMode}:${info.baseRolls.join(',')}:${info.picked}`
+      const criticalTier = getCriticalTier(info);
+      const criticalSignature = criticalTier
+        ? `${rollType || 'GEN'}:${criticalTier}:${info.rollMode}:${info.baseRolls.join(',')}:${info.picked}`
         : null;
-      showCriticalBanner(criticalType, { playAudio: playCriticalSound, signature: criticalSignature });
+      showCriticalBanner(criticalTier, { playAudio: playCriticalSound, signature: criticalSignature });
       const buffDelta = info.buff?.delta || 0;
       const total = (info.picked ?? 0) + modifier + buffDelta;
       const rollLabel = info.rollMode === 'advantage'

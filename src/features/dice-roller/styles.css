@@ -760,16 +760,34 @@ header {
   animation: diceovCriticalPulse 0.35s ease-in-out 2;
 }
 
-.diceov-critical-banner--busted {
+.diceov-critical-banner--critical-failure {
   color: #ffd6d6;
-  background: rgba(120, 0, 0, 0.45);
-  border-color: rgba(255, 100, 100, 0.8);
+  background: rgba(120, 0, 0, 0.48);
+  border-color: rgba(255, 95, 95, 0.92);
 }
 
-.diceov-critical-banner--fatality {
-  color: #ffe9bd;
-  background: rgba(112, 72, 0, 0.4);
-  border-color: rgba(255, 214, 122, 0.9);
+.diceov-critical-banner--poor {
+  color: #ffe9d1;
+  background: rgba(121, 55, 0, 0.44);
+  border-color: rgba(255, 153, 87, 0.9);
+}
+
+.diceov-critical-banner--mediocre {
+  color: #e7ecf5;
+  background: rgba(59, 69, 84, 0.44);
+  border-color: rgba(154, 170, 191, 0.9);
+}
+
+.diceov-critical-banner--excellent {
+  color: #e5fbd7;
+  background: rgba(29, 92, 27, 0.44);
+  border-color: rgba(124, 219, 106, 0.92);
+}
+
+.diceov-critical-banner--critical-success {
+  color: #fff2c2;
+  background: rgba(120, 94, 0, 0.44);
+  border-color: rgba(255, 215, 87, 0.95);
 }
 
 @keyframes diceovCriticalPulse {
