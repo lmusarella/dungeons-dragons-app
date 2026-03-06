@@ -130,6 +130,7 @@ function buildOverlayMarkup() {
           <p class="diceov-result-value" data-dice-result>—</p>
           <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
         </div>
+        <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
     </section>
     ${buildDiceMarkup()}
@@ -215,6 +216,89 @@ function formatHistoryDate(timestamp) {
 function formatModifier(value) {
   if (!value) return '+0';
   return value > 0 ? `+${value}` : `${value}`;
+}
+
+const CRITICAL_AUDIO_FILES = {
+  TS: {
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
+  },
+  TA: {
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
+  },
+  TC: {
+    criticalFailure: null,
+    poor: null,
+    mediocre: null,
+    excellent: null,
+    criticalSuccess: null
+  }
+};
+
+function playCriticalAudio(type, currentRollType) {
+  if (typeof window === 'undefined') return;
+  const filePath = CRITICAL_AUDIO_FILES[currentRollType]?.[type] || null;
+  if (filePath) {
+    const audio = new window.Audio(filePath);
+    void audio.play().catch(() => { });
+    return;
+  }
+  if (!window.AudioContext) return;
+
+  const context = new window.AudioContext();
+  const now = context.currentTime;
+  const rollTypePresets = {
+    TS: {
+      criticalSuccess: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      excellent: { notes: [440, 554.37, 659.25], wave: 'sine' },
+      mediocre: { notes: [293.66, 329.63, 293.66], wave: 'triangle' },
+      poor: { notes: [246.94, 220, 196], wave: 'sawtooth' },
+      criticalFailure: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
+    },
+    TA: {
+      criticalSuccess: { notes: [659.25, 830.61, 987.77], wave: 'square' },
+      excellent: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      mediocre: { notes: [329.63, 293.66, 261.63], wave: 'triangle' },
+      poor: { notes: [220, 196, 174.61], wave: 'sine' },
+      criticalFailure: { notes: [196, 146.83, 110], wave: 'triangle' }
+    },
+    TC: {
+      criticalSuccess: { notes: [587.33, 739.99, 880], wave: 'sine' },
+      excellent: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
+      mediocre: { notes: [311.13, 293.66, 261.63], wave: 'square' },
+      poor: { notes: [261.63, 233.08, 207.65], wave: 'sawtooth' },
+      criticalFailure: { notes: [246.94, 185, 138.59], wave: 'square' }
+    }
+  };
+
+  const preset = rollTypePresets[currentRollType]?.[type]
+    || rollTypePresets.TC[type]
+    || { notes: [220, 164.81, 130.81], wave: 'triangle' };
+
+  preset.notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const start = now + (index * 0.09);
+    const duration = 0.16;
+    oscillator.type = preset.wave;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+  });
+
+  window.setTimeout(() => context.close(), 700);
 }
 
 function getRollMode(overlay) {
@@ -319,6 +403,7 @@ export function openDiceOverlay({
   const selectInput = overlayEl.querySelector('select[name="dice-roll-select"]');
   const resultValue = overlayEl.querySelector('[data-dice-result]');
   const resultDetail = overlayEl.querySelector('[data-dice-detail]');
+  const criticalBanner = overlayEl.querySelector('[data-dice-critical-banner]');
   const buffWrapperD20 = overlayEl.querySelector('[data-dice-buff="d20"]');
   const buffSelectD20 = overlayEl.querySelector('select[name="dice-buff-d20"]');
   const buffWrapperDamage = overlayEl.querySelector('[data-dice-buff="damage"]');
@@ -328,6 +413,12 @@ export function openDiceOverlay({
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
   const historyPanel = overlayEl.querySelector('[data-dice-history-panel]');
   const historyList = overlayEl.querySelector('[data-dice-history]');
+
+  if (criticalBanner) {
+    criticalBanner.setAttribute('hidden', '');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.textContent = '';
+  }
 
   if (modifierInput) {
     attachNumberStepper(modifierInput, {
@@ -350,7 +441,8 @@ export function openDiceOverlay({
     selectionOptions: Array.isArray(selection?.options) ? selection.options : [],
     history: loadHistory(characterId),
     selectionRollMode: null,
-    selectionRollModeReason: null
+    selectionRollModeReason: null,
+    lastCriticalSignature: null
   };
 
   const normalizedWeakPoints = Math.max(0, Number(weakPoints) || 0);
@@ -395,11 +487,73 @@ export function openDiceOverlay({
     modifierField.toggleAttribute('hidden', hidePrimaryModifier);
   }
 
+  function clearCriticalBanner() {
+    if (!criticalBanner) return;
+    criticalBanner.setAttribute('hidden', '');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.textContent = '';
+  }
+
   function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
     if (resultValue) resultValue.textContent = label;
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
     state.lastBuff = null;
+  }
+
+  function showCriticalBanner(tier, { playAudio = false, signature = null } = {}) {
+    if (!criticalBanner) return;
+    if (!tier) {
+      clearCriticalBanner();
+      state.lastCriticalSignature = null;
+      return;
+    }
+    const tierPresentation = {
+      criticalFailure: {
+        message: '☠️ Fallimento critico',
+        className: 'diceov-critical-banner--critical-failure'
+      },
+      poor: {
+        message: '💀 Pessimo',
+        className: 'diceov-critical-banner--poor'
+      },
+      mediocre: {
+        message: '😐 Mediocre',
+        className: 'diceov-critical-banner--mediocre'
+      },
+      excellent: {
+        message: '✨ Ottimo',
+        className: 'diceov-critical-banner--excellent'
+      },
+      criticalSuccess: {
+        message: '🌟 Successo critico',
+        className: 'diceov-critical-banner--critical-success'
+      }
+    };
+    const presentation = tierPresentation[tier];
+    if (!presentation) {
+      clearCriticalBanner();
+      return;
+    }
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.textContent = presentation.message;
+    criticalBanner.classList.add(presentation.className);
+    criticalBanner.removeAttribute('hidden');
+    if (playAudio && signature && signature !== state.lastCriticalSignature) {
+      playCriticalAudio(tier, rollType);
+    }
+    state.lastCriticalSignature = signature;
+  }
+
+  function getCriticalTier(info) {
+    if (!['TS', 'TA', 'TC'].includes(rollType)) return null;
+    if (typeof info?.picked !== 'number') return null;
+    if (info.picked === 1) return 'criticalFailure';
+    if (info.picked >= 2 && info.picked <= 5) return 'poor';
+    if (info.picked >= 6 && info.picked <= 14) return 'mediocre';
+    if (info.picked >= 15 && info.picked <= 19) return 'excellent';
+    if (info.picked === 20) return 'criticalSuccess';
+    return null;
   }
 
   function renderHistory() {
@@ -654,7 +808,7 @@ export function openDiceOverlay({
   }
 
   function updateModifier() {
-    if (state.lastRoll) renderRollResult(state.lastRoll);
+    if (state.lastRoll) renderRollResult(state.lastRoll, { playCriticalSound: false });
   }
 
   async function consumeInspiration() {
@@ -667,7 +821,7 @@ export function openDiceOverlay({
     }
   }
 
-  function renderRollResult(notation) {
+  function renderRollResult(notation, { playCriticalSound = false } = {}) {
     if (hasInvalidRolls(notation)) {
       resetResult('—', 'Lancio non valido, rilancia i dadi.');
       return;
@@ -680,6 +834,11 @@ export function openDiceOverlay({
         resetResult();
         return;
       }
+      const criticalTier = getCriticalTier(info);
+      const criticalSignature = criticalTier
+        ? `${rollType || 'GEN'}:${criticalTier}:${info.rollMode}:${info.baseRolls.join(',')}:${info.picked}`
+        : null;
+      showCriticalBanner(criticalTier, { playAudio: playCriticalSound, signature: criticalSignature });
       const buffDelta = info.buff?.delta || 0;
       const total = (info.picked ?? 0) + modifier + buffDelta;
       const rollLabel = info.rollMode === 'advantage'
@@ -701,6 +860,8 @@ export function openDiceOverlay({
       }
       return;
     }
+
+    showCriticalBanner(null, { signature: null });
 
     const info = getGenericRollInfo(notation);
     state.lastBuff = info.buff;
@@ -884,7 +1045,7 @@ export function openDiceOverlay({
         return;
       }
       void consumeInspiration();
-      renderRollResult(state.lastRoll);
+      renderRollResult(state.lastRoll, { playCriticalSound: true });
     }
     if (state.lastRoll) {
       const summary = summarizeRoll(state.lastRoll);
