@@ -779,15 +779,15 @@ header {
 }
 
 .diceov-critical-banner--excellent {
-  color: #e5fbd7;
-  background: rgba(29, 92, 27, 0.44);
-  border-color: rgba(124, 219, 106, 0.92);
+  color: #dff3ff;
+  background: rgba(16, 92, 153, 0.44);
+  border-color: rgba(107, 201, 255, 0.92);
 }
 
 .diceov-critical-banner--critical-success {
-  color: #fff2c2;
-  background: rgba(120, 94, 0, 0.44);
-  border-color: rgba(255, 215, 87, 0.95);
+  color: #e5fbd7;
+  background: rgba(29, 112, 46, 0.44);
+  border-color: rgba(124, 219, 106, 0.95);
 }
 
 @keyframes diceovCriticalPulse {
