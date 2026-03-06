@@ -220,25 +220,25 @@ function formatModifier(value) {
 
 const CRITICAL_AUDIO_FILES = {
   TS: {
-    criticalFailure: null,
-    poor: null,
-    mediocre: null,
-    excellent: null,
-    criticalSuccess: null
+    criticalFailure: '/audio/fallimento_critico.mp3',
+    poor: '/audio/tiro_pessimo.mp3',
+    mediocre: '/audio/tiro_medriocre.mp3',
+    excellent: '/audio/tiro_ottimo.mp3',
+    criticalSuccess: '/audio/successo_critico.mp3'
   },
   TA: {
-    criticalFailure: null,
-    poor: null,
-    mediocre: null,
-    excellent: null,
-    criticalSuccess: null
+    criticalFailure: '/audio/fallimento_critico.mp3',
+    poor: '/audio/tiro_pessimo.mp3',
+    mediocre: '/audio/tiro_medriocre.mp3',
+    excellent: '/audio/tiro_ottimo.mp3',
+    criticalSuccess: '/audio/successo_critico.mp3'
   },
   TC: {
-    criticalFailure: null,
-    poor: null,
-    mediocre: null,
-    excellent: null,
-    criticalSuccess: null
+    criticalFailure: '/audio/fallimento_critico.mp3',
+    poor: '/audio/tiro_pessimo.mp3',
+    mediocre: '/audio/tiro_medriocre.mp3',
+    excellent: '/audio/tiro_ottimo.mp3',
+    criticalSuccess: '/audio/successo_critico.mp3'
   }
 };
 
