@@ -61,6 +61,36 @@ function getCastSlotOptions(character, spell) {
   return options;
 }
 
+async function chooseCastSlotLevel(character, spell) {
+  const level = Math.max(1, Number(spell?.level) || 1);
+  const castSlotOptions = getCastSlotOptions(character, spell);
+  if (!castSlotOptions.length) {
+    createToast('Slot incantesimo esauriti', 'error');
+    return null;
+  }
+  if (castSlotOptions.length === 1) {
+    return Math.max(level, Number(castSlotOptions[0].value) || level);
+  }
+  const field = document.createElement('label');
+  field.className = 'field';
+  field.innerHTML = '<span>Slot da consumare</span>';
+  const castSlotSelect = buildSelect(castSlotOptions, castSlotOptions[0]?.value || String(level));
+  castSlotSelect.name = 'cast_slot_level';
+  field.appendChild(castSlotSelect);
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid';
+  content.appendChild(field);
+  const formData = await openFormModal({
+    title: spell?.name ? `Lancia ${spell.name}` : 'Scegli slot incantesimo',
+    submitLabel: 'Conferma',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: 'modal-card--form'
+  });
+  if (!formData) return null;
+  return Math.max(level, Number(formData.get('cast_slot_level')) || level);
+}
+
 export function openBackgroundModal(character) {
   if (!character) return;
   const data = character.data || {};
@@ -464,17 +494,6 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     </div>
   `;
 
-  const castSlotOptions = isCastable ? getCastSlotOptions(character, spell) : [];
-  if (isCastable && castSlotOptions.length) {
-    const castSlotField = document.createElement('label');
-    castSlotField.className = 'field';
-    castSlotField.innerHTML = '<span>Slot da consumare</span>';
-    const castSlotSelect = buildSelect(castSlotOptions, castSlotOptions[0]?.value || String(level));
-    castSlotSelect.name = 'cast_slot_level';
-    castSlotField.appendChild(castSlotSelect);
-    content.prepend(castSlotField);
-  }
-
   openFormModal({
     title: spell.name || 'Incantesimo',
     submitLabel: isCastable ? 'Lancia' : 'Chiudi',
@@ -484,7 +503,8 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     showFooter: isCastable
   }).then(async (formData) => {
     if (!formData || !isCastable) return;
-    const selectedLevel = Math.max(level, Number(formData.get('cast_slot_level')) || level);
+    const selectedLevel = await chooseCastSlotLevel(character, spell);
+    if (!selectedLevel) return;
     const consumed = await consumeSpellSlot(character, selectedLevel, onRender);
     if (!consumed) return;
     openSpellDamageOverlay(character, spell, selectedLevel);
