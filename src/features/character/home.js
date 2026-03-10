@@ -39,6 +39,7 @@ import {
   calculateSkillModifier,
   formatSigned,
   getAbilityModifier,
+  getCastableSpellSlotLevels,
   getEquipSlots,
   getHitDiceSides,
   normalizeNumber,
@@ -55,15 +56,7 @@ function shouldAutoUsageDice(character) {
 }
 
 function getAvailableSpellSlotLevels(character, spellLevel) {
-  const minLevel = Math.max(1, Number(spellLevel) || 1);
-  const slots = character?.data?.spellcasting?.slots || {};
-  const options = [];
-  for (let level = minLevel; level <= 9; level += 1) {
-    const available = Math.max(0, Number(slots[level]) || 0);
-    if (available <= 0) continue;
-    options.push({ level, available });
-  }
-  return options;
+  return getCastableSpellSlotLevels(character?.data?.spellcasting?.slots, spellLevel);
 }
 
 async function chooseSpellSlotLevel(character, spell) {

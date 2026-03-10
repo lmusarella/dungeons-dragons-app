@@ -208,6 +208,18 @@ export function sortSpellsByLevel(spells) {
   });
 }
 
+export function getCastableSpellSlotLevels(slots, spellLevel) {
+  const minLevel = Math.max(1, Number(spellLevel) || 1);
+  const slotMap = slots || {};
+  const options = [];
+  for (let level = minLevel; level <= 9; level += 1) {
+    const available = Math.max(0, Number(slotMap[level]) || 0);
+    if (available <= 0) continue;
+    options.push({ level, available });
+  }
+  return options;
+}
+
 export function getSpellTypeLabel(spell) {
   const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
   return isCantrip ? 'Trucchetto' : 'Incantesimo';

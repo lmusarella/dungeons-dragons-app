@@ -6,7 +6,8 @@ import {
   formatAbility,
   calculateArmorClass,
   rollDie,
-  buildSpellDamageOverlayConfig
+  buildSpellDamageOverlayConfig,
+  getCastableSpellSlotLevels
 } from '../../../../../src/features/character/home/utils.js';
 
 describe('src/features/character/home/utils.js', () => {
@@ -27,6 +28,28 @@ describe('src/features/character/home/utils.js', () => {
     expect(rollDie(20)).toBe(11);
   });
 
+
+  it('returns only castable slot levels for a spell', () => {
+    const options = getCastableSpellSlotLevels({
+      1: 0,
+      2: 1,
+      3: 0,
+      4: 2
+    }, 2);
+    expect(options).toEqual([
+      { level: 2, available: 1 },
+      { level: 4, available: 2 }
+    ]);
+  });
+
+  it('supports direct cast when only one valid slot exists', () => {
+    const options = getCastableSpellSlotLevels({
+      1: 0,
+      2: 0,
+      3: 1
+    }, 3);
+    expect(options).toEqual([{ level: 3, available: 1 }]);
+  });
 
   it('builds scaled spell damage config for upcast slots', () => {
     const config = buildSpellDamageOverlayConfig({

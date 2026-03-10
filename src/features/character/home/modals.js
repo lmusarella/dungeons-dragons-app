@@ -10,7 +10,7 @@ import {
 } from '../../../ui/components.js';
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
-import { buildSpellDamageOverlayConfig, sortSpellsByLevel } from './utils.js';
+import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsByLevel } from './utils.js';
 import { conditionList } from './constants.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
@@ -45,20 +45,11 @@ function openSpellDamageOverlay(character, spell, castLevel = null) {
 }
 
 function getCastSlotOptions(character, spell) {
-  const spellLevel = Math.max(0, Number(spell?.level) || 0);
-  const spellcasting = character?.data?.spellcasting || {};
-  const slots = spellcasting.slots || {};
-  const options = [];
-  for (let level = spellLevel; level <= 9; level += 1) {
-    if (level <= 0) continue;
-    const available = Math.max(0, Number(slots[level]) || 0);
-    if (available <= 0) continue;
-    options.push({
-      value: String(level),
-      label: `${level}° livello (${available} slot)`
-    });
-  }
-  return options;
+  return getCastableSpellSlotLevels(character?.data?.spellcasting?.slots, spell?.level)
+    .map((entry) => ({
+      value: String(entry.level),
+      label: `${entry.level}° livello (${entry.available} slot)`
+    }));
 }
 
 async function chooseCastSlotLevel(character, spell) {
