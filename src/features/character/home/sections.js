@@ -736,6 +736,9 @@ export function buildSpellSection(character, canManageSpells = false) {
       if (canManageSpells && isUsed) {
         return `<button type="button" class="${classes}" data-restore-spell-slot="${entry.level}" aria-label="Ripristina uno slot di livello ${entry.level}"></button>`;
       }
+      if (canManageSpells && !isUsed) {
+        return `<button type="button" class="${classes}" data-consume-spell-slot="${entry.level}" aria-label="Consuma uno slot di livello ${entry.level}"></button>`;
+      }
       return `<span class="${classes}"></span>`;
     }).join('');
     return `
