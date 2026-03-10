@@ -851,18 +851,34 @@ const DICE = (function() {
         dice.geometry = geom;
     }
     
-    //playSound function and audio file copied from 
-    //https://github.com/chukwumaijem/roll-a-die
-    function playSound(outerContainer, soundVolume) {
+    // keep a preloaded audio pool to avoid latency while creating/decoding audio on each roll
+    var ROLL_SOUND_SRC = 'icons/diceroll.mp3';
+    var rollSoundPool = [];
+    var rollSoundIndex = 0;
+    var DEFAULT_ROLL_SOUND_POOL_SIZE = 8;
+
+    function ensureRollSoundPool() {
+        if (rollSoundPool.length) return;
+        for (var i = 0; i < DEFAULT_ROLL_SOUND_POOL_SIZE; i++) {
+            var audio = new Audio(ROLL_SOUND_SRC);
+            audio.preload = 'auto';
+            audio.load();
+            rollSoundPool.push(audio);
+        }
+    }
+
+    function playSound(_outerContainer, soundVolume) {
         if (soundVolume === 0) return;
-        const audio = document.createElement('audio');
-        outerContainer.appendChild(audio);
-        audio.src = 'icons/diceroll.mp3'; //todo: make this configurable
+        ensureRollSoundPool();
+        var audio = rollSoundPool[rollSoundIndex];
+        rollSoundIndex = (rollSoundIndex + 1) % rollSoundPool.length;
+        audio.pause();
+        audio.currentTime = 0;
         audio.volume = soundVolume;
-        audio.play();
-        audio.onended = () => {
-          audio.remove();
-        };
+        var playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function() {});
+        }
     }
 
     return that;
