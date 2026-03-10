@@ -1371,8 +1371,8 @@ button:focus-visible,
 }
 
 .charge-indicator {
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 999px;
   background: #3bb273;
   border: 1px solid rgba(0, 0, 0, 0.15);

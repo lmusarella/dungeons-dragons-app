@@ -39,6 +39,7 @@ import {
   calculateSkillModifier,
   formatSigned,
   getAbilityModifier,
+  getCastableSpellSlotLevels,
   getEquipSlots,
   getHitDiceSides,
   normalizeNumber,
@@ -52,6 +53,48 @@ let lastHomeContainer = null;
 
 function shouldAutoUsageDice(character) {
   return character?.data?.settings?.auto_usage_dice !== false;
+}
+
+function getAvailableSpellSlotLevels(character, spellLevel) {
+  return getCastableSpellSlotLevels(character?.data?.spellcasting?.slots, spellLevel);
+}
+
+async function chooseSpellSlotLevel(character, spell) {
+  const baseLevel = Math.max(1, Number(spell?.level) || 1);
+  const options = getAvailableSpellSlotLevels(character, baseLevel);
+  if (!options.length) {
+    createToast('Slot incantesimo esauriti', 'error');
+    return null;
+  }
+  if (options.length === 1) {
+    return options[0].level;
+  }
+  const field = document.createElement('label');
+  field.className = 'field';
+  field.innerHTML = '<span>Seleziona slot da consumare</span>';
+  const select = document.createElement('select');
+  select.name = 'cast_slot_level';
+  select.className = 'input';
+  options.forEach((option) => {
+    const choice = document.createElement('option');
+    choice.value = String(option.level);
+    choice.textContent = `${option.level}° livello (${option.available} slot)`;
+    select.appendChild(choice);
+  });
+  field.appendChild(select);
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid';
+  content.appendChild(field);
+  const formData = await openFormModal({
+    title: spell?.name ? `Lancia ${spell.name}` : 'Scegli slot incantesimo',
+    submitLabel: 'Conferma',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: 'modal-card--form'
+  });
+  if (!formData) return null;
+  const selected = Math.max(baseLevel, Number(formData.get('cast_slot_level')) || baseLevel);
+  return selected;
 }
 
 export async function renderHome(container) {
@@ -556,7 +599,7 @@ export async function renderHome(container) {
         const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
         const spell = spells.find((entry) => entry.id === spellId);
         if (!spell) return;
-        const overlayConfig = buildSpellDamageOverlayConfig(spell);
+        const overlayConfig = buildSpellDamageOverlayConfig(spell, selectedLevel);
         if (!overlayConfig) {
           createToast('Danno non calcolabile per questo trucchetto.', 'error');
           return;
@@ -666,7 +709,9 @@ export async function renderHome(container) {
       if (!spell) return;
       const level = Number(spell.level) || 0;
       if (level < 1) return;
-      const consumed = await consumeSpellSlot(activeCharacter, level, () => renderHome(container));
+      const selectedLevel = await chooseSpellSlotLevel(activeCharacter, spell);
+      if (!selectedLevel) return;
+      const consumed = await consumeSpellSlot(activeCharacter, selectedLevel, () => renderHome(container));
       if (!consumed) return;
 
       const refreshedCharacter = getState().characters.find((char) => normalizeCharacterId(char.id) === normalizeCharacterId(activeCharacter.id)) || activeCharacter;
@@ -685,7 +730,7 @@ export async function renderHome(container) {
         renderHome(container);
         return;
       }
-      const overlayConfig = buildSpellDamageOverlayConfig(spell);
+      const overlayConfig = buildSpellDamageOverlayConfig(spell, selectedLevel);
       if (!overlayConfig) {
         createToast('Danno non calcolabile per questo incantesimo.', 'error');
         return;
@@ -702,6 +747,14 @@ export async function renderHome(container) {
       });
     }));
 
+
+  container.querySelectorAll('[data-consume-spell-slot]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      if (!activeCharacter) return;
+      const level = Number(button.dataset.consumeSpellSlot);
+      if (!Number.isFinite(level) || level < 1) return;
+      await consumeSpellSlot(activeCharacter, level, () => renderHome(container));
+    }));
 
   container.querySelectorAll('[data-restore-spell-slot]')
     .forEach((button) => button.addEventListener('click', async () => {

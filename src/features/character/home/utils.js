@@ -208,6 +208,18 @@ export function sortSpellsByLevel(spells) {
   });
 }
 
+export function getCastableSpellSlotLevels(slots, spellLevel) {
+  const minLevel = Math.max(1, Number(spellLevel) || 1);
+  const slotMap = slots || {};
+  const options = [];
+  for (let level = minLevel; level <= 9; level += 1) {
+    const available = Math.max(0, Number(slotMap[level]) || 0);
+    if (available <= 0) continue;
+    options.push({ level, available });
+  }
+  return options;
+}
+
 export function getSpellTypeLabel(spell) {
   const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
   return isCantrip ? 'Trucchetto' : 'Incantesimo';
@@ -233,14 +245,45 @@ export function buildWeaponDamageOverlayConfig(character, weapon) {
   };
 }
 
-export function buildSpellDamageOverlayConfig(spell) {
+function scaleDamageDiceNotation(damageDie, multiplier) {
+  const parsed = parseDamageDice(damageDie);
+  if (!parsed || !Number.isFinite(multiplier) || multiplier <= 0) return null;
+  return parsed.parts
+    .map((part, index) => {
+      const sign = part.sign < 0 ? '-' : index === 0 ? '' : '+';
+      return `${sign}${part.count * multiplier}d${part.sides}`;
+    })
+    .join('');
+}
+
+export function buildSpellDamageOverlayConfig(spell, castLevel = null) {
   if (!spell) return null;
   const dice = parseDamageDice(spell.damage_die);
   if (!dice) return null;
-  const damageModifier = Number(spell.damage_modifier) || 0;
+  const spellLevel = Math.max(0, Number(spell.level) || 0);
+  const normalizedCastLevel = Math.max(spellLevel, Number(castLevel) || spellLevel);
+  let notation = dice.notation;
+  let damageModifier = Number(spell.damage_modifier) || 0;
+  if (normalizedCastLevel > spellLevel) {
+    const defaultStartLevel = Math.max(spellLevel + 1, 1);
+    const startLevel = Math.max(defaultStartLevel, Number(spell.upcast_start_level) || defaultStartLevel);
+    if (normalizedCastLevel >= startLevel) {
+      const upcastSteps = normalizedCastLevel - startLevel + 1;
+      const upcastNotation = scaleDamageDiceNotation(spell.upcast_damage_die, upcastSteps);
+      if (upcastNotation) {
+        notation = `${notation}${upcastNotation.startsWith('-') ? '' : '+'}${upcastNotation}`;
+      }
+      const upcastModifier = Number(spell.upcast_damage_modifier) || 0;
+      if (upcastModifier) {
+        damageModifier += upcastModifier * upcastSteps;
+      }
+    }
+  }
   return {
-    title: `Danni ${spell.name}`,
-    notation: dice.notation,
+    title: normalizedCastLevel > spellLevel
+      ? `Danni ${spell.name} (slot ${normalizedCastLevel}°)`
+      : `Danni ${spell.name}`,
+    notation,
     modifier: damageModifier
   };
 }
