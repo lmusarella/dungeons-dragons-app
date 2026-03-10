@@ -5,7 +5,8 @@ import {
   formatSigned,
   formatAbility,
   calculateArmorClass,
-  rollDie
+  rollDie,
+  buildSpellDamageOverlayConfig
 } from '../../../../../src/features/character/home/utils.js';
 
 describe('src/features/character/home/utils.js', () => {
@@ -24,6 +25,23 @@ describe('src/features/character/home/utils.js', () => {
     expect(getHitDiceSides('d10')).toBe(10);
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.5);
     expect(rollDie(20)).toBe(11);
+  });
+
+
+  it('builds scaled spell damage config for upcast slots', () => {
+    const config = buildSpellDamageOverlayConfig({
+      name: 'Cura Ferite',
+      level: 1,
+      damage_die: '1d8',
+      damage_modifier: 3,
+      upcast_damage_die: '1d8',
+      upcast_damage_modifier: 1
+    }, 3);
+    expect(config).toEqual({
+      title: 'Danni Cura Ferite (slot 3°)',
+      notation: '1d8+2d8',
+      modifier: 5
+    });
   });
 
   it('calculates armor class with equipped armor and shield', () => {

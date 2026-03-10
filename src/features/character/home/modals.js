@@ -29,8 +29,8 @@ function normalizeSpellCastTime(castTime) {
 }
 
 
-function openSpellDamageOverlay(character, spell) {
-  const overlayConfig = buildSpellDamageOverlayConfig(spell);
+function openSpellDamageOverlay(character, spell, castLevel = null) {
+  const overlayConfig = buildSpellDamageOverlayConfig(spell, castLevel);
   if (!overlayConfig) return;
   openDiceOverlay({
     keepOpen: true,
@@ -42,6 +42,23 @@ function openSpellDamageOverlay(character, spell) {
     characterId: character?.id,
     historyLabel: spell?.name || null
   });
+}
+
+function getCastSlotOptions(character, spell) {
+  const spellLevel = Math.max(0, Number(spell?.level) || 0);
+  const spellcasting = character?.data?.spellcasting || {};
+  const slots = spellcasting.slots || {};
+  const options = [];
+  for (let level = spellLevel; level <= 9; level += 1) {
+    if (level <= 0) continue;
+    const available = Math.max(0, Number(slots[level]) || 0);
+    if (available <= 0) continue;
+    options.push({
+      value: String(level),
+      label: `${level}° livello (${available} slot)`
+    });
+  }
+  return options;
 }
 
 export function openBackgroundModal(character) {
@@ -293,7 +310,31 @@ export function openSpellDrawer(character, onSave, spell = null) {
     type: 'number',
     value: spell?.damage_modifier ?? ''
   });
+  const upcastDamageDieField = buildInput({
+    label: 'Dado extra per slot superiore',
+    name: 'spell_upcast_damage_die',
+    placeholder: 'Es. 1d8',
+    value: spell?.upcast_damage_die ?? ''
+  });
+  const upcastDamageModifierField = buildInput({
+    label: 'Modificatore extra/slot',
+    name: 'spell_upcast_damage_modifier',
+    type: 'number',
+    value: spell?.upcast_damage_modifier ?? ''
+  });
+  const upcastStartLevelField = buildInput({
+    label: 'Slot minimo upcast',
+    name: 'spell_upcast_start_level',
+    type: 'number',
+    value: spell?.upcast_start_level ?? ''
+  });
+  const upcastStartLevelInput = upcastStartLevelField.querySelector('input');
+  if (upcastStartLevelInput) {
+    upcastStartLevelInput.min = '1';
+    upcastStartLevelInput.max = '9';
+  }
   form.appendChild(buildRow([damageDieField, damageModifierField, imageField], 'compact'));
+  form.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
     name: 'spell_description',
@@ -375,6 +416,9 @@ export function openSpellDrawer(character, onSave, spell = null) {
       image_url: formData.get('spell_image_url')?.trim() || null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
+      upcast_damage_die: formData.get('spell_upcast_damage_die')?.trim() || null,
+      upcast_damage_modifier: toNumberOrNull(formData.get('spell_upcast_damage_modifier')),
+      upcast_start_level: toNumberOrNull(formData.get('spell_upcast_start_level')),
       description: formData.get('spell_description')?.trim() || null,
       prep_state: prepState
     };
@@ -420,6 +464,17 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     </div>
   `;
 
+  const castSlotOptions = isCastable ? getCastSlotOptions(character, spell) : [];
+  if (isCastable && castSlotOptions.length) {
+    const castSlotField = document.createElement('label');
+    castSlotField.className = 'field';
+    castSlotField.innerHTML = '<span>Slot da consumare</span>';
+    const castSlotSelect = buildSelect(castSlotOptions, castSlotOptions[0]?.value || String(level));
+    castSlotSelect.name = 'cast_slot_level';
+    castSlotField.appendChild(castSlotSelect);
+    content.prepend(castSlotField);
+  }
+
   openFormModal({
     title: spell.name || 'Incantesimo',
     submitLabel: isCastable ? 'Lancia' : 'Chiudi',
@@ -429,9 +484,10 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     showFooter: isCastable
   }).then(async (formData) => {
     if (!formData || !isCastable) return;
-    const consumed = await consumeSpellSlot(character, level, onRender);
+    const selectedLevel = Math.max(level, Number(formData.get('cast_slot_level')) || level);
+    const consumed = await consumeSpellSlot(character, selectedLevel, onRender);
     if (!consumed) return;
-    openSpellDamageOverlay(character, spell);
+    openSpellDamageOverlay(character, spell, selectedLevel);
   });
 }
 
