@@ -349,6 +349,53 @@ export function buildSkillList(character) {
   `;
 }
 
+export function buildSpecialSkillList(character) {
+  const data = character.data || {};
+  const abilities = data.abilities || {};
+  const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+
+  if (!specialSkills.length) {
+    return `
+      <div class="detail-section">
+        <p class="muted">Nessun tiro speciale configurato. Aggiungilo dalla modifica personaggio.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="detail-section">
+      <div class="detail-grid detail-grid--compact">
+        ${specialSkills.map((skill, index) => {
+    const abilityKey = abilityShortLabel[skill.ability] ? skill.ability : 'str';
+    const proficient = Boolean(skill.proficient);
+    const mastery = Boolean(skill.mastery) && proficient;
+    const baseTotal = calculateSkillModifier(
+      abilities[abilityKey],
+      proficiencyBonus,
+      proficient ? (mastery ? 2 : 1) : 0
+    );
+    const extraBonus = Number(skill.bonus) || 0;
+    const total = (baseTotal ?? 0) + extraBonus;
+    const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
+    const skillLabel = skill.name?.trim() || `Tiro speciale ${index + 1}`;
+    return `
+          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-special-skill-card="${skill.id ?? index}" aria-label="Tira abilità speciale ${skillLabel}">
+            <div>
+              <div class="modifier-title">
+                <strong>${skillLabel}</strong>
+                <span class="modifier-ability modifier-ability--${abilityKey}">${abilityShortLabel[abilityKey]}</span>
+              </div>
+            </div>
+            <div class="modifier-value">${formatSigned(total)}</div>
+          </button>
+        `;
+  }).join('')}
+      </div>
+    </div>
+  `;
+}
+
 export function buildSavingThrowSection(character) {
   const data = character.data || {};
   const abilities = data.abilities || {};
