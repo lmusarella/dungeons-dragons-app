@@ -13,6 +13,7 @@ import {
   buildResourceSections,
   buildSavingThrowSection,
   buildSkillList,
+  buildSpecialSkillList,
   buildSpellSection
 } from './home/sections.js';
 import { buildLootFields, moneyFields } from '../inventory/render.js';
@@ -185,6 +186,21 @@ export async function renderHome(container) {
           </header>
           <div class="home-scroll-body">
             ${activeCharacter ? buildSkillList(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+          </div>
+        </section>
+        <section class="card home-card home-section home-scroll-panel">
+          <header class="card-header">
+            <div>
+              <p class="eyebrow">Tiri abilità speciali</p>
+            </div>
+            <div class="actions">
+              <button class="icon-button" data-open-dice="special-skills" aria-label="Lancia dadi abilità speciali">
+                <span aria-hidden="true">🎲</span>
+              </button>
+            </div>
+          </header>
+          <div class="home-scroll-body">
+            ${activeCharacter ? buildSpecialSkillList(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
       </div>
@@ -573,6 +589,28 @@ export async function renderHome(container) {
         rollType: 'TA',
         selection: {
           label: 'Abilità',
+          options,
+          value: selected.value
+        },
+        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+        characterId: activeCharacter.id
+      });
+    }));
+  container.querySelectorAll('[data-special-skill-card]')
+    .forEach((card) => card.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const specialKey = card.dataset.specialSkillCard;
+      if (!specialKey) return;
+      const options = buildSpecialSkillRollOptions(activeCharacter, items || []);
+      const selected = options.find((entry) => entry.value === specialKey);
+      if (!selected) return;
+      openDiceRollerModal({
+        title: `Tiro abilità speciale • ${selected.shortLabel || selected.label}`,
+        mode: 'd20',
+        rollType: 'TA',
+        selection: {
+          label: 'Abilità speciale',
           options,
           value: selected.value
         },
@@ -1172,6 +1210,44 @@ function buildSkillRollOptions(character, items = []) {
   });
 }
 
+function buildSpecialSkillRollOptions(character, items = []) {
+  const data = character.data || {};
+  const abilities = data.abilities || {};
+  const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const conditionState = getConditionState(character);
+  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
+  const hasHeavyArmor = (items || []).some((item) => item.category === 'armor'
+    && item.armor_type === 'heavy'
+    && item.equipable
+    && getEquipSlots(item).length);
+  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+
+  return specialSkills.map((skill, index) => {
+    const abilityKey = abilityShortLabel[skill.ability] ? skill.ability : 'str';
+    const proficient = Boolean(skill.proficient);
+    const mastery = Boolean(skill.mastery) && proficient;
+    const baseTotal = calculateSkillModifier(abilities[abilityKey], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
+    const extraBonus = Number(skill.bonus) || 0;
+    const total = (baseTotal ?? 0) + extraBonus;
+    const rollModeReasons = [];
+    if (poisonedConditions.length) {
+      rollModeReasons.push(`Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.`);
+    }
+    if (abilityKey === 'dex' && hasHeavyArmor) {
+      rollModeReasons.push('Svantaggio automatico: armatura pesante su tiri speciali basati su DES.');
+    }
+    const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
+    return {
+      value: String(skill.id ?? index),
+      label: `${name} (${formatSigned(total)})`,
+      shortLabel: name,
+      modifier: total,
+      rollMode: rollModeReasons.length ? 'disadvantage' : null,
+      rollModeReason: rollModeReasons.length ? rollModeReasons.join(' ') : null
+    };
+  });
+}
+
 function buildSavingThrowRollOptions(character) {
   const data = character.data || {};
   const abilities = data.abilities || {};
@@ -1307,6 +1383,14 @@ function handleDiceAction(type) {
       rollType: 'TA',
       selection: activeCharacter
         ? { label: 'Abilità', options: buildSkillRollOptions(activeCharacter, items) }
+        : null
+    },
+    'special-skills': {
+      title: 'Tiro Abilità Speciale',
+      mode: 'd20',
+      rollType: 'TA',
+      selection: activeCharacter
+        ? { label: 'Abilità speciale', options: buildSpecialSkillRollOptions(activeCharacter, items) }
         : null
     },
     'attack-roll': {

@@ -25,6 +25,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const abilities = characterData.abilities || {};
   const skillStates = characterData.skills || {};
   const skillMasteryStates = characterData.skill_mastery || {};
+  const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
@@ -171,6 +172,105 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }).join('')}
     </div>
   `;
+
+  const createSpecialSkillId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `special-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  };
+  let draftSpecialSkills = specialSkillRolls.map((entry, index) => ({
+    id: String(entry?.id ?? `special-${index + 1}`),
+    name: entry?.name ?? '',
+    ability: abilityShortLabel[entry?.ability] ? entry.ability : 'str',
+    proficient: Boolean(entry?.proficient),
+    mastery: Boolean(entry?.mastery),
+    bonus: Number(entry?.bonus) || 0
+  }));
+
+  const specialSkillSection = document.createElement('div');
+  specialSkillSection.className = 'character-edit-section';
+  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
+  const specialSkillList = document.createElement('div');
+  specialSkillList.className = 'character-skill-grid';
+  const addSpecialSkillButton = document.createElement('button');
+  addSpecialSkillButton.type = 'button';
+  addSpecialSkillButton.className = 'ghost-button ghost-button--compact';
+  addSpecialSkillButton.textContent = '+ Aggiungi tiro speciale';
+  const renderSpecialSkillRows = () => {
+    specialSkillList.innerHTML = '';
+    if (!draftSpecialSkills.length) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'muted';
+      emptyState.textContent = 'Nessun tiro speciale configurato.';
+      specialSkillList.appendChild(emptyState);
+      return;
+    }
+    draftSpecialSkills.forEach((entry, index) => {
+      const row = document.createElement('div');
+      row.className = 'character-skill-row';
+      row.dataset.specialSkillRow = entry.id;
+      row.innerHTML = `
+        <div class="character-edit-grid">
+          ${buildInput({ label: 'Nome', name: `special_skill_name_${index}`, value: entry.name, placeholder: 'Es. Forgiatura' }).outerHTML}
+          <label class="field">
+            <span>Caratteristica</span>
+            ${buildSelect([
+    { value: 'str', label: 'Forza (FOR)' },
+    { value: 'dex', label: 'Destrezza (DES)' },
+    { value: 'con', label: 'Costituzione (COS)' },
+    { value: 'int', label: 'Intelligenza (INT)' },
+    { value: 'wis', label: 'Saggezza (SAG)' },
+    { value: 'cha', label: 'Carisma (CAR)' }
+  ], entry.ability).outerHTML}
+          </label>
+          ${buildInput({ label: 'Bonus extra', name: `special_skill_bonus_${index}`, type: 'number', value: entry.bonus }).outerHTML}
+        </div>
+        <div class="character-toggle-group">
+          <label class="toggle-pill">
+            <input type="checkbox" name="special_skill_proficient_${index}" ${entry.proficient ? 'checked' : ''} />
+            <span>Competenza</span>
+          </label>
+          <label class="toggle-pill">
+            <input type="checkbox" name="special_skill_mastery_${index}" ${entry.mastery ? 'checked' : ''} />
+            <span>Maestria</span>
+          </label>
+          <button type="button" class="ghost-button ghost-button--compact" data-remove-special-skill="${entry.id}">Rimuovi</button>
+        </div>
+      `;
+      const abilitySelect = row.querySelector('select');
+      if (abilitySelect) abilitySelect.name = `special_skill_ability_${index}`;
+      const masteryInput = row.querySelector(`input[name="special_skill_mastery_${index}"]`);
+      const proficiencyInput = row.querySelector(`input[name="special_skill_proficient_${index}"]`);
+      masteryInput?.addEventListener('change', () => {
+        if (masteryInput.checked && proficiencyInput) proficiencyInput.checked = true;
+      });
+      row.querySelectorAll('input[type="number"]').forEach((input) => {
+        attachNumberStepper(input, {
+          decrementLabel: 'Riduci bonus extra',
+          incrementLabel: 'Aumenta bonus extra'
+        });
+      });
+      row.querySelector(`[data-remove-special-skill="${entry.id}"]`)?.addEventListener('click', () => {
+        draftSpecialSkills = draftSpecialSkills.filter((item) => item.id !== entry.id);
+        renderSpecialSkillRows();
+      });
+      specialSkillList.appendChild(row);
+    });
+  };
+  addSpecialSkillButton.addEventListener('click', () => {
+    draftSpecialSkills.push({
+      id: createSpecialSkillId(),
+      name: '',
+      ability: 'str',
+      proficient: false,
+      mastery: false,
+      bonus: 0
+    });
+    renderSpecialSkillRows();
+  });
+  specialSkillSection.append(specialSkillList, addSpecialSkillButton);
+  renderSpecialSkillRows();
 
   const savingSection = document.createElement('div');
   savingSection.className = 'character-edit-section';
@@ -410,6 +510,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Caratteristiche e competenze', [
         abilitySection,
         skillSection,
+        specialSkillSection,
         savingSection,
         proficiencySection
       ])
@@ -565,6 +666,21 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ['str', 'con', 'int', 'wis', 'cha'].forEach((ability) => {
     nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
   });
+  const nextSpecialSkillRolls = draftSpecialSkills.map((entry, index) => {
+    const name = formData.get(`special_skill_name_${index}`)?.toString().trim() || '';
+    if (!name) return null;
+    const ability = formData.get(`special_skill_ability_${index}`)?.toString() || 'str';
+    const masteryChecked = formData.has(`special_skill_mastery_${index}`);
+    const proficientChecked = formData.has(`special_skill_proficient_${index}`) || masteryChecked;
+    return {
+      id: entry.id,
+      name,
+      ability: abilityShortLabel[ability] ? ability : 'str',
+      proficient: proficientChecked,
+      mastery: masteryChecked && proficientChecked,
+      bonus: toNumberOrNull(formData.get(`special_skill_bonus_${index}`)) ?? 0
+    };
+  }).filter(Boolean);
   const isSpellcaster = formData.get('is_spellcaster') === 'on';
   const canPrepare = formData.get('spell_can_prepare') === 'on';
   const spellSlotLevels = Array.from({ length: 9 }, (_, index) => index + 1);
@@ -629,6 +745,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     },
     skills: nextSkills,
     skill_mastery: nextMastery,
+    special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
     proficiencies: nextProficiencies
   };
