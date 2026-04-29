@@ -185,7 +185,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     ability: abilityShortLabel[entry?.ability] ? entry.ability : 'str',
     proficient: Boolean(entry?.proficient),
     mastery: Boolean(entry?.mastery),
-    bonus: Number(entry?.bonus) || 0
+    bonus: Number(entry?.bonus ?? entry?.extra_bonus ?? entry?.modifier) || 0
   }));
 
   const specialSkillSection = document.createElement('div');
@@ -311,18 +311,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   combatSection.innerHTML = '<h4>Combattimento e magia</h4>';
   const combatGrid = document.createElement('div');
   combatGrid.className = 'character-edit-grid';
-  combatGrid.appendChild(buildInput({
-    label: 'Bonus attacco extra (mischia)',
-    name: 'attack_bonus_melee',
-    type: 'number',
-    value: characterData.attack_bonus_melee ?? characterData.attack_bonus ?? 0
-  }));
-  combatGrid.appendChild(buildInput({
-    label: 'Bonus attacco extra (distanza)',
-    name: 'attack_bonus_ranged',
-    type: 'number',
-    value: characterData.attack_bonus_ranged ?? characterData.attack_bonus ?? 0
-  }));
   combatGrid.appendChild(buildInput({
     label: 'Attacchi extra',
     name: 'extra_attacks',
@@ -617,6 +605,37 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   modalCard?.classList.add('modal-card--wide');
   enhanceNumericFields(form);
 
+  const tooltipHints = {
+    name: 'Nome del personaggio mostrato in scheda.',
+    race: 'Razza o origine del personaggio.',
+    class_name: 'Classe principale del personaggio.',
+    level: 'Livello attuale usato per progressione e risorse.',
+    hp_current: 'Punti ferita correnti.',
+    hp_max: 'Punti ferita massimi.',
+    hp_temp: 'Punti ferita temporanei attivi.',
+    ac: 'Classe armatura totale.',
+    initiative: 'Bonus iniziativa ai tiri di iniziativa.',
+    proficiency_bonus: 'Bonus competenza globale.',
+    extra_attacks: 'Numero di attacchi extra disponibili.',
+    damage_bonus_melee: 'Bonus fisso ai danni in mischia.',
+    damage_bonus_ranged: 'Bonus fisso ai danni a distanza.'
+  };
+  form.querySelectorAll('input, select, textarea').forEach((field) => {
+    const name = field.getAttribute('name');
+    const hint = name ? tooltipHints[name] : null;
+    if (!hint) return;
+    const label = field.closest('.field')?.querySelector('span');
+    if (!label || label.querySelector('.field-help')) return;
+    const help = document.createElement('button');
+    help.type = 'button';
+    help.className = 'field-help';
+    help.textContent = '?';
+    help.title = hint;
+    help.setAttribute('aria-label', hint);
+    label.appendChild(document.createTextNode(' '));
+    label.appendChild(help);
+  });
+
   const formData = await openFormModal({
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',
@@ -723,8 +742,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     speed: toNumberOrNull(formData.get('speed')),
     proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
     initiative: toNumberOrNull(formData.get('initiative')),
-    attack_bonus_melee: toNumberOrNull(formData.get('attack_bonus_melee')) ?? 0,
-    attack_bonus_ranged: toNumberOrNull(formData.get('attack_bonus_ranged')) ?? 0,
+    attack_bonus_melee: toNumberOrNull(formData.get('attack_bonus_melee')) ?? Number(characterData.attack_bonus_melee ?? characterData.attack_bonus) || 0,
+    attack_bonus_ranged: toNumberOrNull(formData.get('attack_bonus_ranged')) ?? Number(characterData.attack_bonus_ranged ?? characterData.attack_bonus) || 0,
     extra_attacks: toNumberOrNull(formData.get('extra_attacks')) ?? 0,
     damage_bonus_melee: toNumberOrNull(formData.get('damage_bonus_melee')) ?? 0,
     damage_bonus_ranged: toNumberOrNull(formData.get('damage_bonus_ranged')) ?? 0,

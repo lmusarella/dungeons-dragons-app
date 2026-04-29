@@ -631,6 +631,23 @@ button:focus-visible,
   color: #3b5d60;
 }
 
+
+.field-help {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid #d6c6ad;
+  background: #fff;
+  color: #3b5d60;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+}
+
+.field-help:hover {
+  border-color: var(--accent);
+}
 .field__input-row {
   display: flex;
   align-items: center;

@@ -637,6 +637,7 @@ export async function renderHome(container) {
         const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
         const spell = spells.find((entry) => entry.id === spellId);
         if (!spell) return;
+        const selectedLevel = Number(spell.cast_level ?? spell.level) || 0;
         const overlayConfig = buildSpellDamageOverlayConfig(spell, selectedLevel);
         if (!overlayConfig) {
           createToast('Danno non calcolabile per questo trucchetto.', 'error');
