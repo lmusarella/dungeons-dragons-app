@@ -651,7 +651,8 @@ export async function renderHome(container) {
           modifier: overlayConfig.modifier,
           rollType: 'DMG',
           characterId: activeCharacter?.id,
-          historyLabel: spell.name || null
+          historyLabel: spell.name || null,
+          sneakAttackDice: activeCharacter?.data?.sneak_attack_dice || null
         });
         return;
       }
@@ -670,7 +671,8 @@ export async function renderHome(container) {
         modifier: overlayConfig.modifier,
         rollType: 'DMG',
         characterId: activeCharacter?.id,
-        historyLabel: weapon.name || null
+        historyLabel: weapon.name || null,
+        sneakAttackDice: activeCharacter?.data?.sneak_attack_dice || null
       });
     }));
 
@@ -782,7 +784,8 @@ export async function renderHome(container) {
         modifier: overlayConfig.modifier,
         rollType: 'DMG',
         characterId: activeCharacter.id,
-        historyLabel: spell.name || null
+        historyLabel: spell.name || null,
+          sneakAttackDice: activeCharacter?.data?.sneak_attack_dice || null
       });
     }));
 

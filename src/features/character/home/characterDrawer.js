@@ -329,6 +329,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     type: 'number',
     value: characterData.damage_bonus_ranged ?? characterData.damage_bonus ?? 0
   }));
+  combatGrid.appendChild(buildInput({
+    label: 'Dadi attacco furtivo',
+    name: 'sneak_attack_dice',
+    placeholder: 'Es. 2d6',
+    value: characterData.sneak_attack_dice ?? ''
+  }));
   combatSection.appendChild(combatGrid);
   const spellcasterField = document.createElement('div');
   spellcasterField.className = 'modal-toggle-field';
@@ -747,6 +753,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     extra_attacks: toNumberOrNull(formData.get('extra_attacks')) ?? 0,
     damage_bonus_melee: toNumberOrNull(formData.get('damage_bonus_melee')) ?? 0,
     damage_bonus_ranged: toNumberOrNull(formData.get('damage_bonus_ranged')) ?? 0,
+    sneak_attack_dice: formData.get('sneak_attack_dice')?.toString().trim() || null,
     ac_bonus: toNumberOrNull(formData.get('ac_bonus')) ?? 0,
     is_spellcaster: isSpellcaster,
     spellcasting: nextSpellcasting,
