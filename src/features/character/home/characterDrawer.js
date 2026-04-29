@@ -636,10 +636,40 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     help.type = 'button';
     help.className = 'field-help';
     help.textContent = '?';
-    help.title = hint;
     help.setAttribute('aria-label', hint);
+    help.setAttribute('aria-expanded', 'false');
+    help.setAttribute('data-tooltip', hint);
     label.appendChild(document.createTextNode(' '));
     label.appendChild(help);
+  });
+
+  const hideHelpTooltips = (except = null) => {
+    form.querySelectorAll('.field-help.is-open').forEach((button) => {
+      if (except && button === except) return;
+      button.classList.remove('is-open');
+      button.setAttribute('aria-expanded', 'false');
+    });
+  };
+
+  form.querySelectorAll('.field-help').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = !button.classList.contains('is-open');
+      hideHelpTooltips(button);
+      button.classList.toggle('is-open', willOpen);
+      button.setAttribute('aria-expanded', String(willOpen));
+    });
+    button.addEventListener('blur', () => {
+      button.classList.remove('is-open');
+      button.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  form.addEventListener('click', (event) => {
+    if (!event.target.closest('.field-help')) {
+      hideHelpTooltips();
+    }
   });
 
   const formData = await openFormModal({

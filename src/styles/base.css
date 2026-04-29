@@ -633,6 +633,7 @@ button:focus-visible,
 
 
 .field-help {
+  position: relative;
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -641,12 +642,44 @@ button:focus-visible,
   color: #3b5d60;
   font-size: 0.72rem;
   line-height: 1;
-  cursor: help;
+  cursor: pointer;
   padding: 0;
 }
 
-.field-help:hover {
+.field-help:hover,
+.field-help:focus-visible,
+.field-help.is-open {
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.14);
+}
+
+.field-help::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d6c6ad;
+  background: #fffdf8;
+  color: #2f474a;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(17, 24, 39, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 12;
+}
+
+.field-help:hover::after,
+.field-help:focus-visible::after,
+.field-help.is-open::after {
+  opacity: 1;
 }
 .field__input-row {
   display: flex;
