@@ -120,6 +120,13 @@ function buildOverlayMarkup() {
                 <option value="minus-d6">-d6</option>
               </select>
             </div>
+            <div class="diceov-control" data-sneak-attack-field hidden>
+              <span class="diceov-label">Attacco furtivo</span>
+              <label class="diceov-toggle">
+                <input type="checkbox" name="dice-sneak-attack" />
+                <span class="diceov-toggle-track" aria-hidden="true"></span>
+              </label>
+            </div>
           </div>
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
         </div>
@@ -357,7 +364,8 @@ export function openDiceOverlay({
   rollType = null,
   weakPoints = 0,
   characterId = null,
-  historyLabel = null
+  historyLabel = null,
+  sneakAttackDice = null
 } = {}) {
   if (!overlayEl) {
     overlayEl = document.createElement('div');
@@ -418,6 +426,8 @@ export function openDiceOverlay({
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
   const historyPanel = overlayEl.querySelector('[data-dice-history-panel]');
   const historyList = overlayEl.querySelector('[data-dice-history]');
+  const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
+  const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
@@ -803,7 +813,10 @@ export function openDiceOverlay({
 
   function updateNotationFromGeneric() {
     const notation = notationInput?.value?.trim();
-    const baseValue = notation || buildGenericNotation(overlayEl);
+    const sneakDice = String(sneakAttackDice || '').trim();
+    const addSneak = rollType === 'DMG' && mode === 'generic' && sneakAttackInput?.checked && sneakDice;
+    const baseRaw = notation || buildGenericNotation(overlayEl);
+    const baseValue = addSneak ? `${baseRaw}${sneakDice.startsWith('-') ? '' : '+'}${sneakDice}` : baseRaw;
     const buffConfig = getBuffConfig();
     const value = buffConfig
       ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
@@ -937,6 +950,7 @@ export function openDiceOverlay({
   if (modifierInput) modifierInput.oninput = updateModifier;
   if (genericModifierInput) genericModifierInput.oninput = updateModifier;
   if (notationInput) notationInput.oninput = updateNotationFromGeneric;
+  if (sneakAttackInput) sneakAttackInput.onchange = updateNotationFromGeneric;
   if (selectInput) {
     selectInput.onchange = () => {
       const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
@@ -980,6 +994,9 @@ export function openDiceOverlay({
 
   setSelectionOptions();
   setBuffVisibility();
+  const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
+  if (sneakAttackField) sneakAttackField.toggleAttribute('hidden', !(rollType === 'DMG' && mode === 'generic' && hasSneakAttack));
+  if (sneakAttackInput) sneakAttackInput.checked = false;
   setInspirationAvailability(state.inspirationAvailable);
   applyDefaultRollMode();
   updateInspiration();

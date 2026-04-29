@@ -349,21 +349,21 @@ export function buildLootFields(weightStep) {
       </label>
        <label class="field">
         <span>Valore</span>
-        <input name="value_cp" type="number" value="0" />
+        <input name="value_cp" type="number" value="0" min="0" step="1" />
       </label>
    </div>
     <div class="compact-field-grid">  
       <label class="field">
         <span>Quantità</span>
-        <input name="qty" type="number" value="1" min="0" step="any" />
+        <input name="qty" type="number" value="1" min="0" step="1" />
       </label>
       <label class="field">
         <span>Peso</span>
-        <input name="weight" type="number" value="0" min="0" step="any" />
+        <input name="weight" type="number" value="0" min="0" step="${weightStep || '0.1'}" />
       </label>
       <label class="field">
         <span>Volume</span>
-        <input name="volume" type="number" value="0" min="0" step="any" />
+        <input name="volume" type="number" value="0" min="0" step="0.1" />
       </label>
      
     </div>

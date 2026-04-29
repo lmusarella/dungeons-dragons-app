@@ -61,7 +61,7 @@ export async function openItemModal(character, item, items, onSave) {
   const qtyInput = qtyField.querySelector('input');
   if (qtyInput) {
     qtyInput.min = '0';
-    qtyInput.step = 'any';
+    qtyInput.step = '1';
   }
   const weightField = buildInput({ label: 'Peso', name: 'weight', type: 'number', value: item?.weight ?? 0 });
   const weightInput = weightField.querySelector('input');
@@ -74,9 +74,14 @@ export async function openItemModal(character, item, items, onSave) {
   const volumeInput = volumeField.querySelector('input');
   if (volumeInput) {
     volumeInput.min = '0';
-    volumeInput.step = 'any';
+    volumeInput.step = '0.1';
   }
   const valueField = buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
+  const valueInput = valueField.querySelector('input');
+  if (valueInput) {
+    valueInput.min = '0';
+    valueInput.step = '1';
+  }
   basicSection.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
   const categorySelect = buildSelect(
     [{ value: '', label: 'Seleziona' }, ...itemCategories],
