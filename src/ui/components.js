@@ -143,12 +143,7 @@ export function attachNumberStepper(input, {
     if (!Number.isFinite(input.valueAsNumber) && input.value === '') {
       input.value = input.min || '0';
     }
-    const numericStep = Number(input.step);
-    const hasValidStep = input.step !== 'any' && Number.isFinite(numericStep) && numericStep > 0;
-    if (hasValidStep) {
-      if (direction < 0) input.stepDown();
-      if (direction > 0) input.stepUp();
-    } else {
+    const fallbackStepValue = () => {
       const fallbackStep = 1;
       const currentValue = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.value || 0);
       const minValue = Number(input.min);
@@ -157,6 +152,18 @@ export function attachNumberStepper(input, {
       if (Number.isFinite(minValue)) nextValue = Math.max(minValue, nextValue);
       if (Number.isFinite(maxValue)) nextValue = Math.min(maxValue, nextValue);
       input.value = String(nextValue);
+    };
+    const numericStep = Number(input.step);
+    const hasValidStep = input.step !== 'any' && Number.isFinite(numericStep) && numericStep > 0;
+    if (hasValidStep) {
+      try {
+        if (direction < 0) input.stepDown();
+        if (direction > 0) input.stepUp();
+      } catch (error) {
+        fallbackStepValue();
+      }
+    } else {
+      fallbackStepValue();
     }
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
