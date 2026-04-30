@@ -84,6 +84,17 @@ const bootstrapApp = async () => {
 
   await loadCachedData();
   initRouter();
+
+  const warmup = () => {
+    import('./features/dice-roller/overlay/dice.js')
+      .then(({ warmupDiceEffectAudio }) => warmupDiceEffectAudio())
+      .catch(() => { });
+  };
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(warmup, { timeout: 2000 });
+  } else {
+    window.setTimeout(warmup, 600);
+  }
 };
 
 registerSW({ immediate: true });
