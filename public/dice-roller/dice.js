@@ -856,6 +856,9 @@ const DICE = (function() {
     var rollSoundPool = [];
     var rollSoundIndex = 0;
     var DEFAULT_ROLL_SOUND_POOL_SIZE = 8;
+    var rollSoundContext = null;
+    var rollSoundBuffer = null;
+    var rollSoundUnlockBound = false;
 
     function ensureRollSoundPool() {
         if (rollSoundPool.length) return;
@@ -866,9 +869,60 @@ const DICE = (function() {
             rollSoundPool.push(audio);
         }
     }
+    
+    function ensureRollSoundContext() {
+        if (rollSoundContext || typeof window === 'undefined') return;
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        rollSoundContext = new Ctx();
+        if (!rollSoundUnlockBound) {
+            var unlock = function() {
+                if (!rollSoundContext) return;
+                if (rollSoundContext.state === 'suspended') {
+                    rollSoundContext.resume().catch(function() {});
+                }
+            };
+            window.addEventListener('pointerdown', unlock, { passive: true });
+            window.addEventListener('touchstart', unlock, { passive: true });
+            rollSoundUnlockBound = true;
+        }
+    }
+    
+    function preloadRollSoundBuffer() {
+        ensureRollSoundContext();
+        if (!rollSoundContext || rollSoundBuffer) return;
+        fetch(ROLL_SOUND_SRC)
+            .then(function(response) { return response.arrayBuffer(); })
+            .then(function(arrayBuffer) { return rollSoundContext.decodeAudioData(arrayBuffer); })
+            .then(function(decoded) {
+                rollSoundBuffer = decoded;
+            })
+            .catch(function() {});
+    }
+
+    function playRollSoundWithWebAudio(soundVolume) {
+        if (!rollSoundContext || !rollSoundBuffer) return false;
+        if (rollSoundContext.state === 'suspended') {
+            rollSoundContext.resume().catch(function() {});
+        }
+        try {
+            var source = rollSoundContext.createBufferSource();
+            var gainNode = rollSoundContext.createGain();
+            gainNode.gain.value = soundVolume;
+            source.buffer = rollSoundBuffer;
+            source.connect(gainNode);
+            gainNode.connect(rollSoundContext.destination);
+            source.start(0);
+            return true;
+        } catch (_err) {
+            return false;
+        }
+    }
 
     function playSound(_outerContainer, soundVolume) {
         if (soundVolume === 0) return;
+        preloadRollSoundBuffer();
+        if (playRollSoundWithWebAudio(soundVolume)) return;
         ensureRollSoundPool();
         var audio = rollSoundPool[rollSoundIndex];
         rollSoundIndex = (rollSoundIndex + 1) % rollSoundPool.length;

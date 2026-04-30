@@ -82,3 +82,12 @@ RLS: assumere che tutte le tabelle siano protette con `auth.uid()` come owner.
 
 - Quando offline, l'app usa la cache IndexedDB (solo lettura).
 - Un banner rosso indica lo stato offline.
+
+## Health check rapido (30/04/2026)
+
+- ✅ Test automatici: `49/49` passati (`npm test -- --run`).
+- ✅ Build produzione completata (`npm run build`).
+- ⚠️ Nota performance: in build Vite segnala script non modulari in `index.html` (dice roller + librerie esterne), quindi non entrano nel bundling ottimizzato.
+- ⚠️ Nota bundle: chunk JS iniziale principale relativamente pesante (~293 KB non compresso); consigliato aumentare lazy-loading su feature secondarie.
+
+Per il piano operativo dettagliato (priorità, KPI e backlog), vedi: `docs/global-app-check-2026-04-30.md`.

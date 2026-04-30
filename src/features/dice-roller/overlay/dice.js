@@ -1,5 +1,6 @@
 import { normalizeCharacterId } from '../../../app/state.js';
 import { attachNumberStepper } from '../../../ui/components.js';
+import { ensureLegacyDiceAssets } from '../legacyLoader.js';
 
 let overlayEl = null;
 
@@ -248,17 +249,99 @@ const CRITICAL_AUDIO_FILES = {
     criticalSuccess: 'audio/successo_critico.mp3'
   }
 };
+const AUDIO_POOL_SIZE = 3;
+const criticalAudioPool = new Map();
+const criticalAudioCursor = new Map();
+let criticalAudioPreloaded = false;
+let criticalAudioContext = null;
+const criticalAudioBuffers = new Map();
+let criticalAudioUnlockBound = false;
 
 function toPublicAssetUrl(relativePath) {
   const baseUrl = import.meta.env.BASE_URL || '/';
   return new URL(relativePath, window.location.origin + baseUrl).toString();
 }
 
+function preloadCriticalAudio() {
+  if (typeof window === 'undefined' || criticalAudioPreloaded) return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (AudioCtx && !criticalAudioContext) {
+    criticalAudioContext = new AudioCtx();
+  }
+  if (criticalAudioContext && !criticalAudioUnlockBound) {
+    const unlock = () => {
+      if (criticalAudioContext?.state === 'suspended') {
+        criticalAudioContext.resume().catch(() => { });
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('touchstart', unlock, { passive: true });
+    criticalAudioUnlockBound = true;
+  }
+  const uniqueFiles = new Set(
+    Object.values(CRITICAL_AUDIO_FILES).flatMap((config) => Object.values(config))
+  );
+  uniqueFiles.forEach((filePath) => {
+    const src = toPublicAssetUrl(filePath);
+    if (criticalAudioPool.has(src)) return;
+    const pool = Array.from({ length: AUDIO_POOL_SIZE }, () => {
+      const audio = new window.Audio(src);
+      audio.preload = 'auto';
+      audio.load();
+      return audio;
+    });
+    criticalAudioPool.set(src, pool);
+    criticalAudioCursor.set(src, 0);
+    if (criticalAudioContext) {
+      fetch(src)
+        .then((response) => response.arrayBuffer())
+        .then((arrayBuffer) => criticalAudioContext.decodeAudioData(arrayBuffer))
+        .then((decoded) => {
+          criticalAudioBuffers.set(src, decoded);
+        })
+        .catch(() => { });
+    }
+  });
+  criticalAudioPreloaded = true;
+}
+
+export function warmupDiceEffectAudio() {
+  preloadCriticalAudio();
+}
+
 function playCriticalAudio(type, currentRollType) {
   if (typeof window === 'undefined') return;
   const filePath = CRITICAL_AUDIO_FILES[currentRollType]?.[type] || null;
   if (filePath) {
-    const audio = new window.Audio(toPublicAssetUrl(filePath));
+    const src = toPublicAssetUrl(filePath);
+    if (criticalAudioContext && criticalAudioBuffers.has(src)) {
+      if (criticalAudioContext.state === 'suspended') {
+        criticalAudioContext.resume().catch(() => { });
+      }
+      try {
+        const source = criticalAudioContext.createBufferSource();
+        const gainNode = criticalAudioContext.createGain();
+        gainNode.gain.value = 1;
+        source.buffer = criticalAudioBuffers.get(src);
+        source.connect(gainNode);
+        gainNode.connect(criticalAudioContext.destination);
+        source.start(0);
+        return;
+      } catch { }
+    }
+    const pool = criticalAudioPool.get(src);
+    if (pool?.length) {
+      const nextIndex = criticalAudioCursor.get(src) ?? 0;
+      const audio = pool[nextIndex];
+      criticalAudioCursor.set(src, (nextIndex + 1) % pool.length);
+      audio.pause();
+      audio.currentTime = 0;
+      void audio.play().catch(() => { });
+      return;
+    }
+    const audio = new window.Audio(src);
+    audio.preload = 'auto';
+    audio.load();
     void audio.play().catch(() => { });
     return;
   }
@@ -367,23 +450,33 @@ export function openDiceOverlay({
   historyLabel = null,
   sneakAttackDice = null
 } = {}) {
+  preloadCriticalAudio();
   if (!overlayEl) {
     overlayEl = document.createElement('div');
     overlayEl.id = 'dice-overlay';
     overlayEl.innerHTML = buildOverlayMarkup();
     document.body.appendChild(overlayEl);
-
-    if (window.main && typeof window.main.init === 'function') {
-      window.main.init();
-    }
-    if (window.main && typeof window.main.setInput === 'function') {
-      window.main.setInput();
-    }
     overlayEl.addEventListener('click', (e) => {
       if (e.target.closest('[data-close]')) closeDiceOverlay();
     });
     document.addEventListener('keydown', escClose, true);
   }
+
+  ensureLegacyDiceAssets()
+    .then(() => {
+      if (window.main && typeof window.main.init === 'function') {
+        window.main.init();
+      }
+      if (window.main && typeof window.main.setInput === 'function') {
+        window.main.setInput();
+      }
+      if (window.main && typeof window.main.clearDice === 'function') {
+        window.main.clearDice();
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 
   try {
     const res = overlayEl.querySelector('#result');
@@ -391,10 +484,6 @@ export function openDiceOverlay({
     const lim = overlayEl.querySelector('#diceLimit');
     if (lim) lim.style.display = 'none';
   } catch { }
-
-  if (window.main && typeof window.main.clearDice === 'function') {
-    window.main.clearDice();
-  }
 
   overlayEl.querySelector('[data-dice-title]')?.replaceChildren(document.createTextNode(title));
   const overlayMode = mode === 'generic' ? 'generic' : 'd20';
