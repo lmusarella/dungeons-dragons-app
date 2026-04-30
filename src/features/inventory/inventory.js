@@ -307,7 +307,14 @@ export async function renderInventory(container) {
         const direction = button.dataset.moneyAction;
         const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
         const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
-        const formData = await openFormModal({ title, submitLabel, content: moneyFields({ direction }) });
+        const formData = await openFormModal({
+          title,
+          submitLabel,
+          content: moneyFields({ direction }),
+          onOpen: ({ fieldsEl }) => {
+            attachNumberSteppers(fieldsEl);
+          }
+        });
         if (!formData) return;
         if (!wallet) {
           wallet = {
