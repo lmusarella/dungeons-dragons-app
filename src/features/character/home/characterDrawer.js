@@ -72,7 +72,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   mainGrid.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: characterData.level ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Allineamento', name: 'alignment', value: characterData.alignment ?? '' }));
-  mainGrid.appendChild(buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' }));
   mainSection.appendChild(mainGrid);
   mainSection.appendChild(buildInput({
     label: 'Foto (URL)',
@@ -80,7 +79,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     placeholder: 'https://.../ritratto.png',
     value: characterData.avatar_url ?? ''
   }));
-  mainSection.appendChild(buildTextarea({
+  const backgroundSection = document.createElement('div');
+  backgroundSection.className = 'character-edit-section';
+  const backgroundGrid = document.createElement('div');
+  backgroundGrid.className = 'character-edit-grid';
+  backgroundGrid.appendChild(buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' }));
+  backgroundSection.appendChild(backgroundGrid);
+  backgroundSection.appendChild(buildTextarea({
     label: 'Descrizione background',
     name: 'description',
     placeholder: 'Dettagli sul background, origini e tratti distintivi...',
@@ -309,33 +314,36 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const combatSection = document.createElement('div');
   combatSection.className = 'character-edit-section';
   combatSection.innerHTML = '<h4>Combattimento e magia</h4>';
-  const combatGrid = document.createElement('div');
-  combatGrid.className = 'character-edit-grid';
-  combatGrid.appendChild(buildInput({
-    label: 'Attacchi extra',
-    name: 'extra_attacks',
-    type: 'number',
-    value: characterData.extra_attacks ?? 0
-  }));
-  combatGrid.appendChild(buildInput({
+  const combatBonusRow = document.createElement('div');
+  combatBonusRow.className = 'character-edit-grid';
+  combatBonusRow.appendChild(buildInput({
     label: 'Bonus danni extra (mischia)',
     name: 'damage_bonus_melee',
     type: 'number',
     value: characterData.damage_bonus_melee ?? characterData.damage_bonus ?? 0
   }));
-  combatGrid.appendChild(buildInput({
+  combatBonusRow.appendChild(buildInput({
     label: 'Bonus danni extra (distanza)',
     name: 'damage_bonus_ranged',
     type: 'number',
     value: characterData.damage_bonus_ranged ?? characterData.damage_bonus ?? 0
   }));
-  combatGrid.appendChild(buildInput({
+  combatSection.appendChild(combatBonusRow);
+  const combatOtherRow = document.createElement('div');
+  combatOtherRow.className = 'character-edit-grid';
+  combatOtherRow.appendChild(buildInput({
+    label: 'Attacchi extra',
+    name: 'extra_attacks',
+    type: 'number',
+    value: characterData.extra_attacks ?? 0
+  }));
+  combatOtherRow.appendChild(buildInput({
     label: 'Dadi attacco furtivo',
     name: 'sneak_attack_dice',
     placeholder: 'Es. 2d6',
     value: characterData.sneak_attack_dice ?? ''
   }));
-  combatSection.appendChild(combatGrid);
+  combatSection.appendChild(combatOtherRow);
   const spellcasterField = document.createElement('div');
   spellcasterField.className = 'modal-toggle-field';
   spellcasterField.innerHTML = `
@@ -492,8 +500,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const steps = [
     {
-      title: 'Identità e background',
-      content: buildEditGroup('Identità e background', [mainSection])
+      title: 'Identità',
+      content: buildEditGroup('Identità', [mainSection])
+    },
+    {
+      title: 'Background',
+      content: buildEditGroup('Background', [backgroundSection])
     },
     {
       title: 'Statistiche e difese',
