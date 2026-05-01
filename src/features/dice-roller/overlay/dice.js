@@ -256,6 +256,7 @@ let criticalAudioPreloaded = false;
 let criticalAudioContext = null;
 const criticalAudioBuffers = new Map();
 let criticalAudioUnlockBound = false;
+const criticalAudioActiveSources = new Map();
 
 function toPublicAssetUrl(relativePath) {
   const baseUrl = import.meta.env.BASE_URL || '/';
@@ -309,9 +310,32 @@ export function warmupDiceEffectAudio() {
   preloadCriticalAudio();
 }
 
+function stopCriticalAudioPlayback() {
+  criticalAudioPool.forEach((pool) => {
+    pool.forEach((audio) => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch { }
+    });
+  });
+
+  criticalAudioActiveSources.forEach(({ source, gainNode }) => {
+    try {
+      source.stop(0);
+    } catch { }
+    try {
+      source.disconnect();
+      gainNode.disconnect();
+    } catch { }
+  });
+  criticalAudioActiveSources.clear();
+}
+
 function playCriticalAudio(type, currentRollType) {
   if (typeof window === 'undefined') return;
   const filePath = CRITICAL_AUDIO_FILES[currentRollType]?.[type] || null;
+  stopCriticalAudioPlayback();
   if (filePath) {
     const src = toPublicAssetUrl(filePath);
     if (criticalAudioContext && criticalAudioBuffers.has(src)) {
@@ -325,6 +349,11 @@ function playCriticalAudio(type, currentRollType) {
         source.buffer = criticalAudioBuffers.get(src);
         source.connect(gainNode);
         gainNode.connect(criticalAudioContext.destination);
+        const sourceId = `${Date.now()}-${Math.random()}`;
+        criticalAudioActiveSources.set(sourceId, { source, gainNode });
+        source.onended = () => {
+          criticalAudioActiveSources.delete(sourceId);
+        };
         source.start(0);
         return;
       } catch { }
@@ -426,6 +455,12 @@ function syncGenericInputsFromNotation(overlay, value) {
   if (typeInput) typeInput.value = `d${match[2]}`;
 }
 
+function resetLegacyDiceScene() {
+  if (window.main && typeof window.main.clearDice === 'function') {
+    window.main.clearDice();
+  }
+}
+
 function setOverlayMode(overlay, mode) {
   overlay.dataset.diceMode = mode;
   overlay.querySelectorAll('[data-dice-control]').forEach((section) => {
@@ -462,6 +497,8 @@ export function openDiceOverlay({
     document.addEventListener('keydown', escClose, true);
   }
 
+  resetLegacyDiceScene();
+
   ensureLegacyDiceAssets()
     .then(() => {
       if (window.main && typeof window.main.init === 'function') {
@@ -470,9 +507,7 @@ export function openDiceOverlay({
       if (window.main && typeof window.main.setInput === 'function') {
         window.main.setInput();
       }
-      if (window.main && typeof window.main.clearDice === 'function') {
-        window.main.clearDice();
-      }
+      resetLegacyDiceScene();
     })
     .catch((error) => {
       console.error(error);
@@ -1100,7 +1135,8 @@ export function openDiceOverlay({
 
   const hasExplicitModifier = modifier !== null && modifier !== undefined && modifier !== '';
   const activeModifierInput = getActiveModifierInput();
-  if (modifierInput && !hasExplicitModifier) modifierInput.value = '0';
+  const hasSelectionDefaults = mode !== 'generic' && state.selectionOptions.some((option) => !option.disabled);
+  if (modifierInput && !hasExplicitModifier && !hasSelectionDefaults) modifierInput.value = '0';
   if (genericModifierInput && !hasExplicitModifier) genericModifierInput.value = '0';
   if (activeModifierInput && hasExplicitModifier && Number.isFinite(Number(modifier))) {
     activeModifierInput.value = Number(modifier);
@@ -1208,4 +1244,5 @@ export function closeDiceOverlay() {
   if (!overlayEl) return;
   document.removeEventListener('keydown', escClose, true);
   overlayEl.setAttribute('hidden', '');
+  resetLegacyDiceScene();
 }
