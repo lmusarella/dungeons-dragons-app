@@ -5,6 +5,7 @@ import { ensureLegacyDiceAssets } from '../legacyLoader.js';
 let overlayEl = null;
 let activeOverlaySessionCleanup = null;
 let overlaySessionToken = 0;
+let legacyDiceInitialized = false;
 
 function buildDiceMarkup() {
   return `
@@ -1157,8 +1158,9 @@ export function openDiceOverlay({
   ensureLegacyDiceAssets()
     .then(() => {
       if (sessionToken !== overlaySessionToken) return;
-      if (window.main && typeof window.main.init === 'function') {
+      if (!legacyDiceInitialized && window.main && typeof window.main.init === 'function') {
         window.main.init();
+        legacyDiceInitialized = true;
       }
       resetLegacyDiceScene();
       if (window.main && typeof window.main.setInput === 'function') {
