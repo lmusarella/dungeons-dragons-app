@@ -162,10 +162,6 @@ export function createDiceRollerEmbed() {
   return wrapper;
 }
 
-function parseLastInt(text) {
-  const m = String(text).match(/\d+/g);
-  return m ? parseInt(m[m.length - 1], 10) : null;
-}
 
 function hasInvalidRolls(notation) {
   const rolls = Array.isArray(notation?.result) ? notation.result : [];
@@ -1166,7 +1162,6 @@ export function openDiceOverlay({
     updateNotationFromMode();
   }
 
-  const resultEl = overlayEl.querySelector('#result');
   let last = null;
 
   let resolveFn;
@@ -1174,22 +1169,7 @@ export function openDiceOverlay({
     resolveFn = resolve;
   });
 
-  const onMut = () => {
-    const n = parseLastInt(resultEl?.textContent || '');
-    if (n != null) {
-      last = n;
-      void consumeInspiration();
-      if (!keepOpen) closeDiceOverlay();
-      cleanup();
-      resolveFn(n);
-    }
-  };
-
-  const mo = resultEl ? new MutationObserver(onMut) : null;
-  mo?.observe(resultEl, { childList: true, characterData: true, subtree: true });
-
   function cleanup() {
-    try { mo?.disconnect(); } catch { }
   }
 
   const onRoll = (event) => {
@@ -1207,6 +1187,11 @@ export function openDiceOverlay({
     if (state.lastRoll) {
       const summary = summarizeRoll(state.lastRoll);
       if (summary) {
+        last = summary.total;
+        if (!keepOpen) closeDiceOverlay();
+        resolveFn?.(summary.total);
+        resolveFn = null;
+
         const subtype = getSelectionLabel();
         const hasDuplicatedContext = normalizeHistoryLabel(subtype) && normalizeHistoryLabel(subtype) === normalizeHistoryLabel(historyLabel);
         addHistoryEntry({
