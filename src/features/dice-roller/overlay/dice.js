@@ -3,6 +3,7 @@ import { attachNumberStepper } from '../../../ui/components.js';
 import { ensureLegacyDiceAssets } from '../legacyLoader.js';
 
 let overlayEl = null;
+let activeOverlaySessionCleanup = null;
 
 function buildDiceMarkup() {
   return `
@@ -485,6 +486,10 @@ export function openDiceOverlay({
   historyLabel = null,
   sneakAttackDice = null
 } = {}) {
+  if (typeof activeOverlaySessionCleanup === 'function') {
+    activeOverlaySessionCleanup();
+    activeOverlaySessionCleanup = null;
+  }
   preloadCriticalAudio();
   if (!overlayEl) {
     overlayEl = document.createElement('div');
@@ -1220,9 +1225,14 @@ export function openDiceOverlay({
   window.addEventListener('diceRoll', onRoll);
 
   const closeRef = closeDiceOverlay;
-  closeDiceOverlay = function () {
+  const closeSession = () => {
     cleanup();
     window.removeEventListener('diceRoll', onRoll);
+    activeOverlaySessionCleanup = null;
+  };
+  activeOverlaySessionCleanup = closeSession;
+  closeDiceOverlay = function () {
+    closeSession();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
 
     if (last == null) resolveFn?.(null);
@@ -1241,6 +1251,10 @@ function escClose(e) {
 }
 
 export function closeDiceOverlay() {
+  if (typeof activeOverlaySessionCleanup === 'function') {
+    activeOverlaySessionCleanup();
+    activeOverlaySessionCleanup = null;
+  }
   if (!overlayEl) return;
   document.removeEventListener('keydown', escClose, true);
   overlayEl.setAttribute('hidden', '');
