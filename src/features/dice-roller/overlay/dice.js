@@ -549,6 +549,9 @@ export function openDiceOverlay({
     lastCriticalSignature: null
   };
 
+  resetResult();
+  state.lastCriticalSignature = null;
+
   const normalizedWeakPoints = Math.max(0, Number(weakPoints) || 0);
   const weaknessReason = (() => {
     if (rollType === 'TA' && normalizedWeakPoints >= 1) {
@@ -1097,6 +1100,8 @@ export function openDiceOverlay({
 
   const hasExplicitModifier = modifier !== null && modifier !== undefined && modifier !== '';
   const activeModifierInput = getActiveModifierInput();
+  if (modifierInput && !hasExplicitModifier) modifierInput.value = '0';
+  if (genericModifierInput && !hasExplicitModifier) genericModifierInput.value = '0';
   if (activeModifierInput && hasExplicitModifier && Number.isFinite(Number(modifier))) {
     activeModifierInput.value = Number(modifier);
   }
@@ -1191,7 +1196,7 @@ export function openDiceOverlay({
 
   return {
     waitForRoll,
-    close: () => { cleanup(); closeRef(); }
+    close: () => { cleanup(); closeDiceOverlay(); }
   };
 }
 
