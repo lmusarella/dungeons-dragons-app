@@ -1227,6 +1227,7 @@ export function openDiceOverlay({
     overlaySessionToken += 1;
     closeSession();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
+    resetLegacyDiceScene();
 
     if (last == null) resolveFn?.(null);
 
