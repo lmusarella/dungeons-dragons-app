@@ -4,6 +4,8 @@ import { ensureLegacyDiceAssets } from '../legacyLoader.js';
 
 let overlayEl = null;
 let activeOverlaySessionCleanup = null;
+let overlaySessionToken = 0;
+let legacyDiceInitialized = false;
 
 function buildDiceMarkup() {
   return `
@@ -162,10 +164,6 @@ export function createDiceRollerEmbed() {
   return wrapper;
 }
 
-function parseLastInt(text) {
-  const m = String(text).match(/\d+/g);
-  return m ? parseInt(m[m.length - 1], 10) : null;
-}
 
 function hasInvalidRolls(notation) {
   const rolls = Array.isArray(notation?.result) ? notation.result : [];
@@ -309,6 +307,8 @@ function preloadCriticalAudio() {
 
 export function warmupDiceEffectAudio() {
   preloadCriticalAudio();
+  overlaySessionToken += 1;
+  const sessionToken = overlaySessionToken;
 }
 
 function stopCriticalAudioPlayback() {
@@ -491,6 +491,8 @@ export function openDiceOverlay({
     activeOverlaySessionCleanup = null;
   }
   preloadCriticalAudio();
+  overlaySessionToken += 1;
+  const sessionToken = overlaySessionToken;
   if (!overlayEl) {
     overlayEl = document.createElement('div');
     overlayEl.id = 'dice-overlay';
@@ -504,19 +506,6 @@ export function openDiceOverlay({
 
   resetLegacyDiceScene();
 
-  ensureLegacyDiceAssets()
-    .then(() => {
-      if (window.main && typeof window.main.init === 'function') {
-        window.main.init();
-      }
-      if (window.main && typeof window.main.setInput === 'function') {
-        window.main.setInput();
-      }
-      resetLegacyDiceScene();
-    })
-    .catch((error) => {
-      console.error(error);
-    });
 
   try {
     const res = overlayEl.querySelector('#result');
@@ -1166,7 +1155,22 @@ export function openDiceOverlay({
     updateNotationFromMode();
   }
 
-  const resultEl = overlayEl.querySelector('#result');
+  ensureLegacyDiceAssets()
+    .then(() => {
+      if (sessionToken !== overlaySessionToken) return;
+      if (!legacyDiceInitialized && window.main && typeof window.main.init === 'function') {
+        window.main.init();
+        legacyDiceInitialized = true;
+      }
+      resetLegacyDiceScene();
+      if (window.main && typeof window.main.setInput === 'function') {
+        window.main.setInput();
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+
   let last = null;
 
   let resolveFn;
@@ -1174,22 +1178,7 @@ export function openDiceOverlay({
     resolveFn = resolve;
   });
 
-  const onMut = () => {
-    const n = parseLastInt(resultEl?.textContent || '');
-    if (n != null) {
-      last = n;
-      void consumeInspiration();
-      if (!keepOpen) closeDiceOverlay();
-      cleanup();
-      resolveFn(n);
-    }
-  };
-
-  const mo = resultEl ? new MutationObserver(onMut) : null;
-  mo?.observe(resultEl, { childList: true, characterData: true, subtree: true });
-
   function cleanup() {
-    try { mo?.disconnect(); } catch { }
   }
 
   const onRoll = (event) => {
@@ -1207,6 +1196,11 @@ export function openDiceOverlay({
     if (state.lastRoll) {
       const summary = summarizeRoll(state.lastRoll);
       if (summary) {
+        last = summary.total;
+        if (!keepOpen) closeDiceOverlay();
+        resolveFn?.(summary.total);
+        resolveFn = null;
+
         const subtype = getSelectionLabel();
         const hasDuplicatedContext = normalizeHistoryLabel(subtype) && normalizeHistoryLabel(subtype) === normalizeHistoryLabel(historyLabel);
         addHistoryEntry({
@@ -1232,8 +1226,10 @@ export function openDiceOverlay({
   };
   activeOverlaySessionCleanup = closeSession;
   closeDiceOverlay = function () {
+    overlaySessionToken += 1;
     closeSession();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
+    resetLegacyDiceScene();
 
     if (last == null) resolveFn?.(null);
 
@@ -1251,6 +1247,7 @@ function escClose(e) {
 }
 
 export function closeDiceOverlay() {
+  overlaySessionToken += 1;
   if (typeof activeOverlaySessionCleanup === 'function') {
     activeOverlaySessionCleanup();
     activeOverlaySessionCleanup = null;
