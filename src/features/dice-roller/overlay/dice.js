@@ -4,6 +4,7 @@ import { ensureLegacyDiceAssets } from '../legacyLoader.js';
 
 let overlayEl = null;
 let activeOverlaySessionCleanup = null;
+let overlaySessionToken = 0;
 
 function buildDiceMarkup() {
   return `
@@ -305,6 +306,8 @@ function preloadCriticalAudio() {
 
 export function warmupDiceEffectAudio() {
   preloadCriticalAudio();
+  overlaySessionToken += 1;
+  const sessionToken = overlaySessionToken;
 }
 
 function stopCriticalAudioPlayback() {
@@ -487,6 +490,8 @@ export function openDiceOverlay({
     activeOverlaySessionCleanup = null;
   }
   preloadCriticalAudio();
+  overlaySessionToken += 1;
+  const sessionToken = overlaySessionToken;
   if (!overlayEl) {
     overlayEl = document.createElement('div');
     overlayEl.id = 'dice-overlay';
@@ -1151,6 +1156,7 @@ export function openDiceOverlay({
 
   ensureLegacyDiceAssets()
     .then(() => {
+      if (sessionToken !== overlaySessionToken) return;
       if (window.main && typeof window.main.init === 'function') {
         window.main.init();
       }
@@ -1218,6 +1224,7 @@ export function openDiceOverlay({
   };
   activeOverlaySessionCleanup = closeSession;
   closeDiceOverlay = function () {
+    overlaySessionToken += 1;
     closeSession();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
 
@@ -1237,6 +1244,7 @@ function escClose(e) {
 }
 
 export function closeDiceOverlay() {
+  overlaySessionToken += 1;
   if (typeof activeOverlaySessionCleanup === 'function') {
     activeOverlaySessionCleanup();
     activeOverlaySessionCleanup = null;
