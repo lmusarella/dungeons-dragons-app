@@ -500,19 +500,6 @@ export function openDiceOverlay({
 
   resetLegacyDiceScene();
 
-  ensureLegacyDiceAssets()
-    .then(() => {
-      if (window.main && typeof window.main.init === 'function') {
-        window.main.init();
-      }
-      if (window.main && typeof window.main.setInput === 'function') {
-        window.main.setInput();
-      }
-      resetLegacyDiceScene();
-    })
-    .catch((error) => {
-      console.error(error);
-    });
 
   try {
     const res = overlayEl.querySelector('#result');
@@ -1161,6 +1148,20 @@ export function openDiceOverlay({
   } else {
     updateNotationFromMode();
   }
+
+  ensureLegacyDiceAssets()
+    .then(() => {
+      if (window.main && typeof window.main.init === 'function') {
+        window.main.init();
+      }
+      resetLegacyDiceScene();
+      if (window.main && typeof window.main.setInput === 'function') {
+        window.main.setInput();
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 
   let last = null;
 
