@@ -21,6 +21,7 @@ import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { bodyParts } from '../inventory/constants.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
+import { assignSharedSpellToCharacter, createSharedSpell, searchSharedSpells } from './spellbookApi.js';
 import {
   openAvatarModal,
   openBackgroundModal,
@@ -28,6 +29,7 @@ import {
   openPreparedSpellsModal,
   openResourceDetail,
   openResourceDrawer,
+  openSpellSourceModal,
   openSpellDrawer,
   openSpellQuickDetailModal
 } from './home/modals.js';
@@ -51,6 +53,99 @@ import { applyMoneyDelta } from '../../lib/calc.js';
 
 let fabHandlersBound = false;
 let lastHomeContainer = null;
+
+function mapSharedSpellToCharacterSpell(sharedSpell) {
+  if (!sharedSpell) return null;
+  return {
+    id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    shared_spell_id: sharedSpell.id,
+    name: sharedSpell.name,
+    level: sharedSpell.level,
+    kind: Number(sharedSpell.level) === 0 ? 'cantrip' : 'spell',
+    cast_time: sharedSpell.cast_time,
+    duration: sharedSpell.duration,
+    range: sharedSpell.range,
+    components: sharedSpell.components,
+    concentration: Boolean(sharedSpell.concentration),
+    attack_roll: Boolean(sharedSpell.attack_roll),
+    is_ritual: Boolean(sharedSpell.ritual),
+    damage_die: sharedSpell.damage_die,
+    damage_modifier: sharedSpell.damage_modifier,
+    upcast_damage_die: sharedSpell.upcast_damage_die,
+    upcast_damage_modifier: sharedSpell.upcast_damage_modifier,
+    upcast_start_level: sharedSpell.upcast_start_level,
+    description: sharedSpell.description,
+    rules_version: sharedSpell.rules_version,
+    prep_state: 'known'
+  };
+}
+
+async function openSharedSpellPicker() {
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid';
+  const queryField = buildInput({
+    label: 'Cerca incantesimo',
+    name: 'spell_query',
+    placeholder: 'Es. Palla di fuoco'
+  });
+  const versionField = document.createElement('label');
+  versionField.className = 'field';
+  versionField.innerHTML = '<span>Versione regole</span>';
+  const versionSelect = document.createElement('select');
+  versionSelect.name = 'rules_version';
+  [
+    { value: '2024', label: '2024' },
+    { value: '2014', label: '2014' }
+  ].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    versionSelect.appendChild(option);
+  });
+  versionField.appendChild(versionSelect);
+  content.appendChild(queryField);
+  content.appendChild(versionField);
+  const formData = await openFormModal({
+    title: 'Seleziona incantesimo condiviso',
+    submitLabel: 'Cerca',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: 'modal-card--form'
+  });
+  if (!formData) return null;
+  const query = formData.get('spell_query')?.toString().trim() || '';
+  const rulesVersion = formData.get('rules_version') || '2024';
+  const sharedSpells = await searchSharedSpells({ query, rulesVersion });
+  if (!sharedSpells.length) {
+    createToast('Nessun incantesimo condiviso trovato', 'info');
+    return null;
+  }
+  const pickContent = document.createElement('div');
+  pickContent.className = 'modal-form-grid';
+  const spellField = document.createElement('label');
+  spellField.className = 'field';
+  spellField.innerHTML = '<span>Incantesimo</span>';
+  const spellSelect = document.createElement('select');
+  spellSelect.name = 'shared_spell_id';
+  sharedSpells.forEach((spell) => {
+    const option = document.createElement('option');
+    option.value = spell.id;
+    option.textContent = `${spell.name} (Lv ${spell.level}, ${spell.rules_version})`;
+    spellSelect.appendChild(option);
+  });
+  spellField.appendChild(spellSelect);
+  pickContent.appendChild(spellField);
+  const pickResult = await openFormModal({
+    title: 'Aggiungi da lista condivisa',
+    submitLabel: 'Aggiungi',
+    cancelLabel: 'Annulla',
+    content: pickContent,
+    cardClass: 'modal-card--form'
+  });
+  if (!pickResult) return null;
+  const selectedId = pickResult.get('shared_spell_id');
+  return sharedSpells.find((entry) => entry.id === selectedId) || null;
+}
 
 function shouldAutoUsageDice(character) {
   return character?.data?.settings?.auto_usage_dice !== false;
@@ -314,8 +409,60 @@ export async function renderHome(container) {
 
   const addSpellButton = container.querySelector('[data-add-spell]');
   if (addSpellButton) {
-    addSpellButton.addEventListener('click', () => {
-      openSpellDrawer(activeCharacter, () => renderHome(container));
+    addSpellButton.addEventListener('click', async () => {
+      if (!activeCharacter) return;
+      const mode = await openSpellSourceModal();
+      if (!mode) return;
+      if (mode === 'shared') {
+        try {
+          const sharedSpell = await openSharedSpellPicker();
+          if (!sharedSpell) return;
+          const nextSpell = mapSharedSpellToCharacterSpell(sharedSpell);
+          const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+          const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, nextSpell] };
+          await saveCharacterData(activeCharacter, nextData, 'Incantesimo aggiunto dalla lista condivisa', () => renderHome(container));
+          if (activeCharacter.user_id) {
+            await assignSharedSpellToCharacter({
+              user_id: activeCharacter.user_id,
+              character_id: activeCharacter.id,
+              shared_spell_id: sharedSpell.id,
+              prep_state: nextSpell.prep_state
+            });
+          }
+          return;
+        } catch (error) {
+          createToast('Errore durante il recupero incantesimi condivisi', 'error');
+          return;
+        }
+      }
+      openSpellDrawer(activeCharacter, async (createdSpell) => {
+        if (!createdSpell) return renderHome(container);
+        try {
+          await createSharedSpell({
+            created_by: activeCharacter.user_id,
+            rules_version: createdSpell.rules_version || '2024',
+            name: createdSpell.name,
+            level: createdSpell.level,
+            school: createdSpell.school || null,
+            cast_time: createdSpell.cast_time || null,
+            range: createdSpell.range || null,
+            duration: createdSpell.duration || null,
+            components: createdSpell.components || null,
+            concentration: Boolean(createdSpell.concentration),
+            ritual: Boolean(createdSpell.is_ritual),
+            attack_roll: Boolean(createdSpell.attack_roll),
+            damage_die: createdSpell.damage_die || null,
+            damage_modifier: createdSpell.damage_modifier ?? null,
+            upcast_damage_die: createdSpell.upcast_damage_die || null,
+            upcast_damage_modifier: createdSpell.upcast_damage_modifier ?? null,
+            upcast_start_level: createdSpell.upcast_start_level ?? null,
+            description: createdSpell.description || null
+          });
+        } catch (error) {
+          createToast('Incantesimo salvato sul personaggio ma non sul catalogo condiviso', 'info');
+        }
+        renderHome(container);
+      });
     });
   }
 

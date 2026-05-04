@@ -452,8 +452,32 @@ export function openSpellDrawer(character, onSave, spell = null) {
       spells: nextSpells
     };
     const message = spell ? 'Incantesimo aggiornato' : 'Incantesimo aggiunto';
-    await saveCharacterData(character, nextData, message, onSave);
+    await saveCharacterData(character, nextData, message, () => onSave?.(nextSpell, { isNew: !spell }));
   });
+}
+
+export async function openSpellSourceModal() {
+  const field = document.createElement('label');
+  field.className = 'field';
+  field.innerHTML = '<span>Come vuoi aggiungere l\'incantesimo?</span>';
+  const modeSelect = buildSelect([
+    { value: 'shared', label: 'Cerca in lista condivisa' },
+    { value: 'manual', label: 'Inserisci nuovo incantesimo' }
+  ], 'shared');
+  modeSelect.name = 'spell_source_mode';
+  field.appendChild(modeSelect);
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid';
+  content.appendChild(field);
+  const formData = await openFormModal({
+    title: 'Aggiungi incantesimo',
+    submitLabel: 'Continua',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: 'modal-card--form'
+  });
+  if (!formData) return null;
+  return formData.get('spell_source_mode') || 'shared';
 }
 
 
