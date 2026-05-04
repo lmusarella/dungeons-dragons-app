@@ -39,7 +39,8 @@ export async function renderLibrary(container) {
     const level = filters.querySelector('input[name="level"]')?.value || '';
     const school = filters.querySelector('input[name="school"]')?.value || '';
     const casterClass = filters.querySelector('input[name="caster"]')?.value || '';
-    const spells = await searchSharedSpells({ query, level, school, casterClass });
+    const result = await searchSharedSpells({ query, level, school, casterClasses: casterClass ? [casterClass] : [] });
+    const spells = result.items || [];
     list.innerHTML = spells.length
       ? spells.map((spell) => `<article class="character-card"><div class="character-card-info"><h3>${spell.name}</h3><p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p></div></article>`).join('')
       : '<p>Nessun incantesimo trovato.</p>';

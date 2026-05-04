@@ -81,6 +81,8 @@ function mapSharedSpellToCharacterSpell(sharedSpell) {
 }
 
 async function openSharedSpellPicker() {
+  const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
+  const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
   const content = document.createElement('div');
   content.className = 'modal-form-grid';
   const queryField = buildInput({
@@ -88,6 +90,7 @@ async function openSharedSpellPicker() {
     name: 'spell_query',
     placeholder: 'Es. Palla di fuoco'
   });
+  const queryInput = queryField.querySelector('input');
   const versionField = document.createElement('label');
   versionField.className = 'field';
   versionField.innerHTML = '<span>Versione regole</span>';
@@ -103,73 +106,100 @@ async function openSharedSpellPicker() {
     versionSelect.appendChild(option);
   });
   versionField.appendChild(versionSelect);
-  content.appendChild(queryField);
+  const schoolField = document.createElement('label');
+  schoolField.className = 'field';
+  schoolField.innerHTML = '<span>Scuola</span>';
+  const schoolSelect = document.createElement('select');
+  schoolSelect.name = 'spell_school_filter';
+  SCHOOLS.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value || 'Tutte';
+    schoolSelect.appendChild(option);
+  });
+  schoolField.appendChild(schoolSelect);
   const levelField = buildInput({
     label: 'Livello',
     name: 'spell_level_filter',
     type: 'number',
     value: ''
   });
-  const schoolField = buildInput({
-    label: 'Scuola di magia',
-    name: 'spell_school_filter',
-    placeholder: 'Es. Evocazione'
+  const classesField = document.createElement('div');
+  classesField.className = 'field';
+  classesField.innerHTML = `<span>Classi</span><div class="tag-row">${CASTER_CLASSES.map((entry) => `<label class="chip"><input type="checkbox" name="spell_caster_filter" value="${entry}" /> ${entry}</label>`).join('')}</div>`;
+  const compactRow = document.createElement('div');
+  compactRow.className = 'modal-form-row modal-form-row--compact';
+  compactRow.append(levelField, schoolField, versionField);
+  content.appendChild(queryField);
+  content.appendChild(compactRow);
+  content.appendChild(classesField);
+  const resultField = document.createElement('label');
+  resultField.className = 'field';
+  resultField.innerHTML = '<span>Risultati</span>';
+  const resultSelect = document.createElement('select');
+  resultSelect.name = 'shared_spell_id';
+  resultField.appendChild(resultSelect);
+  const paging = document.createElement('div');
+  paging.className = 'tab-bar';
+  paging.innerHTML = '<button type="button" class="tab-bar__button" data-prev-page>◀</button><span data-page-label class="muted">Pagina 1</span><button type="button" class="tab-bar__button" data-next-page>▶</button>';
+  content.appendChild(resultField);
+  content.appendChild(paging);
+  let currentPage = 1;
+  let currentItems = [];
+  const pageLabel = paging.querySelector('[data-page-label]');
+  const prevBtn = paging.querySelector('[data-prev-page]');
+  const nextBtn = paging.querySelector('[data-next-page]');
+  const loadResults = async () => {
+    const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked')).map((el) => el.value);
+    const result = await searchSharedSpells({
+      query: queryInput?.value || '',
+      rulesVersion: versionSelect.value || '2024',
+      level: content.querySelector('input[name="spell_level_filter"]')?.value || '',
+      school: schoolSelect.value || '',
+      casterClasses: selectedClasses,
+      page: currentPage,
+      pageSize: 25
+    });
+    currentItems = result.items || [];
+    resultSelect.innerHTML = '';
+    currentItems.forEach((spell) => {
+      const option = document.createElement('option');
+      option.value = spell.id;
+      option.textContent = `${spell.name} (Lv ${spell.level})`;
+      resultSelect.appendChild(option);
+    });
+    if (!currentItems.length) {
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Nessun risultato';
+      resultSelect.appendChild(empty);
+    }
+    const totalPages = Math.max(1, Math.ceil((result.total || 0) / (result.pageSize || 25)));
+    pageLabel.textContent = `Pagina ${currentPage} / ${totalPages}`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  };
+  queryInput?.addEventListener('input', () => {
+    currentPage = 1;
+    void loadResults();
   });
-  const casterField = buildInput({
-    label: 'Classe incantatrice',
-    name: 'spell_caster_filter',
-    placeholder: 'Es. mago'
-  });
-  content.appendChild(levelField);
-  content.appendChild(schoolField);
-  content.appendChild(casterField);
-  content.appendChild(versionField);
+  schoolSelect.addEventListener('change', () => { currentPage = 1; void loadResults(); });
+  versionSelect.addEventListener('change', () => { currentPage = 1; void loadResults(); });
+  content.querySelector('input[name="spell_level_filter"]')?.addEventListener('input', () => { currentPage = 1; void loadResults(); });
+  content.querySelectorAll('input[name="spell_caster_filter"]').forEach((el) => el.addEventListener('change', () => { currentPage = 1; void loadResults(); }));
+  prevBtn?.addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); void loadResults(); });
+  nextBtn?.addEventListener('click', () => { currentPage += 1; void loadResults(); });
+  await loadResults();
   const formData = await openFormModal({
     title: 'Seleziona incantesimo condiviso',
-    submitLabel: 'Cerca',
+    submitLabel: 'Aggiungi',
     cancelLabel: 'Annulla',
     content,
     cardClass: 'modal-card--form'
   });
   if (!formData) return null;
-  const query = formData.get('spell_query')?.toString().trim() || '';
-  const rulesVersion = formData.get('rules_version') || '2024';
-  const sharedSpells = await searchSharedSpells({
-    query,
-    rulesVersion,
-    level: formData.get('spell_level_filter'),
-    school: formData.get('spell_school_filter')?.toString() || '',
-    casterClass: formData.get('spell_caster_filter')?.toString() || ''
-  });
-  if (!sharedSpells.length) {
-    createToast('Nessun incantesimo condiviso trovato', 'info');
-    return null;
-  }
-  const pickContent = document.createElement('div');
-  pickContent.className = 'modal-form-grid';
-  const spellField = document.createElement('label');
-  spellField.className = 'field';
-  spellField.innerHTML = '<span>Incantesimo</span>';
-  const spellSelect = document.createElement('select');
-  spellSelect.name = 'shared_spell_id';
-  sharedSpells.forEach((spell) => {
-    const option = document.createElement('option');
-    option.value = spell.id;
-    option.textContent = `${spell.name} (Lv ${spell.level}, ${spell.rules_version})`;
-    spellSelect.appendChild(option);
-  });
-  spellField.appendChild(spellSelect);
-  pickContent.appendChild(spellField);
-  const pickResult = await openFormModal({
-    title: 'Aggiungi da lista condivisa',
-    submitLabel: 'Aggiungi',
-    cancelLabel: 'Annulla',
-    content: pickContent,
-    cardClass: 'modal-card--form'
-  });
-  if (!pickResult) return null;
-  const selectedId = pickResult.get('shared_spell_id');
-  return sharedSpells.find((entry) => entry.id === selectedId) || null;
+  const selectedId = formData.get('shared_spell_id');
+  return currentItems.find((entry) => entry.id === selectedId) || null;
 }
 
 function shouldAutoUsageDice(character) {

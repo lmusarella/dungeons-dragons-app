@@ -8,13 +8,19 @@ export async function searchSharedSpells({
   rulesVersion = null,
   level = null,
   school = '',
-  casterClass = ''
+  casterClasses = [],
+  page = 1,
+  pageSize = 20
 } = {}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
   let request = supabase
     .from(SHARED_SPELLS_TABLE)
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('name', { ascending: true })
-    .limit(100);
+    .range(from, to);
 
   if (rulesVersion) {
     request = request.eq('rules_version', rulesVersion);
@@ -29,13 +35,21 @@ export async function searchSharedSpells({
   if (school?.trim()) {
     request = request.ilike('school', `%${school.trim()}%`);
   }
-  if (casterClass?.trim()) {
-    request = request.contains('caster_classes', [casterClass.trim().toLowerCase()]);
+  const normalizedClasses = Array.isArray(casterClasses)
+    ? casterClasses.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (normalizedClasses.length) {
+    request = request.overlaps('caster_classes', normalizedClasses);
   }
 
-  const { data, error } = await request;
+  const { data, error, count } = await request;
   if (error) throw error;
-  return data ?? [];
+  return {
+    items: data ?? [],
+    total: count ?? 0,
+    page: safePage,
+    pageSize: safePageSize
+  };
 }
 
 export async function createSharedSpell(payload) {
