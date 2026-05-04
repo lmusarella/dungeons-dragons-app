@@ -14,6 +14,9 @@ import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsBy
 import { conditionList } from './constants.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
+const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
+const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
+const SPELL_RULES_VERSION_OPTIONS = ['2014', '2024'];
 
 function normalizeSpellCastTime(castTime) {
   const rawValue = castTime?.toString().trim();
@@ -264,26 +267,44 @@ export function openSpellDrawer(character, onSave, spell = null) {
   );
   castTimeSelect.name = 'spell_cast_time';
   castTimeField.appendChild(castTimeSelect);
-  form.appendChild(buildRow([
-    buildInput({
-      label: 'Scuola di magia',
-      name: 'spell_school',
-      placeholder: 'Es. Evocazione',
-      value: spell?.school ?? ''
-    }),
-    buildInput({
-      label: 'Classi incantatrici',
-      name: 'spell_caster_classes',
-      placeholder: 'Es. mago, warlock',
-      value: Array.isArray(spell?.caster_classes) ? spell.caster_classes.join(', ') : (spell?.caster_classes ?? '')
-    }),
-    buildInput({
-      label: 'Versione regole',
-      name: 'spell_rules_version',
-      placeholder: '2014 o 2024',
-      value: spell?.rules_version ?? '2024'
-    }),
-  ], 'balanced'));
+  const schoolField = document.createElement('label');
+  schoolField.className = 'field';
+  schoolField.innerHTML = '<span>Scuola di magia</span>';
+  const schoolSelect = buildSelect(
+    SPELL_SCHOOL_OPTIONS.map((value) => ({ value, label: value || 'N/D' })),
+    spell?.school ?? ''
+  );
+  schoolSelect.name = 'spell_school';
+  schoolField.appendChild(schoolSelect);
+  const rulesVersionField = document.createElement('label');
+  rulesVersionField.className = 'field';
+  rulesVersionField.innerHTML = '<span>Versione regole</span>';
+  const rulesVersionSelect = buildSelect(
+    SPELL_RULES_VERSION_OPTIONS.map((value) => ({ value, label: value })),
+    spell?.rules_version ?? '2024'
+  );
+  rulesVersionSelect.name = 'spell_rules_version';
+  rulesVersionField.appendChild(rulesVersionSelect);
+  form.appendChild(buildRow([schoolField, rulesVersionField], 'compact'));
+  const selectedCasterClasses = new Set(
+    Array.isArray(spell?.caster_classes)
+      ? spell.caster_classes.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean)
+      : []
+  );
+  const casterClassesField = document.createElement('div');
+  casterClassesField.className = 'field';
+  casterClassesField.innerHTML = `
+    <span>Classi incantatrici</span>
+    <div class="tag-row">
+      ${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `
+        <label class="chip">
+          <input type="checkbox" name="spell_caster_classes" value="${entry}" ${selectedCasterClasses.has(entry) ? 'checked' : ''} />
+          ${entry}
+        </label>
+      `).join('')}
+    </div>
+  `;
+  form.appendChild(casterClassesField);
   form.appendChild(buildRow([
     castTimeField,
     buildInput({
@@ -462,9 +483,8 @@ export function openSpellDrawer(character, onSave, spell = null) {
       upcast_start_level: toNumberOrNull(formData.get('spell_upcast_start_level')),
       description: formData.get('spell_description')?.trim() || null,
       school: formData.get('spell_school')?.trim() || null,
-      caster_classes: String(formData.get('spell_caster_classes') || '')
-        .split(',')
-        .map((entry) => entry.trim().toLowerCase())
+      caster_classes: formData.getAll('spell_caster_classes')
+        .map((entry) => String(entry).trim().toLowerCase())
         .filter(Boolean),
       rules_version: (formData.get('spell_rules_version') || '2024').toString().trim(),
       prep_state: prepState
