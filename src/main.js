@@ -55,6 +55,10 @@ registerRoute('inventory', async (container) => {
   const { renderInventory } = await import('./features/inventory/inventory.js');
   await renderInventory(container);
 });
+registerRoute('familiars', async (container) => {
+  const { renderFamiliars } = await import('./features/familiars/familiars.js');
+  await renderFamiliars(container);
+});
 registerRoute('journal', async (container) => {
   const { renderJournal } = await import('./features/journal/journal.js');
   await renderJournal(container);
