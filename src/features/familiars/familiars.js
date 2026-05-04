@@ -1,6 +1,6 @@
 import { createCompanion, deleteCompanion, fetchCompanions, updateCompanion } from '../character/companionsApi.js';
 import { getState, normalizeCharacterId } from '../../app/state.js';
-import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberSteppers } from '../../ui/components.js';
+import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { getAbilityModifier } from '../character/home/utils.js';
 
@@ -147,17 +147,26 @@ export async function renderFamiliars(container) {
       abilityRow.appendChild(field);
     });
     content.appendChild(abilityRow);
+    content.querySelectorAll('input[type="number"]').forEach((input) => {
+      if (input.name.startsWith('ab_')) {
+        input.min = '1';
+      } else {
+        input.min = '0';
+      }
+      input.step = '1';
+    });
 
-    content.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: current.hp.current ?? 1 }));
-    content.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: current.hp.max ?? 1 }));
-    content.appendChild(buildInput({ label: 'Velocità terra (m)', name: 'speed_walk', type: 'number', value: current.speeds.walk ?? 9 }));
-    content.appendChild(buildInput({ label: 'Velocità volo (m)', name: 'speed_fly', type: 'number', value: current.speeds.fly ?? '' }));
-    content.appendChild(buildInput({ label: 'Velocità scalata (m)', name: 'speed_climb', type: 'number', value: current.speeds.climb ?? '' }));
-    content.appendChild(buildInput({ label: 'Velocità scavare (m)', name: 'speed_burrow', type: 'number', value: current.speeds.burrow ?? '' }));
+    const speedRow = document.createElement('div');
+    speedRow.className = 'modal-form-row modal-form-row--compact';
+    speedRow.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: current.hp.current ?? 1 }));
+    speedRow.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: current.hp.max ?? 1 }));
+    speedRow.appendChild(buildInput({ label: 'Terra (m)', name: 'speed_walk', type: 'number', value: current.speeds.walk ?? 9 }));
+    speedRow.appendChild(buildInput({ label: 'Volo (m)', name: 'speed_fly', type: 'number', value: current.speeds.fly ?? '' }));
+    speedRow.appendChild(buildInput({ label: 'Scalata (m)', name: 'speed_climb', type: 'number', value: current.speeds.climb ?? '' }));
+    speedRow.appendChild(buildInput({ label: 'Scavare (m)', name: 'speed_burrow', type: 'number', value: current.speeds.burrow ?? '' }));
+    content.appendChild(speedRow);
     content.appendChild(buildTextarea({ label: 'Attacchi (JSON)', name: 'attacks_json', value: JSON.stringify(current.attacks || [], null, 2), placeholder: '[{"name":"Morso","to_hit":4,"damage":"1d6+2"}]' }));
     content.appendChild(buildTextarea({ label: 'Note', name: 'notes', value: companion?.notes || '' }));
-
-    attachNumberSteppers(content);
 
     const formData = await openFormModal({ title: companion ? 'Modifica scheda famiglio' : 'Nuova scheda famiglio', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
     if (!formData) return;
