@@ -97,3 +97,4 @@ Per il piano operativo dettagliato (priorità, KPI e backlog), vedi: `docs/globa
 
 
 Schema SQL iniziale per queste entità: `docs/supabase-spells-companions-schema.sql`.
+RLS policies: `docs/supabase-spells-companions-rls.sql`.
