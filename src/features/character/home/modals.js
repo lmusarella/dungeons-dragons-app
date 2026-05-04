@@ -265,6 +265,26 @@ export function openSpellDrawer(character, onSave, spell = null) {
   castTimeSelect.name = 'spell_cast_time';
   castTimeField.appendChild(castTimeSelect);
   form.appendChild(buildRow([
+    buildInput({
+      label: 'Scuola di magia',
+      name: 'spell_school',
+      placeholder: 'Es. Evocazione',
+      value: spell?.school ?? ''
+    }),
+    buildInput({
+      label: 'Classi incantatrici',
+      name: 'spell_caster_classes',
+      placeholder: 'Es. mago, warlock',
+      value: Array.isArray(spell?.caster_classes) ? spell.caster_classes.join(', ') : (spell?.caster_classes ?? '')
+    }),
+    buildInput({
+      label: 'Versione regole',
+      name: 'spell_rules_version',
+      placeholder: '2014 o 2024',
+      value: spell?.rules_version ?? '2024'
+    }),
+  ], 'balanced'));
+  form.appendChild(buildRow([
     castTimeField,
     buildInput({
       label: 'Durata',
@@ -441,6 +461,12 @@ export function openSpellDrawer(character, onSave, spell = null) {
       upcast_damage_modifier: toNumberOrNull(formData.get('spell_upcast_damage_modifier')),
       upcast_start_level: toNumberOrNull(formData.get('spell_upcast_start_level')),
       description: formData.get('spell_description')?.trim() || null,
+      school: formData.get('spell_school')?.trim() || null,
+      caster_classes: String(formData.get('spell_caster_classes') || '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+      rules_version: (formData.get('spell_rules_version') || '2024').toString().trim(),
       prep_state: prepState
     };
     const currentSpells = Array.isArray(character.data?.spells) ? character.data.spells : [];

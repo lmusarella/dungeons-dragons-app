@@ -65,7 +65,7 @@ npm run dev
 - `journal_entries(id, user_id, character_id, entry_date, session_no, title, content, mood, is_pinned, created_at, updated_at)`
 - `journal_tags(id, user_id, name, created_at)`
 - `journal_entry_tags(entry_id, tag_id)`
-- `shared_spells(id, created_by, rules_version, name, level, school, cast_time, range, duration, components, concentration, ritual, attack_roll, damage_die, damage_modifier, upcast_damage_die, upcast_damage_modifier, upcast_start_level, description, source, created_at, updated_at)`
+- `shared_spells(id, created_by, rules_version, name, level, school, caster_classes, cast_time, range, duration, components, concentration, ritual, attack_roll, damage_die, damage_modifier, upcast_damage_die, upcast_damage_modifier, upcast_start_level, description, source, created_at, updated_at)`
 - `character_spells(id, user_id, character_id, shared_spell_id, custom_spell, prep_state, notes, created_at, updated_at)`
 - `character_companions(id, user_id, character_id, kind, name, rules_version, stat_block, notes, is_active, created_at, updated_at)`
 

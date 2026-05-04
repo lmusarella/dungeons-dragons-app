@@ -63,6 +63,10 @@ registerRoute('settings', async (container) => {
   const { renderSettings } = await import('./features/character/settings.js');
   await renderSettings(container);
 });
+registerRoute('library', async (container) => {
+  const { renderLibrary } = await import('./features/library/library.js');
+  await renderLibrary(container);
+});
 
 subscribe(() => {
   updateOfflineBanner();

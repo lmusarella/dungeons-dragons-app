@@ -104,6 +104,25 @@ async function openSharedSpellPicker() {
   });
   versionField.appendChild(versionSelect);
   content.appendChild(queryField);
+  const levelField = buildInput({
+    label: 'Livello',
+    name: 'spell_level_filter',
+    type: 'number',
+    value: ''
+  });
+  const schoolField = buildInput({
+    label: 'Scuola di magia',
+    name: 'spell_school_filter',
+    placeholder: 'Es. Evocazione'
+  });
+  const casterField = buildInput({
+    label: 'Classe incantatrice',
+    name: 'spell_caster_filter',
+    placeholder: 'Es. mago'
+  });
+  content.appendChild(levelField);
+  content.appendChild(schoolField);
+  content.appendChild(casterField);
   content.appendChild(versionField);
   const formData = await openFormModal({
     title: 'Seleziona incantesimo condiviso',
@@ -115,7 +134,13 @@ async function openSharedSpellPicker() {
   if (!formData) return null;
   const query = formData.get('spell_query')?.toString().trim() || '';
   const rulesVersion = formData.get('rules_version') || '2024';
-  const sharedSpells = await searchSharedSpells({ query, rulesVersion });
+  const sharedSpells = await searchSharedSpells({
+    query,
+    rulesVersion,
+    level: formData.get('spell_level_filter'),
+    school: formData.get('spell_school_filter')?.toString() || '',
+    casterClass: formData.get('spell_caster_filter')?.toString() || ''
+  });
   if (!sharedSpells.length) {
     createToast('Nessun incantesimo condiviso trovato', 'info');
     return null;
@@ -444,6 +469,7 @@ export async function renderHome(container) {
             name: createdSpell.name,
             level: createdSpell.level,
             school: createdSpell.school || null,
+            caster_classes: Array.isArray(createdSpell.caster_classes) ? createdSpell.caster_classes : [],
             cast_time: createdSpell.cast_time || null,
             range: createdSpell.range || null,
             duration: createdSpell.duration || null,

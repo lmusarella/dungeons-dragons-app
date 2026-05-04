@@ -6,6 +6,7 @@ create table if not exists public.shared_spells (
   name text not null,
   level smallint not null check (level between 0 and 9),
   school text,
+  caster_classes text[] not null default '{}',
   cast_time text,
   range text,
   duration text,
