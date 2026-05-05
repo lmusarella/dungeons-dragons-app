@@ -27,10 +27,13 @@ export async function renderLibrary(container) {
   const list = container.querySelector('[data-library-spells]');
   if (!filters || !list) return;
 
-  filters.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
-  filters.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
-  filters.appendChild(buildInput({ label: 'Scuola', name: 'school', placeholder: 'Es. abiurazione' }));
-  filters.appendChild(buildInput({ label: 'Classe', name: 'caster', placeholder: 'Es. mago' }));
+  const filtersRow = document.createElement('div');
+  filtersRow.className = 'modal-form-row modal-form-row--compact';
+  filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
+  filtersRow.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
+  filtersRow.appendChild(buildInput({ label: 'Scuola', name: 'school', placeholder: 'Es. abiurazione' }));
+  filtersRow.appendChild(buildInput({ label: 'Classe', name: 'caster', placeholder: 'Es. mago' }));
+  filters.appendChild(filtersRow);
 
   const searchButton = document.createElement('button');
   searchButton.className = 'primary';
@@ -78,10 +81,28 @@ export async function renderLibrary(container) {
   searchButton.addEventListener('click', () => { void renderSpells(); });
   container.querySelector('[data-library-add-spell]')?.addEventListener('click', async () => {
     const content = document.createElement('div');
-    content.className = 'modal-form-grid';
-    content.appendChild(buildInput({ label: 'Nome', name: 'name', placeholder: 'Es. Dardo Incantato' }));
-    content.appendChild(buildInput({ label: 'Versione regole', name: 'rules_version', value: '2024' }));
-    content.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: '1' }));
+    content.className = 'modal-form-grid spell-form';
+    const buildRow = (elements) => {
+      const row = document.createElement('div');
+      row.className = 'modal-form-row modal-form-row--compact';
+      elements.filter(Boolean).forEach((entry) => row.appendChild(entry));
+      return row;
+    };
+    const rulesField = document.createElement('label');
+    rulesField.className = 'field';
+    rulesField.innerHTML = '<span>Versione regole</span>';
+    const rulesSelect = document.createElement('select');
+    rulesSelect.name = 'rules_version';
+    ['2024', '2014'].forEach((entry) => {
+      const option = document.createElement('option');
+      option.value = entry;
+      option.textContent = entry;
+      rulesSelect.appendChild(option);
+    });
+    rulesField.appendChild(rulesSelect);
+    const levelField = buildInput({ label: 'Livello', name: 'level', type: 'number', value: '1' });
+    const nameField = buildInput({ label: 'Nome incantesimo', name: 'name', placeholder: 'Es. Dardo Incantato' });
+    content.appendChild(buildRow([nameField, rulesField, levelField]));
     const schoolField = document.createElement('label');
     schoolField.className = 'field';
     schoolField.innerHTML = '<span>Scuola</span>';
@@ -94,11 +115,21 @@ export async function renderLibrary(container) {
       schoolSelect.appendChild(option);
     });
     schoolField.appendChild(schoolSelect);
-    content.appendChild(schoolField);
+    const castTimeField = buildInput({ label: 'Tipo di lancio', name: 'cast_time', placeholder: 'Es. Azione' });
+    const durationField = buildInput({ label: 'Durata', name: 'duration', placeholder: 'Es. 1 minuto' });
+    const rangeField = buildInput({ label: 'Range', name: 'range', placeholder: 'Es. 18 m' });
+    const componentsField = buildInput({ label: 'Componenti', name: 'components', placeholder: 'Es. V,S,M' });
+    content.appendChild(buildRow([schoolField, castTimeField, durationField]));
+    content.appendChild(buildRow([rangeField, componentsField]));
     const classesField = document.createElement('div');
     classesField.className = 'field';
     classesField.innerHTML = `<span>Classi incantatrici</span><div class="tag-row">${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `<label class="chip"><input type="checkbox" name="caster_classes" value="${entry}" /> ${entry}</label>`).join('')}</div>`;
     content.appendChild(classesField);
+    content.appendChild(buildRow([
+      buildInput({ label: 'Notazione danno', name: 'damage_die', placeholder: 'Es. 1d8' }),
+      buildInput({ label: 'Mod. danno', name: 'damage_modifier', type: 'number' }),
+      buildInput({ label: 'Danno upcast', name: 'upcast_damage_die', placeholder: 'Es. 1d8' }),
+    ]));
     content.appendChild(buildTextarea({ label: 'Descrizione', name: 'description' }));
     const formData = await openFormModal({ title: 'Nuovo incantesimo condiviso', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
     if (!formData) return;
@@ -109,7 +140,14 @@ export async function renderLibrary(container) {
       rules_version: formData.get('rules_version')?.toString().trim() || '2024',
       level: Number(formData.get('level') || 0),
       school: formData.get('school')?.toString().trim() || null,
+      cast_time: formData.get('cast_time')?.toString().trim() || null,
+      duration: formData.get('duration')?.toString().trim() || null,
+      range: formData.get('range')?.toString().trim() || null,
+      components: formData.get('components')?.toString().trim() || null,
       caster_classes: formData.getAll('caster_classes').map((v) => String(v).trim().toLowerCase()).filter(Boolean),
+      damage_die: formData.get('damage_die')?.toString().trim() || null,
+      damage_modifier: formData.get('damage_modifier') === '' ? null : Number(formData.get('damage_modifier')),
+      upcast_damage_die: formData.get('upcast_damage_die')?.toString().trim() || null,
       description: formData.get('description')?.toString().trim() || null
     });
     const activeCharacterId = getState().activeCharacterId;
