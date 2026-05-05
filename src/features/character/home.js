@@ -130,7 +130,8 @@ async function openSharedSpellPicker() {
   versionSelect.name = 'rules_version';
   [
     { value: '2024', label: '2024' },
-    { value: '2014', label: '2014' }
+    { value: '2014', label: '2014' },
+    { value: 'Custom', label: 'Custom' }
   ].forEach((entry) => {
     const option = document.createElement('option');
     option.value = entry.value;

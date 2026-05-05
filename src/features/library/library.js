@@ -6,6 +6,7 @@ import { openSpellDrawer } from '../character/home/modals.js';
 
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
+const SPELL_RULES_VERSION_OPTIONS = ['2024', '2014', 'Custom'];
 
 export async function renderLibrary(container) {
   container.innerHTML = `
@@ -29,7 +30,7 @@ export async function renderLibrary(container) {
   if (!filters || !list) return;
 
   const filtersRow = document.createElement('div');
-  filtersRow.className = 'modal-form-row modal-form-row--compact';
+  filtersRow.className = 'modal-form-row modal-form-row--compact library-filters-row';
   filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
   filtersRow.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
   const schoolFilterField = document.createElement('label');
@@ -58,23 +59,53 @@ export async function renderLibrary(container) {
   });
   classFilterField.appendChild(classFilterSelect);
   filtersRow.appendChild(classFilterField);
-  filters.appendChild(filtersRow);
-
+  const versionFilterField = document.createElement('label');
+  versionFilterField.className = 'field';
+  versionFilterField.innerHTML = '<span>Versione regole</span>';
+  const versionFilterSelect = document.createElement('select');
+  versionFilterSelect.name = 'rules_version';
+  [{ value: '', label: 'Tutte' }, ...SPELL_RULES_VERSION_OPTIONS.map((entry) => ({ value: entry, label: entry }))]
+    .forEach((entry) => {
+      const option = document.createElement('option');
+      option.value = entry.value;
+      option.textContent = entry.label;
+      versionFilterSelect.appendChild(option);
+    });
+  versionFilterField.appendChild(versionFilterSelect);
+  filtersRow.appendChild(versionFilterField);
   const searchButton = document.createElement('button');
   searchButton.className = 'primary';
   searchButton.type = 'button';
   searchButton.textContent = 'Cerca';
-  filters.appendChild(searchButton);
+  filtersRow.appendChild(searchButton);
+  filters.appendChild(filtersRow);
 
   const renderSpells = async () => {
     const query = filters.querySelector('input[name="q"]')?.value || '';
     const level = filters.querySelector('input[name="level"]')?.value || '';
-    const school = filters.querySelector('input[name="school"]')?.value || '';
-    const casterClass = filters.querySelector('input[name="caster"]')?.value || '';
-    const result = await searchSharedSpells({ query, level, school, casterClasses: casterClass ? [casterClass] : [] });
+    const school = filters.querySelector('select[name="school"]')?.value || '';
+    const casterClass = filters.querySelector('select[name="caster"]')?.value || '';
+    const rulesVersion = filters.querySelector('select[name="rules_version"]')?.value || '';
+    const result = await searchSharedSpells({
+      query,
+      level,
+      school,
+      rulesVersion,
+      casterClasses: casterClass ? [casterClass] : []
+    });
     const spells = result.items || [];
     list.innerHTML = spells.length
-      ? spells.map((spell) => `<article class="character-card"><div class="character-card-info"><h3>${spell.name}</h3><p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p><div class="button-row"><button class="icon-button" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo">🗑️</button></div></div></article>`).join('')
+      ? spells.map((spell) => `
+        <article class="character-card library-spell-card">
+          <div class="character-card-avatar library-spell-card__avatar"><span>✨</span></div>
+          <div class="character-card-info">
+            <h3>${spell.name}</h3>
+            <p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p>
+          </div>
+          <div class="button-row library-spell-card__actions">
+            <button class="icon-button" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo">🗑️</button>
+          </div>
+        </article>`).join('')
       : '<p>Nessun incantesimo trovato.</p>';
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;
@@ -126,7 +157,6 @@ export async function renderLibrary(container) {
         concentration: Boolean(createdSpell.concentration),
         attack_roll: Boolean(createdSpell.attack_roll),
         ritual: Boolean(createdSpell.is_ritual),
-        image_url: createdSpell.image_url || null,
         description: createdSpell.description || null
       });
     const activeCharacterId = getState().activeCharacterId;

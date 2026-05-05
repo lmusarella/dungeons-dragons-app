@@ -3415,6 +3415,35 @@ button:focus-visible,
   gap: 16px;
 }
 
+.library-filters-row {
+  align-items: flex-end;
+  flex-wrap: nowrap;
+}
+
+.library-filters-row .field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.library-filters-row .primary {
+  flex: 0 0 auto;
+  height: 40px;
+}
+
+.library-spell-card {
+  align-items: center;
+  cursor: default;
+}
+
+.library-spell-card__avatar {
+  display: grid;
+  place-items: center;
+}
+
+.library-spell-card__actions {
+  margin-left: auto;
+}
+
 .character-card {
   display: flex;
   align-items: center;
