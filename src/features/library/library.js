@@ -1,5 +1,5 @@
-import { assignSharedSpellToCharacter, createSharedSpell, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, buildTextarea, createToast, openFormModal } from '../../ui/components.js';
+import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
+import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 
@@ -46,8 +46,33 @@ export async function renderLibrary(container) {
     const result = await searchSharedSpells({ query, level, school, casterClasses: casterClass ? [casterClass] : [] });
     const spells = result.items || [];
     list.innerHTML = spells.length
-      ? spells.map((spell) => `<article class="character-card"><div class="character-card-info"><h3>${spell.name}</h3><p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p></div></article>`).join('')
+      ? spells.map((spell) => `<article class="character-card"><div class="character-card-info"><h3>${spell.name}</h3><p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p><div class="button-row"><button class="icon-button" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo">🗑️</button></div></div></article>`).join('')
       : '<p>Nessun incantesimo trovato.</p>';
+    list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
+      const spellId = button.dataset.libraryDeleteSpell;
+      if (!spellId) return;
+      const spell = spells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      const ok = await openConfirmModal({
+        title: 'Conferma eliminazione incantesimo',
+        message: `Eliminare "${spell.name}" dal catalogo centralizzato e da tutte le associazioni personaggio?`,
+        confirmLabel: 'Elimina'
+      });
+      if (!ok) return;
+      await removeSharedSpellAndAssignments(spellId);
+      const activeCharacterId = getState().activeCharacterId;
+      const activeCharacter = getState().characters.find((char) => char.id === activeCharacterId);
+      if (activeCharacter) {
+        const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+        const nextData = {
+          ...(activeCharacter.data || {}),
+          spells: currentSpells.filter((entry) => entry.shared_spell_id !== spellId)
+        };
+        await saveCharacterData(activeCharacter, nextData, 'Incantesimo rimosso dal personaggio');
+      }
+      createToast('Incantesimo centralizzato eliminato', 'success');
+      await renderSpells();
+    }));
   };
 
   searchButton.addEventListener('click', () => { void renderSpells(); });

@@ -18,7 +18,8 @@ describe('src/features/character/spellbookApi.js', () => {
       'createSharedSpell',
       'fetchCharacterSpells',
       'assignSharedSpellToCharacter',
-      'removeCharacterSpell'
+      'removeCharacterSpell',
+      'removeSharedSpellAndAssignments'
     ]);
   });
 });

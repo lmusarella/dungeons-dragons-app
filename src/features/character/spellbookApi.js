@@ -89,3 +89,17 @@ export async function removeCharacterSpell(id) {
     .eq('id', id);
   if (error) throw error;
 }
+
+export async function removeSharedSpellAndAssignments(sharedSpellId) {
+  const { error: linksError } = await supabase
+    .from(CHARACTER_SPELLS_TABLE)
+    .delete()
+    .eq('shared_spell_id', sharedSpellId);
+  if (linksError) throw linksError;
+
+  const { error } = await supabase
+    .from(SHARED_SPELLS_TABLE)
+    .delete()
+    .eq('id', sharedSpellId);
+  if (error) throw error;
+}
