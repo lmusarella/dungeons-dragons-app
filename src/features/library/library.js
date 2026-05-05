@@ -1,6 +1,7 @@
-import { createSharedSpell, searchSharedSpells } from '../character/spellbookApi.js';
+import { assignSharedSpellToCharacter, createSharedSpell, searchSharedSpells } from '../character/spellbookApi.js';
 import { buildInput, buildTextarea, createToast, openFormModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
+import { saveCharacterData } from '../character/home/data.js';
 
 export async function renderLibrary(container) {
   container.innerHTML = `
@@ -59,7 +60,7 @@ export async function renderLibrary(container) {
     const formData = await openFormModal({ title: 'Nuovo incantesimo condiviso', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
     if (!formData) return;
     const { user } = getState();
-    await createSharedSpell({
+    const createdSpell = await createSharedSpell({
       created_by: user?.id,
       name: formData.get('name')?.toString().trim(),
       rules_version: formData.get('rules_version')?.toString().trim() || '2024',
@@ -68,6 +69,45 @@ export async function renderLibrary(container) {
       caster_classes: String(formData.get('caster_classes') || '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
       description: formData.get('description')?.toString().trim() || null
     });
+    const activeCharacterId = getState().activeCharacterId;
+    const activeCharacter = getState().characters.find((char) => char.id === activeCharacterId);
+    if (activeCharacter?.data?.is_spellcaster) {
+      const nextSpell = {
+        id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        shared_spell_id: createdSpell.id,
+        name: createdSpell.name,
+        level: createdSpell.level,
+        kind: Number(createdSpell.level) === 0 ? 'cantrip' : 'spell',
+        cast_time: createdSpell.cast_time || null,
+        duration: createdSpell.duration || null,
+        range: createdSpell.range || null,
+        components: createdSpell.components || null,
+        concentration: Boolean(createdSpell.concentration),
+        attack_roll: Boolean(createdSpell.attack_roll),
+        is_ritual: Boolean(createdSpell.ritual),
+        damage_die: createdSpell.damage_die || null,
+        damage_modifier: createdSpell.damage_modifier ?? null,
+        upcast_damage_die: createdSpell.upcast_damage_die || null,
+        upcast_damage_modifier: createdSpell.upcast_damage_modifier ?? null,
+        upcast_start_level: createdSpell.upcast_start_level ?? null,
+        description: createdSpell.description || null,
+        school: createdSpell.school || null,
+        caster_classes: createdSpell.caster_classes || [],
+        rules_version: createdSpell.rules_version || '2024',
+        prep_state: 'known'
+      };
+      const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      await saveCharacterData(activeCharacter, {
+        ...(activeCharacter.data || {}),
+        spells: [...currentSpells, nextSpell]
+      }, 'Incantesimo aggiunto alla scheda personaggio');
+      await assignSharedSpellToCharacter({
+        user_id: activeCharacter.user_id,
+        character_id: activeCharacter.id,
+        shared_spell_id: createdSpell.id,
+        prep_state: 'known'
+      });
+    }
     createToast('Incantesimo condiviso creato', 'success');
     void renderSpells();
   });
