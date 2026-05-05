@@ -3,6 +3,9 @@ import { buildInput, buildTextarea, createToast, openFormModal } from '../../ui/
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 
+const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
+const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
+
 export async function renderLibrary(container) {
   container.innerHTML = `
     <section class="auth-screen character-select-view">
@@ -54,8 +57,23 @@ export async function renderLibrary(container) {
     content.appendChild(buildInput({ label: 'Nome', name: 'name', placeholder: 'Es. Dardo Incantato' }));
     content.appendChild(buildInput({ label: 'Versione regole', name: 'rules_version', value: '2024' }));
     content.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: '1' }));
-    content.appendChild(buildInput({ label: 'Scuola', name: 'school' }));
-    content.appendChild(buildInput({ label: 'Classi (csv)', name: 'caster_classes', placeholder: 'mago, warlock' }));
+    const schoolField = document.createElement('label');
+    schoolField.className = 'field';
+    schoolField.innerHTML = '<span>Scuola</span>';
+    const schoolSelect = document.createElement('select');
+    schoolSelect.name = 'school';
+    SPELL_SCHOOL_OPTIONS.forEach((value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = value || 'N/D';
+      schoolSelect.appendChild(option);
+    });
+    schoolField.appendChild(schoolSelect);
+    content.appendChild(schoolField);
+    const classesField = document.createElement('div');
+    classesField.className = 'field';
+    classesField.innerHTML = `<span>Classi incantatrici</span><div class="tag-row">${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `<label class="chip"><input type="checkbox" name="caster_classes" value="${entry}" /> ${entry}</label>`).join('')}</div>`;
+    content.appendChild(classesField);
     content.appendChild(buildTextarea({ label: 'Descrizione', name: 'description' }));
     const formData = await openFormModal({ title: 'Nuovo incantesimo condiviso', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
     if (!formData) return;
@@ -66,7 +84,7 @@ export async function renderLibrary(container) {
       rules_version: formData.get('rules_version')?.toString().trim() || '2024',
       level: Number(formData.get('level') || 0),
       school: formData.get('school')?.toString().trim() || null,
-      caster_classes: String(formData.get('caster_classes') || '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
+      caster_classes: formData.getAll('caster_classes').map((v) => String(v).trim().toLowerCase()).filter(Boolean),
       description: formData.get('description')?.toString().trim() || null
     });
     const activeCharacterId = getState().activeCharacterId;

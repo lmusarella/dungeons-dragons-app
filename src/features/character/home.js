@@ -21,7 +21,7 @@ import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { bodyParts } from '../inventory/constants.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
-import { assignSharedSpellToCharacter, createSharedSpell, searchSharedSpells } from './spellbookApi.js';
+import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, searchSharedSpells } from './spellbookApi.js';
 import {
   openAvatarModal,
   openBackgroundModal,
@@ -77,6 +77,38 @@ function mapSharedSpellToCharacterSpell(sharedSpell) {
     description: sharedSpell.description,
     rules_version: sharedSpell.rules_version,
     prep_state: 'known'
+  };
+}
+
+function mapCharacterSpellRowToSpell(row) {
+  const sharedSpell = row?.shared_spell || {};
+  const customSpell = row?.custom_spell || {};
+  const source = row?.shared_spell_id ? sharedSpell : customSpell;
+  if (!source?.name) return null;
+  const level = Number(source.level) || 0;
+  return {
+    id: row.id || `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    shared_spell_id: row.shared_spell_id || null,
+    name: source.name,
+    level,
+    kind: source.kind || (level === 0 ? 'cantrip' : 'spell'),
+    cast_time: source.cast_time || null,
+    duration: source.duration || null,
+    range: source.range || null,
+    components: source.components || null,
+    concentration: Boolean(source.concentration),
+    attack_roll: Boolean(source.attack_roll),
+    is_ritual: Boolean(source.ritual ?? source.is_ritual),
+    damage_die: source.damage_die || null,
+    damage_modifier: source.damage_modifier ?? null,
+    upcast_damage_die: source.upcast_damage_die || null,
+    upcast_damage_modifier: source.upcast_damage_modifier ?? null,
+    upcast_start_level: source.upcast_start_level ?? null,
+    description: source.description || null,
+    school: source.school || null,
+    caster_classes: source.caster_classes || [],
+    rules_version: source.rules_version || null,
+    prep_state: row.prep_state || 'known'
   };
 }
 
@@ -282,9 +314,10 @@ export async function renderHome(container) {
   let resources = state.cache.resources;
   let items = state.cache.items;
   if (!offline && activeCharacter) {
-    const [resourcesResult, itemsResult] = await Promise.allSettled([
+    const [resourcesResult, itemsResult, characterSpellsResult] = await Promise.allSettled([
       fetchResources(activeCharacter.id),
-      fetchItems(activeCharacter.id)
+      fetchItems(activeCharacter.id),
+      fetchCharacterSpells(activeCharacter.id)
     ]);
     const snapshot = {};
     if (resourcesResult.status === 'fulfilled') {
@@ -300,6 +333,20 @@ export async function renderHome(container) {
       snapshot.items = items;
     } else {
       createToast('Errore caricamento equip', 'error');
+    }
+    if (characterSpellsResult.status === 'fulfilled') {
+      const linkedSpells = (characterSpellsResult.value || [])
+        .map((row) => mapCharacterSpellRowToSpell(row))
+        .filter(Boolean);
+      if (linkedSpells.length) {
+        const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+        const merged = [...currentSpells];
+        linkedSpells.forEach((entry) => {
+          const exists = merged.some((spell) => spell.shared_spell_id && spell.shared_spell_id === entry.shared_spell_id);
+          if (!exists) merged.push(entry);
+        });
+        activeCharacter.data = { ...(activeCharacter.data || {}), spells: merged };
+      }
     }
     if (Object.keys(snapshot).length) {
       await cacheSnapshot(snapshot);
