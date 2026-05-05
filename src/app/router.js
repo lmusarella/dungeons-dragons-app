@@ -29,7 +29,7 @@ async function renderRoute() {
   const appHeader = document.querySelector('[data-app-header]');
   const offlineBanner = document.querySelector('[data-offline-banner]');
   const appShell = document.querySelector('.app-shell');
-  const hideShell = route === 'login' || route === 'characters';
+  const hideShell = route === 'login' || route === 'characters' || route === 'library';
   const hideHeader = route === 'login';
   const fabAlwaysVisibleRoutes = ['home', 'inventory', 'journal'];
   const showFab = fabAlwaysVisibleRoutes.includes(route);

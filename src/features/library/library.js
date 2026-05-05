@@ -31,8 +31,32 @@ export async function renderLibrary(container) {
   filtersRow.className = 'modal-form-row modal-form-row--compact';
   filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
   filtersRow.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
-  filtersRow.appendChild(buildInput({ label: 'Scuola', name: 'school', placeholder: 'Es. abiurazione' }));
-  filtersRow.appendChild(buildInput({ label: 'Classe', name: 'caster', placeholder: 'Es. mago' }));
+  const schoolFilterField = document.createElement('label');
+  schoolFilterField.className = 'field';
+  schoolFilterField.innerHTML = '<span>Scuola</span>';
+  const schoolFilterSelect = document.createElement('select');
+  schoolFilterSelect.name = 'school';
+  SPELL_SCHOOL_OPTIONS.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value || 'Tutte';
+    schoolFilterSelect.appendChild(option);
+  });
+  schoolFilterField.appendChild(schoolFilterSelect);
+  filtersRow.appendChild(schoolFilterField);
+  const classFilterField = document.createElement('label');
+  classFilterField.className = 'field';
+  classFilterField.innerHTML = '<span>Classe</span>';
+  const classFilterSelect = document.createElement('select');
+  classFilterSelect.name = 'caster';
+  [{ value: '', label: 'Tutte' }, ...SPELL_CASTER_CLASS_OPTIONS.map((entry) => ({ value: entry, label: entry }))].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    classFilterSelect.appendChild(option);
+  });
+  classFilterField.appendChild(classFilterSelect);
+  filtersRow.appendChild(classFilterField);
   filters.appendChild(filtersRow);
 
   const searchButton = document.createElement('button');
@@ -129,6 +153,8 @@ export async function renderLibrary(container) {
       buildInput({ label: 'Notazione danno', name: 'damage_die', placeholder: 'Es. 1d8' }),
       buildInput({ label: 'Mod. danno', name: 'damage_modifier', type: 'number' }),
       buildInput({ label: 'Danno upcast', name: 'upcast_damage_die', placeholder: 'Es. 1d8' }),
+      buildInput({ label: 'Mod extra/slot', name: 'upcast_damage_modifier', type: 'number' }),
+      buildInput({ label: 'Slot minimo upcast', name: 'upcast_start_level', type: 'number' }),
     ]));
     content.appendChild(buildTextarea({ label: 'Descrizione', name: 'description' }));
     const formData = await openFormModal({ title: 'Nuovo incantesimo condiviso', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
@@ -148,6 +174,8 @@ export async function renderLibrary(container) {
       damage_die: formData.get('damage_die')?.toString().trim() || null,
       damage_modifier: formData.get('damage_modifier') === '' ? null : Number(formData.get('damage_modifier')),
       upcast_damage_die: formData.get('upcast_damage_die')?.toString().trim() || null,
+      upcast_damage_modifier: formData.get('upcast_damage_modifier') === '' ? null : Number(formData.get('upcast_damage_modifier')),
+      upcast_start_level: formData.get('upcast_start_level') === '' ? null : Number(formData.get('upcast_start_level')),
       description: formData.get('description')?.toString().trim() || null
     });
     const activeCharacterId = getState().activeCharacterId;
