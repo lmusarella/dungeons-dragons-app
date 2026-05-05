@@ -190,8 +190,9 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
   });
 }
 
-export function openSpellDrawer(character, onSave, spell = null) {
-  if (!character) return;
+export function openSpellDrawer(character, onSave, spell = null, options = {}) {
+  const { catalogMode = false } = options;
+  if (!character && !catalogMode) return;
   const enhanceSpellNumericField = (field) => {
     const input = field?.querySelector('input[type="number"]');
     if (!input) return;
@@ -201,7 +202,7 @@ export function openSpellDrawer(character, onSave, spell = null) {
       incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
     });
   };
-  const canPrepare = Boolean(character.data?.is_spellcaster);
+  const canPrepare = !catalogMode && Boolean(character?.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form';
   const buildRow = (elements, variant = 'balanced') => {
@@ -489,7 +490,11 @@ export function openSpellDrawer(character, onSave, spell = null) {
       rules_version: (formData.get('spell_rules_version') || '2024').toString().trim(),
       prep_state: prepState
     };
-    const currentSpells = Array.isArray(character.data?.spells) ? character.data.spells : [];
+    if (catalogMode) {
+      await onSave?.(nextSpell, { isNew: !spell });
+      return;
+    }
+    const currentSpells = Array.isArray(character?.data?.spells) ? character.data.spells : [];
     const nextSpells = spell
       ? currentSpells.map((entry) => (entry.id === spell.id ? nextSpell : entry))
       : [...currentSpells, nextSpell];
