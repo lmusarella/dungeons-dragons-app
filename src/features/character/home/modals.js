@@ -16,7 +16,7 @@ import { conditionList } from './constants.js';
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
-const SPELL_RULES_VERSION_OPTIONS = ['2014', '2024'];
+const SPELL_RULES_VERSION_OPTIONS = ['2014', '2024', 'Custom'];
 
 function normalizeSpellCastTime(castTime) {
   const rawValue = castTime?.toString().trim();
@@ -361,12 +361,6 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     placeholder: 'Es. 1d10',
     value: spell?.damage_die ?? ''
   });
-  const imageField = buildInput({
-    label: 'Foto (URL)',
-    name: 'spell_image_url',
-    placeholder: 'https://.../incantesimo.png',
-    value: spell?.image_url ?? ''
-  });
   const damageModifierField = buildInput({
     label: 'Modificatore',
     name: 'spell_damage_modifier',
@@ -396,10 +390,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     upcastStartLevelInput.min = '1';
     upcastStartLevelInput.max = '9';
   }
-  const damageRowFields = catalogMode
-    ? [damageDieField, damageModifierField]
-    : [damageDieField, damageModifierField, imageField];
-  form.appendChild(buildRow(damageRowFields, 'compact'));
+  form.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
   form.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
@@ -479,7 +470,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
       is_ritual: formData.has('spell_is_ritual'),
-      image_url: catalogMode ? null : (formData.get('spell_image_url')?.trim() || null),
+      image_url: null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
       upcast_damage_die: formData.get('spell_upcast_damage_die')?.trim() || null,
