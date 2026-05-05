@@ -474,8 +474,11 @@ export async function renderHome(container) {
           if (!sharedSpell) return;
           const nextSpell = mapSharedSpellToCharacterSpell(sharedSpell);
           const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
-          const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, nextSpell] };
-          await saveCharacterData(activeCharacter, nextData, 'Incantesimo aggiunto dalla lista condivisa', () => renderHome(container));
+          const alreadyLinked = currentSpells.some((entry) => entry.shared_spell_id === sharedSpell.id);
+          if (alreadyLinked) {
+            createToast('Incantesimo già presente nella scheda personaggio', 'info');
+            return;
+          }
           if (activeCharacter.user_id) {
             await assignSharedSpellToCharacter({
               user_id: activeCharacter.user_id,
@@ -484,9 +487,11 @@ export async function renderHome(container) {
               prep_state: nextSpell.prep_state
             });
           }
+          const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, nextSpell] };
+          await saveCharacterData(activeCharacter, nextData, 'Incantesimo aggiunto dalla lista condivisa', () => renderHome(container));
           return;
         } catch (error) {
-          createToast('Errore durante il recupero incantesimi condivisi', 'error');
+          createToast('Errore durante l\'associazione dell\'incantesimo condiviso', 'error');
           return;
         }
       }
