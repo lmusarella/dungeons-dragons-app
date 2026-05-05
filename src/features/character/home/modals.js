@@ -396,7 +396,10 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     upcastStartLevelInput.min = '1';
     upcastStartLevelInput.max = '9';
   }
-  form.appendChild(buildRow([damageDieField, damageModifierField, imageField], 'compact'));
+  const damageRowFields = catalogMode
+    ? [damageDieField, damageModifierField]
+    : [damageDieField, damageModifierField, imageField];
+  form.appendChild(buildRow(damageRowFields, 'compact'));
   form.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
   form.appendChild(buildTextarea({
     label: 'Descrizione',
@@ -476,7 +479,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
       is_ritual: formData.has('spell_is_ritual'),
-      image_url: formData.get('spell_image_url')?.trim() || null,
+      image_url: catalogMode ? null : (formData.get('spell_image_url')?.trim() || null),
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
       upcast_damage_die: formData.get('spell_upcast_damage_die')?.trim() || null,

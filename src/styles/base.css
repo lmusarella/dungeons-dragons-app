@@ -3386,7 +3386,7 @@ button:focus-visible,
 }
 
 .library-view {
-  min-height: 100%;
+  min-height: 100vh;
   align-items: stretch;
 }
 
