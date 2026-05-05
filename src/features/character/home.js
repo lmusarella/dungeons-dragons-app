@@ -21,7 +21,7 @@ import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { bodyParts } from '../inventory/constants.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
-import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, searchSharedSpells } from './spellbookApi.js';
+import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
 import {
   openAvatarModal,
   openBackgroundModal,
@@ -597,6 +597,18 @@ export async function renderHome(container) {
         confirmLabel: 'Elimina'
       });
       if (!shouldDelete) return;
+      if (spell.shared_spell_id) {
+        try {
+          const linkedRows = await fetchCharacterSpells(activeCharacter.id);
+          const linkedRow = linkedRows.find((row) => row.shared_spell_id === spell.shared_spell_id);
+          if (linkedRow?.id) {
+            await removeCharacterSpell(linkedRow.id);
+          }
+        } catch (error) {
+          createToast('Errore rimozione associazione incantesimo', 'error');
+          return;
+        }
+      }
       const nextData = {
         ...(activeCharacter.data || {}),
         spells: spells.filter((entry) => entry.id !== spell.id)
