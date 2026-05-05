@@ -3385,6 +3385,11 @@ button:focus-visible,
   overflow: hidden;
 }
 
+.library-view {
+  min-height: 100%;
+  align-items: stretch;
+}
+
 .character-select-card {
   margin: 0 !important;
 }

@@ -1,5 +1,5 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, buildTextarea, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { attachNumberSteppers, buildInput, buildTextarea, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 
@@ -8,7 +8,7 @@ const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', '
 
 export async function renderLibrary(container) {
   container.innerHTML = `
-    <section class="auth-screen character-select-view">
+    <section class="auth-screen character-select-view library-view">
       <div class="card character-select-card">
         <header class="character-select-header">
           <div>
@@ -156,7 +156,17 @@ export async function renderLibrary(container) {
       buildInput({ label: 'Mod extra/slot', name: 'upcast_damage_modifier', type: 'number' }),
       buildInput({ label: 'Slot minimo upcast', name: 'upcast_start_level', type: 'number' }),
     ]));
+    const toggles = document.createElement('div');
+    toggles.className = 'modal-form-row modal-form-row--compact';
+    toggles.innerHTML = `
+      <div class="modal-toggle-field"><span class="modal-toggle-field__label">Concentrazione</span><label class="diceov-toggle condition-modal__toggle"><input type="checkbox" name="concentration" /><span class="diceov-toggle-track" aria-hidden="true"></span></label></div>
+      <div class="modal-toggle-field"><span class="modal-toggle-field__label">Tiro per colpire</span><label class="diceov-toggle condition-modal__toggle"><input type="checkbox" name="attack_roll" /><span class="diceov-toggle-track" aria-hidden="true"></span></label></div>
+      <div class="modal-toggle-field"><span class="modal-toggle-field__label">Rituale</span><label class="diceov-toggle condition-modal__toggle"><input type="checkbox" name="ritual" /><span class="diceov-toggle-track" aria-hidden="true"></span></label></div>
+    `;
+    content.appendChild(toggles);
+    content.appendChild(buildInput({ label: 'Immagine URL', name: 'image_url', placeholder: 'https://.../spell.png' }));
     content.appendChild(buildTextarea({ label: 'Descrizione', name: 'description' }));
+    attachNumberSteppers(content);
     const formData = await openFormModal({ title: 'Nuovo incantesimo condiviso', submitLabel: 'Salva', content, cardClass: 'modal-card--form' });
     if (!formData) return;
     const { user } = getState();
@@ -176,6 +186,10 @@ export async function renderLibrary(container) {
       upcast_damage_die: formData.get('upcast_damage_die')?.toString().trim() || null,
       upcast_damage_modifier: formData.get('upcast_damage_modifier') === '' ? null : Number(formData.get('upcast_damage_modifier')),
       upcast_start_level: formData.get('upcast_start_level') === '' ? null : Number(formData.get('upcast_start_level')),
+      concentration: formData.has('concentration'),
+      attack_roll: formData.has('attack_roll'),
+      ritual: formData.has('ritual'),
+      image_url: formData.get('image_url')?.toString().trim() || null,
       description: formData.get('description')?.toString().trim() || null
     });
     const activeCharacterId = getState().activeCharacterId;
