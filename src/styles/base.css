@@ -3430,6 +3430,22 @@ button:focus-visible,
   height: 40px;
 }
 
+.library-list-toolbar {
+  margin-top: 10px;
+  max-width: 260px;
+}
+
+.library-pagination {
+  margin: 12px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.library-spell-detail p {
+  margin: 0 0 8px;
+}
+
 .library-spell-card {
   align-items: center;
   cursor: default;

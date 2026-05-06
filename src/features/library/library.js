@@ -1,5 +1,5 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, createToast, openConfirmModal } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 import { openSpellDrawer } from '../character/home/modals.js';
@@ -7,6 +7,19 @@ import { openSpellDrawer } from '../character/home/modals.js';
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
 const SPELL_RULES_VERSION_OPTIONS = ['2024', '2014', 'Custom'];
+const PAGE_SIZE = 8;
+
+function sortSpells(spells, mode) {
+  const items = [...spells];
+  if (mode === 'level') {
+    return items.sort((a, b) => {
+      const levelDiff = (Number(a.level) || 0) - (Number(b.level) || 0);
+      if (levelDiff !== 0) return levelDiff;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' });
+    });
+  }
+  return items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }));
+}
 
 export async function renderLibrary(container) {
   container.innerHTML = `
@@ -80,6 +93,25 @@ export async function renderLibrary(container) {
   filtersRow.appendChild(searchButton);
   filters.appendChild(filtersRow);
 
+  const listToolbar = document.createElement('div');
+  listToolbar.className = 'library-list-toolbar';
+  listToolbar.innerHTML = `
+    <label class="field">
+      <span>Ordina per</span>
+      <select name="sort">
+        <option value="name">Nome (A-Z)</option>
+        <option value="level">Livello (0-9)</option>
+      </select>
+    </label>
+  `;
+  filters.appendChild(listToolbar);
+
+  const pagination = document.createElement('div');
+  pagination.className = 'library-pagination';
+  filters.appendChild(pagination);
+
+  let currentPage = 1;
+
   const renderSpells = async () => {
     const query = filters.querySelector('input[name="q"]')?.value || '';
     const level = filters.querySelector('input[name="level"]')?.value || '';
@@ -94,8 +126,15 @@ export async function renderLibrary(container) {
       casterClasses: casterClass ? [casterClass] : []
     });
     const spells = result.items || [];
-    list.innerHTML = spells.length
-      ? spells.map((spell) => `
+    const sortMode = filters.querySelector('select[name="sort"]')?.value || 'name';
+    const sortedSpells = sortSpells(spells, sortMode);
+    const totalPages = Math.max(1, Math.ceil(sortedSpells.length / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const pageStart = (currentPage - 1) * PAGE_SIZE;
+    const pagedSpells = sortedSpells.slice(pageStart, pageStart + PAGE_SIZE);
+
+    list.innerHTML = pagedSpells.length
+      ? pagedSpells.map((spell) => `
         <article class="character-card library-spell-card">
           <div class="character-card-avatar library-spell-card__avatar"><span>✨</span></div>
           <div class="character-card-info">
@@ -103,14 +142,39 @@ export async function renderLibrary(container) {
             <p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p>
           </div>
           <div class="button-row library-spell-card__actions">
+            <button class="icon-button" type="button" data-library-view-spell="${spell.id}" aria-label="Dettagli incantesimo">👁️</button>
             <button class="icon-button" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo">🗑️</button>
           </div>
         </article>`).join('')
       : '<p>Nessun incantesimo trovato.</p>';
+    pagination.innerHTML = sortedSpells.length
+      ? `<button class="secondary" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}>← Precedente</button>
+         <span class="muted">Pagina ${currentPage} di ${totalPages}</span>
+         <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
+      : '';
+
+    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', async () => {
+      const spell = sortedSpells.find((entry) => entry.id === button.dataset.libraryViewSpell);
+      if (!spell) return;
+      const content = document.createElement('div');
+      content.className = 'library-spell-detail';
+      content.innerHTML = `
+        <p><strong>Livello:</strong> ${spell.level ?? '-'}</p>
+        <p><strong>Scuola:</strong> ${spell.school || '-'}</p>
+        <p><strong>Classi:</strong> ${(spell.caster_classes || []).join(', ') || '-'}</p>
+        <p><strong>Lancio:</strong> ${spell.cast_time || '-'}</p>
+        <p><strong>Durata:</strong> ${spell.duration || '-'}</p>
+        <p><strong>Range:</strong> ${spell.range || '-'}</p>
+        <p><strong>Componenti:</strong> ${spell.components || '-'}</p>
+        <p><strong>Versione:</strong> ${spell.rules_version || '-'}</p>
+        <p><strong>Descrizione:</strong> ${spell.description || 'Nessuna descrizione disponibile.'}</p>
+      `;
+      await openFormModal({ title: spell.name || 'Dettagli incantesimo', content, submitLabel: 'Chiudi', showFooter: false, cancelLabel: 'Chiudi' });
+    }));
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;
       if (!spellId) return;
-      const spell = spells.find((entry) => entry.id === spellId);
+      const spell = sortedSpells.find((entry) => entry.id === spellId);
       if (!spell) return;
       const ok = await openConfirmModal({
         title: 'Conferma eliminazione incantesimo',
@@ -132,9 +196,18 @@ export async function renderLibrary(container) {
       createToast('Incantesimo centralizzato eliminato', 'success');
       await renderSpells();
     }));
+    pagination.querySelector('[data-library-page="prev"]')?.addEventListener('click', () => {
+      currentPage = Math.max(1, currentPage - 1);
+      void renderSpells();
+    });
+    pagination.querySelector('[data-library-page="next"]')?.addEventListener('click', () => {
+      currentPage = Math.min(totalPages, currentPage + 1);
+      void renderSpells();
+    });
   };
 
-  searchButton.addEventListener('click', () => { void renderSpells(); });
+  searchButton.addEventListener('click', () => { currentPage = 1; void renderSpells(); });
+  filters.querySelector('select[name="sort"]')?.addEventListener('change', () => { currentPage = 1; void renderSpells(); });
   container.querySelector('[data-library-add-spell]')?.addEventListener('click', async () => {
     const { user } = getState();
     await openSpellDrawer(null, async (createdSpell) => {
