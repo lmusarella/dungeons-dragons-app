@@ -136,7 +136,6 @@ export async function renderLibrary(container) {
     list.innerHTML = pagedSpells.length
       ? pagedSpells.map((spell) => `
         <article class="character-card library-spell-card">
-          <div class="character-card-avatar library-spell-card__avatar"><span>✨</span></div>
           <div class="character-card-info">
             <h3>${spell.name}</h3>
             <p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p>
@@ -211,68 +210,80 @@ export async function renderLibrary(container) {
   container.querySelector('[data-library-add-spell]')?.addEventListener('click', async () => {
     const { user } = getState();
     await openSpellDrawer(null, async (createdSpell) => {
-      const createdSpellRow = await createSharedSpell({
-        created_by: user?.id,
-        name: createdSpell.name,
-        rules_version: createdSpell.rules_version || '2024',
-        level: Number(createdSpell.level) || 0,
-        school: createdSpell.school || null,
-        cast_time: createdSpell.cast_time || null,
-        duration: createdSpell.duration || null,
-        range: createdSpell.range || null,
-        components: createdSpell.components || null,
-        caster_classes: Array.isArray(createdSpell.caster_classes) ? createdSpell.caster_classes : [],
-        damage_die: createdSpell.damage_die || null,
-        damage_modifier: createdSpell.damage_modifier ?? null,
-        upcast_damage_die: createdSpell.upcast_damage_die || null,
-        upcast_damage_modifier: createdSpell.upcast_damage_modifier ?? null,
-        upcast_start_level: createdSpell.upcast_start_level ?? null,
-        concentration: Boolean(createdSpell.concentration),
-        attack_roll: Boolean(createdSpell.attack_roll),
-        ritual: Boolean(createdSpell.is_ritual),
-        description: createdSpell.description || null
-      });
-    const activeCharacterId = getState().activeCharacterId;
-    const activeCharacter = getState().characters.find((char) => char.id === activeCharacterId);
-    if (activeCharacter?.data?.is_spellcaster) {
-      const nextSpell = {
-        id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        shared_spell_id: createdSpellRow.id,
-        name: createdSpellRow.name,
-        level: createdSpellRow.level,
-        kind: Number(createdSpellRow.level) === 0 ? 'cantrip' : 'spell',
-        cast_time: createdSpellRow.cast_time || null,
-        duration: createdSpellRow.duration || null,
-        range: createdSpellRow.range || null,
-        components: createdSpellRow.components || null,
-        concentration: Boolean(createdSpellRow.concentration),
-        attack_roll: Boolean(createdSpellRow.attack_roll),
-        is_ritual: Boolean(createdSpellRow.ritual),
-        damage_die: createdSpellRow.damage_die || null,
-        damage_modifier: createdSpellRow.damage_modifier ?? null,
-        upcast_damage_die: createdSpellRow.upcast_damage_die || null,
-        upcast_damage_modifier: createdSpellRow.upcast_damage_modifier ?? null,
-        upcast_start_level: createdSpellRow.upcast_start_level ?? null,
-        description: createdSpellRow.description || null,
-        school: createdSpellRow.school || null,
-        caster_classes: createdSpellRow.caster_classes || [],
-        rules_version: createdSpellRow.rules_version || '2024',
-        prep_state: 'known'
-      };
-      const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
-      await saveCharacterData(activeCharacter, {
-        ...(activeCharacter.data || {}),
-        spells: [...currentSpells, nextSpell]
-      }, 'Incantesimo aggiunto alla scheda personaggio');
-      await assignSharedSpellToCharacter({
-        user_id: activeCharacter.user_id,
-        character_id: activeCharacter.id,
-        shared_spell_id: createdSpellRow.id,
-        prep_state: 'known'
-      });
-    }
-    createToast('Incantesimo condiviso creato', 'success');
-    void renderSpells();
+      try {
+        const createdSpellRow = await createSharedSpell({
+          created_by: user?.id,
+          name: createdSpell.name,
+          rules_version: createdSpell.rules_version || '2024',
+          level: Number(createdSpell.level) || 0,
+          school: createdSpell.school || null,
+          cast_time: createdSpell.cast_time || null,
+          duration: createdSpell.duration || null,
+          range: createdSpell.range || null,
+          components: createdSpell.components || null,
+          caster_classes: Array.isArray(createdSpell.caster_classes) ? createdSpell.caster_classes : [],
+          damage_die: createdSpell.damage_die || null,
+          damage_modifier: createdSpell.damage_modifier ?? null,
+          upcast_damage_die: createdSpell.upcast_damage_die || null,
+          upcast_damage_modifier: createdSpell.upcast_damage_modifier ?? null,
+          upcast_start_level: createdSpell.upcast_start_level ?? null,
+          concentration: Boolean(createdSpell.concentration),
+          attack_roll: Boolean(createdSpell.attack_roll),
+          ritual: Boolean(createdSpell.is_ritual),
+          description: createdSpell.description || null
+        });
+        const activeCharacterId = getState().activeCharacterId;
+        const activeCharacter = getState().characters.find((char) => char.id === activeCharacterId);
+        if (activeCharacter?.data?.is_spellcaster) {
+          const nextSpell = {
+            id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            shared_spell_id: createdSpellRow.id,
+            name: createdSpellRow.name,
+            level: createdSpellRow.level,
+            kind: Number(createdSpellRow.level) === 0 ? 'cantrip' : 'spell',
+            cast_time: createdSpellRow.cast_time || null,
+            duration: createdSpellRow.duration || null,
+            range: createdSpellRow.range || null,
+            components: createdSpellRow.components || null,
+            concentration: Boolean(createdSpellRow.concentration),
+            attack_roll: Boolean(createdSpellRow.attack_roll),
+            is_ritual: Boolean(createdSpellRow.ritual),
+            damage_die: createdSpellRow.damage_die || null,
+            damage_modifier: createdSpellRow.damage_modifier ?? null,
+            upcast_damage_die: createdSpellRow.upcast_damage_die || null,
+            upcast_damage_modifier: createdSpellRow.upcast_damage_modifier ?? null,
+            upcast_start_level: createdSpellRow.upcast_start_level ?? null,
+            description: createdSpellRow.description || null,
+            school: createdSpellRow.school || null,
+            caster_classes: createdSpellRow.caster_classes || [],
+            rules_version: createdSpellRow.rules_version || '2024',
+            prep_state: 'known'
+          };
+          const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+          await saveCharacterData(activeCharacter, {
+            ...(activeCharacter.data || {}),
+            spells: [...currentSpells, nextSpell]
+          }, 'Incantesimo aggiunto alla scheda personaggio');
+          await assignSharedSpellToCharacter({
+            user_id: activeCharacter.user_id,
+            character_id: activeCharacter.id,
+            shared_spell_id: createdSpellRow.id,
+            prep_state: 'known'
+          });
+        }
+        createToast('Incantesimo condiviso creato', 'success');
+        void renderSpells();
+      } catch (error) {
+        const message = String(error?.message || error || 'Errore durante la creazione dell'incantesimo');
+        const isDuplicateSpell = message.includes('shared_spells_name_rules_version_key')
+          || message.toLowerCase().includes('duplicate key value violates unique constraint');
+        createToast(
+          isDuplicateSpell
+            ? 'Esiste già un incantesimo simile nel catalogo centralizzato.'
+            : message,
+          'error'
+        );
+      }
     }, null, { catalogMode: true });
   });
 
