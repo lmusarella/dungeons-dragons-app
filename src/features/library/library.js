@@ -274,7 +274,7 @@ export async function renderLibrary(container) {
         createToast('Incantesimo condiviso creato', 'success');
         void renderSpells();
       } catch (error) {
-        const message = String(error?.message || error || 'Errore durante la creazione dell'incantesimo');
+        const message = String(error?.message || error || "Errore durante la creazione dell'incantesimo");
         const isDuplicateSpell = message.includes('shared_spells_name_rules_version_key')
           || message.toLowerCase().includes('duplicate key value violates unique constraint');
         createToast(
