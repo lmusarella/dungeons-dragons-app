@@ -3390,6 +3390,11 @@ button:focus-visible,
   align-items: stretch;
 }
 
+.library-view .character-select-card {
+  width: 100%;
+  max-width: none;
+}
+
 .character-select-card {
   margin: 0 !important;
 }
@@ -3451,10 +3456,6 @@ button:focus-visible,
   cursor: default;
 }
 
-.library-spell-card__avatar {
-  display: grid;
-  place-items: center;
-}
 
 .library-spell-card__actions {
   margin-left: auto;
