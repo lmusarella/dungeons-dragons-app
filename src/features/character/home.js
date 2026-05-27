@@ -1976,9 +1976,9 @@ function buildHpShortcutFields(
         value: ''
       });
       maxHpField.classList.add('hp-shortcut-fields__max');
-      enhanceNumericField(maxHpField, { decrementLabel: 'Riduci PF massimi', incrementLabel: 'Aumenta PF massimi' });
       const maxInput = maxHpField.querySelector('input');
       if (maxInput) {
+        attachModalValueStepper(maxInput, { min: 1 });
         maxInput.min = '1';
       }
       primaryRow.appendChild(maxHpField);

@@ -7,7 +7,6 @@ import {
   buildTextarea,
   createToast,
   openFormModal,
-  attachNumberStepper
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
@@ -16,6 +15,46 @@ import {
   skillList
 } from './constants.js';
 import { getAbilityModifier, normalizeNumber } from './utils.js';
+
+
+function attachDrawerNumberStepper(input, {
+  decrementLabel = 'Diminuisci valore',
+  incrementLabel = 'Aumenta valore'
+} = {}) {
+  if (!(input instanceof HTMLInputElement) || input.type !== 'number') return;
+  if (input.closest('.drawer-number-stepper')) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'number-stepper drawer-number-stepper';
+  const dec = document.createElement('button');
+  dec.type = 'button';
+  dec.className = 'number-stepper__button';
+  dec.textContent = '−';
+  dec.setAttribute('aria-label', decrementLabel);
+  const inc = document.createElement('button');
+  inc.type = 'button';
+  inc.className = 'number-stepper__button';
+  inc.textContent = '+';
+  inc.setAttribute('aria-label', incrementLabel);
+  const parent = input.parentNode;
+  if (!parent) return;
+  parent.insertBefore(wrapper, input);
+  wrapper.append(dec, input, inc);
+  const step = (direction) => {
+    const current = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.value || 0);
+    const stepValue = Number(input.step);
+    const delta = Number.isFinite(stepValue) && stepValue > 0 ? stepValue : 1;
+    let next = current + (delta * direction);
+    const min = Number(input.min);
+    const max = Number(input.max);
+    if (Number.isFinite(min)) next = Math.max(min, next);
+    if (Number.isFinite(max)) next = Math.min(max, next);
+    input.value = String(next);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  dec.addEventListener('click', () => step(-1));
+  inc.addEventListener('click', () => step(1));
+}
 
 export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
@@ -34,7 +73,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const enhanceNumericFields = (root) => {
     root?.querySelectorAll('input[type="number"]').forEach((input) => {
       const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
-      attachNumberStepper(input, {
+      attachDrawerNumberStepper(input, {
         decrementLabel: fieldLabel ? `Riduci ${fieldLabel}` : 'Diminuisci valore',
         incrementLabel: fieldLabel ? `Aumenta ${fieldLabel}` : 'Aumenta valore'
       });
@@ -251,7 +290,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
         if (masteryInput.checked && proficiencyInput) proficiencyInput.checked = true;
       });
       row.querySelectorAll('input[type="number"]').forEach((input) => {
-        attachNumberStepper(input, {
+        attachDrawerNumberStepper(input, {
           decrementLabel: 'Riduci bonus extra',
           incrementLabel: 'Aumenta bonus extra'
         });
