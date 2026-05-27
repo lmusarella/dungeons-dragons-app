@@ -169,27 +169,18 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  let lastStepTs = 0;
-  const handleStepEvent = (event, direction) => {
-    const now = Date.now();
-    const isClick = event.type === 'click';
-    if (isClick && (now - lastStepTs) < 250) return;
-    if (!isClick) {
-      event.preventDefault();
-    }
+  const preserveInputFocus = () => {
     input.focus({ preventScroll: true });
-    stepValue(direction);
-    lastStepTs = now;
   };
 
-  decrementButton.addEventListener('pointerdown', (event) => handleStepEvent(event, -1));
-  incrementButton.addEventListener('pointerdown', (event) => handleStepEvent(event, 1));
-  decrementButton.addEventListener('mousedown', (event) => handleStepEvent(event, -1));
-  incrementButton.addEventListener('mousedown', (event) => handleStepEvent(event, 1));
-  decrementButton.addEventListener('touchstart', (event) => handleStepEvent(event, -1), { passive: false });
-  incrementButton.addEventListener('touchstart', (event) => handleStepEvent(event, 1), { passive: false });
-  decrementButton.addEventListener('click', (event) => handleStepEvent(event, -1));
-  incrementButton.addEventListener('click', (event) => handleStepEvent(event, 1));
+  decrementButton.addEventListener('pointerdown', preserveInputFocus);
+  incrementButton.addEventListener('pointerdown', preserveInputFocus);
+  decrementButton.addEventListener('mousedown', preserveInputFocus);
+  incrementButton.addEventListener('mousedown', preserveInputFocus);
+  decrementButton.addEventListener('touchstart', preserveInputFocus, { passive: true });
+  incrementButton.addEventListener('touchstart', preserveInputFocus, { passive: true });
+  decrementButton.addEventListener('click', () => stepValue(-1));
+  incrementButton.addEventListener('click', () => stepValue(1));
 
   const observer = new MutationObserver(updateButtonState);
   observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
