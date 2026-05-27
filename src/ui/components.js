@@ -169,15 +169,26 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  const keepInputFocus = (event) => {
+  let pointerHandled = false;
+  const handlePointerStep = (event, direction) => {
     event.preventDefault();
+    pointerHandled = true;
     input.focus({ preventScroll: true });
+    stepValue(direction);
   };
 
-  decrementButton.addEventListener('mousedown', keepInputFocus);
-  incrementButton.addEventListener('mousedown', keepInputFocus);
-  decrementButton.addEventListener('click', () => stepValue(-1));
-  incrementButton.addEventListener('click', () => stepValue(1));
+  const handleClickStep = (direction) => {
+    if (pointerHandled) {
+      pointerHandled = false;
+      return;
+    }
+    stepValue(direction);
+  };
+
+  decrementButton.addEventListener('pointerdown', (event) => handlePointerStep(event, -1));
+  incrementButton.addEventListener('pointerdown', (event) => handlePointerStep(event, 1));
+  decrementButton.addEventListener('click', () => handleClickStep(-1));
+  incrementButton.addEventListener('click', () => handleClickStep(1));
 
   const observer = new MutationObserver(updateButtonState);
   observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
