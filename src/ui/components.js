@@ -169,18 +169,23 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  const preserveInputFocus = () => {
+  const onPointerStep = (event, direction) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
     input.focus({ preventScroll: true });
+    stepValue(direction);
   };
 
-  decrementButton.addEventListener('pointerdown', preserveInputFocus);
-  incrementButton.addEventListener('pointerdown', preserveInputFocus);
-  decrementButton.addEventListener('mousedown', preserveInputFocus);
-  incrementButton.addEventListener('mousedown', preserveInputFocus);
-  decrementButton.addEventListener('touchstart', preserveInputFocus, { passive: true });
-  incrementButton.addEventListener('touchstart', preserveInputFocus, { passive: true });
-  decrementButton.addEventListener('click', () => stepValue(-1));
-  incrementButton.addEventListener('click', () => stepValue(1));
+  const onKeyboardClickStep = (event, direction) => {
+    // Keyboard-activated click has detail=0; pointer/touch clicks are already handled in pointerdown.
+    if (event.detail !== 0) return;
+    stepValue(direction);
+  };
+
+  decrementButton.addEventListener('pointerdown', (event) => onPointerStep(event, -1));
+  incrementButton.addEventListener('pointerdown', (event) => onPointerStep(event, 1));
+  decrementButton.addEventListener('click', (event) => onKeyboardClickStep(event, -1));
+  incrementButton.addEventListener('click', (event) => onKeyboardClickStep(event, 1));
 
   const observer = new MutationObserver(updateButtonState);
   observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
