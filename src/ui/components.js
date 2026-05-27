@@ -169,23 +169,31 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  const onPointerStep = (event, direction) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
+  let lastPointerStepAt = 0;
+  const POINTER_CLICK_GUARD_MS = 350;
+
+  const stepFromPointerDown = (event, direction) => {
+    if (typeof event.button === 'number' && event.button !== 0) return;
     event.preventDefault();
     input.focus({ preventScroll: true });
     stepValue(direction);
+    lastPointerStepAt = Date.now();
   };
 
-  const onKeyboardClickStep = (event, direction) => {
-    // Keyboard-activated click has detail=0; pointer/touch clicks are already handled in pointerdown.
-    if (event.detail !== 0) return;
+  const stepFromClick = (direction) => {
+    const elapsed = Date.now() - lastPointerStepAt;
+    if (elapsed >= 0 && elapsed < POINTER_CLICK_GUARD_MS) return;
     stepValue(direction);
   };
 
-  decrementButton.addEventListener('pointerdown', (event) => onPointerStep(event, -1));
-  incrementButton.addEventListener('pointerdown', (event) => onPointerStep(event, 1));
-  decrementButton.addEventListener('click', (event) => onKeyboardClickStep(event, -1));
-  incrementButton.addEventListener('click', (event) => onKeyboardClickStep(event, 1));
+  decrementButton.addEventListener('pointerdown', (event) => stepFromPointerDown(event, -1));
+  incrementButton.addEventListener('pointerdown', (event) => stepFromPointerDown(event, 1));
+  decrementButton.addEventListener('mousedown', (event) => stepFromPointerDown(event, -1));
+  incrementButton.addEventListener('mousedown', (event) => stepFromPointerDown(event, 1));
+  decrementButton.addEventListener('touchstart', (event) => stepFromPointerDown(event, -1), { passive: false });
+  incrementButton.addEventListener('touchstart', (event) => stepFromPointerDown(event, 1), { passive: false });
+  decrementButton.addEventListener('click', () => stepFromClick(-1));
+  incrementButton.addEventListener('click', () => stepFromClick(1));
 
   const observer = new MutationObserver(updateButtonState);
   observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
