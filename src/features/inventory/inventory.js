@@ -461,10 +461,10 @@ export async function renderInventory(container) {
         }),
         onOpen: ({ fieldsEl }) => {
           if (!fieldsEl) return null;
-          attachNumberSteppers(fieldsEl);
+          const amountInput = fieldsEl.querySelector('input[name="amount"]');
+          if (amountInput) attachInventoryAmountStepper(amountInput, { min: 0 });
           const sourceSelect = fieldsEl.querySelector('select[name="source"]');
           const targetSelect = fieldsEl.querySelector('select[name="target"]');
-          const amountInput = fieldsEl.querySelector('input[name="amount"]');
           const targetInput = fieldsEl.querySelector('input[name="target_amount"]');
           const maxButton = fieldsEl.querySelector('[data-exchange-max]');
           const availableHint = fieldsEl.querySelector('[data-exchange-available]');
