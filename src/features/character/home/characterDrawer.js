@@ -679,7 +679,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
   modalCard?.classList.add('modal-card--wide');
-  enhanceNumericFields(form);
 
   const tooltipHints = {
     name: 'Nome del personaggio mostrato in scheda.',
@@ -746,7 +745,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',
     content: form,
-    onOpen: ({ modal }) => {
+    onOpen: ({ modal, fieldsEl }) => {
+      enhanceNumericFields(fieldsEl || form);
       const footer = modal.querySelector('.modal-footer');
       if (!footer) return null;
       const modalActions = footer.querySelector('.modal-actions');
