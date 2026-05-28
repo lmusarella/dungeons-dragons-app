@@ -1296,6 +1296,47 @@ async function handleLootAction(container) {
   }
 }
 
+
+function attachModalValueStepper(input, {
+  min = null,
+  max = null
+} = {}) {
+  if (!(input instanceof HTMLInputElement) || input.type !== 'number') return;
+  if (input.closest('.modal-value-stepper')) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'number-stepper modal-value-stepper';
+  const dec = document.createElement('button');
+  dec.type = 'button';
+  dec.className = 'number-stepper__button modal-value-stepper__button';
+  dec.textContent = '−';
+  dec.setAttribute('aria-label', 'Diminuisci valore');
+  const inc = document.createElement('button');
+  inc.type = 'button';
+  inc.className = 'number-stepper__button modal-value-stepper__button';
+  inc.textContent = '+';
+  inc.setAttribute('aria-label', 'Aumenta valore');
+  const parent = input.parentNode;
+  if (!parent) return;
+  parent.insertBefore(wrapper, input);
+  wrapper.append(dec, input, inc);
+  const resolve = (v) => Number.isFinite(v) ? v : 0;
+  const step = (dir) => {
+    const curr = resolve(input.valueAsNumber);
+    const stepValue = Number(input.step);
+    const amount = Number.isFinite(stepValue) && stepValue > 0 ? stepValue : 1;
+    let next = curr + (amount * dir);
+    const minValue = min ?? (input.min !== '' ? Number(input.min) : null);
+    const maxValue = max ?? (input.max !== '' ? Number(input.max) : null);
+    if (Number.isFinite(minValue)) next = Math.max(minValue, next);
+    if (Number.isFinite(maxValue)) next = Math.min(maxValue, next);
+    input.value = String(next);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  dec.addEventListener('click', () => step(-1));
+  inc.addEventListener('click', () => step(1));
+}
+
 async function handleMoneyAction(direction, container) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   if (!activeCharacter) return;
@@ -1323,7 +1364,8 @@ async function handleMoneyAction(direction, container) {
     submitLabel,
     content: moneyFields({ direction }),
     onOpen: ({ fieldsEl }) => {
-      attachNumberSteppers(fieldsEl);
+      const amountInput = fieldsEl?.querySelector('input[name="amount"]');
+      if (amountInput) attachModalValueStepper(amountInput, { min: 0 });
     }
   });
   if (!formData) return;
@@ -1897,8 +1939,10 @@ function buildHpShortcutFields(
   wrapper.className = 'modal-form-grid hp-shortcut-fields';
   const amountField = buildInput({ label: 'Valore', name: 'amount', type: 'number', value: '1' });
   amountField.classList.add('hp-shortcut-fields__amount');
-  enhanceNumericField(amountField, { decrementLabel: 'Riduci valore PF', incrementLabel: 'Aumenta valore PF' });
   const amountInput = amountField.querySelector('input');
+  if (amountInput) {
+    attachModalValueStepper(amountInput, { min: 1 });
+  }
   if (amountInput) {
     amountInput.min = '1';
     amountInput.required = true;
@@ -1932,9 +1976,9 @@ function buildHpShortcutFields(
         value: ''
       });
       maxHpField.classList.add('hp-shortcut-fields__max');
-      enhanceNumericField(maxHpField, { decrementLabel: 'Riduci PF massimi', incrementLabel: 'Aumenta PF massimi' });
       const maxInput = maxHpField.querySelector('input');
       if (maxInput) {
+        attachModalValueStepper(maxInput, { min: 1 });
         maxInput.min = '1';
       }
       primaryRow.appendChild(maxHpField);

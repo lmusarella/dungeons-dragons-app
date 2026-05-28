@@ -169,8 +169,28 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
+  const keepFocusOnPress = (event) => {
+    event.preventDefault();
+    input.focus({ preventScroll: true });
+  };
+
+  const onStepButtonKeydown = (event, direction) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    stepValue(direction);
+  };
+
+  decrementButton.addEventListener('pointerdown', keepFocusOnPress);
+  incrementButton.addEventListener('pointerdown', keepFocusOnPress);
+  decrementButton.addEventListener('mousedown', keepFocusOnPress);
+  incrementButton.addEventListener('mousedown', keepFocusOnPress);
+  decrementButton.addEventListener('touchstart', keepFocusOnPress, { passive: false });
+  incrementButton.addEventListener('touchstart', keepFocusOnPress, { passive: false });
+
   decrementButton.addEventListener('click', () => stepValue(-1));
   incrementButton.addEventListener('click', () => stepValue(1));
+  decrementButton.addEventListener('keydown', (event) => onStepButtonKeydown(event, -1));
+  incrementButton.addEventListener('keydown', (event) => onStepButtonKeydown(event, 1));
 
   const observer = new MutationObserver(updateButtonState);
   observer.observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
@@ -255,7 +275,8 @@ export function openFormModal({
   cancelLabel = 'Annulla',
   cardClass = '',
   showFooter = true,
-  onOpen
+  onOpen,
+  closeOnOverlay
 } = {}) {
   return new Promise((resolve) => {
     const modal = document.querySelector('[data-form-modal]');
@@ -310,6 +331,8 @@ export function openFormModal({
     modal.hidden = false;
     modal.classList.add('open');
 
+    const shouldCloseOnOverlay = typeof closeOnOverlay === 'boolean' ? closeOnOverlay : cancelLabel === null;
+
     let onOpenCleanup = null;
     if (typeof onOpen === 'function') {
       const cleanupCandidate = onOpen({ modal, formEl, fieldsEl });
@@ -331,7 +354,7 @@ export function openFormModal({
       }
       formEl?.removeEventListener('submit', onSubmit);
       cancelButton?.removeEventListener('click', onCancel);
-      overlay?.removeEventListener('click', onCancel);
+      if (shouldCloseOnOverlay) overlay?.removeEventListener('click', onCancel);
       resolve(result);
     };
 
@@ -345,6 +368,6 @@ export function openFormModal({
 
     formEl?.addEventListener('submit', onSubmit);
     cancelButton?.addEventListener('click', onCancel);
-    overlay?.addEventListener('click', onCancel);
+    if (shouldCloseOnOverlay) overlay?.addEventListener('click', onCancel);
   });
 }

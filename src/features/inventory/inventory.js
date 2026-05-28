@@ -34,6 +34,43 @@ function ensureWallet(wallet, character) {
   };
 }
 
+
+function attachInventoryAmountStepper(input, { min = 0, max = null } = {}) {
+  if (!(input instanceof HTMLInputElement) || input.type !== 'number') return;
+  if (input.closest('.inventory-amount-stepper')) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'number-stepper inventory-amount-stepper';
+  const dec = document.createElement('button');
+  dec.type = 'button';
+  dec.className = 'number-stepper__button';
+  dec.textContent = '−';
+  dec.setAttribute('aria-label', 'Riduci quantità');
+  const inc = document.createElement('button');
+  inc.type = 'button';
+  inc.className = 'number-stepper__button';
+  inc.textContent = '+';
+  inc.setAttribute('aria-label', 'Aumenta quantità');
+  const parent = input.parentNode;
+  if (!parent) return;
+  parent.insertBefore(wrapper, input);
+  wrapper.append(dec, input, inc);
+  const step = (direction) => {
+    const curr = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.value || 0);
+    const stepValue = Number(input.step);
+    const delta = Number.isFinite(stepValue) && stepValue > 0 ? stepValue : 1;
+    let next = curr + (delta * direction);
+    const minValue = min ?? (input.min !== '' ? Number(input.min) : null);
+    const maxValue = max ?? (input.max !== '' ? Number(input.max) : null);
+    if (Number.isFinite(minValue)) next = Math.max(minValue, next);
+    if (Number.isFinite(maxValue)) next = Math.min(maxValue, next);
+    input.value = String(next);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  dec.addEventListener('click', () => step(-1));
+  inc.addEventListener('click', () => step(1));
+}
+
 export async function renderInventory(container) {
   const state = getState();
   const normalizedActiveId = normalizeCharacterId(state.activeCharacterId);
@@ -312,7 +349,8 @@ export async function renderInventory(container) {
           submitLabel,
           content: moneyFields({ direction }),
           onOpen: ({ fieldsEl }) => {
-            attachNumberSteppers(fieldsEl);
+            const amountInput = fieldsEl?.querySelector('input[name="amount"]');
+            if (amountInput) attachInventoryAmountStepper(amountInput, { min: 0 });
           }
         });
         if (!formData) return;
@@ -423,10 +461,10 @@ export async function renderInventory(container) {
         }),
         onOpen: ({ fieldsEl }) => {
           if (!fieldsEl) return null;
-          attachNumberSteppers(fieldsEl);
+          const amountInput = fieldsEl.querySelector('input[name="amount"]');
+          if (amountInput) attachInventoryAmountStepper(amountInput, { min: 0 });
           const sourceSelect = fieldsEl.querySelector('select[name="source"]');
           const targetSelect = fieldsEl.querySelector('select[name="target"]');
-          const amountInput = fieldsEl.querySelector('input[name="amount"]');
           const targetInput = fieldsEl.querySelector('input[name="target_amount"]');
           const maxButton = fieldsEl.querySelector('[data-exchange-max]');
           const availableHint = fieldsEl.querySelector('[data-exchange-available]');
@@ -595,7 +633,8 @@ export async function renderInventory(container) {
           includeDirection: true
         }),
         onOpen: ({ fieldsEl }) => {
-          attachNumberSteppers(fieldsEl);
+          const amountInput = fieldsEl?.querySelector('input[name="amount"]');
+          if (amountInput) attachInventoryAmountStepper(amountInput, { min: 0 });
         }
       });
       if (!formData) return;
