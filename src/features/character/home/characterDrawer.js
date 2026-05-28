@@ -52,8 +52,27 @@ function attachDrawerNumberStepper(input, {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  dec.addEventListener('click', () => step(-1));
-  inc.addEventListener('click', () => step(1));
+
+  let pointerHandled = false;
+  const onPointerStep = (event, direction) => {
+    if (typeof event.button === 'number' && event.button !== 0) return;
+    event.preventDefault();
+    pointerHandled = true;
+    input.focus({ preventScroll: true });
+    step(direction);
+  };
+  const onClickStep = (direction) => {
+    if (pointerHandled) {
+      pointerHandled = false;
+      return;
+    }
+    step(direction);
+  };
+
+  dec.addEventListener('pointerdown', (event) => onPointerStep(event, -1));
+  inc.addEventListener('pointerdown', (event) => onPointerStep(event, 1));
+  dec.addEventListener('click', () => onClickStep(-1));
+  inc.addEventListener('click', () => onClickStep(1));
 }
 
 export async function openCharacterDrawer(user, onSave, character = null) {
