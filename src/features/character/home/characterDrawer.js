@@ -44,8 +44,8 @@ function attachDrawerNumberStepper(input, {
     const stepValue = Number(input.step);
     const delta = Number.isFinite(stepValue) && stepValue > 0 ? stepValue : 1;
     let next = current + (delta * direction);
-    const min = Number(input.min);
-    const max = Number(input.max);
+    const min = input.min !== '' ? Number(input.min) : null;
+    const max = input.max !== '' ? Number(input.max) : null;
     if (Number.isFinite(min)) next = Math.max(min, next);
     if (Number.isFinite(max)) next = Math.min(max, next);
     input.value = String(next);
