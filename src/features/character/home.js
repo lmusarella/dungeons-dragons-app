@@ -1204,7 +1204,9 @@ function bindFabHandlers() {
     const diceButton = event.target.closest('[data-open-dice]');
     const lootButton = event.target.closest('[data-add-loot]');
     const conditionsButton = event.target.closest('[data-edit-conditions]');
-    if (!hpButton && !moneyButton && !restButton && !diceButton && !lootButton && !conditionsButton) return;
+    const resistancesButton = event.target.closest('[data-edit-resistances]');
+    const rollAdjustmentsButton = event.target.closest('[data-edit-roll-adjustments]');
+    if (!hpButton && !moneyButton && !restButton && !diceButton && !lootButton && !conditionsButton && !resistancesButton && !rollAdjustmentsButton) return;
     event.preventDefault();
     closeFabMenu();
     const container = lastHomeContainer ?? null;
@@ -1234,6 +1236,14 @@ function bindFabHandlers() {
     }
     if (conditionsButton) {
       await handleConditionsAction(container);
+      return;
+    }
+    if (resistancesButton) {
+      await handleResistancesAction(container);
+      return;
+    }
+    if (rollAdjustmentsButton) {
+      await handleRollAdjustmentsAction(container);
     }
   });
   fabHandlersBound = true;
@@ -1270,6 +1280,152 @@ async function handleConditionsAction(container) {
     ...activeCharacter.data,
     conditions: selected
   }, 'Condizioni aggiornate', () => {
+    if (container) renderHome(container);
+  });
+}
+
+function getRollAdjustmentData(character) {
+  const adjustments = character?.data?.roll_adjustments || {};
+  return {
+    saving_throws: adjustments.saving_throws || {},
+    skills: adjustments.skills || {}
+  };
+}
+
+function buildRollAdjustmentFields(character) {
+  const adjustments = getRollAdjustmentData(character);
+  const form = document.createElement('div');
+  form.className = 'modal-form-grid';
+  const modeOptions = [
+    { value: '', label: 'Nessuno' },
+    { value: 'advantage', label: 'Vantaggio' },
+    { value: 'disadvantage', label: 'Svantaggio' }
+  ];
+  const buildRows = (title, scope, entries) => {
+    const section = document.createElement('section');
+    section.className = 'character-edit-section';
+    section.innerHTML = `<h4>${title}</h4><p class="muted">Indica vantaggi/svantaggi temporanei o situazionali e la fonte.</p>`;
+    const grid = document.createElement('div');
+    grid.className = 'character-skill-grid character-skill-grid--three-columns';
+    entries.forEach((entry) => {
+      const current = adjustments[scope]?.[entry.key] || {};
+      const row = document.createElement('div');
+      row.className = 'character-skill-row';
+      const modeField = document.createElement('label');
+      modeField.className = 'field';
+      const modeLabel = document.createElement('span');
+      modeLabel.textContent = entry.label;
+      const modeSelect = buildSelect(modeOptions, current.mode || '');
+      modeSelect.name = `roll_${scope}_${entry.key}_mode`;
+      modeField.append(modeLabel, modeSelect);
+      const sourceField = buildInput({
+        label: 'Fonte',
+        name: `roll_${scope}_${entry.key}_source`,
+        placeholder: 'Es. effetto, armatura, tratto razziale',
+        value: current.source || ''
+      });
+      row.append(modeField, sourceField);
+      grid.appendChild(row);
+    });
+    section.appendChild(grid);
+    form.appendChild(section);
+  };
+  buildRows('Tiri salvezza', 'saving_throws', savingThrowList);
+  buildRows('Abilità', 'skills', skillList);
+  return form;
+}
+
+function parseRollAdjustmentsForm(formData) {
+  const next = { saving_throws: {}, skills: {} };
+  [
+    { scope: 'saving_throws', entries: savingThrowList },
+    { scope: 'skills', entries: skillList }
+  ].forEach(({ scope, entries }) => {
+    entries.forEach((entry) => {
+      const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
+      const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
+      if (mode === 'advantage' || mode === 'disadvantage') {
+        next[scope][entry.key] = { mode, source };
+      }
+    });
+  });
+  return next;
+}
+
+async function handleRollAdjustmentsAction(container) {
+  const { activeCharacter, canEditCharacter } = getHomeContext();
+  if (!activeCharacter || !canEditCharacter) return;
+  const formData = await openFormModal({
+    title: 'Vantaggi / Svantaggi situazionali',
+    submitLabel: 'Salva',
+    content: buildRollAdjustmentFields(activeCharacter),
+    cardClass: 'modal-card--wide'
+  });
+  if (!formData) return;
+  await saveCharacterData(activeCharacter, {
+    ...activeCharacter.data,
+    roll_adjustments: parseRollAdjustmentsForm(formData)
+  }, 'Vantaggi/svantaggi aggiornati', () => {
+    if (container) renderHome(container);
+  });
+}
+
+function buildDamageDefenseFields(character) {
+  const defenses = character?.data?.damage_defenses || {};
+  const grouped = damageTypeList.reduce((groups, type) => {
+    const group = type.group || 'Altro';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(type);
+    return groups;
+  }, {});
+  const form = document.createElement('div');
+  form.className = 'modal-form-grid';
+  form.innerHTML = Object.entries(grouped).map(([group, types]) => `
+    <section class="character-edit-section">
+      <h4>${group}</h4>
+      <div class="character-skill-grid character-skill-grid--three-columns">
+        ${types.map((type) => `
+          <div class="character-skill-row">
+            <strong>${type.label}</strong>
+            <div class="character-toggle-group">
+              <label class="toggle-pill">
+                <input type="checkbox" name="damage_resistance_${type.key}" ${(Array.isArray(defenses.resistances) && defenses.resistances.includes(type.key)) ? 'checked' : ''} />
+                <span>Resistenza</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" name="damage_immunity_${type.key}" ${(Array.isArray(defenses.immunities) && defenses.immunities.includes(type.key)) ? 'checked' : ''} />
+                <span>Immunità</span>
+              </label>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `).join('');
+  return form;
+}
+
+function parseDamageDefensesForm(formData) {
+  return {
+    resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
+    immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
+  };
+}
+
+async function handleResistancesAction(container) {
+  const { activeCharacter, canEditCharacter } = getHomeContext();
+  if (!activeCharacter || !canEditCharacter) return;
+  const formData = await openFormModal({
+    title: 'Resistenze & Immunità',
+    submitLabel: 'Salva',
+    content: buildDamageDefenseFields(activeCharacter),
+    cardClass: 'modal-card--wide'
+  });
+  if (!formData) return;
+  await saveCharacterData(activeCharacter, {
+    ...activeCharacter.data,
+    damage_defenses: parseDamageDefensesForm(formData)
+  }, 'Resistenze aggiornate', () => {
     if (container) renderHome(container);
   });
 }
@@ -1467,6 +1623,36 @@ function formatConditionList(keys) {
     .filter(Boolean);
 }
 
+function getManualRollAdjustment(character, scope, key, label) {
+  const entry = character?.data?.roll_adjustments?.[scope]?.[key];
+  if (!entry || (entry.mode !== 'advantage' && entry.mode !== 'disadvantage')) return null;
+  const modeLabel = entry.mode === 'advantage' ? 'Vantaggio' : 'Svantaggio';
+  const source = entry.source?.toString().trim();
+  return {
+    mode: entry.mode,
+    reason: `${modeLabel}: ${label}${source ? ` (${source})` : ' (situazionale)'}.`
+  };
+}
+
+function resolveRollModeEffects(effects) {
+  const validEffects = effects.filter(Boolean);
+  const advantageReasons = validEffects.filter((effect) => effect.mode === 'advantage').map((effect) => effect.reason).filter(Boolean);
+  const disadvantageReasons = validEffects.filter((effect) => effect.mode === 'disadvantage').map((effect) => effect.reason).filter(Boolean);
+  if (advantageReasons.length && disadvantageReasons.length) {
+    return {
+      rollMode: null,
+      rollModeReason: `Vantaggio e svantaggio si annullano. ${[...advantageReasons, ...disadvantageReasons].join(' ')}`
+    };
+  }
+  if (advantageReasons.length) {
+    return { rollMode: 'advantage', rollModeReason: advantageReasons.join(' ') };
+  }
+  if (disadvantageReasons.length) {
+    return { rollMode: 'disadvantage', rollModeReason: disadvantageReasons.join(' ') };
+  }
+  return { rollMode: null, rollModeReason: null };
+}
+
 function getAttackRollMode(conditionState) {
   const advantageKeys = attackRollEffects.advantage.filter((key) => conditionState.includes(key));
   const disadvantageKeys = attackRollEffects.disadvantage.filter((key) => conditionState.includes(key));
@@ -1526,20 +1712,22 @@ function buildSkillRollOptions(character, items = []) {
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const modifierValue = total ?? 0;
     const isStealthHeavy = skill.key === 'stealth' && hasHeavyArmor;
-    const rollModeReasons = [];
+    const rollEffects = [];
     if (poisonedConditions.length) {
-      rollModeReasons.push(`Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.`);
+      rollEffects.push({ mode: 'disadvantage', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
     }
     if (isStealthHeavy) {
-      rollModeReasons.push('Svantaggio automatico: armatura pesante su Furtività.');
+      rollEffects.push({ mode: 'disadvantage', reason: 'Svantaggio automatico: armatura pesante su Furtività.' });
     }
+    rollEffects.push(getManualRollAdjustment(character, 'skills', skill.key, skill.label));
+    const rollMode = resolveRollModeEffects(rollEffects);
     return {
       value: skill.key,
       label: `${skill.label} (${formatSigned(total)})`,
       shortLabel: skill.label,
       modifier: modifierValue,
-      rollMode: rollModeReasons.length ? 'disadvantage' : null,
-      rollModeReason: rollModeReasons.length ? rollModeReasons.join(' ') : null
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason
     };
   });
 }
@@ -1563,21 +1751,22 @@ function buildSpecialSkillRollOptions(character, items = []) {
     const baseTotal = calculateSkillModifier(abilities[abilityKey], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const extraBonus = Number(skill.bonus) || 0;
     const total = (baseTotal ?? 0) + extraBonus;
-    const rollModeReasons = [];
+    const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
+    const rollEffects = [];
     if (poisonedConditions.length) {
-      rollModeReasons.push(`Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.`);
+      rollEffects.push({ mode: 'disadvantage', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
     }
     if (abilityKey === 'dex' && hasHeavyArmor) {
-      rollModeReasons.push('Svantaggio automatico: armatura pesante su tiri speciali basati su DES.');
+      rollEffects.push({ mode: 'disadvantage', reason: 'Svantaggio automatico: armatura pesante su tiri speciali basati su DES.' });
     }
-    const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
+    const rollMode = resolveRollModeEffects(rollEffects);
     return {
       value: String(skill.id ?? index),
       label: `${name} (${formatSigned(total)})`,
       shortLabel: name,
       modifier: total,
-      rollMode: rollModeReasons.length ? 'disadvantage' : null,
-      rollModeReason: rollModeReasons.length ? rollModeReasons.join(' ') : null
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason
     };
   });
 }
@@ -1593,14 +1782,21 @@ function buildSavingThrowRollOptions(character) {
     const total = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
     const modifierValue = total ?? 0;
     const effects = getSavingThrowEffects(conditionState, save.key);
+    const manualEffect = getManualRollAdjustment(character, 'saving_throws', save.key, save.label);
+    const rollMode = effects.disabled
+      ? { rollMode: null, rollModeReason: null }
+      : resolveRollModeEffects([
+        effects.rollMode ? { mode: effects.rollMode, reason: effects.rollModeReason } : null,
+        manualEffect
+      ]);
     const autoFailLabel = effects.disabled ? ' · fallimento diretto' : '';
     return {
       value: save.key,
       label: `${save.label} (${formatSigned(total)})${autoFailLabel}`,
       shortLabel: abilityShortLabel[save.key] || save.label,
       modifier: modifierValue,
-      rollMode: effects.rollMode || null,
-      rollModeReason: effects.rollModeReason || null,
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason,
       disabled: effects.disabled || false,
       disabledReason: effects.disabledReason || null
     };

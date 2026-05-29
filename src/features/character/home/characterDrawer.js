@@ -88,6 +88,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const damageDefenses = characterData.damage_defenses || {};
+  const rollAdjustments = characterData.roll_adjustments || {};
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
@@ -588,6 +589,47 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   toggleSpellcastingSection();
   syncSpellcastingDerived();
 
+  const rollAdjustmentSection = document.createElement('div');
+  rollAdjustmentSection.className = 'character-edit-section';
+  const rollModeOptions = [
+    { value: '', label: 'Nessuno' },
+    { value: 'advantage', label: 'Vantaggio' },
+    { value: 'disadvantage', label: 'Svantaggio' }
+  ];
+  const renderRollAdjustmentRows = (scope, entries) => entries.map((entry) => {
+    const current = rollAdjustments?.[scope]?.[entry.key] || {};
+    return `
+      <div class="character-skill-row">
+        <label class="field">
+          <span>${entry.label}</span>
+          <select name="roll_${scope}_${entry.key}_mode">
+            ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === (current.mode || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Fonte</span>
+          <input type="text" name="roll_${scope}_${entry.key}_source" value="${(current.source || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" placeholder="Es. effetto, armatura, tratto razziale" />
+        </label>
+      </div>
+    `;
+  }).join('');
+  rollAdjustmentSection.innerHTML = `
+    <h4>Vantaggi & Svantaggi</h4>
+    <p class="muted">Registra vantaggi o svantaggi situazionali e la relativa fonte: effetti temporanei, armature, tratti razziali, privilegi di classe o condizioni narrative.</p>
+    <div class="character-edit-subsection">
+      <h5>Tiri salvezza</h5>
+      <div class="character-skill-grid character-skill-grid--three-columns">
+        ${renderRollAdjustmentRows('saving_throws', savingThrowList)}
+      </div>
+    </div>
+    <div class="character-edit-subsection">
+      <h5>Abilità</h5>
+      <div class="character-skill-grid character-skill-grid--three-columns">
+        ${renderRollAdjustmentRows('skills', skillList)}
+      </div>
+    </div>
+  `;
+
   const damageDefenseSection = document.createElement('div');
   damageDefenseSection.className = 'character-edit-section';
   const groupedDamageTypes = damageTypeList.reduce((groups, type) => {
@@ -674,6 +716,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     {
       title: 'Combattimento e magia',
       content: buildEditGroup('Combattimento e magia', [combatSection])
+    },
+    {
+      title: 'Vantaggi & Svantaggi',
+      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection])
     },
     {
       title: 'Resistenze & Immunità',
@@ -883,6 +929,19 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
+  const nextRollAdjustments = { saving_throws: {}, skills: {} };
+  [
+    { scope: 'saving_throws', entries: savingThrowList },
+    { scope: 'skills', entries: skillList }
+  ].forEach(({ scope, entries }) => {
+    entries.forEach((entry) => {
+      const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
+      const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
+      if (mode === 'advantage' || mode === 'disadvantage') {
+        nextRollAdjustments[scope][entry.key] = { mode, source };
+      }
+    });
+  });
   const nextDamageDefenses = {
     resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
     immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
@@ -974,7 +1033,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
     proficiencies: nextProficiencies,
-    damage_defenses: nextDamageDefenses
+    damage_defenses: nextDamageDefenses,
+    roll_adjustments: nextRollAdjustments
   };
   const payload = {
     name,

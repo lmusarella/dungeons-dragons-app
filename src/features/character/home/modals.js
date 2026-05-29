@@ -188,7 +188,7 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover } = {})
       recoverButton.type = 'submit';
       recoverButton.name = 'resource_action';
       recoverButton.value = 'recover';
-      recoverButton.className = 'secondary';
+      recoverButton.className = 'ghost-button';
       recoverButton.textContent = 'Recupera Carica';
       actionsRight.insertBefore(recoverButton, submitButton);
       return () => recoverButton.remove();
