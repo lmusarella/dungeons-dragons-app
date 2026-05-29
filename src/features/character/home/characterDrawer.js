@@ -251,6 +251,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     bonus: Number(entry?.bonus ?? entry?.extra_bonus ?? entry?.modifier) || 0
   }));
 
+  const specialSkillAbilityOptions = [
+    { value: 'str', label: 'Forza (FOR)' },
+    { value: 'dex', label: 'Destrezza (DES)' },
+    { value: 'con', label: 'Costituzione (COS)' },
+    { value: 'int', label: 'Intelligenza (INT)' },
+    { value: 'wis', label: 'Saggezza (SAG)' },
+    { value: 'cha', label: 'Carisma (CAR)' }
+  ];
+
   const specialSkillSection = document.createElement('div');
   specialSkillSection.className = 'character-edit-section';
   specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
@@ -260,6 +269,25 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   addSpecialSkillButton.type = 'button';
   addSpecialSkillButton.className = 'ghost-button ghost-button--compact';
   addSpecialSkillButton.textContent = '+ Aggiungi tiro speciale';
+
+  const readSpecialSkillRows = () => {
+    draftSpecialSkills = draftSpecialSkills.map((entry, index) => {
+      const row = specialSkillList.querySelector(`[data-special-skill-row="${entry.id}"]`);
+      if (!row) return entry;
+      const mastery = Boolean(row.querySelector(`input[name="special_skill_mastery_${index}"]`)?.checked);
+      const proficient = Boolean(row.querySelector(`input[name="special_skill_proficient_${index}"]`)?.checked) || mastery;
+      const ability = row.querySelector(`select[name="special_skill_ability_${index}"]`)?.value || entry.ability || 'str';
+      return {
+        ...entry,
+        name: row.querySelector(`input[name="special_skill_name_${index}"]`)?.value ?? entry.name,
+        ability: abilityShortLabel[ability] ? ability : 'str',
+        proficient,
+        mastery: mastery && proficient,
+        bonus: Number(row.querySelector(`input[name="special_skill_bonus_${index}"]`)?.value || 0) || 0
+      };
+    });
+  };
+
   const renderSpecialSkillRows = () => {
     specialSkillList.innerHTML = '';
     if (!draftSpecialSkills.length) {
@@ -273,40 +301,65 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       const row = document.createElement('div');
       row.className = 'character-skill-row';
       row.dataset.specialSkillRow = entry.id;
-      row.innerHTML = `
-        <div class="character-edit-grid">
-          ${buildInput({ label: 'Nome', name: `special_skill_name_${index}`, value: entry.name, placeholder: 'Es. Forgiatura' }).outerHTML}
-          <label class="field">
-            <span>Caratteristica</span>
-            ${buildSelect([
-    { value: 'str', label: 'Forza (FOR)' },
-    { value: 'dex', label: 'Destrezza (DES)' },
-    { value: 'con', label: 'Costituzione (COS)' },
-    { value: 'int', label: 'Intelligenza (INT)' },
-    { value: 'wis', label: 'Saggezza (SAG)' },
-    { value: 'cha', label: 'Carisma (CAR)' }
-  ], entry.ability).outerHTML}
-          </label>
-          ${buildInput({ label: 'Bonus extra', name: `special_skill_bonus_${index}`, type: 'number', value: entry.bonus }).outerHTML}
-        </div>
-        <div class="character-toggle-group">
-          <label class="toggle-pill">
-            <input type="checkbox" name="special_skill_proficient_${index}" ${entry.proficient ? 'checked' : ''} />
-            <span>Competenza</span>
-          </label>
-          <label class="toggle-pill">
-            <input type="checkbox" name="special_skill_mastery_${index}" ${entry.mastery ? 'checked' : ''} />
-            <span>Maestria</span>
-          </label>
-          <button type="button" class="ghost-button ghost-button--compact" data-remove-special-skill="${entry.id}">Rimuovi</button>
-        </div>
-      `;
-      const abilitySelect = row.querySelector('select');
-      if (abilitySelect) abilitySelect.name = `special_skill_ability_${index}`;
-      const masteryInput = row.querySelector(`input[name="special_skill_mastery_${index}"]`);
-      const proficiencyInput = row.querySelector(`input[name="special_skill_proficient_${index}"]`);
-      masteryInput?.addEventListener('change', () => {
-        if (masteryInput.checked && proficiencyInput) proficiencyInput.checked = true;
+
+      const grid = document.createElement('div');
+      grid.className = 'character-edit-grid';
+      grid.appendChild(buildInput({
+        label: 'Nome',
+        name: `special_skill_name_${index}`,
+        value: entry.name,
+        placeholder: 'Es. Forgiatura'
+      }));
+
+      const abilityField = document.createElement('label');
+      abilityField.className = 'field';
+      const abilityLabel = document.createElement('span');
+      abilityLabel.textContent = 'Caratteristica';
+      const abilitySelect = buildSelect(specialSkillAbilityOptions, entry.ability);
+      abilitySelect.name = `special_skill_ability_${index}`;
+      abilityField.append(abilityLabel, abilitySelect);
+      grid.appendChild(abilityField);
+
+      grid.appendChild(buildInput({
+        label: 'Bonus extra',
+        name: `special_skill_bonus_${index}`,
+        type: 'number',
+        value: entry.bonus
+      }));
+
+      const toggleGroup = document.createElement('div');
+      toggleGroup.className = 'character-toggle-group';
+      const proficiencyLabel = document.createElement('label');
+      proficiencyLabel.className = 'toggle-pill';
+      const proficiencyInput = document.createElement('input');
+      proficiencyInput.type = 'checkbox';
+      proficiencyInput.name = `special_skill_proficient_${index}`;
+      proficiencyInput.checked = Boolean(entry.proficient);
+      const proficiencyText = document.createElement('span');
+      proficiencyText.textContent = 'Competenza';
+      proficiencyLabel.append(proficiencyInput, proficiencyText);
+
+      const masteryLabel = document.createElement('label');
+      masteryLabel.className = 'toggle-pill';
+      const masteryInput = document.createElement('input');
+      masteryInput.type = 'checkbox';
+      masteryInput.name = `special_skill_mastery_${index}`;
+      masteryInput.checked = Boolean(entry.mastery);
+      const masteryText = document.createElement('span');
+      masteryText.textContent = 'Maestria';
+      masteryLabel.append(masteryInput, masteryText);
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'ghost-button ghost-button--compact';
+      removeButton.textContent = 'Rimuovi';
+      removeButton.dataset.removeSpecialSkill = entry.id;
+
+      toggleGroup.append(proficiencyLabel, masteryLabel, removeButton);
+      row.append(grid, toggleGroup);
+
+      masteryInput.addEventListener('change', () => {
+        if (masteryInput.checked) proficiencyInput.checked = true;
       });
       row.querySelectorAll('input[type="number"]').forEach((input) => {
         attachDrawerNumberStepper(input, {
@@ -314,7 +367,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
           incrementLabel: 'Aumenta bonus extra'
         });
       });
-      row.querySelector(`[data-remove-special-skill="${entry.id}"]`)?.addEventListener('click', () => {
+      removeButton.addEventListener('click', () => {
+        readSpecialSkillRows();
         draftSpecialSkills = draftSpecialSkills.filter((item) => item.id !== entry.id);
         renderSpecialSkillRows();
       });
@@ -322,6 +376,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     });
   };
   addSpecialSkillButton.addEventListener('click', () => {
+    readSpecialSkillRows();
     draftSpecialSkills.push({
       id: createSpecialSkillId(),
       name: '',
