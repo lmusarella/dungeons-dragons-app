@@ -10,12 +10,13 @@ import {
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
+  conditionList,
   damageTypeList,
   equipmentProficiencyList,
   savingThrowList,
   skillList
 } from './constants.js';
-import { getAbilityModifier, normalizeNumber } from './utils.js';
+import { getAbilityModifier, getEquipSlots, normalizeNumber } from './utils.js';
 
 
 function attachDrawerNumberStepper(input, {
@@ -76,6 +77,67 @@ function attachDrawerNumberStepper(input, {
   inc.addEventListener('click', () => onClickStep(1));
 }
 
+const rollAdjustmentSourceOptions = [
+  { value: '', label: 'Seleziona fonte' },
+  { value: 'situational', label: 'Situazionale' },
+  { value: 'effect', label: 'Effetto temporaneo' },
+  { value: 'condition', label: 'Condizione' },
+  { value: 'armor', label: 'Armatura' },
+  { value: 'racial', label: 'Abilità razziale' },
+  { value: 'class', label: 'Privilegio di classe' },
+  { value: 'spell', label: 'Incantesimo' },
+  { value: 'item', label: 'Oggetto magico/equipaggiamento' },
+  { value: 'other', label: 'Altro' }
+];
+
+const conditionLabels = conditionList.reduce((acc, condition) => {
+  acc[condition.key] = condition.label;
+  return acc;
+}, {});
+
+function escapeAttribute(value) {
+  return (value || '').toString()
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function getCharacterConditions(data) {
+  if (Array.isArray(data?.conditions)) return data.conditions;
+  if (data?.condition) return [data.condition];
+  return [];
+}
+
+function formatConditionNames(keys) {
+  return keys.map((key) => conditionLabels[key] || key).filter(Boolean).join(', ');
+}
+
+function hasEquippedHeavyArmor(items = []) {
+  return (items || []).some((item) => item.category === 'armor'
+    && item.armor_type === 'heavy'
+    && item.equipable
+    && getEquipSlots(item).length);
+}
+
+function getAutomaticDrawerRollEffects(characterData, items, scope, entry) {
+  const conditions = getCharacterConditions(characterData);
+  const effects = [];
+  if (scope === 'skills') {
+    const poisoned = conditions.includes('avvelenato') ? ['avvelenato'] : [];
+    if (poisoned.length) {
+      effects.push(`Svantaggio: condizioni ${formatConditionNames(poisoned)}.`);
+    }
+    if (entry.key === 'stealth' && hasEquippedHeavyArmor(items)) {
+      effects.push('Svantaggio automatico: armatura pesante su Furtività.');
+    }
+  }
+  if (scope === 'saving_throws' && entry.key === 'dex' && conditions.includes('intralciato')) {
+    effects.push('Svantaggio: condizioni Intralciato.');
+  }
+  return effects;
+}
+
 export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
   const characterData = character?.data || {};
@@ -89,6 +151,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const proficiencies = characterData.proficiencies || {};
   const damageDefenses = characterData.damage_defenses || {};
   const rollAdjustments = characterData.roll_adjustments || {};
+  const drawerItems = getState().cache.items || [];
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
@@ -598,6 +661,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ];
   const renderRollAdjustmentRows = (scope, entries) => entries.map((entry) => {
     const current = rollAdjustments?.[scope]?.[entry.key] || {};
+    const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
     return `
       <div class="character-skill-row">
         <label class="field">
@@ -607,9 +671,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
           </select>
         </label>
         <label class="field">
-          <span>Fonte</span>
-          <input type="text" name="roll_${scope}_${entry.key}_source" value="${(current.source || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" placeholder="Es. effetto, armatura, tratto razziale" />
+          <span>Fonte manuale</span>
+          <select name="roll_${scope}_${entry.key}_source">
+            ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === (current.source || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
+          </select>
         </label>
+        ${automaticEffects.length ? `<p class="muted">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
       </div>
     `;
   }).join('');

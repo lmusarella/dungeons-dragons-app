@@ -1309,6 +1309,7 @@ function buildRollAdjustmentFields(character) {
     grid.className = 'character-skill-grid character-skill-grid--three-columns';
     entries.forEach((entry) => {
       const current = adjustments[scope]?.[entry.key] || {};
+      const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
       const row = document.createElement('div');
       row.className = 'character-skill-row';
       const modeField = document.createElement('label');
@@ -1318,13 +1319,20 @@ function buildRollAdjustmentFields(character) {
       const modeSelect = buildSelect(modeOptions, current.mode || '');
       modeSelect.name = `roll_${scope}_${entry.key}_mode`;
       modeField.append(modeLabel, modeSelect);
-      const sourceField = buildInput({
-        label: 'Fonte',
-        name: `roll_${scope}_${entry.key}_source`,
-        placeholder: 'Es. effetto, armatura, tratto razziale',
-        value: current.source || ''
-      });
+      const sourceField = document.createElement('label');
+      sourceField.className = 'field';
+      const sourceLabel = document.createElement('span');
+      sourceLabel.textContent = 'Fonte manuale';
+      const sourceSelect = buildSelect(rollAdjustmentSourceOptions, current.source || '');
+      sourceSelect.name = `roll_${scope}_${entry.key}_source`;
+      sourceField.append(sourceLabel, sourceSelect);
       row.append(modeField, sourceField);
+      if (automaticEffects.length) {
+        const automaticList = document.createElement('p');
+        automaticList.className = 'muted';
+        automaticList.textContent = `Automatico: ${automaticEffects.map((effect) => effect.reason).join(' ')}`;
+        row.appendChild(automaticList);
+      }
       grid.appendChild(row);
     });
     section.appendChild(grid);
@@ -1610,6 +1618,20 @@ const savingThrowEffects = {
   }
 };
 
+const rollAdjustmentSourceOptions = [
+  { value: '', label: 'Seleziona fonte' },
+  { value: 'situational', label: 'Situazionale' },
+  { value: 'effect', label: 'Effetto temporaneo' },
+  { value: 'condition', label: 'Condizione' },
+  { value: 'armor', label: 'Armatura' },
+  { value: 'racial', label: 'Abilità razziale' },
+  { value: 'class', label: 'Privilegio di classe' },
+  { value: 'spell', label: 'Incantesimo' },
+  { value: 'item', label: 'Oggetto magico/equipaggiamento' },
+  { value: 'other', label: 'Altro' }
+];
+
+
 function getConditionState(character) {
   const data = character?.data || {};
   if (Array.isArray(data.conditions)) return data.conditions;
@@ -1623,14 +1645,66 @@ function formatConditionList(keys) {
     .filter(Boolean);
 }
 
+function hasEquippedHeavyArmor(items = []) {
+  return (items || []).some((item) => item.category === 'armor'
+    && item.armor_type === 'heavy'
+    && item.equipable
+    && getEquipSlots(item).length);
+}
+
+function getAutomaticSkillRollEffects(character, items, skill) {
+  const conditionState = getConditionState(character);
+  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
+  const hasHeavyArmor = hasEquippedHeavyArmor(items);
+  const effects = [];
+  if (poisonedConditions.length) {
+    effects.push({ mode: 'disadvantage', source: 'condition', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
+  }
+  if (skill.key === 'stealth' && hasHeavyArmor) {
+    effects.push({ mode: 'disadvantage', source: 'armor', reason: 'Svantaggio automatico: armatura pesante su Furtività.' });
+  }
+  return effects;
+}
+
+function getAutomaticSpecialSkillRollEffects(character, items, abilityKey) {
+  const conditionState = getConditionState(character);
+  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
+  const hasHeavyArmor = hasEquippedHeavyArmor(items);
+  const effects = [];
+  if (poisonedConditions.length) {
+    effects.push({ mode: 'disadvantage', source: 'condition', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
+  }
+  if (abilityKey === 'dex' && hasHeavyArmor) {
+    effects.push({ mode: 'disadvantage', source: 'armor', reason: 'Svantaggio automatico: armatura pesante su tiri speciali basati su DES.' });
+  }
+  return effects;
+}
+
+function getAutomaticSavingThrowRollEffects(character, save) {
+  const effects = getSavingThrowEffects(getConditionState(character), save.key);
+  if (!effects.rollMode) return [];
+  return [{ mode: effects.rollMode, source: 'condition', reason: effects.rollModeReason }];
+}
+
+function getAutomaticRollEffects(character, items, scope, entry) {
+  if (scope === 'skills') return getAutomaticSkillRollEffects(character, items, entry);
+  if (scope === 'saving_throws') return getAutomaticSavingThrowRollEffects(character, entry);
+  return [];
+}
+
+function getRollAdjustmentSourceLabel(source) {
+  return rollAdjustmentSourceOptions.find((option) => option.value === source)?.label || source;
+}
+
 function getManualRollAdjustment(character, scope, key, label) {
   const entry = character?.data?.roll_adjustments?.[scope]?.[key];
   if (!entry || (entry.mode !== 'advantage' && entry.mode !== 'disadvantage')) return null;
   const modeLabel = entry.mode === 'advantage' ? 'Vantaggio' : 'Svantaggio';
   const source = entry.source?.toString().trim();
+  const sourceLabel = source ? getRollAdjustmentSourceLabel(source) : 'Situazionale';
   return {
     mode: entry.mode,
-    reason: `${modeLabel}: ${label}${source ? ` (${source})` : ' (situazionale)'}.`
+    reason: `${modeLabel}: ${label} (${sourceLabel}).`
   };
 }
 
@@ -1700,25 +1774,12 @@ function buildSkillRollOptions(character, items = []) {
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
-  const conditionState = getConditionState(character);
-  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
-  const hasHeavyArmor = (items || []).some((item) => item.category === 'armor'
-    && item.armor_type === 'heavy'
-    && item.equipable
-    && getEquipSlots(item).length);
   return skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const modifierValue = total ?? 0;
-    const isStealthHeavy = skill.key === 'stealth' && hasHeavyArmor;
-    const rollEffects = [];
-    if (poisonedConditions.length) {
-      rollEffects.push({ mode: 'disadvantage', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
-    }
-    if (isStealthHeavy) {
-      rollEffects.push({ mode: 'disadvantage', reason: 'Svantaggio automatico: armatura pesante su Furtività.' });
-    }
+    const rollEffects = getAutomaticSkillRollEffects(character, items, skill);
     rollEffects.push(getManualRollAdjustment(character, 'skills', skill.key, skill.label));
     const rollMode = resolveRollModeEffects(rollEffects);
     return {
@@ -1736,12 +1797,6 @@ function buildSpecialSkillRollOptions(character, items = []) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const conditionState = getConditionState(character);
-  const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
-  const hasHeavyArmor = (items || []).some((item) => item.category === 'armor'
-    && item.armor_type === 'heavy'
-    && item.equipable
-    && getEquipSlots(item).length);
   const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
 
   return specialSkills.map((skill, index) => {
@@ -1752,13 +1807,7 @@ function buildSpecialSkillRollOptions(character, items = []) {
     const extraBonus = Number(skill.bonus) || 0;
     const total = (baseTotal ?? 0) + extraBonus;
     const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
-    const rollEffects = [];
-    if (poisonedConditions.length) {
-      rollEffects.push({ mode: 'disadvantage', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
-    }
-    if (abilityKey === 'dex' && hasHeavyArmor) {
-      rollEffects.push({ mode: 'disadvantage', reason: 'Svantaggio automatico: armatura pesante su tiri speciali basati su DES.' });
-    }
+    const rollEffects = getAutomaticSpecialSkillRollEffects(character, items, abilityKey);
     const rollMode = resolveRollModeEffects(rollEffects);
     return {
       value: String(skill.id ?? index),
@@ -1786,7 +1835,7 @@ function buildSavingThrowRollOptions(character) {
     const rollMode = effects.disabled
       ? { rollMode: null, rollModeReason: null }
       : resolveRollModeEffects([
-        effects.rollMode ? { mode: effects.rollMode, reason: effects.rollModeReason } : null,
+        ...getAutomaticSavingThrowRollEffects(character, save),
         manualEffect
       ]);
     const autoFailLabel = effects.disabled ? ' · fallimento diretto' : '';
