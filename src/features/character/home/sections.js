@@ -233,7 +233,17 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
             <div class="hp-panel-hit-dice">
               <span>Dadi vita</span>
               <strong>${formatHitDice(hitDice)}</strong>
+              <button
+                class="icon-button icon-button--dice hp-panel-hit-dice__roll"
+                type="button"
+                data-roll-hit-dice
+                aria-label="Lancia dado vita per curare PF"
+                ${canEditCharacter ? '' : 'disabled'}
+              >
+                <span aria-hidden="true">🎲</span>
+              </button>
             </div>
+            ${canEditCharacter ? '<p class="hp-panel-hit-dice__warning">Se lanci il dado verrà sottratto ai dadi vita disponibili.</p>' : ''}
           </div>
         </div>
         <div class="hp-panel-subgrid">

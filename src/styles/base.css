@@ -1805,6 +1805,21 @@ button:focus-visible,
   color: #6a5540;
 }
 
+.hp-panel-hit-dice__roll {
+  width: 26px;
+  height: 26px;
+  font-size: 1rem;
+  background: #fffaf1;
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+
+.hp-panel-hit-dice__warning {
+  margin: 4px 0 0;
+  color: #b23a48;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .hp-bar {
   position: relative;
   height: 8px;

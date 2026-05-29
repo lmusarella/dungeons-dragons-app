@@ -133,6 +133,7 @@ function buildOverlayMarkup() {
             </div>
           </div>
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
+          <p class="diceov-warning" data-custom-warning hidden></p>
         </div>
       </div>
       <div class="diceov-results">
@@ -442,7 +443,10 @@ function updateDiceInput(overlay, value) {
 }
 
 function buildGenericNotation(overlay) {
-  const count = Math.max(Number(overlay.querySelector('[name="dice-count"]')?.value) || 1, 1);
+  const countInput = overlay.querySelector('[name="dice-count"]');
+  const max = countInput?.max ? Number(countInput.max) : null;
+  const rawCount = Math.max(Number(countInput?.value) || 1, 1);
+  const count = max && Number.isFinite(max) ? Math.min(rawCount, max) : rawCount;
   const type = overlay.querySelector('[name="dice-type"]')?.value || 'd20';
   return `${count}${type}`;
 }
@@ -484,7 +488,10 @@ export function openDiceOverlay({
   weakPoints = 0,
   characterId = null,
   historyLabel = null,
-  sneakAttackDice = null
+  sneakAttackDice = null,
+  genericDiceMax = null,
+  warning = null,
+  onRollComplete = null
 } = {}) {
   if (typeof activeOverlaySessionCleanup === 'function') {
     activeOverlaySessionCleanup();
@@ -546,6 +553,7 @@ export function openDiceOverlay({
   const historyList = overlayEl.querySelector('[data-dice-history]');
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
+  const customWarning = overlayEl.querySelector('[data-custom-warning]');
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
@@ -1124,6 +1132,10 @@ export function openDiceOverlay({
   setModifierVisibility();
   renderHistory();
   setHistoryOpen(false);
+  if (customWarning) {
+    customWarning.textContent = warning ? String(warning) : '';
+    customWarning.toggleAttribute('hidden', !warning);
+  }
 
   overlayEl.removeAttribute('hidden');
 
@@ -1139,7 +1151,14 @@ export function openDiceOverlay({
   if (mode === 'generic') {
     const diceCountInput = overlayEl.querySelector('[name="dice-count"]');
     const diceTypeInput = overlayEl.querySelector('[name="dice-type"]');
-    if (diceCountInput) diceCountInput.value = '1';
+    if (diceCountInput) {
+      diceCountInput.value = '1';
+      if (genericDiceMax && Number.isFinite(Number(genericDiceMax))) {
+        diceCountInput.max = String(Math.max(Number(genericDiceMax), 1));
+      } else {
+        diceCountInput.removeAttribute('max');
+      }
+    }
     if (diceTypeInput) diceTypeInput.value = 'd20';
     if (notationInput) notationInput.value = '1d20';
     if (genericModifierInput && !hasExplicitModifier) {
@@ -1197,6 +1216,14 @@ export function openDiceOverlay({
       const summary = summarizeRoll(state.lastRoll);
       if (summary) {
         last = summary.total;
+        if (typeof onRollComplete === 'function') {
+          onRollComplete({
+            total: summary.total,
+            value: summary.value,
+            notation: state.lastRoll,
+            diceCount: Array.isArray(state.lastRoll?.result) ? state.lastRoll.result.length : 0
+          });
+        }
         if (!keepOpen) closeDiceOverlay();
         resolveFn?.(summary.total);
         resolveFn = null;
