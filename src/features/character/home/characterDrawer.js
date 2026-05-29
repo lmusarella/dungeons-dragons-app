@@ -10,6 +10,7 @@ import {
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
+  damageTypeList,
   equipmentProficiencyList,
   savingThrowList,
   skillList
@@ -86,6 +87,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
+  const damageDefenses = characterData.damage_defenses || {};
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
@@ -586,6 +588,41 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   toggleSpellcastingSection();
   syncSpellcastingDerived();
 
+  const damageDefenseSection = document.createElement('div');
+  damageDefenseSection.className = 'character-edit-section';
+  const groupedDamageTypes = damageTypeList.reduce((groups, type) => {
+    const group = type.group || 'Altro';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(type);
+    return groups;
+  }, {});
+  damageDefenseSection.innerHTML = `
+    <h4>Resistenze & Immunità</h4>
+    <p class="muted">Seleziona le difese ai tipi di danno di D&D. La voce “Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
+    ${Object.entries(groupedDamageTypes).map(([group, types]) => `
+      <div class="character-edit-subsection">
+        <h5>${group}</h5>
+        <div class="character-skill-grid character-skill-grid--three-columns">
+          ${types.map((type) => `
+            <div class="character-skill-row">
+              <strong>${type.label}</strong>
+              <div class="character-toggle-group">
+                <label class="toggle-pill">
+                  <input type="checkbox" name="damage_resistance_${type.key}" ${(Array.isArray(damageDefenses.resistances) && damageDefenses.resistances.includes(type.key)) ? 'checked' : ''} />
+                  <span>Resistenza</span>
+                </label>
+                <label class="toggle-pill">
+                  <input type="checkbox" name="damage_immunity_${type.key}" ${(Array.isArray(damageDefenses.immunities) && damageDefenses.immunities.includes(type.key)) ? 'checked' : ''} />
+                  <span>Immunità</span>
+                </label>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+
   const proficiencyNotesSection = document.createElement('div');
   proficiencyNotesSection.className = 'character-edit-section';
   proficiencyNotesSection.appendChild(buildTextarea({
@@ -637,6 +674,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     {
       title: 'Combattimento e magia',
       content: buildEditGroup('Combattimento e magia', [combatSection])
+    },
+    {
+      title: 'Resistenze & Immunità',
+      content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection])
     },
     {
       title: 'Note e dettagli',
@@ -842,6 +883,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
+  const nextDamageDefenses = {
+    resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
+    immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
+  };
   const nextAcModifiers = { ...characterData.ac_ability_modifiers };
   ['str', 'con', 'int', 'wis', 'cha'].forEach((ability) => {
     nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
@@ -928,7 +973,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
-    proficiencies: nextProficiencies
+    proficiencies: nextProficiencies,
+    damage_defenses: nextDamageDefenses
   };
   const payload = {
     name,

@@ -654,7 +654,7 @@ export function buildAttackSection(character, items = []) {
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
     return `
-          <div class="modifier-card attack-card">
+          <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${weapon.name}</strong>
@@ -679,7 +679,7 @@ export function buildAttackSection(character, items = []) {
       const abilityLabel = abilityShortLabel[spellAbilityKey] ?? spellAbilityKey?.toUpperCase();
       const rangeText = spell.range ? `Range ${spell.range}` : '';
       return `
-            <div class="modifier-card attack-card">
+            <div class="modifier-card attack-card" data-roll-attack="spell:${spell.id}">
               <div class="attack-card__body">
                 <div class="attack-card__title">
                   <strong class="attack-card__name">${spell.name}</strong>

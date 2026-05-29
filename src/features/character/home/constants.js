@@ -37,6 +37,24 @@ export const savingThrowList = [
   { key: 'cha', label: 'Carisma' }
 ];
 
+
+export const damageTypeList = [
+  { key: 'acid', label: 'Acido', group: 'Energia' },
+  { key: 'bludgeoning', label: 'Contundente', group: 'Fisico' },
+  { key: 'piercing', label: 'Perforante', group: 'Fisico' },
+  { key: 'slashing', label: 'Tagliente', group: 'Fisico' },
+  { key: 'cold', label: 'Freddo', group: 'Energia' },
+  { key: 'fire', label: 'Fuoco', group: 'Energia' },
+  { key: 'force', label: 'Forza', group: 'Energia' },
+  { key: 'lightning', label: 'Fulmine', group: 'Energia' },
+  { key: 'thunder', label: 'Tuono', group: 'Energia' },
+  { key: 'necrotic', label: 'Necrotico', group: 'Magico' },
+  { key: 'poison', label: 'Veleno', group: 'Magico' },
+  { key: 'psychic', label: 'Psichico', group: 'Magico' },
+  { key: 'radiant', label: 'Radioso', group: 'Magico' },
+  { key: 'all', label: 'Tutti i danni', group: 'Speciale' }
+];
+
 export const conditionList = [
   {
     key: 'accecato',

@@ -1,7 +1,7 @@
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildInput, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
+import { buildInput, buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
@@ -34,7 +34,7 @@ import {
   openSpellQuickDetailModal
 } from './home/modals.js';
 import { consumeSpellSlot, restoreSpellSlot, saveCharacterData } from './home/data.js';
-import { abilityShortLabel, conditionList, savingThrowList, skillList } from './home/constants.js';
+import { abilityShortLabel, conditionList, damageTypeList, savingThrowList, skillList } from './home/constants.js';
 import {
   applyRestRecovery,
   buildSpellDamageOverlayConfig,
@@ -900,6 +900,12 @@ export async function renderHome(container) {
       await handleHitDiceHeal(activeCharacter, container);
     }));
 
+  container.querySelectorAll('[data-roll-attack]')
+    .forEach((card) => card.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      openPresetAttackRoll(card.dataset.rollAttack);
+    }));
+
   container.querySelectorAll('[data-roll-damage]')
     .forEach((button) => button.addEventListener('click', () => {
       if (!activeCharacter) return;
@@ -999,6 +1005,15 @@ export async function renderHome(container) {
               renderHome(container);
             } catch (error) {
               createToast('Errore ripristino risorsa', 'error');
+            }
+          },
+          onRecover: async () => {
+            try {
+              await updateResource(resource.id, { used: Math.max((Number(resource.used) || 0) - 1, 0) });
+              createToast('Carica recuperata');
+              renderHome(container);
+            } catch (error) {
+              createToast('Errore recupero carica', 'error');
             }
           }
         });
@@ -1670,6 +1685,51 @@ function buildSpellAttackRollOptions(character) {
   }];
 }
 
+
+function getDamageTypeLabel(typeKey) {
+  return damageTypeList.find((type) => type.key === typeKey)?.label || typeKey;
+}
+
+function calculateEffectiveDamage(character, rawAmount, damageType) {
+  const amount = Math.max(Number(rawAmount) || 0, 0);
+  if (!damageType) {
+    return { amount, reason: null };
+  }
+  const defenses = character?.data?.damage_defenses || {};
+  const resistances = Array.isArray(defenses.resistances) ? defenses.resistances : [];
+  const immunities = Array.isArray(defenses.immunities) ? defenses.immunities : [];
+  if (immunities.includes('all') || immunities.includes(damageType)) {
+    return { amount: 0, reason: `immunità a ${getDamageTypeLabel(damageType)}` };
+  }
+  if (resistances.includes('all') || resistances.includes(damageType)) {
+    return { amount: Math.floor(amount / 2), reason: `resistenza a ${getDamageTypeLabel(damageType)}` };
+  }
+  return { amount, reason: null };
+}
+
+function openPresetAttackRoll(attackKey) {
+  const { activeCharacter, canEditCharacter } = getHomeContext();
+  if (!activeCharacter || !attackKey) return;
+  const items = getState().cache.items || [];
+  const options = buildAttackRollOptions(activeCharacter, items);
+  const selected = options.find((entry) => entry.value === attackKey);
+  if (!selected) return;
+  openDiceRollerModal({
+    title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
+    mode: 'd20',
+    rollType: 'TC',
+    selection: {
+      label: 'Attacco',
+      options,
+      value: selected.value
+    },
+    allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+    weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+    characterId: activeCharacter.id,
+    historyLabel: selected.shortLabel || selected.label
+  });
+}
+
 function handleDiceAction(type) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   const items = getState().cache.items || [];
@@ -1876,6 +1936,8 @@ async function handleHpAction(action, container) {
   const hitDiceSides = getHitDiceSides(hitDice.die);
   const diceCount = Math.max(Number(formData.get('hit_dice_count')) || 1, 1);
   let amount = Number(formData.get('amount'));
+  const rawDamageAmount = amount;
+  const selectedDamageType = action === 'damage' ? formData.get('damage_type')?.toString() || '' : '';
 
   if (action === 'heal' && useHitDice) {
     if (!hitDiceSides) {
@@ -1900,6 +1962,12 @@ async function handleHpAction(action, container) {
   if (!amount || amount <= 0) {
     createToast('Inserisci un valore valido', 'error');
     return;
+  }
+  const damageAdjustment = action === 'damage'
+    ? calculateEffectiveDamage(activeCharacter, amount, selectedDamageType)
+    : { amount, reason: null };
+  if (action === 'damage') {
+    amount = damageAdjustment.amount;
   }
   const currentHp = Number(activeCharacter.data?.hp?.current) || 0;
   const currentTempHp = Number(activeCharacter.data?.hp?.temp) || 0;
@@ -1934,9 +2002,15 @@ async function handleHpAction(action, container) {
       used: Math.min(hitDiceUsed + diceCount, hitDiceMax)
     }
     : hitDice;
+  const damageLabel = action === 'damage' && selectedDamageType
+    ? ` ${getDamageTypeLabel(selectedDamageType).toLowerCase()}`
+    : '';
+  const adjustmentLabel = action === 'damage' && damageAdjustment.reason
+    ? ` (da ${rawDamageAmount}, ${damageAdjustment.reason})`
+    : '';
   const message = action === 'heal'
     ? `${useTempHp ? 'HP temporanei +' : 'PF curati +'}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
-    : `Danno ${amount}`;
+    : `Danno${damageLabel} ${amount}${adjustmentLabel}`;
   const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
   const saveOnComplete = async () => {
     if (container) renderHome(container);
@@ -2043,6 +2117,18 @@ function buildHpShortcutFields(
 
   if (!allowHitDice) {
     if (allowMaxOverride) {
+      const damageTypeField = document.createElement('label');
+      damageTypeField.className = 'field hp-shortcut-fields__damage-type';
+      const damageTypeLabel = document.createElement('span');
+      damageTypeLabel.textContent = 'Tipo di danno';
+      const damageTypeSelect = buildSelect([
+        { value: '', label: 'Nessun tipo (danno normale)' },
+        ...damageTypeList.map((type) => ({ value: type.key, label: type.label }))
+      ], '');
+      damageTypeSelect.name = 'damage_type';
+      damageTypeField.append(damageTypeLabel, damageTypeSelect);
+      primaryRow.appendChild(damageTypeField);
+
       const maxHpField = buildInput({
         label: 'Nuovo massimo PF',
         name: 'hp_max_override',
