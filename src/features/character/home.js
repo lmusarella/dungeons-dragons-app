@@ -895,6 +895,11 @@ export async function renderHome(container) {
       openResourceDrawer(activeCharacter, () => renderHome(container), resource);
     }));
 
+  container.querySelectorAll('[data-roll-hit-dice]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      await handleHitDiceHeal(activeCharacter, container);
+    }));
+
   container.querySelectorAll('[data-roll-damage]')
     .forEach((button) => button.addEventListener('click', () => {
       if (!activeCharacter) return;
@@ -1774,6 +1779,75 @@ async function handleRestAction(resetOn, container) {
   }
 }
 
+
+async function handleHitDiceHeal(activeCharacter, container) {
+  const { canEditCharacter } = getHomeContext();
+  if (!activeCharacter) return;
+  if (!canEditCharacter) {
+    createToast('Azioni HP disponibili solo con profilo online', 'error');
+    return;
+  }
+
+  const hitDice = activeCharacter.data?.hit_dice || {};
+  const hitDiceUsed = Number(hitDice.used) || 0;
+  const hitDiceMax = Number(hitDice.max) || 0;
+  const remaining = Math.max(hitDiceMax - hitDiceUsed, 0);
+  const hitDiceSides = getHitDiceSides(hitDice.die);
+  if (!hitDiceSides) {
+    createToast('Configura un dado vita valido', 'error');
+    return;
+  }
+  if (remaining <= 0) {
+    createToast('Nessun dado vita disponibile', 'error');
+    return;
+  }
+
+  const conMod = getAbilityModifier(activeCharacter.data?.abilities?.con) ?? 0;
+  let rolledDiceCount = 1;
+  const rollSession = openDiceOverlay({
+    keepOpen: false,
+    title: `Dado vita • ${hitDice.die || `d${hitDiceSides}`}`,
+    mode: 'generic',
+    notation: `1d${hitDiceSides}`,
+    modifier: conMod,
+    rollType: 'GEN',
+    characterId: activeCharacter.id,
+    historyLabel: 'Dado vita',
+    genericDiceMax: remaining,
+    warning: 'Attenzione: ogni dado vita lanciato verrà sottratto ai dadi vita disponibili.',
+    onRollComplete: ({ diceCount }) => {
+      rolledDiceCount = Math.max(Number(diceCount) || 1, 1);
+    }
+  });
+  const amount = await rollSession.waitForRoll;
+  if (!amount || amount <= 0) return;
+  if (rolledDiceCount > remaining) {
+    createToast(`Hai solo ${remaining} dadi vita disponibili`, 'error');
+    return;
+  }
+
+  const currentHp = Number(activeCharacter.data?.hp?.current) || 0;
+  const maxHp = activeCharacter.data?.hp?.max;
+  const nextCurrent = currentHp + Number(amount);
+  const adjusted = maxHp !== null && maxHp !== undefined
+    ? Math.min(nextCurrent, Number(maxHp))
+    : nextCurrent;
+
+  await saveCharacterData(activeCharacter, {
+    ...activeCharacter.data,
+    hp: {
+      ...activeCharacter.data?.hp,
+      current: adjusted
+    },
+    hit_dice: {
+      ...hitDice,
+      used: Math.min(hitDiceUsed + rolledDiceCount, hitDiceMax)
+    }
+  }, `PF curati +${amount} (${rolledDiceCount}d${hitDiceSides})`, () => {
+    if (container) renderHome(container);
+  });
+}
+
 async function handleHpAction(action, container) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   if (!activeCharacter) return;
@@ -1787,7 +1861,7 @@ async function handleHpAction(action, container) {
     title,
     submitLabel,
     content: buildHpShortcutFields(activeCharacter, {
-      allowHitDice: action === 'heal',
+      allowHitDice: false,
       allowTempHp: action === 'heal',
       allowMaxOverride: action === 'damage'
     })
@@ -1973,7 +2047,7 @@ function buildHpShortcutFields(
         label: 'Nuovo massimo PF',
         name: 'hp_max_override',
         type: 'number',
-        value: ''
+        value: character?.data?.hp?.max ?? ''
       });
       maxHpField.classList.add('hp-shortcut-fields__max');
       const maxInput = maxHpField.querySelector('input');
