@@ -4231,7 +4231,7 @@ button:focus-visible,
 
 .compact-ability-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -4257,7 +4257,7 @@ button:focus-visible,
 .compact-competency-grid,
 .compact-special-skill-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 6px;
 }
 
@@ -4267,8 +4267,8 @@ button:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 10px;
+  padding: 5px 7px;
+  border-radius: 9px;
   border: 1px solid #eadfc9;
   background: #fdf7ea;
 }
@@ -4413,6 +4413,10 @@ button:focus-visible,
   .compact-setting-grid--roll,
   .compact-setting-grid--defense {
     grid-template-columns: 1fr;
+  }
+
+  .compact-ability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .compact-setting-row--roll,

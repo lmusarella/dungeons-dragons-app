@@ -120,9 +120,44 @@ function hasEquippedHeavyArmor(items = []) {
     && getEquipSlots(item).length);
 }
 
+function getDrawerAttackRollEntries(characterData, items = []) {
+  const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
+  const weaponEntries = equippedWeapons.map((weapon) => ({
+    key: `weapon:${weapon.id ?? weapon.name}`,
+    label: weapon.name || 'Arma'
+  }));
+  const spells = Array.isArray(characterData?.spells) ? characterData.spells : [];
+  const spellEntries = spells
+    .filter((spell) => {
+      const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
+      return isCantrip && spell.attack_roll && spell.damage_die;
+    })
+    .map((spell) => ({
+      key: `spell:${spell.id}`,
+      label: spell.name || 'Incantesimo'
+    }));
+  const spellcasting = characterData?.spellcasting || {};
+  const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(characterData?.proficiency_bonus) !== null);
+  const genericSpellEntry = hasSpellAttack ? [{ key: 'spell-attack', label: 'Incantesimi' }] : [];
+  return [...weaponEntries, ...spellEntries, ...genericSpellEntry];
+}
+
+function getAutomaticDrawerAttackEffects(characterData) {
+  const conditions = getCharacterConditions(characterData);
+  const advantage = conditions.filter((key) => ['invisibile'].includes(key));
+  const disadvantage = conditions.filter((key) => ['accecato', 'avvelenato', 'intralciato', 'prono', 'spaventato'].includes(key));
+  const effects = [];
+  if (advantage.length) effects.push(`Vantaggio: condizioni ${formatConditionNames(advantage)}.`);
+  if (disadvantage.length) effects.push(`Svantaggio: condizioni ${formatConditionNames(disadvantage)}.`);
+  return effects;
+}
+
 function getAutomaticDrawerRollEffects(characterData, items, scope, entry) {
   const conditions = getCharacterConditions(characterData);
   const effects = [];
+  if (scope === 'attack_rolls') {
+    effects.push(...getAutomaticDrawerAttackEffects(characterData));
+  }
   if (scope === 'skills') {
     const poisoned = conditions.includes('avvelenato') ? ['avvelenato'] : [];
     if (poisoned.length) {
@@ -700,6 +735,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     <h4>Vantaggi & Svantaggi</h4>
     <p class="muted compact-settings-help">Registra solo override manuali; condizioni, armature ed effetti automatici vengono mostrati direttamente nelle righe.</p>
     <div class="character-edit-subsection compact-settings-section">
+      <h5>Tiri per colpire</h5>
+      <div class="compact-setting-grid compact-setting-grid--roll">
+        ${renderRollAdjustmentRows('attack_rolls', getDrawerAttackRollEntries(characterData, drawerItems))}
+      </div>
+    </div>
+    <div class="character-edit-subsection compact-settings-section">
       <h5>Tiri salvezza</h5>
       <div class="compact-setting-grid compact-setting-grid--roll">
         ${renderRollAdjustmentRows('saving_throws', savingThrowList)}
@@ -783,21 +824,20 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Background', [backgroundSection])
     },
     {
-      title: 'Statistiche e difese',
-      content: buildEditGroup('Statistiche e difese', [statsSection, acSection])
-    },
-    {
       title: 'Caratteristiche',
       content: buildEditGroup('Caratteristiche', [abilitySection])
     },
     {
-      title: 'Competenze',
-      content: buildEditGroup('Competenze', [
-        skillSection,
-        specialSkillSection,
-        savingSection,
-        proficiencySection
-      ])
+      title: 'Abilità',
+      content: buildEditGroup('Abilità', [skillSection, specialSkillSection])
+    },
+    {
+      title: 'Tiri Salvezza',
+      content: buildEditGroup('Tiri Salvezza', [savingSection])
+    },
+    {
+      title: 'Statistiche e difese',
+      content: buildEditGroup('Statistiche e difese', [statsSection, acSection])
     },
     {
       title: 'Combattimento e magia',
@@ -814,6 +854,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     {
       title: 'Note e dettagli',
       content: buildEditGroup('Note e dettagli', [
+        proficiencySection,
         proficiencyNotesSection,
         languageNotesSection,
         talentNotesSection
@@ -1015,8 +1056,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
-  const nextRollAdjustments = { saving_throws: {}, skills: {} };
+  const nextRollAdjustments = { attack_rolls: {}, saving_throws: {}, skills: {} };
   [
+    { scope: 'attack_rolls', entries: getDrawerAttackRollEntries(characterData, drawerItems) },
     { scope: 'saving_throws', entries: savingThrowList },
     { scope: 'skills', entries: skillList }
   ].forEach(({ scope, entries }) => {

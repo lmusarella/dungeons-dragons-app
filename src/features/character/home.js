@@ -1287,6 +1287,7 @@ async function handleConditionsAction(container) {
 function getRollAdjustmentData(character) {
   const adjustments = character?.data?.roll_adjustments || {};
   return {
+    attack_rolls: adjustments.attack_rolls || {},
     saving_throws: adjustments.saving_throws || {},
     skills: adjustments.skills || {}
   };
@@ -1294,6 +1295,7 @@ function getRollAdjustmentData(character) {
 
 function buildRollAdjustmentFields(character) {
   const adjustments = getRollAdjustmentData(character);
+  const items = getState().cache.items || [];
   const form = document.createElement('div');
   form.className = 'modal-form-grid compact-settings-form compact-settings-form--rolls';
   const modeOptions = [
@@ -1309,7 +1311,7 @@ function buildRollAdjustmentFields(character) {
     grid.className = 'compact-setting-grid compact-setting-grid--roll';
     entries.forEach((entry) => {
       const current = adjustments[scope]?.[entry.key] || {};
-      const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
+      const automaticEffects = getAutomaticRollEffects(character, items, scope, entry);
       const automaticRollMode = resolveRollModeEffects(automaticEffects).rollMode || '';
       const automaticSource = automaticEffects.length === 1 ? (automaticEffects[0].source || '') : '';
       const selectedMode = current.mode || automaticRollMode;
@@ -1342,21 +1344,24 @@ function buildRollAdjustmentFields(character) {
     section.appendChild(grid);
     form.appendChild(section);
   };
+  buildRows('Tiri per colpire', 'attack_rolls', getAttackRollAdjustmentEntries(character, items));
   buildRows('Tiri salvezza', 'saving_throws', savingThrowList);
   buildRows('Abilità', 'skills', skillList);
   return form;
 }
 
 function parseRollAdjustmentsForm(formData, character) {
-  const next = { saving_throws: {}, skills: {} };
+  const items = getState().cache.items || [];
+  const next = { attack_rolls: {}, saving_throws: {}, skills: {} };
   [
+    { scope: 'attack_rolls', entries: getAttackRollAdjustmentEntries(character, items) },
     { scope: 'saving_throws', entries: savingThrowList },
     { scope: 'skills', entries: skillList }
   ].forEach(({ scope, entries }) => {
     entries.forEach((entry) => {
       const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
       const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
-      const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
+      const automaticEffects = getAutomaticRollEffects(character, items, scope, entry);
       const automaticMode = resolveRollModeEffects(automaticEffects).rollMode || '';
       const automaticSource = automaticEffects.length === 1 ? (automaticEffects[0].source || '') : '';
       const matchesAutomatic = mode === automaticMode && source === automaticSource;
@@ -1660,6 +1665,45 @@ function hasEquippedHeavyArmor(items = []) {
     && getEquipSlots(item).length);
 }
 
+function getAttackRollAdjustmentEntries(character, items = []) {
+  const data = character?.data || {};
+  const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
+  const weaponEntries = equippedWeapons.map((weapon) => ({
+    key: `weapon:${weapon.id ?? weapon.name}`,
+    label: weapon.name || 'Arma'
+  }));
+  const spells = Array.isArray(data.spells) ? data.spells : [];
+  const spellEntries = spells
+    .filter((spell) => {
+      const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
+      return isCantrip && spell.attack_roll && spell.damage_die;
+    })
+    .map((spell) => ({
+      key: `spell:${spell.id}`,
+      label: spell.name || 'Incantesimo'
+    }));
+  const spellcasting = data.spellcasting || {};
+  const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(data.proficiency_bonus) !== null);
+  const genericSpellEntry = hasSpellAttack
+    ? [{ key: 'spell-attack', label: 'Incantesimi' }]
+    : [];
+  return [...weaponEntries, ...spellEntries, ...genericSpellEntry];
+}
+
+function getAutomaticAttackRollEffects(character) {
+  const conditionState = getConditionState(character);
+  const advantageKeys = attackRollEffects.advantage.filter((key) => conditionState.includes(key));
+  const disadvantageKeys = attackRollEffects.disadvantage.filter((key) => conditionState.includes(key));
+  const effects = [];
+  if (advantageKeys.length) {
+    effects.push({ mode: 'advantage', source: 'condition', reason: `Vantaggio: condizioni ${formatConditionList(advantageKeys).join(', ')}.` });
+  }
+  if (disadvantageKeys.length) {
+    effects.push({ mode: 'disadvantage', source: 'condition', reason: `Svantaggio: condizioni ${formatConditionList(disadvantageKeys).join(', ')}.` });
+  }
+  return effects;
+}
+
 function getAutomaticSkillRollEffects(character, items, skill) {
   const conditionState = getConditionState(character);
   const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
@@ -1695,6 +1739,7 @@ function getAutomaticSavingThrowRollEffects(character, save) {
 }
 
 function getAutomaticRollEffects(character, items, scope, entry) {
+  if (scope === 'attack_rolls') return getAutomaticAttackRollEffects(character, entry);
   if (scope === 'skills') return getAutomaticSkillRollEffects(character, items, entry);
   if (scope === 'saving_throws') return getAutomaticSavingThrowRollEffects(character, entry);
   return [];
@@ -1867,8 +1912,7 @@ function buildAttackRollOptions(character, items = []) {
   const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus) ?? 0;
   const proficiencies = data.proficiencies || {};
-  const conditionState = getConditionState(character);
-  const attackRollMode = getAttackRollMode(conditionState);
+  const automaticAttackEffects = getAutomaticAttackRollEffects(character);
   const options = equippedWeapons.map((weapon) => {
     const weaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
     const attackAbility = weapon.attack_ability || (weaponRange === 'ranged' ? 'dex' : 'str');
@@ -1881,13 +1925,18 @@ function buildAttackRollOptions(character, items = []) {
     const weaponProficiencyBonus = proficient ? proficiencyBonus : 0;
     const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
     const attackTotal = abilityMod + weaponProficiencyBonus + (Number(weapon.attack_modifier) || 0) + attackBonus;
+    const value = `weapon:${weapon.id ?? weapon.name}`;
+    const rollMode = resolveRollModeEffects([
+      ...automaticAttackEffects,
+      getManualRollAdjustment(character, 'attack_rolls', value, weapon.name)
+    ]);
     return {
-      value: `weapon:${weapon.id ?? weapon.name}`,
+      value,
       label: `${weapon.name} (${formatSigned(attackTotal)})`,
       shortLabel: weapon.name,
       modifier: attackTotal,
-      rollMode: attackRollMode.rollMode,
-      rollModeReason: attackRollMode.rollModeReason
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason
     };
   });
 
@@ -1905,13 +1954,18 @@ function buildAttackRollOptions(character, items = []) {
   });
   if (spellAbilityKey && spellAttackBonus !== null) {
     cantripAttacks.forEach((spell) => {
+      const value = `spell:${spell.id}`;
+      const rollMode = resolveRollModeEffects([
+        ...automaticAttackEffects,
+        getManualRollAdjustment(character, 'attack_rolls', value, spell.name)
+      ]);
       options.push({
-        value: `spell:${spell.id}`,
+        value,
         label: `${spell.name} (${formatSigned(spellAttackBonus)})`,
         shortLabel: spell.name,
         modifier: spellAttackBonus,
-        rollMode: attackRollMode.rollMode,
-        rollModeReason: attackRollMode.rollModeReason
+        rollMode: rollMode.rollMode,
+        rollModeReason: rollMode.rollModeReason
       });
     });
   }
@@ -1930,11 +1984,18 @@ function buildSpellAttackRollOptions(character) {
     return [];
   }
   const attackBonus = spellAbilityMod + proficiencyBonus;
+  const value = 'spell-attack';
+  const rollMode = resolveRollModeEffects([
+    ...getAutomaticAttackRollEffects(character),
+    getManualRollAdjustment(character, 'attack_rolls', value, 'Incantesimi')
+  ]);
   return [{
-    value: 'spell-attack',
+    value,
     label: `Incantesimi (${formatSigned(attackBonus)})`,
     shortLabel: 'Incantesimi',
-    modifier: attackBonus
+    modifier: attackBonus,
+    rollMode: rollMode.rollMode,
+    rollModeReason: rollMode.rollModeReason
   }];
 }
 
