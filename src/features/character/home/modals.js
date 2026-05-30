@@ -152,13 +152,14 @@ export async function openConditionsModal(character) {
   });
 }
 
-export function openResourceDetail(resource, { onUse, onReset } = {}) {
+export function openResourceDetail(resource, { onUse, onReset, onRecover } = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
   const isExhausted = maxUses && resource.used >= maxUses;
   const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
+  const canRecoverCharge = Boolean(maxUses > 1 && Number(resource.used) > 0 && onRecover);
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
   const hasDisplayImage = hasUsableDetailImage(resource.image_url);
   const imageUrl = resource.image_url?.trim() || '';
@@ -177,9 +178,27 @@ export function openResourceDetail(resource, { onUse, onReset } = {}) {
       : 'Chiudi',
     cancelLabel: isActive ? (hasAction ? 'Chiudi' : null) : null,
     content: detail,
-    showFooter: isActive
+    showFooter: isActive,
+    onOpen: ({ modal }) => {
+      if (!canRecoverCharge) return null;
+      const submitButton = modal.querySelector('[data-form-submit]');
+      const actionsRight = submitButton?.parentElement;
+      if (!actionsRight) return null;
+      const recoverButton = document.createElement('button');
+      recoverButton.type = 'submit';
+      recoverButton.name = 'resource_action';
+      recoverButton.value = 'recover';
+      recoverButton.className = 'ghost-button';
+      recoverButton.textContent = 'Recupera Carica';
+      actionsRight.insertBefore(recoverButton, submitButton);
+      return () => recoverButton.remove();
+    }
   }).then(async (formData) => {
     if (!formData || !maxUses) return;
+    if (formData.get('resource_action') === 'recover' && onRecover) {
+      await onRecover();
+      return;
+    }
     if (isExhausted && onReset) {
       await onReset();
       return;

@@ -360,7 +360,18 @@ export function openFormModal({
 
     const onSubmit = (event) => {
       event.preventDefault();
-      const data = formEl ? new FormData(formEl) : null;
+      let data = null;
+      if (formEl) {
+        try {
+          data = new FormData(formEl, event.submitter);
+        } catch (error) {
+          data = new FormData(formEl);
+          const submitter = event.submitter;
+          if (submitter?.name) {
+            data.set(submitter.name, submitter.value ?? '');
+          }
+        }
+      }
       cleanup(data);
     };
 

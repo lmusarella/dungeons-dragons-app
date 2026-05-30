@@ -10,11 +10,13 @@ import {
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
+  conditionList,
+  damageTypeList,
   equipmentProficiencyList,
   savingThrowList,
   skillList
 } from './constants.js';
-import { getAbilityModifier, normalizeNumber } from './utils.js';
+import { getAbilityModifier, getEquipSlots, normalizeNumber } from './utils.js';
 
 
 function attachDrawerNumberStepper(input, {
@@ -75,6 +77,102 @@ function attachDrawerNumberStepper(input, {
   inc.addEventListener('click', () => onClickStep(1));
 }
 
+const rollAdjustmentSourceOptions = [
+  { value: '', label: 'Seleziona fonte' },
+  { value: 'situational', label: 'Situazionale' },
+  { value: 'effect', label: 'Effetto temporaneo' },
+  { value: 'condition', label: 'Condizione' },
+  { value: 'armor', label: 'Armatura' },
+  { value: 'racial', label: 'Abilità razziale' },
+  { value: 'class', label: 'Privilegio di classe' },
+  { value: 'spell', label: 'Incantesimo' },
+  { value: 'item', label: 'Oggetto magico/equipaggiamento' },
+  { value: 'other', label: 'Altro' }
+];
+
+const conditionLabels = conditionList.reduce((acc, condition) => {
+  acc[condition.key] = condition.label;
+  return acc;
+}, {});
+
+function escapeAttribute(value) {
+  return (value || '').toString()
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function getCharacterConditions(data) {
+  if (Array.isArray(data?.conditions)) return data.conditions;
+  if (data?.condition) return [data.condition];
+  return [];
+}
+
+function formatConditionNames(keys) {
+  return keys.map((key) => conditionLabels[key] || key).filter(Boolean).join(', ');
+}
+
+function hasEquippedHeavyArmor(items = []) {
+  return (items || []).some((item) => item.category === 'armor'
+    && item.armor_type === 'heavy'
+    && item.equipable
+    && getEquipSlots(item).length);
+}
+
+function getDrawerAttackRollEntries(characterData, items = []) {
+  const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
+  const weaponEntries = equippedWeapons.map((weapon) => ({
+    key: `weapon:${weapon.id ?? weapon.name}`,
+    label: weapon.name || 'Arma'
+  }));
+  const spells = Array.isArray(characterData?.spells) ? characterData.spells : [];
+  const spellEntries = spells
+    .filter((spell) => {
+      const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
+      return isCantrip && spell.attack_roll && spell.damage_die;
+    })
+    .map((spell) => ({
+      key: `spell:${spell.id}`,
+      label: spell.name || 'Incantesimo'
+    }));
+  const spellcasting = characterData?.spellcasting || {};
+  const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(characterData?.proficiency_bonus) !== null);
+  const genericSpellEntry = hasSpellAttack ? [{ key: 'spell-attack', label: 'Incantesimi' }] : [];
+  return [...weaponEntries, ...spellEntries, ...genericSpellEntry];
+}
+
+function getAutomaticDrawerAttackEffects(characterData) {
+  const conditions = getCharacterConditions(characterData);
+  const advantage = conditions.filter((key) => ['invisibile'].includes(key));
+  const disadvantage = conditions.filter((key) => ['accecato', 'avvelenato', 'intralciato', 'prono', 'spaventato'].includes(key));
+  const effects = [];
+  if (advantage.length) effects.push(`Vantaggio: condizioni ${formatConditionNames(advantage)}.`);
+  if (disadvantage.length) effects.push(`Svantaggio: condizioni ${formatConditionNames(disadvantage)}.`);
+  return effects;
+}
+
+function getAutomaticDrawerRollEffects(characterData, items, scope, entry) {
+  const conditions = getCharacterConditions(characterData);
+  const effects = [];
+  if (scope === 'attack_rolls') {
+    effects.push(...getAutomaticDrawerAttackEffects(characterData));
+  }
+  if (scope === 'skills') {
+    const poisoned = conditions.includes('avvelenato') ? ['avvelenato'] : [];
+    if (poisoned.length) {
+      effects.push(`Svantaggio: condizioni ${formatConditionNames(poisoned)}.`);
+    }
+    if (entry.key === 'stealth' && hasEquippedHeavyArmor(items)) {
+      effects.push('Svantaggio automatico: armatura pesante su Furtività.');
+    }
+  }
+  if (scope === 'saving_throws' && entry.key === 'dex' && conditions.includes('intralciato')) {
+    effects.push('Svantaggio: condizioni Intralciato.');
+  }
+  return effects;
+}
+
 export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
   const characterData = character?.data || {};
@@ -86,6 +184,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
+  const damageDefenses = characterData.damage_defenses || {};
+  const rollAdjustments = characterData.roll_adjustments || {};
+  const drawerItems = getState().cache.items || [];
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
@@ -153,32 +254,38 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const statsSection = document.createElement('div');
   statsSection.className = 'character-edit-section';
 
-  const statsGrid = document.createElement('div');
-  statsGrid.className = 'character-edit-grid';
-  statsGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
-  statsGrid.appendChild(buildInput({
+  const hpRow = document.createElement('div');
+  hpRow.className = 'life-armor-row life-armor-row--hp';
+  hpRow.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
+  hpRow.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
+  hpRow.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
+
+  const hitDiceRow = document.createElement('div');
+  hitDiceRow.className = 'life-armor-row life-armor-row--hit-dice';
+  hitDiceRow.appendChild(buildInput({ label: 'Dado vita (es. d8)', name: 'hit_dice_die', value: hitDice.die ?? '' }));
+  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
+  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
+
+  const armorRow = document.createElement('div');
+  armorRow.className = 'life-armor-row life-armor-row--armor';
+  armorRow.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
+  armorRow.appendChild(buildInput({
     label: 'Modificatore CA totale',
     name: 'ac_bonus',
     type: 'number',
     value: characterData.ac_bonus ?? 0
   }));
-  statsGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Dado vita (es. d8)', name: 'hit_dice_die', value: hitDice.die ?? '' }));
-  statsGrid.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
-  statsSection.appendChild(statsGrid);
+
+  statsSection.append(hpRow, hitDiceRow, armorRow);
 
   const acSection = document.createElement('div');
-  acSection.className = 'character-edit-section';
+  acSection.className = 'character-edit-section compact-ac-options';
   acSection.innerHTML = `
-    <h4>Opzioni CA base</h4>
-    <p class="muted">Base = 10 + Destrezza. Seleziona eventuali modificatori extra.</p>
-    <div class="character-saving-grid">
+    <div class="compact-ac-options__header">
+      <h4>Opzioni CA base</h4>
+      <span class="muted">Base 10 + DES; extra mod.</span>
+    </div>
+    <div class="compact-pill-grid compact-ac-options__grid">
       ${[
     { key: 'str', label: 'Forza' },
     { key: 'con', label: 'Costituzione' },
@@ -194,10 +301,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     </div>
   `;
   const abilitySection = document.createElement('div');
-  abilitySection.className = 'character-edit-section';
+  abilitySection.className = 'character-edit-section compact-character-section';
   abilitySection.innerHTML = '<h4>Caratteristiche</h4>';
   const abilityGrid = document.createElement('div');
-  abilityGrid.className = 'character-edit-grid';
+  abilityGrid.className = 'compact-ability-grid';
   abilityGrid.appendChild(buildInput({ label: 'Forza', name: 'ability_str', type: 'number', value: abilities.str ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Destrezza', name: 'ability_dex', type: 'number', value: abilities.dex ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Costituzione', name: 'ability_con', type: 'number', value: abilities.con ?? 0 }));
@@ -205,17 +312,23 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   abilityGrid.appendChild(buildInput({ label: 'Saggezza', name: 'ability_wis', type: 'number', value: abilities.wis ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Carisma', name: 'ability_cha', type: 'number', value: abilities.cha ?? 0 }));
   abilitySection.appendChild(abilityGrid);
+  const abilityMetaGrid = document.createElement('div');
+  abilityMetaGrid.className = 'compact-character-meta-grid';
+  abilityMetaGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? 0 }));
+  abilityMetaGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? 0 }));
+  abilityMetaGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? 0 }));
+  abilitySection.appendChild(abilityMetaGrid);
 
   const skillSection = document.createElement('div');
-  skillSection.className = 'character-edit-section';
+  skillSection.className = 'character-edit-section compact-character-section';
   skillSection.innerHTML = `
     <h4>Competenze e maestria</h4>
-    <div class="character-skill-grid character-skill-grid--three-columns">
+    <div class="compact-competency-grid">
       ${skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
     return `
-        <div class="character-skill-row character-skill-row--compact">
+        <div class="compact-competency-row">
           <div class="character-skill-row__meta">
             <strong>${skill.label}</strong>
             <span class="muted">${abilityShortLabel[skill.ability]}</span>
@@ -261,10 +374,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ];
 
   const specialSkillSection = document.createElement('div');
-  specialSkillSection.className = 'character-edit-section';
-  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
+  specialSkillSection.className = 'character-edit-section compact-character-section';
+  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted compact-settings-help">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
   const specialSkillList = document.createElement('div');
-  specialSkillList.className = 'character-skill-grid';
+  specialSkillList.className = 'compact-special-skill-list';
   const addSpecialSkillButton = document.createElement('button');
   addSpecialSkillButton.type = 'button';
   addSpecialSkillButton.className = 'ghost-button ghost-button--compact';
@@ -299,11 +412,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     }
     draftSpecialSkills.forEach((entry, index) => {
       const row = document.createElement('div');
-      row.className = 'character-skill-row';
+      row.className = 'compact-special-skill-row';
       row.dataset.specialSkillRow = entry.id;
 
       const grid = document.createElement('div');
-      grid.className = 'character-edit-grid';
+      grid.className = 'compact-special-skill-grid';
       grid.appendChild(buildInput({
         label: 'Nome',
         name: `special_skill_name_${index}`,
@@ -391,10 +504,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   renderSpecialSkillRows();
 
   const savingSection = document.createElement('div');
-  savingSection.className = 'character-edit-section';
+  savingSection.className = 'character-edit-section compact-character-section';
   savingSection.innerHTML = `
     <h4>Tiri salvezza</h4>
-    <div class="character-saving-grid">
+    <div class="compact-pill-grid">
       ${savingThrowList.map((save) => {
     const proficient = Boolean(savingStates[save.key]);
     return `
@@ -408,10 +521,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   `;
 
   const proficiencySection = document.createElement('div');
-  proficiencySection.className = 'character-edit-section';
+  proficiencySection.className = 'character-edit-section compact-character-section';
   proficiencySection.innerHTML = `
     <h4>Competenze equipaggiamento</h4>
-    <div class="character-saving-grid">
+    <div class="compact-pill-grid">
       ${equipmentProficiencyList.map((prof) => {
     const proficient = Boolean(proficiencies[prof.key]);
     return `
@@ -560,7 +673,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     wis: abilitySection.querySelector('input[name="ability_wis"]'),
     cha: abilitySection.querySelector('input[name="ability_cha"]')
   };
-  const proficiencyInput = statsSection.querySelector('input[name="proficiency_bonus"]');
+  const proficiencyInput = abilitySection.querySelector('input[name="proficiency_bonus"]');
   const syncSpellcastingDerived = () => {
     const selectedAbility = spellcastingAbilitySelect.value;
     const abilityValue = selectedAbility ? abilityInputs[selectedAbility]?.value : null;
@@ -585,6 +698,108 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   proficiencyInput?.addEventListener('input', syncSpellcastingDerived);
   toggleSpellcastingSection();
   syncSpellcastingDerived();
+
+  const rollAdjustmentSection = document.createElement('div');
+  rollAdjustmentSection.className = 'character-edit-section compact-settings-form compact-settings-form--rolls';
+  const rollModeOptions = [
+    { value: '', label: 'Nessuno' },
+    { value: 'advantage', label: 'Vantaggio' },
+    { value: 'disadvantage', label: 'Svantaggio' }
+  ];
+  const getAutomaticDrawerRollMode = (effects) => {
+    const hasAdvantage = effects.some((effect) => effect.startsWith('Vantaggio'));
+    const hasDisadvantage = effects.some((effect) => effect.startsWith('Svantaggio'));
+    if (hasAdvantage && hasDisadvantage) return '';
+    if (hasAdvantage) return 'advantage';
+    if (hasDisadvantage) return 'disadvantage';
+    return '';
+  };
+  const getAutomaticDrawerSource = (effects) => {
+    if (effects.length !== 1) return '';
+    if (effects[0].toLowerCase().includes('armatura')) return 'armor';
+    if (effects[0].toLowerCase().includes('condizion')) return 'condition';
+    return '';
+  };
+  const renderRollAdjustmentRows = (scope, entries) => entries.map((entry) => {
+    const current = rollAdjustments?.[scope]?.[entry.key] || {};
+    const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
+    const selectedMode = current.mode || getAutomaticDrawerRollMode(automaticEffects);
+    const selectedSource = current.source || getAutomaticDrawerSource(automaticEffects);
+    return `
+      <div class="compact-setting-row compact-setting-row--roll">
+        <label class="field compact-setting-field">
+          <span>${entry.label}</span>
+          <select name="roll_${scope}_${entry.key}_mode">
+            ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === selectedMode ? 'selected' : ''}>${option.label}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field compact-setting-field">
+          <span>Fonte manuale</span>
+          <select name="roll_${scope}_${entry.key}_source">
+            ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === selectedSource ? 'selected' : ''}>${option.label}</option>`).join('')}
+          </select>
+        </label>
+        ${automaticEffects.length ? `<p class="muted compact-setting-note">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
+      </div>
+    `;
+  }).join('');
+  rollAdjustmentSection.innerHTML = `
+    <h4>Vantaggi & Svantaggi</h4>
+    <p class="muted compact-settings-help">Registra solo override manuali; condizioni, armature ed effetti automatici vengono mostrati direttamente nelle righe.</p>
+    <div class="character-edit-subsection compact-settings-section">
+      <h5>Tiri per colpire</h5>
+      <div class="compact-setting-grid compact-setting-grid--roll">
+        ${renderRollAdjustmentRows('attack_rolls', getDrawerAttackRollEntries(characterData, drawerItems))}
+      </div>
+    </div>
+    <div class="character-edit-subsection compact-settings-section">
+      <h5>Tiri salvezza</h5>
+      <div class="compact-setting-grid compact-setting-grid--roll">
+        ${renderRollAdjustmentRows('saving_throws', savingThrowList)}
+      </div>
+    </div>
+    <div class="character-edit-subsection compact-settings-section">
+      <h5>Abilità</h5>
+      <div class="compact-setting-grid compact-setting-grid--roll">
+        ${renderRollAdjustmentRows('skills', skillList)}
+      </div>
+    </div>
+  `;
+
+  const damageDefenseSection = document.createElement('div');
+  damageDefenseSection.className = 'character-edit-section compact-settings-form compact-settings-form--defenses';
+  const groupedDamageTypes = damageTypeList.reduce((groups, type) => {
+    const group = type.group || 'Altro';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(type);
+    return groups;
+  }, {});
+  damageDefenseSection.innerHTML = `
+    <h4>Resistenze & Immunità</h4>
+    <p class="muted compact-settings-help">Seleziona rapidamente resistenza o immunità. “Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
+    ${Object.entries(groupedDamageTypes).map(([group, types]) => `
+      <div class="character-edit-subsection compact-settings-section">
+        <h5>${group}</h5>
+        <div class="compact-setting-grid compact-setting-grid--defense">
+          ${types.map((type) => `
+            <div class="compact-setting-row compact-setting-row--defense">
+              <strong>${type.label}</strong>
+              <div class="character-toggle-group">
+                <label class="toggle-pill">
+                  <input type="checkbox" name="damage_resistance_${type.key}" ${(Array.isArray(damageDefenses.resistances) && damageDefenses.resistances.includes(type.key)) ? 'checked' : ''} />
+                  <span>Resistenza</span>
+                </label>
+                <label class="toggle-pill">
+                  <input type="checkbox" name="damage_immunity_${type.key}" ${(Array.isArray(damageDefenses.immunities) && damageDefenses.immunities.includes(type.key)) ? 'checked' : ''} />
+                  <span>Immunità</span>
+                </label>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
 
   const proficiencyNotesSection = document.createElement('div');
   proficiencyNotesSection.className = 'character-edit-section';
@@ -621,30 +836,37 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Background', [backgroundSection])
     },
     {
-      title: 'Statistiche e difese',
-      content: buildEditGroup('Statistiche e difese', [statsSection, acSection])
+      title: 'Caratteristiche e Tiri Salvezza',
+      content: buildEditGroup('Caratteristiche e Tiri Salvezza', [abilitySection, savingSection])
     },
     {
-      title: 'Caratteristiche e competenze',
-      content: buildEditGroup('Caratteristiche e competenze', [
-        abilitySection,
-        skillSection,
-        specialSkillSection,
-        savingSection,
-        proficiencySection
+      title: 'Abilità',
+      content: buildEditGroup('Abilità', [skillSection, specialSkillSection])
+    },
+    {
+      title: 'Competenze e Talenti',
+      content: buildEditGroup('Competenze e Talenti', [
+        proficiencySection,
+        proficiencyNotesSection,
+        languageNotesSection,
+        talentNotesSection
       ])
+    },
+    {
+      title: 'Vita e Classe Armatura',
+      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection])
     },
     {
       title: 'Combattimento e magia',
       content: buildEditGroup('Combattimento e magia', [combatSection])
     },
     {
-      title: 'Note e dettagli',
-      content: buildEditGroup('Note e dettagli', [
-        proficiencyNotesSection,
-        languageNotesSection,
-        talentNotesSection
-      ])
+      title: 'Vantaggi & Svantaggi',
+      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection])
+    },
+    {
+      title: 'Resistenze & Immunità',
+      content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection])
     }
   ];
 
@@ -733,7 +955,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
-  modalCard?.classList.add('modal-card--wide');
+  modalCard?.classList.add('modal-card--wide', 'modal-card--character-editor');
 
   const tooltipHints = {
     name: 'Nome del personaggio mostrato in scheda.',
@@ -818,7 +1040,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       };
     }
   });
-  modalCard?.classList.remove('modal-card--wide');
+  modalCard?.classList.remove('modal-card--wide', 'modal-card--character-editor');
   if (!formData) return;
   const name = formData.get('name')?.trim();
   if (!name) {
@@ -842,6 +1064,26 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
+  const nextRollAdjustments = { attack_rolls: {}, saving_throws: {}, skills: {} };
+  [
+    { scope: 'attack_rolls', entries: getDrawerAttackRollEntries(characterData, drawerItems) },
+    { scope: 'saving_throws', entries: savingThrowList },
+    { scope: 'skills', entries: skillList }
+  ].forEach(({ scope, entries }) => {
+    entries.forEach((entry) => {
+      const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
+      const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
+      const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
+      const matchesAutomatic = mode === getAutomaticDrawerRollMode(automaticEffects) && source === getAutomaticDrawerSource(automaticEffects);
+      if ((mode === 'advantage' || mode === 'disadvantage') && !matchesAutomatic) {
+        nextRollAdjustments[scope][entry.key] = { mode, source };
+      }
+    });
+  });
+  const nextDamageDefenses = {
+    resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
+    immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
+  };
   const nextAcModifiers = { ...characterData.ac_ability_modifiers };
   ['str', 'con', 'int', 'wis', 'cha'].forEach((ability) => {
     nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
@@ -928,7 +1170,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
-    proficiencies: nextProficiencies
+    proficiencies: nextProficiencies,
+    damage_defenses: nextDamageDefenses,
+    roll_adjustments: nextRollAdjustments
   };
   const payload = {
     name,

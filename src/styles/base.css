@@ -440,19 +440,25 @@ button:focus-visible,
 
 .actions-fab-menu {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 10px);
   left: 50%;
-  width: 0;
-  height: 0;
-  transform: translateX(-50%);
+  width: min(92vw, 720px);
+  max-height: min(58vh, 360px);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  transform: translateX(-50%) translateY(8px) scale(0.98);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .actions-fab.is-open .actions-fab-menu {
   opacity: 1;
   pointer-events: auto;
+  transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .actions-fab-backdrop {
@@ -471,23 +477,27 @@ button:focus-visible,
 }
 
 .actions-fab-item {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  margin-bottom: 16px;
-  padding: 10px 16px;
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
   border-radius: 999px;
   border: 3px solid rgba(255, 255, 255, 0.35);
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #fff8ea;
   font-weight: 600;
+  white-space: nowrap;
   box-shadow:
     0 12px 24px rgba(var(--accent-rgb), 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transform: translate(-50%, 0) scale(0.9);
+  transform: translateY(8px) scale(0.96);
   opacity: 0;
   pointer-events: none;
   transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.actions-fab-item[hidden] {
+  display: none;
 }
 
 .actions-fab-item:focus-visible {
@@ -496,7 +506,7 @@ button:focus-visible,
 }
 
 .actions-fab-item:active {
-  transform: translate(-50%, 0) scale(0.98);
+  transform: translateY(1px) scale(0.98);
   box-shadow:
     0 8px 18px rgba(var(--accent-rgb), 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -523,7 +533,9 @@ button:focus-visible,
   box-shadow: 0 12px 24px rgba(122, 92, 196, 0.32);
 }
 
-.actions-fab-item[data-edit-conditions] {
+.actions-fab-item[data-edit-conditions],
+.actions-fab-item[data-edit-resistances],
+.actions-fab-item[data-edit-roll-adjustments] {
   background: linear-gradient(135deg, #3f9a67, #2f7a4f);
   box-shadow: 0 12px 24px rgba(63, 154, 103, 0.32);
 }
@@ -546,43 +558,7 @@ button:focus-visible,
 .actions-fab.is-open .actions-fab-item {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0) scale(1);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(1) {
-  transform: translate(-50%, 0px) translateX(-339px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(2) {
-  transform: translate(-50%, 0px) translateX(-253px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(3) {
-  transform: translate(-50%, 0px) translateX(-175px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(4) {
-  transform: translate(-50%, 0px) translateX(-91px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(5) {
-  transform: translate(-50%, 0px) translateX(-7px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(6) {
-  transform: translate(-50%, 0px) translateX(80px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(7) {
-  transform: translate(-50%, 0px) translateX(185px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(8) {
-  transform: translate(-50%, 0px) translateX(285px);
-}
-
-.actions-fab.is-open .actions-fab-item:nth-child(9) {
-  transform: translate(-50%, 0px) translateX(372px);
+  transform: translateY(0) scale(1);
 }
 
 .actions-fab-toggle {
@@ -3065,6 +3041,51 @@ button:focus-visible,
   max-height: 90vh;
 }
 
+.modal-card--character-editor {
+  width: min(1120px, 98vw);
+  height: min(94vh, 900px);
+  max-height: 94vh;
+}
+
+.modal-card--character-editor .modal-form,
+.modal-card--character-editor .modal-body,
+.modal-card--character-editor .character-edit-form,
+.modal-card--character-editor .character-edit-stepper {
+  min-height: 0;
+}
+
+.modal-card--character-editor .modal-body {
+  overflow: hidden;
+}
+
+.modal-card--character-editor .character-edit-form,
+.modal-card--character-editor .character-edit-stepper {
+  height: 100%;
+}
+
+.modal-card--character-editor .character-edit-stepper {
+  flex: 1 1 auto;
+}
+
+.modal-card--character-editor .character-edit-stepper-content {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modal-card--character-editor .character-edit-step {
+  grid-area: 1 / 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal-card--character-editor .character-edit-step > .character-edit-group {
+  box-sizing: border-box;
+  min-height: 100%;
+  width: 100%;
+}
+
 .modal-card--scrollable {
   max-height: 90vh;
 }
@@ -4092,6 +4113,10 @@ button:focus-visible,
   gap: 12px;
 }
 
+.character-edit-stepper-content {
+  min-height: 0;
+}
+
 .character-edit-stepper-nav {
   list-style: none;
   padding: 0;
@@ -4170,6 +4195,58 @@ button:focus-visible,
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.life-armor-row {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.life-armor-row:last-child {
+  margin-bottom: 0;
+}
+
+.life-armor-row--hp,
+.life-armor-row--hit-dice {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-armor-row--armor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-armor-row .field {
+  margin-bottom: 0;
+}
+
+.compact-ac-options {
+  padding-top: 2px;
+}
+
+.compact-ac-options__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.compact-ac-options__header h4 {
+  margin: 0;
+}
+
+.compact-ac-options__header .muted {
+  font-size: 0.78rem;
+}
+
+.compact-ac-options__grid {
+  gap: 5px;
+}
+
+.compact-ac-options__grid .toggle-pill {
+  padding: 3px 6px;
+  font-size: 0.7rem;
+}
+
 .character-skill-grid {
   display: grid;
   gap: 10px;
@@ -4242,6 +4319,199 @@ button:focus-visible,
   flex-wrap: wrap;
 }
 
+
+
+.compact-character-section {
+  margin: 0;
+}
+
+.compact-character-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+}
+
+.compact-ability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.compact-character-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.compact-ability-grid .field,
+.compact-character-meta-grid .field,
+.compact-special-skill-grid .field {
+  margin-bottom: 0;
+  gap: 3px;
+}
+
+.compact-ability-grid .field span,
+.compact-character-meta-grid .field span,
+.compact-special-skill-grid .field span {
+  font-size: 0.78rem;
+}
+
+.compact-ability-grid input,
+.compact-character-meta-grid input,
+.compact-special-skill-grid input,
+.compact-special-skill-grid select {
+  min-height: 36px;
+  padding: 7px 9px;
+  border-radius: 9px;
+}
+
+.compact-competency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+.compact-special-skill-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.compact-competency-row,
+.compact-special-skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 9px;
+  border: 1px solid #eadfc9;
+  background: #fdf7ea;
+}
+
+.compact-competency-row .character-toggle-group,
+.compact-special-skill-row .character-toggle-group {
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.compact-competency-row .toggle-pill,
+.compact-special-skill-row .toggle-pill,
+.compact-pill-grid .toggle-pill {
+  padding: 4px 7px;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
+.compact-special-skill-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.compact-special-skill-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(95px, 0.55fr);
+  gap: 6px;
+}
+
+.compact-pill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.compact-settings-form {
+  gap: 10px;
+}
+
+.compact-settings-form .character-edit-subsection,
+.compact-settings-section {
+  margin: 0;
+}
+
+.compact-settings-section h4,
+.compact-settings-section h5 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.compact-settings-help {
+  margin: -2px 0 8px;
+  font-size: 0.8rem;
+}
+
+.compact-setting-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-setting-grid--roll {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.compact-setting-grid--defense {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.compact-setting-row {
+  border: 1px solid #eadfc9;
+  border-radius: 10px;
+  background: #fdf7ea;
+  padding: 6px 8px;
+}
+
+.compact-setting-row--roll {
+  display: grid;
+  grid-template-columns: minmax(105px, 1fr) minmax(120px, 0.95fr);
+  align-items: end;
+  gap: 6px;
+}
+
+.compact-setting-row--defense {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.compact-setting-row--defense strong {
+  font-size: 0.9rem;
+}
+
+.compact-setting-field {
+  gap: 3px;
+  margin-bottom: 0;
+}
+
+.compact-setting-field span {
+  font-size: 0.75rem;
+}
+
+.compact-setting-field select {
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+}
+
+.compact-setting-note {
+  grid-column: 1 / -1;
+  margin: -1px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.compact-setting-row .character-toggle-group {
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.compact-setting-row .toggle-pill {
+  padding: 4px 7px;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
 .toggle-pill {
   display: inline-flex;
   align-items: center;
@@ -4255,7 +4525,22 @@ button:focus-visible,
 
 @media (max-width: 900px) {
   .character-edit-grid--identity,
-  .character-skill-grid--three-columns {
+  .character-skill-grid--three-columns,
+  .compact-setting-grid--roll,
+  .compact-setting-grid--defense {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-ability-grid,
+  .compact-character-meta-grid,
+  .life-armor-row--hp,
+  .life-armor-row--hit-dice,
+  .life-armor-row--armor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compact-setting-row--roll,
+  .compact-special-skill-grid {
     grid-template-columns: 1fr;
   }
 }
