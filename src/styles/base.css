@@ -4218,6 +4218,99 @@ button:focus-visible,
   flex-wrap: wrap;
 }
 
+
+.compact-settings-form {
+  gap: 10px;
+}
+
+.compact-settings-form .character-edit-subsection,
+.compact-settings-section {
+  margin: 0;
+}
+
+.compact-settings-section h4,
+.compact-settings-section h5 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.compact-settings-help {
+  margin: -2px 0 8px;
+  font-size: 0.8rem;
+}
+
+.compact-setting-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-setting-grid--roll {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.compact-setting-grid--defense {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.compact-setting-row {
+  border: 1px solid #eadfc9;
+  border-radius: 10px;
+  background: #fdf7ea;
+  padding: 6px 8px;
+}
+
+.compact-setting-row--roll {
+  display: grid;
+  grid-template-columns: minmax(105px, 1fr) minmax(120px, 0.95fr);
+  align-items: end;
+  gap: 6px;
+}
+
+.compact-setting-row--defense {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.compact-setting-row--defense strong {
+  font-size: 0.9rem;
+}
+
+.compact-setting-field {
+  gap: 3px;
+  margin-bottom: 0;
+}
+
+.compact-setting-field span {
+  font-size: 0.75rem;
+}
+
+.compact-setting-field select {
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+}
+
+.compact-setting-note {
+  grid-column: 1 / -1;
+  margin: -1px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.compact-setting-row .character-toggle-group {
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.compact-setting-row .toggle-pill {
+  padding: 4px 7px;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
 .toggle-pill {
   display: inline-flex;
   align-items: center;
@@ -4231,7 +4324,13 @@ button:focus-visible,
 
 @media (max-width: 900px) {
   .character-edit-grid--identity,
-  .character-skill-grid--three-columns {
+  .character-skill-grid--three-columns,
+  .compact-setting-grid--roll,
+  .compact-setting-grid--defense {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-setting-row--roll {
     grid-template-columns: 1fr;
   }
 }

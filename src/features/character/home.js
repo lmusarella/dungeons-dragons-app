@@ -1295,7 +1295,7 @@ function getRollAdjustmentData(character) {
 function buildRollAdjustmentFields(character) {
   const adjustments = getRollAdjustmentData(character);
   const form = document.createElement('div');
-  form.className = 'modal-form-grid';
+  form.className = 'modal-form-grid compact-settings-form compact-settings-form--rolls';
   const modeOptions = [
     { value: '', label: 'Nessuno' },
     { value: 'advantage', label: 'Vantaggio' },
@@ -1303,24 +1303,24 @@ function buildRollAdjustmentFields(character) {
   ];
   const buildRows = (title, scope, entries) => {
     const section = document.createElement('section');
-    section.className = 'character-edit-section';
-    section.innerHTML = `<h4>${title}</h4><p class="muted">Indica vantaggi/svantaggi temporanei o situazionali e la fonte.</p>`;
+    section.className = 'character-edit-section compact-settings-section';
+    section.innerHTML = `<h4>${title}</h4><p class="muted compact-settings-help">Indica solo gli override manuali; gli effetti automatici restano visibili sotto la riga.</p>`;
     const grid = document.createElement('div');
-    grid.className = 'character-skill-grid character-skill-grid--three-columns';
+    grid.className = 'compact-setting-grid compact-setting-grid--roll';
     entries.forEach((entry) => {
       const current = adjustments[scope]?.[entry.key] || {};
       const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
       const row = document.createElement('div');
-      row.className = 'character-skill-row';
+      row.className = 'compact-setting-row compact-setting-row--roll';
       const modeField = document.createElement('label');
-      modeField.className = 'field';
+      modeField.className = 'field compact-setting-field';
       const modeLabel = document.createElement('span');
       modeLabel.textContent = entry.label;
       const modeSelect = buildSelect(modeOptions, current.mode || '');
       modeSelect.name = `roll_${scope}_${entry.key}_mode`;
       modeField.append(modeLabel, modeSelect);
       const sourceField = document.createElement('label');
-      sourceField.className = 'field';
+      sourceField.className = 'field compact-setting-field';
       const sourceLabel = document.createElement('span');
       sourceLabel.textContent = 'Fonte manuale';
       const sourceSelect = buildSelect(rollAdjustmentSourceOptions, current.source || '');
@@ -1329,7 +1329,7 @@ function buildRollAdjustmentFields(character) {
       row.append(modeField, sourceField);
       if (automaticEffects.length) {
         const automaticList = document.createElement('p');
-        automaticList.className = 'muted';
+        automaticList.className = 'muted compact-setting-note';
         automaticList.textContent = `Automatico: ${automaticEffects.map((effect) => effect.reason).join(' ')}`;
         row.appendChild(automaticList);
       }
@@ -1387,13 +1387,13 @@ function buildDamageDefenseFields(character) {
     return groups;
   }, {});
   const form = document.createElement('div');
-  form.className = 'modal-form-grid';
+  form.className = 'modal-form-grid compact-settings-form compact-settings-form--defenses';
   form.innerHTML = Object.entries(grouped).map(([group, types]) => `
-    <section class="character-edit-section">
+    <section class="character-edit-section compact-settings-section">
       <h4>${group}</h4>
-      <div class="character-skill-grid character-skill-grid--three-columns">
+      <div class="compact-setting-grid compact-setting-grid--defense">
         ${types.map((type) => `
-          <div class="character-skill-row">
+          <div class="compact-setting-row compact-setting-row--defense">
             <strong>${type.label}</strong>
             <div class="character-toggle-group">
               <label class="toggle-pill">

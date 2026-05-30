@@ -653,7 +653,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   syncSpellcastingDerived();
 
   const rollAdjustmentSection = document.createElement('div');
-  rollAdjustmentSection.className = 'character-edit-section';
+  rollAdjustmentSection.className = 'character-edit-section compact-settings-form compact-settings-form--rolls';
   const rollModeOptions = [
     { value: '', label: 'Nessuno' },
     { value: 'advantage', label: 'Vantaggio' },
@@ -663,42 +663,42 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     const current = rollAdjustments?.[scope]?.[entry.key] || {};
     const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
     return `
-      <div class="character-skill-row">
-        <label class="field">
+      <div class="compact-setting-row compact-setting-row--roll">
+        <label class="field compact-setting-field">
           <span>${entry.label}</span>
           <select name="roll_${scope}_${entry.key}_mode">
             ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === (current.mode || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
           </select>
         </label>
-        <label class="field">
+        <label class="field compact-setting-field">
           <span>Fonte manuale</span>
           <select name="roll_${scope}_${entry.key}_source">
             ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === (current.source || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
           </select>
         </label>
-        ${automaticEffects.length ? `<p class="muted">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
+        ${automaticEffects.length ? `<p class="muted compact-setting-note">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
       </div>
     `;
   }).join('');
   rollAdjustmentSection.innerHTML = `
     <h4>Vantaggi & Svantaggi</h4>
-    <p class="muted">Registra vantaggi o svantaggi situazionali e la relativa fonte: effetti temporanei, armature, tratti razziali, privilegi di classe o condizioni narrative.</p>
-    <div class="character-edit-subsection">
+    <p class="muted compact-settings-help">Registra solo override manuali; condizioni, armature ed effetti automatici vengono mostrati direttamente nelle righe.</p>
+    <div class="character-edit-subsection compact-settings-section">
       <h5>Tiri salvezza</h5>
-      <div class="character-skill-grid character-skill-grid--three-columns">
+      <div class="compact-setting-grid compact-setting-grid--roll">
         ${renderRollAdjustmentRows('saving_throws', savingThrowList)}
       </div>
     </div>
-    <div class="character-edit-subsection">
+    <div class="character-edit-subsection compact-settings-section">
       <h5>Abilità</h5>
-      <div class="character-skill-grid character-skill-grid--three-columns">
+      <div class="compact-setting-grid compact-setting-grid--roll">
         ${renderRollAdjustmentRows('skills', skillList)}
       </div>
     </div>
   `;
 
   const damageDefenseSection = document.createElement('div');
-  damageDefenseSection.className = 'character-edit-section';
+  damageDefenseSection.className = 'character-edit-section compact-settings-form compact-settings-form--defenses';
   const groupedDamageTypes = damageTypeList.reduce((groups, type) => {
     const group = type.group || 'Altro';
     if (!groups[group]) groups[group] = [];
@@ -707,13 +707,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }, {});
   damageDefenseSection.innerHTML = `
     <h4>Resistenze & Immunità</h4>
-    <p class="muted">Seleziona le difese ai tipi di danno di D&D. La voce “Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
+    <p class="muted compact-settings-help">Seleziona rapidamente resistenza o immunità. “Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
     ${Object.entries(groupedDamageTypes).map(([group, types]) => `
-      <div class="character-edit-subsection">
+      <div class="character-edit-subsection compact-settings-section">
         <h5>${group}</h5>
-        <div class="character-skill-grid character-skill-grid--three-columns">
+        <div class="compact-setting-grid compact-setting-grid--defense">
           ${types.map((type) => `
-            <div class="character-skill-row">
+            <div class="compact-setting-row compact-setting-row--defense">
               <strong>${type.label}</strong>
               <div class="character-toggle-group">
                 <label class="toggle-pill">
