@@ -256,8 +256,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const statsGrid = document.createElement('div');
   statsGrid.className = 'character-edit-grid';
-  statsGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? 0 }));
   statsGrid.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
   statsGrid.appendChild(buildInput({
     label: 'Modificatore CA totale',
@@ -265,7 +263,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     type: 'number',
     value: characterData.ac_bonus ?? 0
   }));
-  statsGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? 0 }));
   statsGrid.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
   statsGrid.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
   statsGrid.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
@@ -306,6 +303,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   abilityGrid.appendChild(buildInput({ label: 'Saggezza', name: 'ability_wis', type: 'number', value: abilities.wis ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Carisma', name: 'ability_cha', type: 'number', value: abilities.cha ?? 0 }));
   abilitySection.appendChild(abilityGrid);
+  const abilityMetaGrid = document.createElement('div');
+  abilityMetaGrid.className = 'compact-character-meta-grid';
+  abilityMetaGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? 0 }));
+  abilityMetaGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? 0 }));
+  abilityMetaGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? 0 }));
+  abilitySection.appendChild(abilityMetaGrid);
 
   const skillSection = document.createElement('div');
   skillSection.className = 'character-edit-section compact-character-section';
@@ -661,7 +664,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     wis: abilitySection.querySelector('input[name="ability_wis"]'),
     cha: abilitySection.querySelector('input[name="ability_cha"]')
   };
-  const proficiencyInput = statsSection.querySelector('input[name="proficiency_bonus"]');
+  const proficiencyInput = abilitySection.querySelector('input[name="proficiency_bonus"]');
   const syncSpellcastingDerived = () => {
     const selectedAbility = spellcastingAbilitySelect.value;
     const abilityValue = selectedAbility ? abilityInputs[selectedAbility]?.value : null;
@@ -836,8 +839,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Tiri Salvezza', [savingSection])
     },
     {
-      title: 'Statistiche e difese',
-      content: buildEditGroup('Statistiche e difese', [statsSection, acSection])
+      title: 'Vita e Classe Armatura',
+      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection])
     },
     {
       title: 'Combattimento e magia',
@@ -852,8 +855,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection])
     },
     {
-      title: 'Note e dettagli',
-      content: buildEditGroup('Note e dettagli', [
+      title: 'Competenze e Talenti',
+      content: buildEditGroup('Competenze e Talenti', [
         proficiencySection,
         proficiencyNotesSection,
         languageNotesSection,
