@@ -3041,6 +3041,51 @@ button:focus-visible,
   max-height: 90vh;
 }
 
+.modal-card--character-editor {
+  width: min(1120px, 98vw);
+  height: min(94vh, 900px);
+  max-height: 94vh;
+}
+
+.modal-card--character-editor .modal-form,
+.modal-card--character-editor .modal-body,
+.modal-card--character-editor .character-edit-form,
+.modal-card--character-editor .character-edit-stepper {
+  min-height: 0;
+}
+
+.modal-card--character-editor .modal-body {
+  overflow: hidden;
+}
+
+.modal-card--character-editor .character-edit-form,
+.modal-card--character-editor .character-edit-stepper {
+  height: 100%;
+}
+
+.modal-card--character-editor .character-edit-stepper {
+  flex: 1 1 auto;
+}
+
+.modal-card--character-editor .character-edit-stepper-content {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modal-card--character-editor .character-edit-step {
+  grid-area: 1 / 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal-card--character-editor .character-edit-step > .character-edit-group {
+  box-sizing: border-box;
+  min-height: 100%;
+  width: 100%;
+}
+
 .modal-card--scrollable {
   max-height: 90vh;
 }
@@ -4068,6 +4113,10 @@ button:focus-visible,
   gap: 12px;
 }
 
+.character-edit-stepper-content {
+  min-height: 0;
+}
+
 .character-edit-stepper-nav {
   list-style: none;
   padding: 0;
@@ -4144,6 +4193,58 @@ button:focus-visible,
 
 .character-edit-grid--identity {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-armor-row {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.life-armor-row:last-child {
+  margin-bottom: 0;
+}
+
+.life-armor-row--hp,
+.life-armor-row--hit-dice {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-armor-row--armor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-armor-row .field {
+  margin-bottom: 0;
+}
+
+.compact-ac-options {
+  padding-top: 2px;
+}
+
+.compact-ac-options__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.compact-ac-options__header h4 {
+  margin: 0;
+}
+
+.compact-ac-options__header .muted {
+  font-size: 0.78rem;
+}
+
+.compact-ac-options__grid {
+  gap: 5px;
+}
+
+.compact-ac-options__grid .toggle-pill {
+  padding: 3px 6px;
+  font-size: 0.7rem;
 }
 
 .character-skill-grid {
@@ -4431,7 +4532,10 @@ button:focus-visible,
   }
 
   .compact-ability-grid,
-  .compact-character-meta-grid {
+  .compact-character-meta-grid,
+  .life-armor-row--hp,
+  .life-armor-row--hit-dice,
+  .life-armor-row--armor {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

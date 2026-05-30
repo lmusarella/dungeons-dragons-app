@@ -254,29 +254,38 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const statsSection = document.createElement('div');
   statsSection.className = 'character-edit-section';
 
-  const statsGrid = document.createElement('div');
-  statsGrid.className = 'character-edit-grid';
-  statsGrid.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
-  statsGrid.appendChild(buildInput({
+  const hpRow = document.createElement('div');
+  hpRow.className = 'life-armor-row life-armor-row--hp';
+  hpRow.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
+  hpRow.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
+  hpRow.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
+
+  const hitDiceRow = document.createElement('div');
+  hitDiceRow.className = 'life-armor-row life-armor-row--hit-dice';
+  hitDiceRow.appendChild(buildInput({ label: 'Dado vita (es. d8)', name: 'hit_dice_die', value: hitDice.die ?? '' }));
+  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
+  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
+
+  const armorRow = document.createElement('div');
+  armorRow.className = 'life-armor-row life-armor-row--armor';
+  armorRow.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
+  armorRow.appendChild(buildInput({
     label: 'Modificatore CA totale',
     name: 'ac_bonus',
     type: 'number',
     value: characterData.ac_bonus ?? 0
   }));
-  statsGrid.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Dado vita (es. d8)', name: 'hit_dice_die', value: hitDice.die ?? '' }));
-  statsGrid.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
-  statsGrid.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
-  statsSection.appendChild(statsGrid);
+
+  statsSection.append(hpRow, hitDiceRow, armorRow);
 
   const acSection = document.createElement('div');
-  acSection.className = 'character-edit-section';
+  acSection.className = 'character-edit-section compact-ac-options';
   acSection.innerHTML = `
-    <h4>Opzioni CA base</h4>
-    <p class="muted">Base = 10 + Destrezza. Seleziona eventuali modificatori extra.</p>
-    <div class="compact-pill-grid">
+    <div class="compact-ac-options__header">
+      <h4>Opzioni CA base</h4>
+      <span class="muted">Base 10 + DES; extra mod.</span>
+    </div>
+    <div class="compact-pill-grid compact-ac-options__grid">
       ${[
     { key: 'str', label: 'Forza' },
     { key: 'con', label: 'Costituzione' },
@@ -827,16 +836,21 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Background', [backgroundSection])
     },
     {
-      title: 'Caratteristiche',
-      content: buildEditGroup('Caratteristiche', [abilitySection])
+      title: 'Caratteristiche e Tiri Salvezza',
+      content: buildEditGroup('Caratteristiche e Tiri Salvezza', [abilitySection, savingSection])
     },
     {
       title: 'Abilità',
       content: buildEditGroup('Abilità', [skillSection, specialSkillSection])
     },
     {
-      title: 'Tiri Salvezza',
-      content: buildEditGroup('Tiri Salvezza', [savingSection])
+      title: 'Competenze e Talenti',
+      content: buildEditGroup('Competenze e Talenti', [
+        proficiencySection,
+        proficiencyNotesSection,
+        languageNotesSection,
+        talentNotesSection
+      ])
     },
     {
       title: 'Vita e Classe Armatura',
@@ -853,15 +867,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     {
       title: 'Resistenze & Immunità',
       content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection])
-    },
-    {
-      title: 'Competenze e Talenti',
-      content: buildEditGroup('Competenze e Talenti', [
-        proficiencySection,
-        proficiencyNotesSection,
-        languageNotesSection,
-        talentNotesSection
-      ])
     }
   ];
 
@@ -950,7 +955,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
-  modalCard?.classList.add('modal-card--wide');
+  modalCard?.classList.add('modal-card--wide', 'modal-card--character-editor');
 
   const tooltipHints = {
     name: 'Nome del personaggio mostrato in scheda.',
@@ -1035,7 +1040,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       };
     }
   });
-  modalCard?.classList.remove('modal-card--wide');
+  modalCard?.classList.remove('modal-card--wide', 'modal-card--character-editor');
   if (!formData) return;
   const name = formData.get('name')?.trim();
   if (!name) {
