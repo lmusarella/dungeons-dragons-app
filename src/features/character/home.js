@@ -1310,20 +1310,24 @@ function buildRollAdjustmentFields(character) {
     entries.forEach((entry) => {
       const current = adjustments[scope]?.[entry.key] || {};
       const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
+      const automaticRollMode = resolveRollModeEffects(automaticEffects).rollMode || '';
+      const automaticSource = automaticEffects.length === 1 ? (automaticEffects[0].source || '') : '';
+      const selectedMode = current.mode || automaticRollMode;
+      const selectedSource = current.source || automaticSource;
       const row = document.createElement('div');
       row.className = 'compact-setting-row compact-setting-row--roll';
       const modeField = document.createElement('label');
       modeField.className = 'field compact-setting-field';
       const modeLabel = document.createElement('span');
       modeLabel.textContent = entry.label;
-      const modeSelect = buildSelect(modeOptions, current.mode || '');
+      const modeSelect = buildSelect(modeOptions, selectedMode);
       modeSelect.name = `roll_${scope}_${entry.key}_mode`;
       modeField.append(modeLabel, modeSelect);
       const sourceField = document.createElement('label');
       sourceField.className = 'field compact-setting-field';
       const sourceLabel = document.createElement('span');
       sourceLabel.textContent = 'Fonte manuale';
-      const sourceSelect = buildSelect(rollAdjustmentSourceOptions, current.source || '');
+      const sourceSelect = buildSelect(rollAdjustmentSourceOptions, selectedSource);
       sourceSelect.name = `roll_${scope}_${entry.key}_source`;
       sourceField.append(sourceLabel, sourceSelect);
       row.append(modeField, sourceField);
@@ -1343,7 +1347,7 @@ function buildRollAdjustmentFields(character) {
   return form;
 }
 
-function parseRollAdjustmentsForm(formData) {
+function parseRollAdjustmentsForm(formData, character) {
   const next = { saving_throws: {}, skills: {} };
   [
     { scope: 'saving_throws', entries: savingThrowList },
@@ -1352,7 +1356,11 @@ function parseRollAdjustmentsForm(formData) {
     entries.forEach((entry) => {
       const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
       const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
-      if (mode === 'advantage' || mode === 'disadvantage') {
+      const automaticEffects = getAutomaticRollEffects(character, getState().cache.items || [], scope, entry);
+      const automaticMode = resolveRollModeEffects(automaticEffects).rollMode || '';
+      const automaticSource = automaticEffects.length === 1 ? (automaticEffects[0].source || '') : '';
+      const matchesAutomatic = mode === automaticMode && source === automaticSource;
+      if ((mode === 'advantage' || mode === 'disadvantage') && !matchesAutomatic) {
         next[scope][entry.key] = { mode, source };
       }
     });
@@ -1372,7 +1380,7 @@ async function handleRollAdjustmentsAction(container) {
   if (!formData) return;
   await saveCharacterData(activeCharacter, {
     ...activeCharacter.data,
-    roll_adjustments: parseRollAdjustmentsForm(formData)
+    roll_adjustments: parseRollAdjustmentsForm(formData, activeCharacter)
   }, 'Vantaggi/svantaggi aggiornati', () => {
     if (container) renderHome(container);
   });

@@ -244,7 +244,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   acSection.innerHTML = `
     <h4>Opzioni CA base</h4>
     <p class="muted">Base = 10 + Destrezza. Seleziona eventuali modificatori extra.</p>
-    <div class="character-saving-grid">
+    <div class="compact-pill-grid">
       ${[
     { key: 'str', label: 'Forza' },
     { key: 'con', label: 'Costituzione' },
@@ -260,10 +260,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     </div>
   `;
   const abilitySection = document.createElement('div');
-  abilitySection.className = 'character-edit-section';
+  abilitySection.className = 'character-edit-section compact-character-section';
   abilitySection.innerHTML = '<h4>Caratteristiche</h4>';
   const abilityGrid = document.createElement('div');
-  abilityGrid.className = 'character-edit-grid';
+  abilityGrid.className = 'compact-ability-grid';
   abilityGrid.appendChild(buildInput({ label: 'Forza', name: 'ability_str', type: 'number', value: abilities.str ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Destrezza', name: 'ability_dex', type: 'number', value: abilities.dex ?? 0 }));
   abilityGrid.appendChild(buildInput({ label: 'Costituzione', name: 'ability_con', type: 'number', value: abilities.con ?? 0 }));
@@ -273,15 +273,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   abilitySection.appendChild(abilityGrid);
 
   const skillSection = document.createElement('div');
-  skillSection.className = 'character-edit-section';
+  skillSection.className = 'character-edit-section compact-character-section';
   skillSection.innerHTML = `
     <h4>Competenze e maestria</h4>
-    <div class="character-skill-grid character-skill-grid--three-columns">
+    <div class="compact-competency-grid">
       ${skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
     return `
-        <div class="character-skill-row character-skill-row--compact">
+        <div class="compact-competency-row">
           <div class="character-skill-row__meta">
             <strong>${skill.label}</strong>
             <span class="muted">${abilityShortLabel[skill.ability]}</span>
@@ -327,10 +327,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ];
 
   const specialSkillSection = document.createElement('div');
-  specialSkillSection.className = 'character-edit-section';
-  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
+  specialSkillSection.className = 'character-edit-section compact-character-section';
+  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted compact-settings-help">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
   const specialSkillList = document.createElement('div');
-  specialSkillList.className = 'character-skill-grid';
+  specialSkillList.className = 'compact-special-skill-list';
   const addSpecialSkillButton = document.createElement('button');
   addSpecialSkillButton.type = 'button';
   addSpecialSkillButton.className = 'ghost-button ghost-button--compact';
@@ -365,11 +365,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     }
     draftSpecialSkills.forEach((entry, index) => {
       const row = document.createElement('div');
-      row.className = 'character-skill-row';
+      row.className = 'compact-special-skill-row';
       row.dataset.specialSkillRow = entry.id;
 
       const grid = document.createElement('div');
-      grid.className = 'character-edit-grid';
+      grid.className = 'compact-special-skill-grid';
       grid.appendChild(buildInput({
         label: 'Nome',
         name: `special_skill_name_${index}`,
@@ -457,10 +457,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   renderSpecialSkillRows();
 
   const savingSection = document.createElement('div');
-  savingSection.className = 'character-edit-section';
+  savingSection.className = 'character-edit-section compact-character-section';
   savingSection.innerHTML = `
     <h4>Tiri salvezza</h4>
-    <div class="character-saving-grid">
+    <div class="compact-pill-grid">
       ${savingThrowList.map((save) => {
     const proficient = Boolean(savingStates[save.key]);
     return `
@@ -474,10 +474,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   `;
 
   const proficiencySection = document.createElement('div');
-  proficiencySection.className = 'character-edit-section';
+  proficiencySection.className = 'character-edit-section compact-character-section';
   proficiencySection.innerHTML = `
     <h4>Competenze equipaggiamento</h4>
-    <div class="character-saving-grid">
+    <div class="compact-pill-grid">
       ${equipmentProficiencyList.map((prof) => {
     const proficient = Boolean(proficiencies[prof.key]);
     return `
@@ -659,21 +659,37 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     { value: 'advantage', label: 'Vantaggio' },
     { value: 'disadvantage', label: 'Svantaggio' }
   ];
+  const getAutomaticDrawerRollMode = (effects) => {
+    const hasAdvantage = effects.some((effect) => effect.startsWith('Vantaggio'));
+    const hasDisadvantage = effects.some((effect) => effect.startsWith('Svantaggio'));
+    if (hasAdvantage && hasDisadvantage) return '';
+    if (hasAdvantage) return 'advantage';
+    if (hasDisadvantage) return 'disadvantage';
+    return '';
+  };
+  const getAutomaticDrawerSource = (effects) => {
+    if (effects.length !== 1) return '';
+    if (effects[0].toLowerCase().includes('armatura')) return 'armor';
+    if (effects[0].toLowerCase().includes('condizion')) return 'condition';
+    return '';
+  };
   const renderRollAdjustmentRows = (scope, entries) => entries.map((entry) => {
     const current = rollAdjustments?.[scope]?.[entry.key] || {};
     const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
+    const selectedMode = current.mode || getAutomaticDrawerRollMode(automaticEffects);
+    const selectedSource = current.source || getAutomaticDrawerSource(automaticEffects);
     return `
       <div class="compact-setting-row compact-setting-row--roll">
         <label class="field compact-setting-field">
           <span>${entry.label}</span>
           <select name="roll_${scope}_${entry.key}_mode">
-            ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === (current.mode || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
+            ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === selectedMode ? 'selected' : ''}>${option.label}</option>`).join('')}
           </select>
         </label>
         <label class="field compact-setting-field">
           <span>Fonte manuale</span>
           <select name="roll_${scope}_${entry.key}_source">
-            ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === (current.source || '') ? 'selected' : ''}>${option.label}</option>`).join('')}
+            ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === selectedSource ? 'selected' : ''}>${option.label}</option>`).join('')}
           </select>
         </label>
         ${automaticEffects.length ? `<p class="muted compact-setting-note">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
@@ -771,9 +787,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Statistiche e difese', [statsSection, acSection])
     },
     {
-      title: 'Caratteristiche e competenze',
-      content: buildEditGroup('Caratteristiche e competenze', [
-        abilitySection,
+      title: 'Caratteristiche',
+      content: buildEditGroup('Caratteristiche', [abilitySection])
+    },
+    {
+      title: 'Competenze',
+      content: buildEditGroup('Competenze', [
         skillSection,
         specialSkillSection,
         savingSection,
@@ -1004,7 +1023,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     entries.forEach((entry) => {
       const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
       const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
-      if (mode === 'advantage' || mode === 'disadvantage') {
+      const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
+      const matchesAutomatic = mode === getAutomaticDrawerRollMode(automaticEffects) && source === getAutomaticDrawerSource(automaticEffects);
+      if ((mode === 'advantage' || mode === 'disadvantage') && !matchesAutomatic) {
         nextRollAdjustments[scope][entry.key] = { mode, source };
       }
     });

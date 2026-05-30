@@ -4219,6 +4219,91 @@ button:focus-visible,
 }
 
 
+
+.compact-character-section {
+  margin: 0;
+}
+
+.compact-character-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+}
+
+.compact-ability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.compact-ability-grid .field,
+.compact-special-skill-grid .field {
+  margin-bottom: 0;
+  gap: 3px;
+}
+
+.compact-ability-grid .field span,
+.compact-special-skill-grid .field span {
+  font-size: 0.78rem;
+}
+
+.compact-ability-grid input,
+.compact-special-skill-grid input,
+.compact-special-skill-grid select {
+  min-height: 36px;
+  padding: 7px 9px;
+  border-radius: 9px;
+}
+
+.compact-competency-grid,
+.compact-special-skill-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 6px;
+}
+
+.compact-competency-row,
+.compact-special-skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid #eadfc9;
+  background: #fdf7ea;
+}
+
+.compact-competency-row .character-toggle-group,
+.compact-special-skill-row .character-toggle-group {
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.compact-competency-row .toggle-pill,
+.compact-special-skill-row .toggle-pill,
+.compact-pill-grid .toggle-pill {
+  padding: 4px 7px;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
+.compact-special-skill-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.compact-special-skill-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(95px, 0.55fr);
+  gap: 6px;
+}
+
+.compact-pill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .compact-settings-form {
   gap: 10px;
 }
@@ -4330,7 +4415,8 @@ button:focus-visible,
     grid-template-columns: 1fr;
   }
 
-  .compact-setting-row--roll {
+  .compact-setting-row--roll,
+  .compact-special-skill-grid {
     grid-template-columns: 1fr;
   }
 }
