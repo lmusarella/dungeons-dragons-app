@@ -163,10 +163,10 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
     <div class="inventory-table ${nested ? 'inventory-table--nested' : ''}">
       <div class="inventory-table__header">
         <span>Oggetto</span>
-        <span>Categoria</span>
+        <span>Cat.</span>
         <span>Qtà</span>
         <span>Peso</span>
-        <span>Volume</span>
+        <span>Vol.</span>
         <span>Azioni</span>
       </div>
       <div class="inventory-table__body">
