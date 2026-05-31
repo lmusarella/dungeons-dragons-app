@@ -22,3 +22,25 @@ body {
   background-position: center;
   background-repeat: repeat;
 }
+
+.inventory-container-accordion {
+  display: block;
+}
+
+.inventory-container-accordion__summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.inventory-container-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.inventory-container-accordion__icon {
+  display: inline-flex;
+  transition: transform 160ms ease;
+}
+
+.inventory-container-accordion:not([open]) .inventory-container-accordion__icon {
+  transform: rotate(-90deg);
+}

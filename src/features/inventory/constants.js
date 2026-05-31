@@ -81,3 +81,31 @@ export const armorTypes = [
   { value: 'medium', label: 'Media' },
   { value: 'heavy', label: 'Pesante' }
 ];
+
+
+export const ammunitionTypes = [
+  { value: '', label: 'Nessuna' },
+  { value: 'arrow', label: 'Frecce' },
+  { value: 'bolt', label: 'Dardi' },
+  { value: 'bullet', label: 'Proiettili' }
+];
+
+export const damageTypeOptions = [
+  { value: '', label: 'Seleziona' },
+  { value: 'acid', label: 'Acido' },
+  { value: 'bludgeoning', label: 'Contundente' },
+  { value: 'piercing', label: 'Perforante' },
+  { value: 'slashing', label: 'Tagliente' },
+  { value: 'cold', label: 'Freddo' },
+  { value: 'fire', label: 'Fuoco' },
+  { value: 'force', label: 'Forza' },
+  { value: 'lightning', label: 'Fulmine' },
+  { value: 'thunder', label: 'Tuono' },
+  { value: 'necrotic', label: 'Necrotico' },
+  { value: 'poison', label: 'Veleno' },
+  { value: 'psychic', label: 'Psichico' },
+  { value: 'radiant', label: 'Radioso' }
+];
+
+export const ammunitionTypeLabels = new Map(ammunitionTypes.map((type) => [type.value, type.label]));
+export const damageTypeLabels = new Map(damageTypeOptions.map((type) => [type.value, type.label]));

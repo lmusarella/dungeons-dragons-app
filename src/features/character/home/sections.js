@@ -15,6 +15,7 @@ import {
   formatSigned,
   getAbilityModifier,
   getEquipSlots,
+  getWeaponDamageModes,
   normalizeNumber,
   parseProficiencyNotes,
   parseProficiencyNotesSections,
@@ -632,11 +633,7 @@ export function buildAttackSection(character, items = []) {
     const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
     const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
     const attackTotal = abilityMod + proficiencyBonus + (Number(weapon.attack_modifier) || 0) + attackBonus;
-    const damageTotal = abilityMod + (Number(weapon.damage_modifier) || 0) + damageBonus;
-    const damageDie = weapon.damage_die ? weapon.damage_die : '-';
-    const damageText = damageDie === '-'
-      ? '-'
-      : `${damageDie}${damageTotal ? ` ${formatSigned(damageTotal)}` : ''}`;
+    const damageModes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
     const normalRange = Number(weapon.range_normal) || null;
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
     const meleeRange = Number(weapon.melee_range) || 1.5;
@@ -653,11 +650,19 @@ export function buildAttackSection(character, items = []) {
     const rangeText = rangeParts.join(' · ');
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
-    return `
+    const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
+    return renderedModes.map((mode) => {
+      const modeDamageTotal = abilityMod + (Number(mode.damageModifier) || 0) + damageBonus;
+      const damageText = mode.damageDie
+        ? `${mode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
+        : '-';
+      const modeLabel = mode.id === 'alternate' ? ` · ${mode.label}` : '';
+      const rollDamageKey = `weapon:${weaponKey}:${mode.id}`;
+      return `
           <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
             <div class="attack-card__body">
               <div class="attack-card__title">
-                <strong class="attack-card__name">${weapon.name}</strong>
+                <strong class="attack-card__name">${weapon.name}${modeLabel}</strong>
                 <span class="modifier-ability modifier-ability--${attackAbility}">${abilityLabel}</span>
                 <span class="attack-card__hit">${formatSigned(attackTotal)}</span>
               </div>
@@ -666,11 +671,12 @@ export function buildAttackSection(character, items = []) {
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
-            <button class="icon-button icon-button--fire" data-roll-damage="${weaponKey}" aria-label="Calcola danni ${weapon.name}">
+            <button class="icon-button icon-button--fire" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel}">
               <span aria-hidden="true">🔥</span>
             </button>
           </div>
         `;
+    }).join('');
   }).join('')}
         ${hasSpellAttacks
     ? cantripAttacks.map((spell) => {

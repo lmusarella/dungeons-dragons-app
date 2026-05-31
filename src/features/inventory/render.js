@@ -4,6 +4,7 @@ import {
   getItemStatusLabels,
   normalizeTransactionAmount
 } from './utils.js';
+import { ammunitionTypeLabels, damageTypeLabels } from './constants.js';
 
 function buildTransactionAmount(amount) {
   const baseUrl = import.meta.env.BASE_URL;
@@ -115,9 +116,10 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
         ? `Volume ${usedVolume}`
         : '';
     return `
-      <div class="inventory-group inventory-group--container">
-        <div class="inventory-table__row inventory-table__row--container">
+      <details class="inventory-group inventory-group--container inventory-container-accordion" open>
+        <summary class="inventory-table__row inventory-table__row--container inventory-container-accordion__summary">
           <div class="inventory-table__cell inventory-table__cell--item">
+            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
             <div class="item-info-body">
               <strong>${container.name}</strong>
               ${volumeLabel ? `<span class="muted">${volumeLabel}</span>` : ''}
@@ -135,12 +137,12 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
               <span aria-hidden="true">🗑️</span>
             </button>
           </div>
-        </div>
+        </summary>
         <div class="inventory-group__children">
           <p class="inventory-group__label">Contenuto del contenitore</p>
           ${buildItemList(children, weightUnit, { nested: true, emptyLabel: 'Nessun oggetto nel contenitore.' })}
         </div>
-      </div>
+      </details>
     `;
   }).join('');
 
@@ -182,6 +184,9 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
               ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : ''}
               <div class="item-info-body">
                 <button class="item-name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
+                ${item.ammunition_type ? `<span class="muted">Munizioni: ${ammunitionTypeLabels.get(item.ammunition_type) || item.ammunition_type}</span>` : ''}
+                ${item.consumes_ammunition ? `<span class="muted">Consuma: ${ammunitionTypeLabels.get(item.required_ammunition_type) || item.required_ammunition_type || 'munizioni'}</span>` : ''}
+                ${item.damage_type ? `<span class="muted">Danno: ${damageTypeLabels.get(item.damage_type) || item.damage_type}</span>` : ''}
               </div>
             </div>
             <div class="inventory-table__cell">${getCategoryLabel(item.category)}</div>

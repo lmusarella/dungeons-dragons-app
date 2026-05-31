@@ -225,7 +225,28 @@ export function getSpellTypeLabel(spell) {
   return isCantrip ? 'Trucchetto' : 'Incantesimo';
 }
 
-export function buildWeaponDamageOverlayConfig(character, weapon) {
+export function getWeaponDamageModes(weapon) {
+  if (!weapon) return [];
+  const modes = [{
+    id: 'default',
+    label: weapon.damage_mode_label || 'Una mano',
+    damageDie: weapon.damage_die || null,
+    damageModifier: Number(weapon.damage_modifier) || 0,
+    damageType: weapon.damage_type || null
+  }];
+  if (weapon.has_alternate_damage_mode && weapon.alternate_damage_die) {
+    modes.push({
+      id: 'alternate',
+      label: weapon.alternate_damage_label || 'Due mani',
+      damageDie: weapon.alternate_damage_die,
+      damageModifier: Number(weapon.alternate_damage_modifier) || 0,
+      damageType: weapon.alternate_damage_type || weapon.damage_type || null
+    });
+  }
+  return modes;
+}
+
+export function buildWeaponDamageOverlayConfig(character, weapon, modeId = 'default') {
   if (!character || !weapon) return null;
   const data = character.data || {};
   const weaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
@@ -235,13 +256,16 @@ export function buildWeaponDamageOverlayConfig(character, weapon) {
   const damageBonusMelee = Number(data.damage_bonus_melee ?? data.damage_bonus) || 0;
   const damageBonusRanged = Number(data.damage_bonus_ranged ?? data.damage_bonus) || 0;
   const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
-  const damageTotal = abilityMod + (Number(weapon.damage_modifier) || 0) + damageBonus;
-  const dice = parseDamageDice(weapon.damage_die);
+  const mode = getWeaponDamageModes(weapon).find((entry) => entry.id === modeId) || getWeaponDamageModes(weapon)[0];
+  const damageTotal = abilityMod + (Number(mode?.damageModifier) || 0) + damageBonus;
+  const dice = parseDamageDice(mode?.damageDie);
   if (!dice) return null;
+  const modeLabel = mode?.id === 'alternate' ? ` (${mode.label})` : '';
   return {
-    title: `Danni ${weapon.name}`,
+    title: `Danni ${weapon.name}${modeLabel}`,
     notation: dice.notation,
-    modifier: damageTotal
+    modifier: damageTotal,
+    damageType: mode?.damageType || null
   };
 }
 

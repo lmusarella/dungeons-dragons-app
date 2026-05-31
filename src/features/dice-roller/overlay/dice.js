@@ -124,6 +124,13 @@ function buildOverlayMarkup() {
                 <option value="minus-d6">-d6</option>
               </select>
             </div>
+            <div class="diceov-control" data-critical-damage-field hidden>
+              <span class="diceov-label">Critico</span>
+              <label class="diceov-toggle">
+                <input type="checkbox" name="dice-critical-damage" />
+                <span class="diceov-toggle-track" aria-hidden="true"></span>
+              </label>
+            </div>
             <div class="diceov-control" data-sneak-attack-field hidden>
               <span class="diceov-label">Attacco furtivo</span>
               <label class="diceov-toggle">
@@ -460,6 +467,10 @@ function syncGenericInputsFromNotation(overlay, value) {
   if (typeInput) typeInput.value = `d${match[2]}`;
 }
 
+function scaleDiceNotation(value, multiplier = 2) {
+  return String(value || '').replace(/(\d+)\s*d\s*(\d+)/gi, (_, count, sides) => `${Number(count) * multiplier}d${sides}`);
+}
+
 function resetLegacyDiceScene() {
   if (window.main && typeof window.main.clearDice === 'function') {
     window.main.clearDice();
@@ -551,6 +562,8 @@ export function openDiceOverlay({
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
   const historyPanel = overlayEl.querySelector('[data-dice-history-panel]');
   const historyList = overlayEl.querySelector('[data-dice-history]');
+  const criticalDamageField = overlayEl.querySelector('[data-critical-damage-field]');
+  const criticalDamageInput = overlayEl.querySelector('input[name="dice-critical-damage"]');
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
@@ -943,9 +956,11 @@ export function openDiceOverlay({
   function updateNotationFromGeneric() {
     const notation = notationInput?.value?.trim();
     const sneakDice = String(sneakAttackDice || '').trim();
-    const addSneak = rollType === 'DMG' && mode === 'generic' && sneakAttackInput?.checked && sneakDice;
+    const isDamageRoll = rollType === 'DMG' && mode === 'generic';
+    const addSneak = isDamageRoll && sneakAttackInput?.checked && sneakDice;
     const baseRaw = notation || buildGenericNotation(overlayEl);
-    const baseValue = addSneak ? `${baseRaw}${sneakDice.startsWith('-') ? '' : '+'}${sneakDice}` : baseRaw;
+    const combinedBase = addSneak ? `${baseRaw}${sneakDice.startsWith('-') ? '' : '+'}${sneakDice}` : baseRaw;
+    const baseValue = isDamageRoll && criticalDamageInput?.checked ? scaleDiceNotation(combinedBase, 2) : combinedBase;
     const buffConfig = getBuffConfig();
     const value = buffConfig
       ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
@@ -1079,6 +1094,7 @@ export function openDiceOverlay({
   if (modifierInput) modifierInput.oninput = updateModifier;
   if (genericModifierInput) genericModifierInput.oninput = updateModifier;
   if (notationInput) notationInput.oninput = updateNotationFromGeneric;
+  if (criticalDamageInput) criticalDamageInput.onchange = updateNotationFromGeneric;
   if (sneakAttackInput) sneakAttackInput.onchange = updateNotationFromGeneric;
   if (selectInput) {
     selectInput.onchange = () => {
@@ -1123,8 +1139,11 @@ export function openDiceOverlay({
 
   setSelectionOptions();
   setBuffVisibility();
+  const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
+  if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
+  if (criticalDamageInput) criticalDamageInput.checked = false;
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
-  if (sneakAttackField) sneakAttackField.toggleAttribute('hidden', !(rollType === 'DMG' && mode === 'generic' && hasSneakAttack));
+  if (sneakAttackField) sneakAttackField.toggleAttribute('hidden', !(isDamageGenericRoll && hasSneakAttack));
   if (sneakAttackInput) sneakAttackInput.checked = false;
   setInspirationAvailability(state.inspirationAvailable);
   applyDefaultRollMode();
