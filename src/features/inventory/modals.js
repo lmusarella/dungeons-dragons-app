@@ -114,7 +114,7 @@ export async function openItemModal(character, item, items, onSave) {
   const maxVolumeInput = maxVolumeField.querySelector('input');
   const ammunitionTypeField = document.createElement('label');
   ammunitionTypeField.className = 'field';
-  ammunitionTypeField.innerHTML = '<span>Tipo munizione contenuta</span>';
+  ammunitionTypeField.innerHTML = '<span>Tipo munizione dell\'oggetto</span>';
   const ammunitionTypeSelect = buildSelect(ammunitionTypes, item?.ammunition_type ?? '');
   ammunitionTypeSelect.name = 'ammunition_type';
   ammunitionTypeField.appendChild(ammunitionTypeSelect);
@@ -247,6 +247,7 @@ export async function openItemModal(character, item, items, onSave) {
     label: 'Consuma munizioni',
     checked: item?.consumes_ammunition ?? false
   });
+  consumesAmmoField.classList.add('item-modal-toggle-field--compact');
   const weaponAmmoTypeField = document.createElement('label');
   weaponAmmoTypeField.className = 'field';
   weaponAmmoTypeField.innerHTML = '<span>Munizione richiesta</span>';
@@ -255,9 +256,10 @@ export async function openItemModal(character, item, items, onSave) {
   weaponAmmoTypeField.appendChild(weaponAmmoTypeSelect);
   const { field: alternateModeField, input: alternateModeInput } = buildToggleField({
     name: 'has_alternate_damage_mode',
-    label: 'Modalità impugnatura alternativa',
+    label: 'Impugnatura alternativa',
     checked: item?.has_alternate_damage_mode ?? false
   });
+  alternateModeField.classList.add('item-modal-toggle-field--compact');
   const alternateModeLabelField = buildInput({
     label: 'Nome modalità alternativa',
     name: 'alternate_damage_label',
@@ -488,7 +490,8 @@ export async function openItemModal(character, item, items, onSave) {
     toggleFieldVisibility(armorBonusRow, showArmorFields);
     toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
     toggleFieldVisibility(maxVolumeField, isContainer);
-    toggleFieldVisibility(ammunitionTypeField, !isWeapon);
+    toggleFieldVisibility(ammunitionTypeField, !isWeapon && !isContainer);
+    ammunitionTypeSelect.disabled = isWeapon || isContainer;
     if (maxVolumeInput) {
       maxVolumeInput.disabled = !isContainer;
       if (!isContainer) {

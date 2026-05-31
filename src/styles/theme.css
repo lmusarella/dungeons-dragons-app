@@ -196,7 +196,11 @@ body {
 }
 
 .inventory-table--nested .inventory-table__header {
-  display: none;
+  display: grid;
+  position: static;
+  margin-top: 0;
+  padding-block: 4px;
+  background: rgba(253, 247, 234, 0.72);
 }
 
 .inventory-table--nested .inventory-table__row {
@@ -221,4 +225,23 @@ body {
   .inventory-table__cell--actions {
     justify-content: flex-end;
   }
+}
+
+
+.item-modal-toggle-field--compact {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 10px;
+  gap: 8px;
+}
+
+.item-modal-toggle-field--compact .condition-modal__item-label {
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+.item-modal-toggle-field--compact .diceov-toggle-track {
+  transform: scale(0.82);
+  transform-origin: right center;
 }

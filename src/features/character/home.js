@@ -2029,6 +2029,7 @@ function findAmmunitionForWeapon(items, weapon) {
   const requiredType = weapon.required_ammunition_type || weapon.ammunition_type;
   return (items || [])
     .filter((item) => item.id !== weapon.id)
+    .filter((item) => item.category !== 'container')
     .filter((item) => !requiredType || item.ammunition_type === requiredType)
     .filter((item) => Number(item.qty) > 0)
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }))[0] || null;
