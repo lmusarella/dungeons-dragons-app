@@ -245,3 +245,67 @@ body {
   transform: scale(0.82);
   transform-origin: right center;
 }
+
+
+.weapon-damage-modes-field {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px dashed rgba(148, 123, 90, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 250, 241, 0.58);
+}
+
+.weapon-damage-modes-field__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.weapon-damage-modes-field__header p {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+}
+
+.weapon-damage-modes-field__list {
+  display: grid;
+  gap: 6px;
+}
+
+.weapon-damage-mode-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.1fr) minmax(90px, 0.8fr) minmax(76px, 0.55fr) minmax(120px, 1fr) auto;
+  gap: 6px;
+  align-items: end;
+  padding: 6px;
+  border: 1px solid rgba(234, 223, 201, 0.9);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.weapon-damage-mode-row .field {
+  gap: 3px;
+}
+
+.weapon-damage-mode-row .field span {
+  font-size: 0.7rem;
+}
+
+.weapon-damage-mode-row__remove {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  align-self: center;
+}
+
+@media (max-width: 720px) {
+  .weapon-damage-mode-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .weapon-damage-mode-row__remove {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}

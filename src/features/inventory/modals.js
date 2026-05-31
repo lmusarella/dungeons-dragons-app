@@ -254,36 +254,94 @@ export async function openItemModal(character, item, items, onSave) {
   const weaponAmmoTypeSelect = buildSelect(ammunitionTypes, item?.required_ammunition_type ?? item?.ammunition_type ?? '');
   weaponAmmoTypeSelect.name = 'required_ammunition_type';
   weaponAmmoTypeField.appendChild(weaponAmmoTypeSelect);
-  const { field: alternateModeField, input: alternateModeInput } = buildToggleField({
-    name: 'has_alternate_damage_mode',
-    label: 'Impugnatura alternativa',
-    checked: item?.has_alternate_damage_mode ?? false
-  });
-  alternateModeField.classList.add('item-modal-toggle-field--compact');
-  const alternateModeLabelField = buildInput({
-    label: 'Nome modalità alternativa',
-    name: 'alternate_damage_label',
-    placeholder: 'Es. Due mani',
-    value: item?.alternate_damage_label ?? ''
-  });
-  const alternateDamageDieField = buildInput({
-    label: 'Dado danno alternativo',
-    name: 'alternate_damage_die',
-    placeholder: 'Es. 1d10',
-    value: item?.alternate_damage_die ?? ''
-  });
-  const alternateDamageModifierField = buildInput({
-    label: 'Mod. danno alternativo',
-    name: 'alternate_damage_modifier',
-    type: 'number',
-    value: item?.alternate_damage_modifier ?? item?.damage_modifier ?? 0
-  });
-  const alternateDamageTypeField = document.createElement('label');
-  alternateDamageTypeField.className = 'field';
-  alternateDamageTypeField.innerHTML = '<span>Tipo danno alternativo</span>';
-  const alternateDamageTypeSelect = buildSelect(damageTypeOptions, item?.alternate_damage_type ?? item?.damage_type ?? '');
-  alternateDamageTypeSelect.name = 'alternate_damage_type';
-  alternateDamageTypeField.appendChild(alternateDamageTypeSelect);
+  const parseWeaponDamageModes = (sourceItem) => {
+    const rawModes = sourceItem?.weapon_damage_modes;
+    let parsedModes = [];
+    if (Array.isArray(rawModes)) {
+      parsedModes = rawModes;
+    } else if (typeof rawModes === 'string' && rawModes.trim()) {
+      try {
+        const parsed = JSON.parse(rawModes);
+        parsedModes = Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        parsedModes = [];
+      }
+    }
+    const normalized = parsedModes
+      .map((mode) => ({
+        label: mode.label || mode.name || '',
+        damage_die: mode.damage_die || mode.damageDie || '',
+        damage_modifier: mode.damage_modifier ?? mode.damageModifier ?? 0,
+        damage_type: mode.damage_type || mode.damageType || sourceItem?.damage_type || ''
+      }))
+      .filter((mode) => mode.label || mode.damage_die);
+    if (!normalized.length && sourceItem?.has_alternate_damage_mode && sourceItem?.alternate_damage_die) {
+      normalized.push({
+        label: sourceItem.alternate_damage_label || 'Due mani',
+        damage_die: sourceItem.alternate_damage_die,
+        damage_modifier: sourceItem.alternate_damage_modifier ?? sourceItem.damage_modifier ?? 0,
+        damage_type: sourceItem.alternate_damage_type || sourceItem.damage_type || ''
+      });
+    }
+    return normalized;
+  };
+  const weaponDamageModesField = document.createElement('div');
+  weaponDamageModesField.className = 'weapon-damage-modes-field';
+  weaponDamageModesField.innerHTML = `
+    <div class="weapon-damage-modes-field__header">
+      <div>
+        <strong>Impugnature aggiuntive</strong>
+        <p class="muted">Aggiungi più modalità oltre al danno base dell'arma.</p>
+      </div>
+      <button type="button" class="resource-action-button" data-add-weapon-damage-mode>Aggiungi</button>
+    </div>
+    <div class="weapon-damage-modes-field__list" data-weapon-damage-modes></div>
+  `;
+  const weaponDamageModesList = weaponDamageModesField.querySelector('[data-weapon-damage-modes]');
+  const addWeaponDamageModeButton = weaponDamageModesField.querySelector('[data-add-weapon-damage-mode]');
+  const createWeaponDamageModeRow = ({ label = '', damage_die = '', damage_modifier = 0, damage_type = '' } = {}) => {
+    const row = document.createElement('div');
+    row.className = 'weapon-damage-mode-row';
+    const labelField = buildInput({
+      label: 'Nome',
+      name: 'weapon_damage_mode_label',
+      placeholder: 'Es. Due mani',
+      value: label
+    });
+    const dieField = buildInput({
+      label: 'Dado',
+      name: 'weapon_damage_mode_die',
+      placeholder: 'Es. 1d10',
+      value: damage_die
+    });
+    const modifierField = buildInput({
+      label: 'Mod.',
+      name: 'weapon_damage_mode_modifier',
+      type: 'number',
+      value: damage_modifier ?? 0
+    });
+    const typeField = document.createElement('label');
+    typeField.className = 'field';
+    typeField.innerHTML = '<span>Tipo</span>';
+    const typeSelect = buildSelect(damageTypeOptions, damage_type || item?.damage_type || '');
+    typeSelect.name = 'weapon_damage_mode_type';
+    typeField.appendChild(typeSelect);
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'icon-button weapon-damage-mode-row__remove';
+    removeButton.setAttribute('aria-label', 'Rimuovi impugnatura');
+    removeButton.title = 'Rimuovi';
+    removeButton.innerHTML = '<span aria-hidden="true">🗑️</span>';
+    removeButton.addEventListener('click', () => row.remove());
+    row.append(labelField, dieField, modifierField, typeField, removeButton);
+    enhanceNumericFields(row);
+    return row;
+  };
+  const addWeaponDamageModeRow = (mode = {}) => {
+    weaponDamageModesList?.appendChild(createWeaponDamageModeRow(mode));
+  };
+  parseWeaponDamageModes(item).forEach((mode) => addWeaponDamageModeRow(mode));
+  addWeaponDamageModeButton?.addEventListener('click', () => addWeaponDamageModeRow({ damage_type: damageTypeSelect.value }));
   const { field: thrownField, input: thrownInput } = buildToggleField({
     name: 'is_thrown',
     label: 'Proprietà lancio',
@@ -353,8 +411,6 @@ export async function openItemModal(character, item, items, onSave) {
   const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced');
   const weaponDamageRow = buildRow([damageDieField, damageTypeField, attackModifierField, damageModifierField], 'compact');
   const weaponAmmoRow = buildRow([consumesAmmoField, weaponAmmoTypeField], 'compact');
-  const weaponAlternateToggleRow = buildRow([alternateModeField], 'compact');
-  const weaponAlternateRow = buildRow([alternateModeLabelField, alternateDamageDieField, alternateDamageModifierField, alternateDamageTypeField], 'compact');
   const weaponThrownRow = buildRow([thrownField], 'compact');
   const armorPrimaryRow = buildRow([armorTypeField, armorClassField], 'balanced');
   const armorBonusRow = buildRow([armorBonusField, shieldBonusField, shieldField], 'compact');
@@ -362,8 +418,7 @@ export async function openItemModal(character, item, items, onSave) {
   proficiencySection.appendChild(weaponPrimaryRow);
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(weaponAmmoRow);
-  proficiencySection.appendChild(weaponAlternateToggleRow);
-  proficiencySection.appendChild(weaponAlternateRow);
+  proficiencySection.appendChild(weaponDamageModesField);
   proficiencySection.appendChild(weaponThrownRow);
   proficiencySection.appendChild(rangeGrid);
   proficiencySection.appendChild(armorPrimaryRow);
@@ -439,16 +494,9 @@ export async function openItemModal(character, item, items, onSave) {
       consumesAmmoInput.closest('.condition-modal__item')?.classList.toggle('is-selected', consumesAmmoInput.checked);
     }
     weaponAmmoTypeSelect.disabled = !isWeapon || !(consumesAmmoInput?.checked ?? false);
-    if (alternateModeInput) {
-      alternateModeInput.disabled = !isWeapon;
-      alternateModeInput.closest('.condition-modal__item')?.classList.toggle('is-selected', alternateModeInput.checked);
-    }
-    const alternateEnabled = isWeapon && (alternateModeInput?.checked ?? false);
-    [alternateModeLabelField, alternateDamageDieField, alternateDamageModifierField].forEach((field) => {
-      const input = field.querySelector('input');
-      if (input) input.disabled = !alternateEnabled;
+    weaponDamageModesField.querySelectorAll('input, select, button').forEach((field) => {
+      field.disabled = !isWeapon;
     });
-    alternateDamageTypeSelect.disabled = !alternateEnabled;
     if (thrownInput) {
       thrownInput.disabled = !isWeapon;
       thrownInput.closest('.condition-modal__item')?.classList.toggle('is-selected', thrownInput.checked);
@@ -482,8 +530,7 @@ export async function openItemModal(character, item, items, onSave) {
     toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageRow, showWeaponFields);
     toggleFieldVisibility(weaponAmmoRow, showWeaponFields);
-    toggleFieldVisibility(weaponAlternateToggleRow, showWeaponFields);
-    toggleFieldVisibility(weaponAlternateRow, showWeaponFields && (alternateModeInput?.checked ?? false));
+    toggleFieldVisibility(weaponDamageModesField, showWeaponFields);
     toggleFieldVisibility(weaponThrownRow, showWeaponFields);
     toggleFieldVisibility(rangeGrid, showWeaponFields);
     toggleFieldVisibility(armorPrimaryRow, showArmorFields);
@@ -507,7 +554,6 @@ export async function openItemModal(character, item, items, onSave) {
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
   consumesAmmoInput?.addEventListener('change', updateEquipmentFields);
-  alternateModeInput?.addEventListener('change', updateEquipmentFields);
   syncKindWithCategory();
   updateEquipmentFields();
 
@@ -537,6 +583,18 @@ export async function openItemModal(character, item, items, onSave) {
       return;
     }
   }
+  const modeLabels = formData.getAll('weapon_damage_mode_label');
+  const modeDice = formData.getAll('weapon_damage_mode_die');
+  const modeModifiers = formData.getAll('weapon_damage_mode_modifier');
+  const modeTypes = formData.getAll('weapon_damage_mode_type');
+  const weaponDamageModes = modeDice.map((die, index) => ({
+    id: `mode-${index + 1}`,
+    label: String(modeLabels[index] || '').trim() || `Impugnatura ${index + 1}`,
+    damage_die: String(die || '').trim(),
+    damage_modifier: Number(modeModifiers[index]) || 0,
+    damage_type: modeTypes[index] || null
+  })).filter((mode) => mode.damage_die);
+
   const payload = {
     user_id: character.user_id,
     character_id: character.id,
@@ -566,11 +624,12 @@ export async function openItemModal(character, item, items, onSave) {
     damage_type: formData.get('damage_type') || null,
     attack_modifier: Number(formData.get('attack_modifier')) || 0,
     damage_modifier: Number(formData.get('damage_modifier')) || 0,
-    has_alternate_damage_mode: formData.get('has_alternate_damage_mode') === 'on',
-    alternate_damage_label: formData.get('alternate_damage_label')?.trim() || null,
-    alternate_damage_die: formData.get('alternate_damage_die')?.trim() || null,
-    alternate_damage_modifier: Number(formData.get('alternate_damage_modifier')) || 0,
-    alternate_damage_type: formData.get('alternate_damage_type') || null,
+    weapon_damage_modes: weaponDamageModes,
+    has_alternate_damage_mode: weaponDamageModes.length > 0,
+    alternate_damage_label: weaponDamageModes[0]?.label || null,
+    alternate_damage_die: weaponDamageModes[0]?.damage_die || null,
+    alternate_damage_modifier: Number(weaponDamageModes[0]?.damage_modifier) || 0,
+    alternate_damage_type: weaponDamageModes[0]?.damage_type || null,
     is_thrown: formData.get('is_thrown') === 'on',
     melee_range: (() => {
       const meleeRange = String(formData.get('melee_range') ?? '').trim().replace(',', '.');

@@ -234,7 +234,29 @@ export function getWeaponDamageModes(weapon) {
     damageModifier: Number(weapon.damage_modifier) || 0,
     damageType: weapon.damage_type || null
   }];
-  if (weapon.has_alternate_damage_mode && weapon.alternate_damage_die) {
+  const rawModes = weapon.weapon_damage_modes;
+  let customModes = [];
+  if (Array.isArray(rawModes)) {
+    customModes = rawModes;
+  } else if (typeof rawModes === 'string' && rawModes.trim()) {
+    try {
+      const parsed = JSON.parse(rawModes);
+      customModes = Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      customModes = [];
+    }
+  }
+  customModes
+    .map((mode, index) => ({
+      id: mode.id || `mode-${index + 1}`,
+      label: mode.label || mode.name || `Impugnatura ${index + 1}`,
+      damageDie: mode.damage_die || mode.damageDie || null,
+      damageModifier: Number(mode.damage_modifier ?? mode.damageModifier) || 0,
+      damageType: mode.damage_type || mode.damageType || weapon.damage_type || null
+    }))
+    .filter((mode) => mode.damageDie)
+    .forEach((mode) => modes.push(mode));
+  if (modes.length === 1 && weapon.has_alternate_damage_mode && weapon.alternate_damage_die) {
     modes.push({
       id: 'alternate',
       label: weapon.alternate_damage_label || 'Due mani',
@@ -260,7 +282,7 @@ export function buildWeaponDamageOverlayConfig(character, weapon, modeId = 'defa
   const damageTotal = abilityMod + (Number(mode?.damageModifier) || 0) + damageBonus;
   const dice = parseDamageDice(mode?.damageDie);
   if (!dice) return null;
-  const modeLabel = mode?.id === 'alternate' ? ` (${mode.label})` : '';
+  const modeLabel = mode?.id && mode.id !== 'default' ? ` (${mode.label})` : '';
   return {
     title: `Danni ${weapon.name}${modeLabel}`,
     notation: dice.notation,

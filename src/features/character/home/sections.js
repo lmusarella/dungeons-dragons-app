@@ -24,6 +24,7 @@ import {
 import { calcTotalWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
 import { getBodyPartLabels, getCategoryLabel, getItemStatusLabels, getWeightUnit } from '../../inventory/utils.js';
+import { ammunitionTypeLabels } from '../../inventory/constants.js';
 
 export function buildEmptyState(canCreateCharacter, offline) {
   if (!canCreateCharacter) {
@@ -647,7 +648,16 @@ export function buildAttackSection(character, items = []) {
     if (weaponRange !== 'melee' && normalRange) {
       rangeParts.push(`Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
     }
-    const rangeText = rangeParts.join(' · ');
+    const requiredAmmoType = weapon.required_ammunition_type || weapon.ammunition_type;
+    const ammoRemaining = weapon.consumes_ammunition
+      ? items
+        .filter((item) => item.category !== 'container')
+        .filter((item) => requiredAmmoType ? item.ammunition_type === requiredAmmoType : item.ammunition_type)
+        .reduce((total, item) => total + (Number(item.qty) || 0), 0)
+      : null;
+    const ammoLabel = ammunitionTypeLabels.get(requiredAmmoType) || 'Munizioni';
+    const ammoText = ammoRemaining !== null ? `${ammoLabel} ${ammoRemaining}` : '';
+    const rangeText = [...rangeParts, ammoText].filter(Boolean).join(' · ');
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
     const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
@@ -656,7 +666,7 @@ export function buildAttackSection(character, items = []) {
       const damageText = mode.damageDie
         ? `${mode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
         : '-';
-      const modeLabel = mode.id === 'alternate' ? ` · ${mode.label}` : '';
+      const modeLabel = mode.id !== 'default' ? ` · ${mode.label}` : '';
       const rollDamageKey = `weapon:${weaponKey}:${mode.id}`;
       return `
           <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
