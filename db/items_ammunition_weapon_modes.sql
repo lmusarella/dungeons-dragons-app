@@ -29,3 +29,4 @@ comment on column public.items.alternate_damage_type is 'Tipo di danno specifico
 -- Opzionale: se usi PostgREST/Supabase e la cache schema non si aggiorna subito,
 -- esegui anche questa notifica o attendi il refresh automatico.
 notify pgrst, 'reload schema';
+select pg_notify('pgrst', 'reload schema');
