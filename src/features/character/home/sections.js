@@ -15,6 +15,7 @@ import {
   formatSigned,
   getAbilityModifier,
   getEquipSlots,
+  getWeaponDamageModes,
   normalizeNumber,
   parseProficiencyNotes,
   parseProficiencyNotesSections,
@@ -23,6 +24,7 @@ import {
 import { calcTotalWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
 import { getBodyPartLabels, getCategoryLabel, getItemStatusLabels, getWeightUnit } from '../../inventory/utils.js';
+import { ammunitionTypeLabels } from '../../inventory/constants.js';
 
 export function buildEmptyState(canCreateCharacter, offline) {
   if (!canCreateCharacter) {
@@ -632,11 +634,7 @@ export function buildAttackSection(character, items = []) {
     const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
     const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
     const attackTotal = abilityMod + proficiencyBonus + (Number(weapon.attack_modifier) || 0) + attackBonus;
-    const damageTotal = abilityMod + (Number(weapon.damage_modifier) || 0) + damageBonus;
-    const damageDie = weapon.damage_die ? weapon.damage_die : '-';
-    const damageText = damageDie === '-'
-      ? '-'
-      : `${damageDie}${damageTotal ? ` ${formatSigned(damageTotal)}` : ''}`;
+    const damageModes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
     const normalRange = Number(weapon.range_normal) || null;
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
     const meleeRange = Number(weapon.melee_range) || 1.5;
@@ -650,9 +648,30 @@ export function buildAttackSection(character, items = []) {
     if (weaponRange !== 'melee' && normalRange) {
       rangeParts.push(`Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
     }
-    const rangeText = rangeParts.join(' · ');
+    const requiredAmmoType = weapon.required_ammunition_type || weapon.ammunition_type;
+    const ammoRemaining = weapon.consumes_ammunition
+      ? items
+        .filter((item) => item.category !== 'container')
+        .filter((item) => requiredAmmoType ? item.ammunition_type === requiredAmmoType : item.ammunition_type)
+        .reduce((total, item) => total + (Number(item.qty) || 0), 0)
+      : null;
+    const ammoLabel = ammunitionTypeLabels.get(requiredAmmoType) || 'Munizioni';
+    const ammoText = ammoRemaining !== null ? `${ammoLabel} ${ammoRemaining}` : '';
+    const rangeText = [...rangeParts, ammoText].filter(Boolean).join(' · ');
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
+    const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
+    const selectedMode = renderedModes.find((mode) => mode.id === weapon.selected_damage_mode) || renderedModes[0];
+    const modeDamageTotal = abilityMod + (Number(selectedMode.damageModifier) || 0) + damageBonus;
+    const damageText = selectedMode.damageDie
+      ? `${selectedMode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
+      : '-';
+    const modeLabel = selectedMode.id !== 'default' ? selectedMode.label : '';
+    const modeText = modeLabel ? `Impugnatura: ${modeLabel}` : '';
+    const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
+    const cycleButton = renderedModes.length > 1
+      ? `<button class="icon-button icon-button--weapon-mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span aria-hidden="true">🔁</span></button>`
+      : '';
     return `
           <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
             <div class="attack-card__body">
@@ -663,12 +682,16 @@ export function buildAttackSection(character, items = []) {
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage">${damageText}</span>
+                ${modeText ? `<span class="muted">${modeText}</span>` : ''}
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
-            <button class="icon-button icon-button--fire" data-roll-damage="${weaponKey}" aria-label="Calcola danni ${weapon.name}">
-              <span aria-hidden="true">🔥</span>
-            </button>
+            <div class="attack-card__actions">
+              ${cycleButton}
+              <button class="icon-button icon-button--fire" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}">
+                <span aria-hidden="true">🔥</span>
+              </button>
+            </div>
           </div>
         `;
   }).join('')}

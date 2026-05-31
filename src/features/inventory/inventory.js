@@ -250,7 +250,9 @@ export async function renderInventory(container) {
       carryTotalEl.textContent = formatWeight(calcTotalWeight(filtered), weightUnit);
     }
     listEl.querySelectorAll('[data-edit]')
-      .forEach((btn) => btn.addEventListener('click', () => {
+      .forEach((btn) => btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         const item = items.find((entry) => entry.id === btn.dataset.edit);
         if (item) openItemModal(activeCharacter, item, items, renderInventory.bind(null, container));
       }));
@@ -269,7 +271,9 @@ export async function renderInventory(container) {
         if (item) openItemImageModal(item);
       }));
     listEl.querySelectorAll('[data-delete]')
-      .forEach((btn) => btn.addEventListener('click', async () => {
+      .forEach((btn) => btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         const item = items.find((entry) => entry.id === btn.dataset.delete);
         if (!item) return;
         const isContainer = item.category === 'container';
@@ -298,7 +302,9 @@ export async function renderInventory(container) {
         });
       }));
     listEl.querySelectorAll('[data-use]')
-      .forEach((btn) => btn.addEventListener('click', async () => {
+      .forEach((btn) => btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         const item = items.find((entry) => entry.id === btn.dataset.use);
         if (!item) return;
         if (item.qty <= 0) {

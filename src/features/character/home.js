@@ -39,6 +39,7 @@ import {
   applyRestRecovery,
   buildSpellDamageOverlayConfig,
   buildWeaponDamageOverlayConfig,
+  getWeaponDamageModes,
   calculateSkillModifier,
   formatSigned,
   getAbilityModifier,
@@ -906,6 +907,32 @@ export async function renderHome(container) {
       openPresetAttackRoll(card.dataset.rollAttack);
     }));
 
+  container.querySelectorAll('[data-cycle-weapon-mode]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const weaponKey = button.dataset.cycleWeaponMode;
+      const weapon = items?.find((entry) => String(entry.id) === weaponKey || entry.name === weaponKey);
+      if (!weapon) return;
+      const modes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
+      if (modes.length <= 1) return;
+      const currentMode = weapon.selected_damage_mode || modes[0].id;
+      const currentIndex = Math.max(modes.findIndex((mode) => mode.id === currentMode), 0);
+      const nextMode = modes[(currentIndex + 1) % modes.length];
+      updateItem(weapon.id, { selected_damage_mode: nextMode.id })
+        .then((saved) => {
+          const nextItems = (getState().cache.items || items || []).map((entry) => String(entry.id) === String(weapon.id)
+            ? { ...entry, ...(saved || {}), selected_damage_mode: nextMode.id }
+            : entry);
+          updateCache('items', nextItems);
+          return cacheSnapshot({ items: nextItems });
+        })
+        .then(() => {
+          createToast(`Modalità ${nextMode.label}`);
+          renderHome(container);
+        })
+        .catch(() => createToast('Errore cambio modalità arma', 'error'));
+    }));
+
   container.querySelectorAll('[data-roll-damage]')
     .forEach((button) => button.addEventListener('click', () => {
       if (!activeCharacter) return;
@@ -935,9 +962,12 @@ export async function renderHome(container) {
         });
         return;
       }
-      const weapon = items?.find((entry) => String(entry.id) === rollKey || entry.name === rollKey);
+      const weaponParts = rollKey.startsWith('weapon:') ? rollKey.split(':') : [null, rollKey, 'default'];
+      const weaponLookup = weaponParts[1] || rollKey;
+      const weaponMode = weaponParts[2] || 'default';
+      const weapon = items?.find((entry) => String(entry.id) === weaponLookup || entry.name === weaponLookup);
       if (!weapon) return;
-      const overlayConfig = buildWeaponDamageOverlayConfig(activeCharacter, weapon);
+      const overlayConfig = buildWeaponDamageOverlayConfig(activeCharacter, weapon, weaponMode);
       if (!overlayConfig) {
         createToast('Danno non calcolabile per questa arma.', 'error');
         return;
@@ -2021,6 +2051,32 @@ function calculateEffectiveDamage(character, rawAmount, damageType) {
   return { amount, reason: null };
 }
 
+function findAmmunitionForWeapon(items, weapon) {
+  if (!weapon?.consumes_ammunition) return null;
+  const requiredType = weapon.required_ammunition_type || weapon.ammunition_type;
+  return (items || [])
+    .filter((item) => item.id !== weapon.id)
+    .filter((item) => item.category !== 'container')
+    .filter((item) => !requiredType || item.ammunition_type === requiredType)
+    .filter((item) => Number(item.qty) > 0)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }))[0] || null;
+}
+
+async function consumeWeaponAmmunition(items, weapon) {
+  const ammunition = findAmmunitionForWeapon(items, weapon);
+  if (!ammunition) return false;
+  const nextQty = Math.max((Number(ammunition.qty) || 0) - 1, 0);
+  const saved = await updateItem(ammunition.id, { qty: nextQty });
+  const cachedItems = getState().cache.items || [];
+  const nextItems = cachedItems.map((entry) => String(entry.id) === String(ammunition.id)
+    ? { ...entry, ...(saved || {}), qty: nextQty }
+    : entry);
+  updateCache('items', nextItems);
+  await cacheSnapshot({ items: nextItems });
+  createToast(`${ammunition.name} consumato (${nextQty} rimasti)`);
+  return true;
+}
+
 function openPresetAttackRoll(attackKey) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   if (!activeCharacter || !attackKey) return;
@@ -2028,6 +2084,13 @@ function openPresetAttackRoll(attackKey) {
   const options = buildAttackRollOptions(activeCharacter, items);
   const selected = options.find((entry) => entry.value === attackKey);
   if (!selected) return;
+  const weaponId = attackKey.startsWith('weapon:') ? attackKey.replace('weapon:', '') : null;
+  const weapon = weaponId ? items.find((entry) => String(entry.id) === weaponId || entry.name === weaponId) : null;
+  if (weapon?.consumes_ammunition && !findAmmunitionForWeapon(items, weapon)) {
+    createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
+    return;
+  }
+  let ammunitionConsumed = false;
   openDiceRollerModal({
     title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
     mode: 'd20',
@@ -2040,7 +2103,16 @@ function openPresetAttackRoll(attackKey) {
     allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
     weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
     characterId: activeCharacter.id,
-    historyLabel: selected.shortLabel || selected.label
+    historyLabel: selected.shortLabel || selected.label,
+    onRollComplete: async () => {
+      if (!weapon?.consumes_ammunition || ammunitionConsumed) return;
+      ammunitionConsumed = true;
+      try {
+        await consumeWeaponAmmunition(getState().cache.items || items, weapon);
+      } catch (error) {
+        createToast('Errore consumo munizioni', 'error');
+      }
+    }
   });
 }
 
@@ -2368,7 +2440,8 @@ function openDiceRollerModal({
   rollType = null,
   weakPoints = 0,
   characterId = null,
-  historyLabel = null
+  historyLabel = null,
+  onRollComplete = null
 }) {
   openDiceOverlay({
     keepOpen: true,
@@ -2380,7 +2453,8 @@ function openDiceRollerModal({
     rollType,
     weakPoints,
     characterId,
-    historyLabel
+    historyLabel,
+    onRollComplete
   });
 }
 
