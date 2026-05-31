@@ -309,3 +309,47 @@ body {
     justify-self: end;
   }
 }
+
+.attack-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.icon-button--weapon-mode {
+  border-color: rgba(59, 93, 96, 0.35);
+  background: rgba(59, 93, 96, 0.1);
+  color: var(--accent);
+  margin-top: 4px;
+}
+
+.weapon-damage-modes-field {
+  gap: 12px;
+  padding: 12px;
+}
+
+.weapon-damage-modes-field__list {
+  gap: 10px;
+}
+
+.weapon-damage-mode-row {
+  grid-template-columns: minmax(170px, 1.25fr) minmax(120px, 0.85fr) minmax(92px, 0.55fr) minmax(150px, 1fr) auto;
+  gap: 10px;
+  padding: 10px;
+}
+
+.weapon-damage-mode-row .field {
+  min-width: 0;
+}
+
+.weapon-damage-mode-row .field input,
+.weapon-damage-mode-row .field select {
+  min-height: 40px;
+}
+
+@media (max-width: 980px) {
+  .weapon-damage-mode-row {
+    grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.8fr);
+  }
+}

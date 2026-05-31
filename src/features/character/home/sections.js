@@ -661,32 +661,39 @@ export function buildAttackSection(character, items = []) {
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
     const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
-    return renderedModes.map((mode) => {
-      const modeDamageTotal = abilityMod + (Number(mode.damageModifier) || 0) + damageBonus;
-      const damageText = mode.damageDie
-        ? `${mode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
-        : '-';
-      const modeLabel = mode.id !== 'default' ? ` · ${mode.label}` : '';
-      const rollDamageKey = `weapon:${weaponKey}:${mode.id}`;
-      return `
+    const selectedMode = renderedModes.find((mode) => mode.id === weapon.selected_damage_mode) || renderedModes[0];
+    const modeDamageTotal = abilityMod + (Number(selectedMode.damageModifier) || 0) + damageBonus;
+    const damageText = selectedMode.damageDie
+      ? `${selectedMode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
+      : '-';
+    const modeLabel = selectedMode.id !== 'default' ? selectedMode.label : '';
+    const modeText = modeLabel ? `Impugnatura: ${modeLabel}` : '';
+    const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
+    const cycleButton = renderedModes.length > 1
+      ? `<button class="icon-button icon-button--weapon-mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span aria-hidden="true">🔁</span></button>`
+      : '';
+    return `
           <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
             <div class="attack-card__body">
               <div class="attack-card__title">
-                <strong class="attack-card__name">${weapon.name}${modeLabel}</strong>
+                <strong class="attack-card__name">${weapon.name}</strong>
                 <span class="modifier-ability modifier-ability--${attackAbility}">${abilityLabel}</span>
                 <span class="attack-card__hit">${formatSigned(attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage">${damageText}</span>
+                ${modeText ? `<span class="muted">${modeText}</span>` : ''}
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
-            <button class="icon-button icon-button--fire" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel}">
-              <span aria-hidden="true">🔥</span>
-            </button>
+            <div class="attack-card__actions">
+              ${cycleButton}
+              <button class="icon-button icon-button--fire" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}">
+                <span aria-hidden="true">🔥</span>
+              </button>
+            </div>
           </div>
         `;
-    }).join('');
   }).join('')}
         ${hasSpellAttacks
     ? cantripAttacks.map((spell) => {

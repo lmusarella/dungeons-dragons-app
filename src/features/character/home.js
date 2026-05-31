@@ -39,6 +39,7 @@ import {
   applyRestRecovery,
   buildSpellDamageOverlayConfig,
   buildWeaponDamageOverlayConfig,
+  getWeaponDamageModes,
   calculateSkillModifier,
   formatSigned,
   getAbilityModifier,
@@ -904,6 +905,32 @@ export async function renderHome(container) {
     .forEach((card) => card.addEventListener('click', (event) => {
       if (event.target.closest('button')) return;
       openPresetAttackRoll(card.dataset.rollAttack);
+    }));
+
+  container.querySelectorAll('[data-cycle-weapon-mode]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const weaponKey = button.dataset.cycleWeaponMode;
+      const weapon = items?.find((entry) => String(entry.id) === weaponKey || entry.name === weaponKey);
+      if (!weapon) return;
+      const modes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
+      if (modes.length <= 1) return;
+      const currentMode = weapon.selected_damage_mode || modes[0].id;
+      const currentIndex = Math.max(modes.findIndex((mode) => mode.id === currentMode), 0);
+      const nextMode = modes[(currentIndex + 1) % modes.length];
+      updateItem(weapon.id, { selected_damage_mode: nextMode.id })
+        .then((saved) => {
+          const nextItems = (getState().cache.items || items || []).map((entry) => String(entry.id) === String(weapon.id)
+            ? { ...entry, ...(saved || {}), selected_damage_mode: nextMode.id }
+            : entry);
+          updateCache('items', nextItems);
+          return cacheSnapshot({ items: nextItems });
+        })
+        .then(() => {
+          createToast(`Modalità ${nextMode.label}`);
+          renderHome(container);
+        })
+        .catch(() => createToast('Errore cambio modalità arma', 'error'));
     }));
 
   container.querySelectorAll('[data-roll-damage]')
