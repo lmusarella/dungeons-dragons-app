@@ -353,3 +353,36 @@ body {
     grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.8fr);
   }
 }
+
+/* Keep additional weapon grip inputs readable inside the item edit modal. */
+.weapon-damage-mode-row {
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.65fr) minmax(160px, 0.75fr) auto;
+}
+
+.weapon-damage-mode-row .field:nth-child(4) {
+  grid-column: 1 / -2;
+}
+
+.weapon-damage-mode-row__remove {
+  align-self: end;
+}
+
+@media (max-width: 720px) {
+  .weapon-damage-modes-field__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .weapon-damage-mode-row {
+    grid-template-columns: 1fr;
+  }
+
+  .weapon-damage-mode-row .field:nth-child(4),
+  .weapon-damage-mode-row__remove {
+    grid-column: 1;
+  }
+
+  .weapon-damage-mode-row__remove {
+    justify-self: end;
+  }
+}
