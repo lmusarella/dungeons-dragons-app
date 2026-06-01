@@ -358,6 +358,15 @@ header {
   width: 100%;
 }
 
+
+.diceov-generic-builder {
+  display: contents;
+}
+
+.diceov-generic-builder[hidden] {
+  display: none;
+}
+
 .diceov-generic-row input[name="dice-count"] {
   width: 72px;
 }
@@ -436,17 +445,17 @@ header {
   font-size: 0.85rem;
   color: rgba(255,255,255,0.7);
   display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .diceov-result--full {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px 12px;
   justify-content: space-between;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .diceov-result--full .diceov-result-label {
@@ -458,7 +467,7 @@ header {
 }
 
 .diceov-result--full .diceov-result-detail {
-  flex: 1 1 240px;
+  flex: 1 1 320px;
   text-align: right;
 }
 
@@ -691,7 +700,7 @@ header {
 
 .diceov-stage {
   padding: 10px 10px 12px;
-  width: min(770px, 98vw);
+  width: min(920px, 98vw);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
@@ -804,5 +813,141 @@ header {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+.diceov-quick-dice {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 6px 0 2px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.diceov-quick-dice-title {
+  flex: 0 0 auto;
+  margin-right: 2px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.diceov-quick-die {
+  display: inline-grid;
+  grid-template-columns: 24px minmax(24px, auto) 24px;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px 3px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  background: #111;
+}
+
+.diceov-quick-die-label {
+  padding: 0 2px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ffdc7a;
+}
+
+.diceov-quick-die-btn,
+.diceov-reroll-die {
+  border: 1px solid #3a3a3a;
+  background: #1e1e1e;
+  color: #f1f1f1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.diceov-quick-die-btn {
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.diceov-quick-die-btn:hover,
+.diceov-reroll-die:hover,
+.diceov-reroll-die.is-pending {
+  border-color: #ffdc7a;
+  box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.18);
+  transform: translateY(-1px);
+}
+
+.diceov-reroll-die.is-pending {
+  background: rgba(255, 220, 122, 0.14);
+}
+
+.diceov-reroll-tray {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 100%;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.diceov-reroll-tray[hidden] {
+  display: none;
+}
+
+.diceov-reroll-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.diceov-reroll-die {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.diceov-reroll-die-type {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #ffdc7a;
+}
+
+.diceov-reroll-die-value {
+  min-width: 1.4em;
+  font-size: 0.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .diceov-quick-dice {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .diceov-quick-dice-title {
+    font-size: 0.66rem;
+  }
+
+  .diceov-quick-die {
+    grid-template-columns: 24px minmax(24px, auto) 24px;
+  }
+
+  .diceov-reroll-tray {
+    justify-content: flex-start;
   }
 }
