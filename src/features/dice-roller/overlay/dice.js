@@ -139,6 +139,7 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
+          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
           <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
             <span class="diceov-quick-dice-title">Aggiungi dadi</span>
             ${[4, 6, 8, 10, 12].map((die) => `
@@ -149,7 +150,6 @@ function buildOverlayMarkup() {
               </div>
             `).join('')}
           </div>
-          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
           <p class="diceov-warning" data-custom-warning hidden></p>
         </div>
       </div>
