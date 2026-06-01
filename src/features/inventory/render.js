@@ -125,10 +125,10 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
               ${volumeLabel ? `<span class="muted">${volumeLabel}</span>` : ''}
             </div>
           </div>
-          <div class="inventory-table__cell">${getCategoryLabel(container.category)}</div>
-          <div class="inventory-table__cell">${container.qty}</div>
-          <div class="inventory-table__cell">${formatWeight(container.weight ?? 0, weightUnit)}</div>
-          <div class="inventory-table__cell">${container.max_volume ?? '-'}</div>
+          <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(container.category)}</span></div>
+          <div class="inventory-table__cell" data-label="Quantità">${container.qty}</div>
+          <div class="inventory-table__cell" data-label="Peso">${formatWeight(container.weight ?? 0, weightUnit)}</div>
+          <div class="inventory-table__cell" data-label="Volume">${container.max_volume ?? '-'}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
             <button class="resource-action-button icon-button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
               <span aria-hidden="true">✏️</span>
@@ -148,10 +148,16 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
 
   return `
     ${containerSections}
-    <div class="inventory-group">
-      <p class="inventory-group__label">Oggetti non contenuti</p>
-      ${buildItemList(topLevel, weightUnit)}
-    </div>
+    <details class="inventory-group inventory-group--loose inventory-loose-accordion" open>
+      <summary class="inventory-loose-accordion__summary">
+        <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+        <span class="inventory-loose-accordion__title">Oggetti Sfusi</span>
+        <span class="inventory-loose-accordion__count">${topLevel.length} ${topLevel.length === 1 ? 'oggetto' : 'oggetti'}</span>
+      </summary>
+      <div class="inventory-group__children inventory-group__children--loose">
+        ${buildItemList(topLevel, weightUnit)}
+      </div>
+    </details>
   `;
 }
 
@@ -189,10 +195,10 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
                 ${item.damage_type ? `<span class="muted">Danno: ${damageTypeLabels.get(item.damage_type) || item.damage_type}</span>` : ''}
               </div>
             </div>
-            <div class="inventory-table__cell">${getCategoryLabel(item.category)}</div>
-            <div class="inventory-table__cell">${item.qty}</div>
-            <div class="inventory-table__cell">${formatWeight(item.weight ?? 0, weightUnit)}</div>
-            <div class="inventory-table__cell">${volumeValue}</div>
+            <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(item.category)}</span></div>
+            <div class="inventory-table__cell" data-label="Quantità">${item.qty}</div>
+            <div class="inventory-table__cell" data-label="Peso">${formatWeight(item.weight ?? 0, weightUnit)}</div>
+            <div class="inventory-table__cell" data-label="Volume">${volumeValue}</div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Consuma</button>` : ''}
               <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">

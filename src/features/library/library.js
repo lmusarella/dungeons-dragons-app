@@ -1,8 +1,8 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
-import { openSpellDrawer } from '../character/home/modals.js';
+import { openSpellDrawer, openSpellQuickDetailModal } from '../character/home/modals.js';
 
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
@@ -24,16 +24,21 @@ function sortSpells(spells, mode) {
 export async function renderLibrary(container) {
   container.innerHTML = `
     <section class="auth-screen character-select-view library-view">
-      <div class="card character-select-card">
-        <header class="character-select-header">
-          <div>
+      <div class="card character-select-card library-shell">
+        <header class="character-select-header library-hero">
+          <div class="library-hero__copy">
+            <span class="library-hero__eyebrow">Compendio condiviso</span>
             <p class="title-car-select">Archivio centralizzato</p>
-            <p class="muted">Gestisci contenuti condivisi (incantesimi ora, oggetti in futuro).</p>
+            <p class="muted">Trova, filtra e mantieni ordinati gli incantesimi condivisi tra i personaggi.</p>
           </div>
-          <button class="icon-button icon-button--add character-select-add" type="button" data-library-add-spell aria-label="Nuovo incantesimo">+</button>
+          <button class="primary library-add-button" type="button" data-library-add-spell aria-label="Nuovo incantesimo">
+            <span aria-hidden="true">＋</span>
+            <span>Nuovo incantesimo</span>
+          </button>
         </header>
-        <div class="modal-form-grid" data-library-filters></div>
-        <div class="character-card-grid" data-library-spells></div>
+        <div class="library-filter-panel" data-library-filters></div>
+        <div class="library-results-heading" data-library-results-heading></div>
+        <div class="character-card-grid library-results-grid" data-library-spells></div>
       </div>
     </section>
   `;
@@ -89,7 +94,7 @@ export async function renderLibrary(container) {
   const searchButton = document.createElement('button');
   searchButton.className = 'primary';
   searchButton.type = 'button';
-  searchButton.textContent = 'Cerca';
+  searchButton.innerHTML = '<span aria-hidden="true">🔎</span><span>Cerca</span>';
   filtersRow.appendChild(searchButton);
   filters.appendChild(filtersRow);
 
@@ -106,6 +111,7 @@ export async function renderLibrary(container) {
   `;
   filters.appendChild(listToolbar);
 
+  const resultsHeading = container.querySelector('[data-library-results-heading]');
   const pagination = document.createElement('div');
   pagination.className = 'library-pagination';
   filters.appendChild(pagination);
@@ -133,42 +139,57 @@ export async function renderLibrary(container) {
     const pageStart = (currentPage - 1) * PAGE_SIZE;
     const pagedSpells = sortedSpells.slice(pageStart, pageStart + PAGE_SIZE);
 
+    if (resultsHeading) {
+      const shownFrom = sortedSpells.length ? pageStart + 1 : 0;
+      const shownTo = Math.min(pageStart + pagedSpells.length, sortedSpells.length);
+      resultsHeading.innerHTML = `
+        <div>
+          <span class="library-results-heading__eyebrow">Risultati</span>
+          <strong>${sortedSpells.length} incantesimi</strong>
+        </div>
+        <span class="muted">${sortedSpells.length ? `${shownFrom}-${shownTo} mostrati` : 'Nessun risultato con questi filtri'}</span>
+      `;
+    }
     list.innerHTML = pagedSpells.length
-      ? pagedSpells.map((spell) => `
+      ? pagedSpells.map((spell) => {
+        const classes = (spell.caster_classes || []).join(', ') || 'Nessuna classe';
+        const traits = [spell.concentration ? 'Concentrazione' : '', spell.ritual ? 'Rituale' : '', spell.rules_version ? `Regole ${spell.rules_version}` : '']
+          .filter(Boolean);
+        return `
         <article class="character-card library-spell-card">
-          <div class="character-card-info">
-            <h3>${spell.name}</h3>
-            <p class="muted">Lv ${spell.level} · ${spell.school || '-'} · ${(spell.caster_classes || []).join(', ') || '-'}</p>
+          <div class="library-spell-card__level" aria-label="Livello ${spell.level ?? 0}">
+            <span>Lv</span>
+            <strong>${spell.level ?? 0}</strong>
+          </div>
+          <div class="character-card-info library-spell-card__info">
+            <div class="library-spell-card__title-row">
+              <h3>${spell.name}</h3>
+              <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
+            </div>
+            <p class="muted">${classes}</p>
+            ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
           </div>
           <div class="button-row library-spell-card__actions">
-            <button class="icon-button" type="button" data-library-view-spell="${spell.id}" aria-label="Dettagli incantesimo">👁️</button>
-            <button class="icon-button" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo">🗑️</button>
+            <button class="secondary library-spell-card__detail" type="button" data-library-view-spell="${spell.id}" aria-label="Dettagli incantesimo ${spell.name}">Dettagli</button>
+            <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>
-        </article>`).join('')
-      : '<p>Nessun incantesimo trovato.</p>';
+        </article>`;
+      }).join('')
+      : '<div class="library-empty-state"><strong>Nessun incantesimo trovato</strong><span class="muted">Prova a rimuovere un filtro o cerca un altro nome.</span></div>';
     pagination.innerHTML = sortedSpells.length
       ? `<button class="secondary" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}>← Precedente</button>
          <span class="muted">Pagina ${currentPage} di ${totalPages}</span>
          <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
       : '';
 
-    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', async () => {
+    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', () => {
       const spell = sortedSpells.find((entry) => entry.id === button.dataset.libraryViewSpell);
       if (!spell) return;
-      const content = document.createElement('div');
-      content.className = 'library-spell-detail';
-      content.innerHTML = `
-        <p><strong>Livello:</strong> ${spell.level ?? '-'}</p>
-        <p><strong>Scuola:</strong> ${spell.school || '-'}</p>
-        <p><strong>Classi:</strong> ${(spell.caster_classes || []).join(', ') || '-'}</p>
-        <p><strong>Lancio:</strong> ${spell.cast_time || '-'}</p>
-        <p><strong>Durata:</strong> ${spell.duration || '-'}</p>
-        <p><strong>Range:</strong> ${spell.range || '-'}</p>
-        <p><strong>Componenti:</strong> ${spell.components || '-'}</p>
-        <p><strong>Versione:</strong> ${spell.rules_version || '-'}</p>
-        <p><strong>Descrizione:</strong> ${spell.description || 'Nessuna descrizione disponibile.'}</p>
-      `;
-      await openFormModal({ title: spell.name || 'Dettagli incantesimo', content, submitLabel: 'Chiudi', showFooter: false, cancelLabel: 'Chiudi' });
+      openSpellQuickDetailModal(null, {
+        ...spell,
+        kind: Number(spell.level) === 0 ? 'cantrip' : 'spell',
+        is_ritual: Boolean(spell.ritual || spell.is_ritual)
+      });
     }));
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;
