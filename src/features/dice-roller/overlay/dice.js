@@ -140,6 +140,7 @@ function buildOverlayMarkup() {
             </div>
           </div>
           <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
+            <span class="diceov-quick-dice-title">Aggiungi dadi</span>
             ${[4, 6, 8, 10, 12].map((die) => `
               <div class="diceov-quick-die">
                 <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
@@ -533,6 +534,16 @@ function refreshNotationSummary(notation) {
   notation.resultTotal = resultTotal;
   notation.resultString = resultString;
   return notation;
+}
+
+function formatDiceValues(values, { compactAfter = 8 } = {}) {
+  const rolls = Array.isArray(values) ? values : [];
+  if (!rolls.length) return 'nessun dado';
+  const total = rolls.reduce((sum, value) => sum + value, 0);
+  if (rolls.length > compactAfter) {
+    return `${rolls.length} dadi, somma ${total}`;
+  }
+  return rolls.join(' + ');
 }
 
 function resetLegacyDiceScene() {
@@ -1162,11 +1173,11 @@ export function openDiceOverlay({
         : info.rollMode === 'disadvantage'
           ? 'Svantaggio'
           : 'Normale';
-      const rollsLabel = info.baseRolls.join(', ');
+      const rollsLabel = formatDiceValues(info.baseRolls, { compactAfter: 4 });
       if (resultValue) resultValue.textContent = `${total}`;
       if (resultDetail) {
         const selection = info.baseRolls.length > 1 ? ` (selezionato ${info.picked})` : '';
-        const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Mod ${formatModifier(modifier)}`];
+        const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Modificatore ${formatModifier(modifier)}`];
         if (info.buff) {
           pieces.push(
             `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
@@ -1187,12 +1198,14 @@ export function openDiceOverlay({
     const constant = Number(notation.constant) || 0;
     const buffDelta = info.buff?.delta || 0;
     const total = diceTotal + constant + modifier + buffDelta;
-    const rollDetail = info.baseRolls.length ? `Dadi: ${info.baseRolls.join(', ')}` : 'Dadi: —';
+    const rollDetail = info.baseRolls.length
+      ? `Tiro dadi: ${formatDiceValues(info.baseRolls)}`
+      : 'Tiro dadi: —';
     if (resultValue) resultValue.textContent = `${total}`;
     if (resultDetail) {
       const pieces = [rollDetail];
-      if (constant) pieces.push(`Costante ${formatModifier(constant)}`);
-      if (modifier) pieces.push(`Mod ${formatModifier(modifier)}`);
+      if (constant) pieces.push(`Bonus fisso ${formatModifier(constant)}`);
+      if (modifier) pieces.push(`Modificatore ${formatModifier(modifier)}`);
       if (info.buff) {
         pieces.push(
           `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`

@@ -436,17 +436,17 @@ header {
   font-size: 0.85rem;
   color: rgba(255,255,255,0.7);
   display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .diceov-result--full {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px 12px;
   justify-content: space-between;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .diceov-result--full .diceov-result-label {
@@ -458,7 +458,7 @@ header {
 }
 
 .diceov-result--full .diceov-result-detail {
-  flex: 1 1 240px;
+  flex: 1 1 320px;
   text-align: right;
 }
 
@@ -810,11 +810,22 @@ header {
 .diceov-quick-dice {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   margin: 6px 0 2px;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+.diceov-quick-dice-title {
+  flex: 0 0 auto;
+  margin-right: 2px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .diceov-quick-die {
@@ -917,6 +928,10 @@ header {
   .diceov-quick-dice {
     justify-content: flex-start;
     gap: 4px;
+  }
+
+  .diceov-quick-dice-title {
+    font-size: 0.66rem;
   }
 
   .diceov-quick-die {
