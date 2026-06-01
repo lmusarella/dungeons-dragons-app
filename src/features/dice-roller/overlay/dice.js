@@ -139,7 +139,16 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
-          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
+          <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
+            ${[4, 6, 8, 10, 12].map((die) => `
+              <div class="diceov-quick-die">
+                <span class="diceov-quick-die-label">D${die}</span>
+                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
+                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
+              </div>
+            `).join('')}
+          </div>
+          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio puoi cliccare un dado nel risultato per ritirarlo.</p>
           <p class="diceov-warning" data-custom-warning hidden></p>
         </div>
       </div>
@@ -148,6 +157,7 @@ function buildOverlayMarkup() {
           <p class="diceov-result-label">Risultato</p>
           <p class="diceov-result-value" data-dice-result>—</p>
           <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
+          <div class="diceov-reroll-tray" data-reroll-tray hidden></div>
         </div>
         <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
@@ -471,6 +481,74 @@ function scaleDiceNotation(value, multiplier = 2) {
   return String(value || '').replace(/(\d+)\s*d\s*(\d+)/gi, (_, count, sides) => `${Number(count) * multiplier}d${sides}`);
 }
 
+
+const QUICK_DICE_SIDES = [4, 6, 8, 10, 12];
+
+function parseEditableDiceNotation(value) {
+  const counts = new Map();
+  let constant = 0;
+  const expression = String(value || '').replace(/\s+/g, '');
+  const tokenPattern = /([+-]?)(?:(\d*)d(\d+)|(\d+))/gi;
+  let match;
+  while ((match = tokenPattern.exec(expression))) {
+    const sign = match[1] === '-' ? -1 : 1;
+    if (match[3]) {
+      const sides = Number(match[3]);
+      const count = Number(match[2] || 1) * sign;
+      if (Number.isFinite(sides) && sides > 0) {
+        counts.set(sides, Math.max((counts.get(sides) || 0) + count, 0));
+      }
+      continue;
+    }
+    if (match[4]) constant += sign * Number(match[4]);
+  }
+  return { counts, constant };
+}
+
+function stringifyEditableDiceNotation({ counts, constant }) {
+  const orderedSides = [4, 6, 8, 10, 12, 20, 100];
+  const extraSides = [...counts.keys()]
+    .filter((sides) => !orderedSides.includes(sides))
+    .sort((a, b) => a - b);
+  const diceParts = [...orderedSides, ...extraSides]
+    .map((sides) => ({ sides, count: Number(counts.get(sides)) || 0 }))
+    .filter(({ count }) => count > 0)
+    .map(({ sides, count }) => `${count}d${sides}`);
+
+  const parts = [...diceParts];
+  if (constant) {
+    parts.push(String(constant));
+  }
+  return parts.join('+').replace(/\+\-/g, '-') || '1d20';
+}
+
+function getDieMaxValue(type) {
+  if (type === 'd10' || type === 'd100') return 9;
+  if (type === 'd9') return 9;
+  const sides = Number(String(type || '').replace(/^d/i, ''));
+  return Number.isFinite(sides) && sides > 0 ? sides : 20;
+}
+
+function rollSingleDie(type) {
+  const max = getDieMaxValue(type);
+  const startsAtZero = type === 'd10' || type === 'd100' || type === 'd9';
+  return startsAtZero
+    ? Math.floor(Math.random() * (max + 1))
+    : Math.floor(Math.random() * max) + 1;
+}
+
+function refreshNotationSummary(notation) {
+  const result = Array.isArray(notation?.result) ? notation.result : [];
+  const constant = Number(notation?.constant) || 0;
+  const resultTotal = result.reduce((sum, value) => sum + value, 0) + constant;
+  let resultString = result.join(' ');
+  if (constant) resultString += `${constant > 0 ? ' +' : ' -'}${Math.abs(constant)}`;
+  if (result.length > 1 || constant) resultString += ` = ${resultTotal}`;
+  notation.resultTotal = resultTotal;
+  notation.resultString = resultString;
+  return notation;
+}
+
 function resetLegacyDiceScene() {
   if (window.main && typeof window.main.clearDice === 'function') {
     window.main.clearDice();
@@ -567,6 +645,8 @@ export function openDiceOverlay({
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
+  const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
+  const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
@@ -596,7 +676,8 @@ export function openDiceOverlay({
     history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null,
-    lastCriticalSignature: null
+    lastCriticalSignature: null,
+    rerollHint: null
   };
 
   resetResult();
@@ -656,6 +737,8 @@ export function openDiceOverlay({
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
     state.lastBuff = null;
+    state.rerollHint = null;
+    renderRerollTray(null);
   }
 
   function showCriticalBanner(tier, { playAudio = false, signature = null } = {}) {
@@ -983,6 +1066,62 @@ export function openDiceOverlay({
     }
   }
 
+  function getRerollableDice(notation) {
+    const rolls = Array.isArray(notation?.result) ? notation.result : [];
+    const diceSet = Array.isArray(notation?.set) ? notation.set : [];
+    if (!rolls.length || !diceSet.length) return [];
+    if (mode !== 'generic') {
+      const info = getD20RollInfo(notation);
+      const baseCount = info.rollMode === 'normal' ? 1 : 2;
+      return rolls.slice(0, baseCount).map((value, index) => ({
+        index,
+        value,
+        type: diceSet[index] || `d${sides}`,
+        label: info.rollMode === 'normal' ? `d${sides}` : `${index + 1}° d${sides}`
+      }));
+    }
+    const info = getGenericRollInfo(notation);
+    return info.baseRolls.map((value, index) => ({
+      index,
+      value,
+      type: diceSet[index] || 'd20',
+      label: diceSet[index] || 'd20'
+    }));
+  }
+
+  function renderRerollTray(notation) {
+    if (!rerollTray) return;
+    const dice = notation ? getRerollableDice(notation) : [];
+    if (!dice.length) {
+      rerollTray.innerHTML = '';
+      rerollTray.setAttribute('hidden', '');
+      return;
+    }
+    rerollTray.innerHTML = `
+      <span class="diceov-reroll-label">Ritira:</span>
+      ${dice.map((die) => `
+        <button class="diceov-reroll-die" type="button" data-reroll-index="${die.index}" aria-label="Ritira ${die.label} con risultato ${die.value}">
+          <span class="diceov-reroll-die-type">${die.label.toUpperCase()}</span>
+          <span class="diceov-reroll-die-value">${die.value}</span>
+        </button>
+      `).join('')}
+    `;
+    rerollTray.removeAttribute('hidden');
+  }
+
+  function rerollDieAt(index) {
+    if (!state.lastRoll || !Array.isArray(state.lastRoll.result)) return;
+    const dice = getRerollableDice(state.lastRoll);
+    const die = dice.find((entry) => entry.index === index);
+    if (!die) return;
+    const nextValue = rollSingleDie(die.type);
+    const previousValue = state.lastRoll.result[index];
+    state.lastRoll.result[index] = nextValue;
+    refreshNotationSummary(state.lastRoll);
+    state.rerollHint = `${die.label.toUpperCase()} ritirato: ${previousValue} → ${nextValue}`;
+    renderRollResult(state.lastRoll, { playCriticalSound: true });
+  }
+
   function renderRollResult(notation, { playCriticalSound = false } = {}) {
     if (hasInvalidRolls(notation)) {
       resetResult('—', 'Lancio non valido, rilancia i dadi.');
@@ -1018,8 +1157,10 @@ export function openDiceOverlay({
             `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
           );
         }
+        if (state.rerollHint) pieces.push(state.rerollHint);
         resultDetail.textContent = pieces.join(' · ');
       }
+      renderRerollTray(notation);
       return;
     }
 
@@ -1042,8 +1183,10 @@ export function openDiceOverlay({
           `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
         );
       }
+      if (state.rerollHint) pieces.push(state.rerollHint);
       resultDetail.textContent = pieces.join(' · ');
     }
+    renderRerollTray(notation);
   }
 
   function summarizeRoll(notation) {
@@ -1130,6 +1273,30 @@ export function openDiceOverlay({
   };
   if (buffSelectD20) buffSelectD20.onchange = handleBuffChange;
   if (buffSelectDamage) buffSelectDamage.onchange = handleBuffChange;
+  if (quickDiceControls) {
+    quickDiceControls.onclick = (event) => {
+      const button = event.target.closest('[data-quick-die]');
+      if (!button || !notationInput) return;
+      const die = Number(button.dataset.quickDie);
+      if (!QUICK_DICE_SIDES.includes(die)) return;
+      const action = button.dataset.quickDieAction;
+      const parsed = parseEditableDiceNotation(notationInput.value || buildGenericNotation(overlayEl));
+      const current = Number(parsed.counts.get(die)) || 0;
+      const next = action === 'decrement' ? Math.max(current - 1, 0) : current + 1;
+      parsed.counts.set(die, next);
+      notationInput.value = stringifyEditableDiceNotation(parsed);
+      syncGenericInputsFromNotation(overlayEl, notationInput.value);
+      updateNotationFromGeneric();
+    };
+  }
+  if (rerollTray) {
+    rerollTray.onclick = (event) => {
+      const button = event.target.closest('[data-reroll-index]');
+      if (!button) return;
+      rerollDieAt(Number(button.dataset.rerollIndex));
+    };
+  }
+
   if (historyToggle) {
     historyToggle.onclick = () => {
       const shouldOpen = !historyAccordion?.classList.contains('is-open');
@@ -1221,8 +1388,9 @@ export function openDiceOverlay({
 
   const onRoll = (event) => {
     if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
-    state.lastRoll = event.detail || null;
+    state.lastRoll = event.detail ? refreshNotationSummary(event.detail) : null;
     state.lastBuff = null;
+    state.rerollHint = null;
     if (state.lastRoll) {
       if (hasInvalidRolls(state.lastRoll)) {
         resetResult('—', 'Lancio non valido, rilancia i dadi.');
