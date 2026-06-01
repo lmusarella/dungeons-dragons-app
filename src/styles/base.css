@@ -6442,3 +6442,40 @@ button:focus-visible,
   margin-top: 0;
   font-size: 0.95rem;
 }
+
+.spell-slot-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.spell-slot-edit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, 0.7fr);
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #eadfc9;
+  border-radius: 12px;
+  background: #fdf7ea;
+}
+
+.spell-slot-edit-row .field {
+  margin-bottom: 0;
+  gap: 3px;
+}
+
+.spell-slot-edit-row .field span {
+  font-size: 0.76rem;
+}
+
+.spell-slot-edit-row input {
+  min-height: 36px;
+  padding: 7px 9px;
+  border-radius: 9px;
+}
+
+@media (max-width: 560px) {
+  .spell-slot-edit-row {
+    grid-template-columns: 1fr;
+  }
+}

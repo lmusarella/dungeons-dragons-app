@@ -190,6 +190,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const spellSlots = spellcasting.slots || {};
+  const spellSlotsMax = spellcasting.slots_max || {};
   const enhanceNumericFields = (root) => {
     root?.querySelectorAll('input[type="number"]').forEach((input) => {
       const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
@@ -661,14 +662,26 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   spellcastingGrid.appendChild(spellAttackField);
   spellcastingSection.appendChild(spellcastingGrid);
   const slotGrid = document.createElement('div');
-  slotGrid.className = 'character-edit-grid';
+  slotGrid.className = 'spell-slot-edit-grid';
   Array.from({ length: 9 }, (_, index) => index + 1).forEach((level) => {
-    slotGrid.appendChild(buildInput({
-      label: `Slot ${level}°`,
-      name: `spell_slot_${level}`,
+    const remainingSlots = Math.max(0, Number(spellSlots[level]) || 0);
+    const totalSlots = Math.max(remainingSlots, Number(spellSlotsMax[level]) || 0);
+    const usedSlots = Math.max(0, totalSlots - remainingSlots);
+    const slotRow = document.createElement('div');
+    slotRow.className = 'spell-slot-edit-row';
+    slotRow.appendChild(buildInput({
+      label: `Slot ${level}° totali`,
+      name: `spell_slot_max_${level}`,
       type: 'number',
-      value: spellSlots[level] ?? 0
+      value: totalSlots
     }));
+    slotRow.appendChild(buildInput({
+      label: 'Consumati',
+      name: `spell_slot_used_${level}`,
+      type: 'number',
+      value: usedSlots
+    }));
+    slotGrid.appendChild(slotRow);
   });
   spellcastingSection.appendChild(slotGrid);
   const slotRechargeField = document.createElement('label');
@@ -1207,11 +1220,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       recharge: formData.get('spell_slot_recharge') || 'long_rest',
       can_prepare: canPrepare,
       slots: spellSlotLevels.reduce((acc, level) => {
-        acc[level] = toNumberOrNull(formData.get(`spell_slot_${level}`)) ?? 0;
+        const maxSlots = Math.max(0, toNumberOrNull(formData.get(`spell_slot_max_${level}`)) ?? 0);
+        const usedSlots = Math.min(maxSlots, Math.max(0, toNumberOrNull(formData.get(`spell_slot_used_${level}`)) ?? 0));
+        acc[level] = Math.max(maxSlots - usedSlots, 0);
         return acc;
       }, {}),
       slots_max: spellSlotLevels.reduce((acc, level) => {
-        acc[level] = toNumberOrNull(formData.get(`spell_slot_${level}`)) ?? 0;
+        acc[level] = Math.max(0, toNumberOrNull(formData.get(`spell_slot_max_${level}`)) ?? 0);
         return acc;
       }, {})
     }
