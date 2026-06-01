@@ -387,7 +387,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     }
     return `special-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   };
-  let draftSpecialSkills = specialSkillRolls.map((entry, index) => ({
+  const normalizedSpecialSkillRolls = specialSkillRolls.map((entry, index) => ({
     id: String(entry?.id ?? `special-${index + 1}`),
     name: entry?.name ?? '',
     ability: abilityShortLabel[entry?.ability] ? entry.ability : 'str',
@@ -395,6 +395,21 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     mastery: Boolean(entry?.mastery),
     bonus: Number(entry?.bonus ?? entry?.extra_bonus ?? entry?.modifier) || 0
   }));
+  const hasInitiativeSpecialSkill = normalizedSpecialSkillRolls.some((entry) => {
+    const id = String(entry.id ?? '').toLowerCase();
+    const name = String(entry.name ?? '').trim().toLowerCase();
+    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  });
+  let draftSpecialSkills = hasInitiativeSpecialSkill
+    ? normalizedSpecialSkillRolls
+    : [{
+      id: 'default_initiative',
+      name: 'Iniziativa',
+      ability: 'dex',
+      proficient: false,
+      mastery: false,
+      bonus: 0
+    }, ...normalizedSpecialSkillRolls];
 
   const specialSkillAbilityOptions = [
     { value: 'str', label: 'Forza (FOR)' },
@@ -899,6 +914,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       })
     },
     {
+      title: 'Vita e CA',
+      icon: '❤️',
+      description: 'Punti ferita, dadi vita e classe armatura.',
+      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection], {
+        icon: '❤️',
+        description: 'Controlla sopravvivenza e difesa senza cercare tra le impostazioni avanzate.'
+      })
+    },
+    {
       title: 'Abilità',
       icon: '🧠',
       description: 'Competenze, maestrie e prove speciali.',
@@ -919,15 +943,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       ], {
         icon: '🏅',
         description: 'Separa le competenze operative dalle note libere su lingue e talenti.'
-      })
-    },
-    {
-      title: 'Vita e CA',
-      icon: '❤️',
-      description: 'Punti ferita, dadi vita e classe armatura.',
-      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection], {
-        icon: '❤️',
-        description: 'Controlla sopravvivenza e difesa senza cercare tra le impostazioni avanzate.'
       })
     },
     {

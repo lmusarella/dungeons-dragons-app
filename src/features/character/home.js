@@ -1915,7 +1915,15 @@ function buildSpecialSkillRollOptions(character, items = []) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+  const configuredSpecialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+  const hasInitiative = configuredSpecialSkills.some((skill) => {
+    const id = String(skill?.id ?? '').toLowerCase();
+    const name = String(skill?.name ?? '').trim().toLowerCase();
+    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  });
+  const specialSkills = hasInitiative
+    ? configuredSpecialSkills
+    : [{ id: 'default_initiative', name: 'Iniziativa', ability: 'dex', proficient: false, mastery: false, bonus: 0 }, ...configuredSpecialSkills];
 
   return specialSkills.map((skill, index) => {
     const abilityKey = abilityShortLabel[skill.ability] ? skill.ability : 'str';

@@ -6479,3 +6479,31 @@ button:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+.character-edit-form--guided .spell-slot-edit-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+
+.character-edit-form--guided .spell-slot-edit-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 10px;
+}
+
+.character-edit-form--guided .spell-slot-edit-row .number-stepper {
+  grid-template-columns: 30px minmax(42px, 1fr) 30px;
+  gap: 4px;
+}
+
+.character-edit-form--guided .spell-slot-edit-row .number-stepper__button {
+  min-width: 30px;
+  min-height: 34px;
+  border-radius: 9px;
+}
+
+@media (max-width: 680px) {
+  .character-edit-form--guided .spell-slot-edit-grid,
+  .character-edit-form--guided .spell-slot-edit-row {
+    grid-template-columns: 1fr;
+  }
+}

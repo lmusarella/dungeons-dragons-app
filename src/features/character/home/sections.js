@@ -252,7 +252,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
                 <span aria-hidden="true">🎲</span>
               </button>
             </div>
-            ${canEditCharacter ? '<p class="hp-panel-hit-dice__warning">Se lanci il dado verrà sottratto ai dadi vita disponibili.</p>' : ''}
           </div>
         </div>
         <div class="hp-panel-subgrid">
@@ -372,19 +371,29 @@ export function buildSkillList(character) {
   `;
 }
 
+function getSpecialSkillRollsWithDefault(data) {
+  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+  const hasInitiative = specialSkills.some((skill) => {
+    const id = String(skill?.id ?? '').toLowerCase();
+    const name = String(skill?.name ?? '').trim().toLowerCase();
+    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  });
+  const initiativeRoll = {
+    id: 'default_initiative',
+    name: 'Iniziativa',
+    ability: 'dex',
+    proficient: false,
+    mastery: false,
+    bonus: 0
+  };
+  return hasInitiative ? specialSkills : [initiativeRoll, ...specialSkills];
+}
+
 export function buildSpecialSkillList(character) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
-
-  if (!specialSkills.length) {
-    return `
-      <div class="detail-section">
-        <p class="muted">Nessun tiro speciale configurato. Aggiungilo dalla modifica personaggio.</p>
-      </div>
-    `;
-  }
+  const specialSkills = getSpecialSkillRollsWithDefault(data);
 
   return `
     <div class="detail-section">
