@@ -29,13 +29,14 @@ async function renderRoute() {
   const appHeader = document.querySelector('[data-app-header]');
   const offlineBanner = document.querySelector('[data-offline-banner]');
   const appShell = document.querySelector('.app-shell');
-  const hideShell = route === 'login' || route === 'characters' || route === 'library';
+  const hideShell = route === 'login' || route === 'characters' || route === 'library' || route === 'settings';
   const hideHeader = route === 'login';
   const fabAlwaysVisibleRoutes = ['home', 'inventory', 'journal'];
   const showFab = fabAlwaysVisibleRoutes.includes(route);
   const isAuthRoute = route === 'login' || route === 'characters';
   if (appShell) {
     appShell.classList.toggle('app-shell--auth', isAuthRoute);
+    appShell.dataset.route = route;
   }
   document.body.classList.toggle('no-route-scroll', isAuthRoute);
   const applyShellVisibility = (shouldHide, shouldShowFab) => {
