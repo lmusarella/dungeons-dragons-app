@@ -6426,3 +6426,19 @@ button:focus-visible,
     justify-content: center;
   }
 }
+
+.spell-prepared-list__card {
+  align-items: center;
+}
+
+.spell-card-actions {
+  align-items: center;
+  align-self: center;
+}
+
+.spell-card-actions__damage {
+  width: 30px;
+  height: 30px;
+  margin-top: 0;
+  font-size: 0.95rem;
+}
