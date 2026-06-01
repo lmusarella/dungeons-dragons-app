@@ -54,6 +54,12 @@ async function renderRoute() {
         .forEach((item) => {
           item.hidden = !fabAlwaysVisibleRoutes.includes(route) && item.dataset.fabScope !== route;
         });
+      actionsFab.querySelectorAll('[data-fab-group]')
+        .forEach((group) => {
+          const visibleActions = Array.from(group.querySelectorAll('.actions-fab-item'))
+            .filter((item) => !item.hidden);
+          group.hidden = visibleActions.length === 0;
+        });
     }
   };
 

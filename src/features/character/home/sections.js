@@ -1,6 +1,7 @@
 import {
   abilityShortLabel,
   conditionList,
+  damageTypeList,
   equipmentProficiencyList,
   RESOURCE_CAST_TIME_ORDER,
   savingThrowList,
@@ -10,6 +11,7 @@ import {
   calculateArmorClass,
   calculatePassivePerception,
   calculateSkillModifier,
+  buildSpellDamageOverlayConfig,
   formatHitDice,
   formatModifier,
   formatSigned,
@@ -119,6 +121,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
   `;
   const weaknessStatus = `Livello attuale: ${weakPoints}`;
   const armorClass = calculateArmorClass(data, abilities, items);
+  const hasDarkvision = Boolean(data.darkvision_enabled);
+  const darkvisionRange = normalizeNumber(data.darkvision_range_m);
+  const darkvisionLabel = hasDarkvision
+    ? `${darkvisionRange ?? 18} m`
+    : 'No';
   const abilityCards = [
     { key: 'str', label: abilityShortLabel.str, value: abilities.str },
     { key: 'dex', label: abilityShortLabel.dex, value: abilities.dex },
@@ -245,13 +252,16 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
                 <span aria-hidden="true">🎲</span>
               </button>
             </div>
-            ${canEditCharacter ? '<p class="hp-panel-hit-dice__warning">Se lanci il dado verrà sottratto ai dadi vita disponibili.</p>' : ''}
           </div>
         </div>
         <div class="hp-panel-subgrid">
           <div class="stat-chip stat-chip--highlight">
             <span>Percezione passiva</span>
             <strong>${passivePerception ?? '-'}</strong>
+          </div>
+          <div class="stat-chip stat-chip--highlight stat-chip--darkvision">
+            <span>Scurovisione</span>
+            <strong>${darkvisionLabel}</strong>
           </div>
           <div class="hp-panel-status-row">
             <div class="weakness-track">
@@ -361,19 +371,29 @@ export function buildSkillList(character) {
   `;
 }
 
+function getSpecialSkillRollsWithDefault(data) {
+  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+  const hasInitiative = specialSkills.some((skill) => {
+    const id = String(skill?.id ?? '').toLowerCase();
+    const name = String(skill?.name ?? '').trim().toLowerCase();
+    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  });
+  const initiativeRoll = {
+    id: 'default_initiative',
+    name: 'Iniziativa',
+    ability: 'dex',
+    proficient: false,
+    mastery: false,
+    bonus: 0
+  };
+  return hasInitiative ? specialSkills : [initiativeRoll, ...specialSkills];
+}
+
 export function buildSpecialSkillList(character) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const specialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
-
-  if (!specialSkills.length) {
-    return `
-      <div class="detail-section">
-        <p class="muted">Nessun tiro speciale configurato. Aggiungilo dalla modifica personaggio.</p>
-      </div>
-    `;
-  }
+  const specialSkills = getSpecialSkillRollsWithDefault(data);
 
   return `
     <div class="detail-section">
@@ -437,6 +457,16 @@ export function buildSavingThrowSection(character) {
   `;
 }
 
+function buildDefenseTags(damageDefenses, type) {
+  const keys = Array.isArray(damageDefenses?.[type]) ? damageDefenses[type] : [];
+  const labels = keys
+    .map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key)
+    .filter(Boolean);
+  return labels.length
+    ? `<div class="tag-row">${labels.map((label) => `<span class="chip chip--defense">${label}</span>`).join('')}</div>`
+    : '<p class="muted">Nessuna voce configurata.</p>';
+}
+
 export function buildProficiencyOverview(character, items = [], canEditCharacter = false) {
   const data = character.data || {};
   const proficiencies = data.proficiencies || {};
@@ -446,6 +476,7 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const explicitLanguages = parseProficiencyNotes(languageNotes);
   const talentNotes = data.talents || '';
   const talents = parseProficiencyNotes(talentNotes);
+  const damageDefenses = data.damage_defenses || {};
   const combinedLanguages = [...explicitLanguages, ...legacyLanguages];
   const languages = combinedLanguages.reduce((acc, entry) => {
     const cleaned = entry.trim();
@@ -475,6 +506,9 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="talents">
             Talenti
           </button>
+          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="defenses">
+            Resistenze & Immunità
+          </button>
         </div>
         <div class="detail-card detail-card--text tab-panel is-active" role="tabpanel" data-proficiency-panel="equipment">
           ${equipped.length
@@ -495,6 +529,18 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           ${talents.length
     ? `<div class="tag-row">${talents.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
+        </div>
+        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="defenses">
+          <div class="defense-summary-grid">
+            <div class="defense-summary-card">
+              <span>Resistenze</span>
+              ${buildDefenseTags(damageDefenses, 'resistances')}
+            </div>
+            <div class="defense-summary-card">
+              <span>Immunità</span>
+              ${buildDefenseTags(damageDefenses, 'immunities')}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -779,6 +825,7 @@ export function buildSpellSection(character, canManageSpells = false) {
     const level = Number(spell.level) || 0;
     const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
     const castTimeClass = getResourceCastTimeClass(castTimeLabel);
+    const damageOverlay = buildSpellDamageOverlayConfig(spell, level);
     return `
       <div class="modifier-card attack-card resource-card spell-prepared-list__card">
         <div class="resource-card__badges spell-card__badges">
@@ -791,6 +838,11 @@ export function buildSpellSection(character, canManageSpells = false) {
           ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
         </button>
         <div class="resource-card-actions spell-card-actions">
+          ${damageOverlay ? `
+            <button class="icon-button icon-button--fire spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
+              <span aria-hidden="true">🔥</span>
+            </button>
+          ` : ''}
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
           ${canManageSpells ? `
             <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
@@ -968,31 +1020,40 @@ export function buildResourceSections(resources, canManageResources) {
   const sortedResources = sortResourcesByCastTime(resources);
   const passiveResources = sortedResources.filter((resource) => resource.reset_on === null || resource.reset_on === 'none');
   const activeResources = sortedResources.filter((resource) => resource.reset_on !== null && resource.reset_on !== 'none');
-  const activeSection = activeResources.length
-    ? `
-      <div class="resource-section resource-section--active">
-        <div class="resource-section__body">
-          ${buildResourceList(activeResources, canManageResources, { showUseButton: true })}
-        </div>
+  const activeSection = `
+    <details class="resource-accordion resource-section resource-section--active" open>
+      <summary class="resource-accordion__summary">
+        <span>Attive</span>
+        <span class="resource-accordion__meta">${activeResources.length} risorse</span>
+        <span class="resource-accordion__icon" aria-hidden="true">▾</span>
+      </summary>
+      <div class="resource-section__body resource-accordion__body">
+        ${activeResources.length
+    ? buildResourceList(activeResources, canManageResources, { showUseButton: true })
+    : '<p class="muted">Nessuna risorsa attiva.</p>'}
       </div>
-    `
-    : '<p class="muted">Nessuna risorsa attiva.</p>';
-  const passiveSection = passiveResources.length
-    ? `
-      <div class="resource-section">
-        <header class="card-header"><div><p class="eyebrow">Risorse Passive</p></div></header>
-        <div class="resource-section__body">
-          ${buildResourceList(passiveResources, canManageResources, {
-    showCharges: false,
-    showUseButton: false,
-    showDescription: true,
-    showCastTime: true
-  })}
-        </div>
+    </details>
+  `;
+  const passiveSection = `
+    <details class="resource-accordion resource-section" ${activeResources.length ? '' : 'open'}>
+      <summary class="resource-accordion__summary">
+        <span>Passive</span>
+        <span class="resource-accordion__meta">${passiveResources.length} risorse</span>
+        <span class="resource-accordion__icon" aria-hidden="true">▾</span>
+      </summary>
+      <div class="resource-section__body resource-accordion__body">
+        ${passiveResources.length
+    ? buildResourceList(passiveResources, canManageResources, {
+      showCharges: false,
+      showUseButton: false,
+      showDescription: true,
+      showCastTime: true
+    })
+    : '<p class="muted">Nessuna risorsa passiva.</p>'}
       </div>
-    `
-    : '';
-  return `${activeSection}${passiveSection}`;
+    </details>
+  `;
+  return `<div class="resource-accordion-stack">${activeSection}${passiveSection}</div>`;
 }
 
 export function buildResourceCharges(resource) {

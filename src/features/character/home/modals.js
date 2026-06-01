@@ -138,17 +138,38 @@ export async function openConditionsModal(character) {
   const list = document.createElement('div');
   list.className = 'condition-modal__list';
   conditionList.forEach((condition) => {
-    const label = document.createElement('label');
+    const label = document.createElement('div');
     const isChecked = current.includes(condition.key);
     label.className = `condition-modal__item${isChecked ? ' is-selected' : ''}`;
+    label.setAttribute('role', 'group');
     label.innerHTML = `
       <span class="condition-modal__item-label"><strong>${condition.label}</strong></span>
-      <span class="diceov-toggle condition-modal__toggle">
-        <input type="checkbox" name="conditions" value="${condition.key}" ${isChecked ? 'checked' : ''} />
-        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      <span class="condition-modal__actions">
+        <details class="info-tooltip condition-modal__tooltip">
+          <summary aria-label="Descrivi ${condition.label}">?</summary>
+          <div class="info-tooltip__panel">
+            <p><strong>${condition.label}</strong></p>
+            <p>${condition.effect}</p>
+          </div>
+        </details>
+        <label class="diceov-toggle condition-modal__toggle">
+          <input type="checkbox" name="conditions" value="${condition.key}" ${isChecked ? 'checked' : ''} />
+          <span class="diceov-toggle-track" aria-hidden="true"></span>
+        </label>
       </span>
     `;
     const checkbox = label.querySelector('input[type="checkbox"]');
+    const tooltip = label.querySelector('.condition-modal__tooltip');
+    tooltip?.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+    tooltip?.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+    });
+    label.addEventListener('click', (event) => {
+      if (event.target.closest('.condition-modal__tooltip, .condition-modal__toggle')) return;
+      checkbox?.click();
+    });
     checkbox?.addEventListener('change', () => {
       label.classList.toggle('is-selected', checkbox.checked);
     });
@@ -342,11 +363,11 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   casterClassesField.className = 'field';
   casterClassesField.innerHTML = `
     <span>Classi incantatrici</span>
-    <div class="tag-row">
+    <div class="spell-caster-class-grid">
       ${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `
-        <label class="chip">
+        <label class="spell-caster-class-option">
           <input type="checkbox" name="spell_caster_classes" value="${entry}" ${selectedCasterClasses.has(entry) ? 'checked' : ''} />
-          ${entry}
+          <span>${entry}</span>
         </label>
       `).join('')}
     </div>
@@ -920,6 +941,19 @@ export function openResourceDrawer(character, onSave, resource = null) {
     elements.filter(Boolean).forEach((element) => row.appendChild(element));
     return row;
   };
+  const buildSection = ({ title, description, content, variant = '' }) => {
+    const section = document.createElement('section');
+    section.className = ['ability-modal-section', variant].filter(Boolean).join(' ');
+    const header = document.createElement('div');
+    header.className = 'ability-modal-section__header';
+    header.innerHTML = `
+      <h4>${title}</h4>
+      ${description ? `<p class="muted">${description}</p>` : ''}
+    `;
+    section.appendChild(header);
+    content.filter(Boolean).forEach((element) => section.appendChild(element));
+    return section;
+  };
   const nameField = buildInput({ label: 'Nome abilità', name: 'name', placeholder: 'Es. Azione Impetuosa', value: resource?.name ?? '' });
   const imageField = buildInput({
     label: 'Foto (URL)',
@@ -941,8 +975,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
 
-  form.appendChild(buildRow([nameField, castTimeField, imageField], 'balanced'));
-
+  const identitySectionRows = [buildRow([nameField, castTimeField, imageField], 'balanced')];
 
   const passiveField = document.createElement('div');
   passiveField.className = 'modal-toggle-field';
@@ -959,7 +992,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   const usedField = buildInput({ label: 'Cariche consumate', name: 'used', type: 'number', value: resource?.used ?? 0 });
   enhanceNumericField(usedField, { decrementLabel: 'Riduci cariche consumate', incrementLabel: 'Aumenta cariche consumate' });
 
-  form.appendChild(buildRow([passiveField, maxUsesField, usedField], 'compact'));
+  const chargeSectionRows = [buildRow([passiveField, maxUsesField, usedField], 'compact')];
 
   const inputRiposoCorto = buildInput({
     label: 'Recupero riposo breve',
@@ -986,7 +1019,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   ], resource?.reset_on ?? 'long_rest');
   resetSelect.name = 'reset_on';
   resetField.appendChild(resetSelect);
-  form.appendChild(buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'balanced'));
+  chargeSectionRows.push(buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'balanced'));
 
   const damageDiceNotationField = buildInput({
     label: 'Notazione dado',
@@ -1001,13 +1034,33 @@ export function openResourceDrawer(character, onSave, resource = null) {
     value: resource?.damage_modifier ?? ''
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
-  form.appendChild(buildRow([damageDiceNotationField, damageModifierField], 'compact'));
 
-  form.appendChild(buildTextarea({
+  const descriptionField = buildTextarea({
     label: 'Descrizione',
     name: 'description',
-    placeholder: 'Inserisci una descrizione...',
+    placeholder: 'Inserisci una descrizione, effetti e note di utilizzo...',
     value: resource?.description ?? ''
+  });
+  form.appendChild(buildSection({
+    title: 'Dettagli abilità',
+    description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
+    content: identitySectionRows
+  }));
+  form.appendChild(buildSection({
+    title: 'Cariche e recupero',
+    description: 'Usa “Passiva” per abilità sempre attive; le abilità con cariche compaiono tra le risorse attive.',
+    content: chargeSectionRows
+  }));
+  form.appendChild(buildSection({
+    title: 'Tiro automatico',
+    description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
+    content: [buildRow([damageDiceNotationField, damageModifierField], 'compact')]
+  }));
+  form.appendChild(buildSection({
+    title: 'Descrizione',
+    description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.',
+    content: [descriptionField],
+    variant: 'ability-modal-section--description'
   }));
 
   const maxUsesInput = form.querySelector('input[name="max_uses"]');
