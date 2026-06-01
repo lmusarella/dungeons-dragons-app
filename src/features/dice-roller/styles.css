@@ -691,7 +691,7 @@ header {
 
 .diceov-stage {
   padding: 10px 10px 12px;
-  width: min(770px, 98vw);
+  width: min(920px, 98vw);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
@@ -809,25 +809,29 @@ header {
 
 .diceov-quick-dice {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 2px;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 4px;
+  margin: 6px 0 2px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .diceov-quick-die {
   display: inline-grid;
-  grid-template-columns: 30px auto 30px;
+  grid-template-columns: 24px minmax(24px, auto) 24px;
   align-items: center;
-  gap: 4px;
-  padding: 4px 5px;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px 3px;
   border: 1px solid #303030;
   border-radius: 999px;
   background: #111;
 }
 
 .diceov-quick-die-label {
-  padding: 0 4px;
-  font-size: 0.74rem;
+  padding: 0 2px;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   color: #ffdc7a;
@@ -843,10 +847,10 @@ header {
 }
 
 .diceov-quick-die-btn {
-  min-width: 30px;
-  min-height: 28px;
+  min-width: 24px;
+  min-height: 24px;
   border-radius: 999px;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -911,11 +915,12 @@ header {
 
 @media (max-width: 560px) {
   .diceov-quick-dice {
-    gap: 6px;
+    justify-content: flex-start;
+    gap: 4px;
   }
 
   .diceov-quick-die {
-    grid-template-columns: 28px 1fr 28px;
+    grid-template-columns: 24px minmax(24px, auto) 24px;
   }
 
   .diceov-reroll-tray {
