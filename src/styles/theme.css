@@ -728,3 +728,216 @@ body {
     flex: 1 1 auto;
   }
 }
+
+/* Follow-up refinements for inventory accordions, spell editor modal, and compact archive rows. */
+.inventory-group__children > .inventory-group__label {
+  margin: 0 0 4px;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  opacity: 0.72;
+}
+
+.inventory-group__children > .muted.eyebrow {
+  margin: 2px 0 0;
+  padding: 6px 8px;
+  border: 1px dashed rgba(148, 123, 90, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.62);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.inventory-loose-accordion {
+  padding: 6px;
+  border: 1px solid rgba(148, 123, 90, 0.34);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(252, 246, 232, 0.82));
+  box-shadow: 0 5px 16px rgba(79, 67, 44, 0.06);
+}
+
+.inventory-loose-accordion__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid rgba(148, 123, 90, 0.2);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 250, 241, 0.98), rgba(247, 232, 200, 0.72));
+  cursor: pointer;
+  list-style: none;
+}
+
+.inventory-loose-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.inventory-loose-accordion:not([open]) .inventory-container-accordion__icon {
+  transform: rotate(-90deg);
+}
+
+.inventory-loose-accordion__title {
+  color: #2f4d50;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.inventory-loose-accordion__count {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(59, 93, 96, 0.1);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.inventory-group__children--loose {
+  margin-top: 6px;
+  padding: 6px;
+  border-style: solid;
+}
+
+.modal-card--spell-editor {
+  width: min(980px, 96vw);
+  max-height: 92vh;
+}
+
+.modal-card--spell-editor .modal-body {
+  padding-right: 4px;
+}
+
+.spell-editor-form {
+  gap: 10px;
+}
+
+.spell-form-section {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(59, 93, 96, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 253, 248, 0.9), rgba(252, 246, 232, 0.62));
+}
+
+.spell-form-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spell-form-section__header h4 {
+  margin: 0;
+  color: #2f4d50;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.spell-form-section__header p {
+  margin: 0;
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.spell-editor-form .field > span,
+.spell-editor-form .modal-toggle-field__label {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.spell-editor-form .tag-row {
+  gap: 6px;
+}
+
+.spell-editor-form .chip {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
+.spell-editor-form textarea {
+  min-height: 130px;
+}
+
+.library-results-grid {
+  gap: 7px;
+}
+
+.library-spell-card {
+  gap: 10px;
+  min-height: 0;
+  padding: 9px 10px;
+  border-radius: 14px;
+}
+
+.library-spell-card__level {
+  flex-basis: 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.library-spell-card__level span {
+  font-size: 0.52rem;
+}
+
+.library-spell-card__level strong {
+  font-size: 1.02rem;
+}
+
+.library-spell-card__info {
+  gap: 2px;
+}
+
+.library-spell-card__title-row {
+  gap: 6px;
+}
+
+.library-spell-card__title-row h3 {
+  font-size: 0.98rem;
+  line-height: 1.15;
+}
+
+.library-spell-card__info .muted {
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.library-spell-card__school,
+.library-spell-card__traits span {
+  padding: 2px 6px;
+  font-size: 0.63rem;
+}
+
+.library-spell-card__traits {
+  gap: 4px;
+}
+
+.library-spell-card__actions .icon-button {
+  width: 30px;
+  height: 30px;
+}
+
+.library-spell-card__detail {
+  min-height: 30px;
+  padding-inline: 10px;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 720px) {
+  .modal-card--spell-editor {
+    width: min(96vw, 720px);
+  }
+
+  .spell-form-section__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .spell-form-section__header p {
+    text-align: left;
+  }
+}

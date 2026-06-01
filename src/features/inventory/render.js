@@ -148,10 +148,16 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
 
   return `
     ${containerSections}
-    <div class="inventory-group">
-      <p class="inventory-group__label">Oggetti non contenuti</p>
-      ${buildItemList(topLevel, weightUnit)}
-    </div>
+    <details class="inventory-group inventory-group--loose inventory-loose-accordion" open>
+      <summary class="inventory-loose-accordion__summary">
+        <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+        <span class="inventory-loose-accordion__title">Oggetti Sfusi</span>
+        <span class="inventory-loose-accordion__count">${topLevel.length} ${topLevel.length === 1 ? 'oggetto' : 'oggetti'}</span>
+      </summary>
+      <div class="inventory-group__children inventory-group__children--loose">
+        ${buildItemList(topLevel, weightUnit)}
+      </div>
+    </details>
   `;
 }
 

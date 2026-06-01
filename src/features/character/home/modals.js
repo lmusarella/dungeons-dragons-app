@@ -223,7 +223,18 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   };
   const canPrepare = !catalogMode && Boolean(character?.data?.is_spellcaster);
   const form = document.createElement('div');
-  form.className = 'drawer-form modal-form-grid spell-form';
+  form.className = 'drawer-form modal-form-grid spell-form spell-editor-form';
+  const buildSection = (title, description = '') => {
+    const section = document.createElement('section');
+    section.className = 'spell-form-section';
+    section.innerHTML = `
+      <div class="spell-form-section__header">
+        <h4>${title}</h4>
+        ${description ? `<p class="muted">${description}</p>` : ''}
+      </div>
+    `;
+    return section;
+  };
   const buildRow = (elements, variant = 'balanced') => {
     const row = document.createElement('div');
     row.className = `modal-form-row modal-form-row--${variant}`;
@@ -274,7 +285,9 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     prepStateSelect.name = 'spell_prep_state';
     prepStateField.appendChild(prepStateSelect);
   }
-  form.appendChild(buildRow([nameField, spellKindField, levelField], 'compact'));
+  const identitySection = buildSection('Identità', 'Nome, livello e regole base dell\'incantesimo.');
+  identitySection.appendChild(buildRow([nameField, spellKindField, levelField], 'compact'));
+
   const castTimeField = document.createElement('label');
   castTimeField.className = 'field';
   castTimeField.innerHTML = '<span>Tipo di lancio</span>';
@@ -305,7 +318,8 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   );
   rulesVersionSelect.name = 'spell_rules_version';
   rulesVersionField.appendChild(rulesVersionSelect);
-  form.appendChild(buildRow([schoolField, rulesVersionField], 'compact'));
+  identitySection.appendChild(buildRow([schoolField, rulesVersionField], 'compact'));
+  form.appendChild(identitySection);
   const selectedCasterClasses = new Set(
     Array.isArray(spell?.caster_classes)
       ? spell.caster_classes.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean)
@@ -324,8 +338,12 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       `).join('')}
     </div>
   `;
-  form.appendChild(casterClassesField);
-  form.appendChild(buildRow([
+  const classesSection = buildSection('Classi', 'Seleziona le classi che possono impararlo o prepararlo.');
+  classesSection.appendChild(casterClassesField);
+  form.appendChild(classesSection);
+
+  const castingSection = buildSection('Lancio', 'Tempi, gittata, durata e componenti in un colpo d\'occhio.');
+  castingSection.appendChild(buildRow([
     castTimeField,
     buildInput({
       label: 'Durata',
@@ -346,6 +364,9 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       value: spell?.components ?? ''
     })
   ], 'compact'));
+  form.appendChild(castingSection);
+
+  const traitsSection = buildSection('Proprietà rapide');
   const concentrationField = document.createElement('div');
   concentrationField.className = 'modal-toggle-field';
   concentrationField.innerHTML = `
@@ -373,7 +394,8 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       <span class="diceov-toggle-track" aria-hidden="true"></span>
     </label>
   `;
-  form.appendChild(buildRow([concentrationField, attackRollField, ritualField, prepStateField], 'compact'));
+  traitsSection.appendChild(buildRow([concentrationField, attackRollField, ritualField, prepStateField], 'compact'));
+  form.appendChild(traitsSection);
   const damageDieField = buildInput({
     label: 'Notazione dado',
     name: 'spell_damage_die',
@@ -409,14 +431,19 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     upcastStartLevelInput.min = '1';
     upcastStartLevelInput.max = '9';
   }
-  form.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
-  form.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
-  form.appendChild(buildTextarea({
+  const damageSection = buildSection('Danni e upcast', 'Compila solo i campi utili: puoi lasciare vuoto ciò che non serve.');
+  damageSection.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
+  damageSection.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
+  form.appendChild(damageSection);
+
+  const descriptionSection = buildSection('Descrizione');
+  descriptionSection.appendChild(buildTextarea({
     label: 'Descrizione',
     name: 'spell_description',
     placeholder: 'Descrizione dell\'incantesimo...',
     value: spell?.description ?? ''
   }));
+  form.appendChild(descriptionSection);
 
   const concentrationInput = form.querySelector('input[name="spell_concentration"]');
   if (concentrationInput) {
@@ -461,7 +488,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',
     submitLabel: spell ? 'Salva' : 'Aggiungi',
     content: form,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--spell-editor']
   }).then(async (formData) => {
     if (!formData) return;
     const name = formData.get('spell_name')?.trim();
