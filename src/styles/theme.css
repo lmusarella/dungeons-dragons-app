@@ -941,3 +941,230 @@ body {
     text-align: left;
   }
 }
+
+/* Route-level polish for settings/library and organized spell accordions. */
+.app-shell[data-route="settings"] .app-main,
+.app-shell[data-route="library"] .app-main {
+  padding-bottom: 0;
+}
+
+.library-view,
+.settings-view {
+  min-height: 100vh;
+  overflow: auto;
+  background:
+    radial-gradient(circle at top left, rgba(59, 93, 96, 0.1), transparent 30%),
+    linear-gradient(135deg, rgba(246, 241, 231, 0.98), rgba(253, 247, 234, 0.98));
+}
+
+.library-view {
+  background-image:
+    radial-gradient(circle at top left, rgba(59, 93, 96, 0.1), transparent 30%),
+    linear-gradient(135deg, rgba(246, 241, 231, 0.98), rgba(253, 247, 234, 0.98));
+  background-size: auto;
+  background-position: center;
+}
+
+.settings-view {
+  width: 100%;
+  padding: clamp(14px, 2vw, 28px);
+  box-sizing: border-box;
+}
+
+.settings-shell {
+  display: grid;
+  gap: 16px;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: clamp(16px, 2.4vw, 28px);
+  border: 1px solid rgba(148, 123, 90, 0.22);
+  border-radius: 24px;
+  box-shadow: 0 16px 42px rgba(79, 67, 44, 0.1);
+}
+
+.settings-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid rgba(148, 123, 90, 0.22);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(59, 93, 96, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.98), rgba(249, 235, 207, 0.9));
+}
+
+.settings-hero h2 {
+  margin: 4px 0 6px;
+  color: #2f4d50;
+}
+
+.settings-hero p {
+  margin: 0;
+}
+
+.settings-hero__eyebrow {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-hero__badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 93, 96, 0.1);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.settings-form {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(59, 93, 96, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.78);
+}
+
+.settings-panel--inline {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
+  align-items: center;
+}
+
+.settings-panel__copy h3 {
+  margin: 0 0 4px;
+  color: #2f4d50;
+  font-size: 1rem;
+}
+
+.settings-panel__copy p {
+  margin: 0;
+}
+
+.settings-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-control-card,
+.settings-toggle-card {
+  padding: 12px;
+  border: 1px solid rgba(148, 123, 90, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.settings-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.settings-toggle-card > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.settings-toggle-card strong {
+  color: #2d2924;
+}
+
+.settings-toggle-card small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.spell-prepared-list--accordion {
+  gap: 8px;
+}
+
+.spell-list-accordion {
+  padding: 6px;
+  border: 1px solid rgba(148, 123, 90, 0.26);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(252, 246, 232, 0.72));
+}
+
+.spell-list-accordion__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(59, 93, 96, 0.08);
+  cursor: pointer;
+  list-style: none;
+}
+
+.spell-list-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.spell-list-accordion:not([open]) .inventory-container-accordion__icon {
+  transform: rotate(-90deg);
+}
+
+.spell-list-accordion__title {
+  color: #2f4d50;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.spell-list-accordion__count {
+  margin-left: auto;
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.78);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.spell-list-accordion__body {
+  padding-top: 6px;
+}
+
+.spell-list-accordion__empty {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px dashed rgba(148, 123, 90, 0.24);
+  border-radius: 10px;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .settings-hero,
+  .settings-panel--inline {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .settings-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-actions .primary {
+    width: 100%;
+  }
+}

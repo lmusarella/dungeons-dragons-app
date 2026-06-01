@@ -833,34 +833,43 @@ export function buildSpellSection(character, canManageSpells = false) {
         </div>
         ${notes ? `<p class="spell-notes">${notes}</p>` : ''}
       </div>
-      <div class="spell-prepared-list">
-        <span class="spell-prepared-list__group-title">Trucchetti</span>
-        ${cantrips.length
-    ? `
-          <div class="spell-prepared-list__items">
-            ${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}
+      <div class="spell-prepared-list spell-prepared-list--accordion">
+        <details class="spell-list-accordion" open>
+          <summary class="spell-list-accordion__summary">
+            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+            <span class="spell-list-accordion__title">Trucchetti</span>
+            <span class="spell-list-accordion__count">${cantrips.length}</span>
+          </summary>
+          <div class="spell-list-accordion__body">
+            ${cantrips.length
+    ? `<div class="spell-prepared-list__items">${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}</div>`
+    : '<p class="muted spell-list-accordion__empty">Nessun trucchetto disponibile.</p>'}
           </div>
-        `
-    : '<p class="muted">Nessun trucchetto disponibile.</p>'}
-      </div>
-      <div class="spell-prepared-list">
-       
-        ${preparedSpells.length
-    ? `
-          <div class="spell-prepared-list__group">
-            <span class="spell-prepared-list__group-title">Preparati</span>
+        </details>
+        <details class="spell-list-accordion" open>
+          <summary class="spell-list-accordion__summary">
+            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+            <span class="spell-list-accordion__title">Preparati</span>
+            <span class="spell-list-accordion__count">${preparedOnlySpells.length}</span>
+          </summary>
+          <div class="spell-list-accordion__body">
             ${preparedOnlySpells.length
       ? `<div class="spell-prepared-list__items">${preparedOnlySpells.map((spell) => renderSpellQuickItem(spell, 'Preparato')).join('')}</div>`
-      : '<p class="muted">Nessun incantesimo preparato.</p>'}
+      : '<p class="muted spell-list-accordion__empty">Nessun incantesimo preparato.</p>'}
           </div>
-          <div class="spell-prepared-list__group">
-            <span class="spell-prepared-list__group-title">Sempre conosciuti</span>
+        </details>
+        <details class="spell-list-accordion" open>
+          <summary class="spell-list-accordion__summary">
+            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+            <span class="spell-list-accordion__title">Sempre conosciuti</span>
+            <span class="spell-list-accordion__count">${alwaysKnownSpells.length}</span>
+          </summary>
+          <div class="spell-list-accordion__body">
             ${alwaysKnownSpells.length
       ? `<div class="spell-prepared-list__items">${alwaysKnownSpells.map((spell) => renderSpellQuickItem(spell, 'Sempre preparato')).join('')}</div>`
-      : '<p class="muted">Nessun incantesimo sempre conosciuto.</p>'}
+      : '<p class="muted spell-list-accordion__empty">Nessun incantesimo sempre conosciuto.</p>'}
           </div>
-        `
-    : '<p class="muted">Nessun incantesimo preparato disponibile.</p>'}
+        </details>
       </div>
     </div>
   `;

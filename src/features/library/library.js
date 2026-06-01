@@ -1,8 +1,8 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { buildInput, createToast, openConfirmModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
-import { openSpellDrawer } from '../character/home/modals.js';
+import { openSpellDrawer, openSpellQuickDetailModal } from '../character/home/modals.js';
 
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
@@ -182,23 +182,14 @@ export async function renderLibrary(container) {
          <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
       : '';
 
-    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', async () => {
+    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', () => {
       const spell = sortedSpells.find((entry) => entry.id === button.dataset.libraryViewSpell);
       if (!spell) return;
-      const content = document.createElement('div');
-      content.className = 'library-spell-detail';
-      content.innerHTML = `
-        <p><strong>Livello:</strong> ${spell.level ?? '-'}</p>
-        <p><strong>Scuola:</strong> ${spell.school || '-'}</p>
-        <p><strong>Classi:</strong> ${(spell.caster_classes || []).join(', ') || '-'}</p>
-        <p><strong>Lancio:</strong> ${spell.cast_time || '-'}</p>
-        <p><strong>Durata:</strong> ${spell.duration || '-'}</p>
-        <p><strong>Range:</strong> ${spell.range || '-'}</p>
-        <p><strong>Componenti:</strong> ${spell.components || '-'}</p>
-        <p><strong>Versione:</strong> ${spell.rules_version || '-'}</p>
-        <p><strong>Descrizione:</strong> ${spell.description || 'Nessuna descrizione disponibile.'}</p>
-      `;
-      await openFormModal({ title: spell.name || 'Dettagli incantesimo', content, submitLabel: 'Chiudi', showFooter: false, cancelLabel: 'Chiudi' });
+      openSpellQuickDetailModal(null, {
+        ...spell,
+        kind: Number(spell.level) === 0 ? 'cantrip' : 'spell',
+        is_ritual: Boolean(spell.ritual || spell.is_ritual)
+      });
     }));
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;

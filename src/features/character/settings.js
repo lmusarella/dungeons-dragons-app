@@ -7,7 +7,7 @@ export async function renderSettings(container) {
   const normalizedActiveId = normalizeCharacterId(activeCharacterId);
   const active = characters.find((char) => normalizeCharacterId(char.id) === normalizedActiveId);
   if (!active) {
-    container.innerHTML = '<section class="card"><p>Nessun personaggio selezionato.</p></section>';
+    container.innerHTML = '<section class="settings-view"><div class="card settings-shell"><p>Nessun personaggio selezionato.</p></div></section>';
     return;
   }
 
@@ -18,32 +18,60 @@ export async function renderSettings(container) {
   };
 
   container.innerHTML = `
-    <section class="card">
-      <h2>Impostazioni</h2>
-      <form data-settings-form>
-        <label class="field">
-          <span>Modalità ingombro</span>
-          <select name="encumbrance">
-            <option value="standard">Standard</option>
-            <option value="variant">Variant</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Mostra peso in</span>
-          <select name="weight_unit">
-            <option value="lb">Lb</option>
-            <option value="kg">Kg</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Tira dadi automatico su Usa (abilità/risorse/incantesimi)</span>
-          <span class="diceov-toggle">
-            <input type="checkbox" name="auto_usage_dice" />
-            <span class="diceov-toggle-track" aria-hidden="true"></span>
-          </span>
-        </label>
-        <button class="primary" type="submit">Salva</button>
-      </form>
+    <section class="settings-view">
+      <div class="card settings-shell">
+        <header class="settings-hero">
+          <div>
+            <span class="settings-hero__eyebrow">Preferenze personaggio</span>
+            <h2>Impostazioni</h2>
+            <p class="muted">Configura peso, ingombro e automazioni rapide per ${active.name || 'il personaggio'}.</p>
+          </div>
+          <span class="settings-hero__badge">${active.name || 'Personaggio attivo'}</span>
+        </header>
+        <form class="settings-form" data-settings-form>
+          <section class="settings-panel">
+            <div class="settings-panel__copy">
+              <h3>Inventario</h3>
+              <p class="muted">Scegli come calcolare e mostrare carico e pesi.</p>
+            </div>
+            <div class="settings-control-grid">
+              <label class="field settings-control-card">
+                <span>Modalità ingombro</span>
+                <select name="encumbrance">
+                  <option value="standard">Standard</option>
+                  <option value="variant">Variant</option>
+                </select>
+              </label>
+              <label class="field settings-control-card">
+                <span>Mostra peso in</span>
+                <select name="weight_unit">
+                  <option value="lb">Lb</option>
+                  <option value="kg">Kg</option>
+                </select>
+              </label>
+            </div>
+          </section>
+          <section class="settings-panel settings-panel--inline">
+            <div class="settings-panel__copy">
+              <h3>Automazioni</h3>
+              <p class="muted">Lancia automaticamente i dadi quando usi abilità, risorse o incantesimi.</p>
+            </div>
+            <label class="settings-toggle-card">
+              <span>
+                <strong>Tiro dadi automatico</strong>
+                <small>Usa dadi automatici su azioni rapide</small>
+              </span>
+              <span class="diceov-toggle">
+                <input type="checkbox" name="auto_usage_dice" />
+                <span class="diceov-toggle-track" aria-hidden="true"></span>
+              </span>
+            </label>
+          </section>
+          <div class="settings-actions">
+            <button class="primary" type="submit">Salva impostazioni</button>
+          </div>
+        </form>
+      </div>
     </section>
   `;
 

@@ -574,7 +574,7 @@ export async function openSpellSourceModal() {
 
 
 export function openSpellQuickDetailModal(character, spell, onRender) {
-  if (!character || !spell) return;
+  if (!spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
   const detailChips = [
     `Range: ${spell.range?.trim() || '-'}`,
@@ -584,7 +584,7 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     ...(spell.is_ritual ? ['Rituale: Sì'] : [])
   ];
   const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
-  const isCastable = level > 0;
+  const isCastable = Boolean(character) && level > 0;
   const hasDisplayImage = hasUsableDetailImage(spell.image_url);
   const imageUrl = spell.image_url?.trim() || '';
 
