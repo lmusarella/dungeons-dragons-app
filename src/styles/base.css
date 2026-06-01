@@ -533,11 +533,19 @@ button:focus-visible,
   box-shadow: 0 12px 24px rgba(122, 92, 196, 0.32);
 }
 
-.actions-fab-item[data-edit-conditions],
-.actions-fab-item[data-edit-resistances],
-.actions-fab-item[data-edit-roll-adjustments] {
+.actions-fab-item[data-edit-conditions] {
   background: linear-gradient(135deg, #3f9a67, #2f7a4f);
   box-shadow: 0 12px 24px rgba(63, 154, 103, 0.32);
+}
+
+.actions-fab-item[data-edit-resistances] {
+  background: linear-gradient(135deg, #2e8b9a, #1f6977);
+  box-shadow: 0 12px 24px rgba(46, 139, 154, 0.32);
+}
+
+.actions-fab-item[data-edit-roll-adjustments] {
+  background: linear-gradient(135deg, #8a63c7, #6546a5);
+  box-shadow: 0 12px 24px rgba(138, 99, 199, 0.32);
 }
 
 .actions-fab-item[data-add-loot] {
