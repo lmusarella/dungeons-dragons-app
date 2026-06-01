@@ -342,11 +342,11 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   casterClassesField.className = 'field';
   casterClassesField.innerHTML = `
     <span>Classi incantatrici</span>
-    <div class="tag-row">
+    <div class="spell-caster-class-grid">
       ${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `
-        <label class="chip">
+        <label class="spell-caster-class-option">
           <input type="checkbox" name="spell_caster_classes" value="${entry}" ${selectedCasterClasses.has(entry) ? 'checked' : ''} />
-          ${entry}
+          <span>${entry}</span>
         </label>
       `).join('')}
     </div>

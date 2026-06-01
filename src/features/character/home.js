@@ -55,6 +55,39 @@ import { applyMoneyDelta } from '../../lib/calc.js';
 let fabHandlersBound = false;
 let lastHomeContainer = null;
 
+function captureHomeScrollState(container) {
+  if (!container || !container.querySelector('.home-layout')) return null;
+  return {
+    windowX: window.scrollX || 0,
+    windowY: window.scrollY || 0,
+    panels: Array.from(container.querySelectorAll('.home-scroll-body, .home-scroll-panel'))
+      .map((element, index) => ({
+        index,
+        top: element.scrollTop || 0,
+        left: element.scrollLeft || 0
+      }))
+  };
+}
+
+function restoreHomeScrollState(container, scrollState) {
+  if (!container || !scrollState) return;
+  const restore = () => {
+    const panels = Array.from(container.querySelectorAll('.home-scroll-body, .home-scroll-panel'));
+    scrollState.panels.forEach((entry) => {
+      const panel = panels[entry.index];
+      if (!panel) return;
+      panel.scrollTop = entry.top;
+      panel.scrollLeft = entry.left;
+    });
+    window.scrollTo(scrollState.windowX, scrollState.windowY);
+  };
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(restore);
+  } else {
+    setTimeout(restore, 0);
+  }
+}
+
 function mapSharedSpellToCharacterSpell(sharedSpell) {
   if (!sharedSpell) return null;
   return {
@@ -283,6 +316,7 @@ async function chooseSpellSlotLevel(character, spell) {
 }
 
 export async function renderHome(container) {
+  const scrollState = captureHomeScrollState(container);
 
   lastHomeContainer = container;
   const state = getState();
@@ -1214,6 +1248,7 @@ export async function renderHome(container) {
         if (item) openItemImageModal(item);
       });
     });
+  restoreHomeScrollState(container, scrollState);
   } finally {
     setGlobalLoading(false);
   }

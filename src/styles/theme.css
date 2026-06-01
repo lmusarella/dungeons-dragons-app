@@ -1314,3 +1314,38 @@ body {
     padding: 42px 14px 14px;
   }
 }
+
+.spell-caster-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
+.spell-caster-class-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid rgba(59, 93, 96, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 248, 232, 0.76);
+  color: #2f4d50;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.spell-caster-class-option input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.spell-caster-class-option span {
+  line-height: 1;
+}

@@ -6130,3 +6130,30 @@ button:focus-visible,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.drawer-form .ability-modal-section + .ability-modal-section {
+  margin-top: 12px;
+}
+
+.compact-darkvision-toggle {
+  min-height: 36px;
+  align-self: end;
+  margin-bottom: 0;
+  padding: 7px 9px;
+  border: 1px solid #eadfc9;
+  border-radius: 9px;
+  background: #fdf7ea;
+}
+
+.compact-darkvision-toggle .modal-toggle-field__label {
+  font-size: 0.78rem;
+}
+
+.stat-chip--darkvision {
+  background: linear-gradient(135deg, #e8edf8, #d8e3f6);
+  border-color: #bacbe8;
+}
+
+.stat-chip--darkvision strong {
+  color: #243f6b;
+}

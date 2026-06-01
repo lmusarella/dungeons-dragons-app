@@ -120,6 +120,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
   `;
   const weaknessStatus = `Livello attuale: ${weakPoints}`;
   const armorClass = calculateArmorClass(data, abilities, items);
+  const hasDarkvision = Boolean(data.darkvision_enabled);
+  const darkvisionRange = normalizeNumber(data.darkvision_range_m);
+  const darkvisionLabel = hasDarkvision
+    ? `${darkvisionRange ?? 18} m`
+    : 'No';
   const abilityCards = [
     { key: 'str', label: abilityShortLabel.str, value: abilities.str },
     { key: 'dex', label: abilityShortLabel.dex, value: abilities.dex },
@@ -253,6 +258,10 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
           <div class="stat-chip stat-chip--highlight">
             <span>Percezione passiva</span>
             <strong>${passivePerception ?? '-'}</strong>
+          </div>
+          <div class="stat-chip stat-chip--highlight stat-chip--darkvision">
+            <span>Scurovisione</span>
+            <strong>${darkvisionLabel}</strong>
           </div>
           <div class="hp-panel-status-row">
             <div class="weakness-track">

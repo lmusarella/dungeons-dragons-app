@@ -331,6 +331,23 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   abilityMetaGrid.appendChild(buildInput({ label: 'Bonus competenza', name: 'proficiency_bonus', type: 'number', value: characterData.proficiency_bonus ?? 0 }));
   abilityMetaGrid.appendChild(buildInput({ label: 'Iniziativa', name: 'initiative', type: 'number', value: characterData.initiative ?? 0 }));
   abilityMetaGrid.appendChild(buildInput({ label: 'Velocità', name: 'speed', type: 'number', value: characterData.speed ?? 0 }));
+  const darkvisionField = document.createElement('div');
+  darkvisionField.className = 'modal-toggle-field compact-darkvision-toggle';
+  darkvisionField.innerHTML = `
+    <span class="modal-toggle-field__label">Scurovisione</span>
+    <label class="diceov-toggle">
+      <input type="checkbox" name="darkvision_enabled" ${characterData.darkvision_enabled ? 'checked' : ''} />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const darkvisionRangeField = buildInput({
+    label: 'Range scurovisione (m)',
+    name: 'darkvision_range_m',
+    type: 'number',
+    value: characterData.darkvision_range_m ?? 18
+  });
+  abilityMetaGrid.appendChild(darkvisionField);
+  abilityMetaGrid.appendChild(darkvisionRangeField);
   abilitySection.appendChild(abilityMetaGrid);
 
   const skillSection = document.createElement('div');
@@ -1077,6 +1094,19 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     });
   });
 
+  const darkvisionInput = form.querySelector('input[name="darkvision_enabled"]');
+  const darkvisionRangeInput = form.querySelector('input[name="darkvision_range_m"]');
+  const syncDarkvisionRange = () => {
+    const enabled = Boolean(darkvisionInput?.checked);
+    if (darkvisionRangeInput) {
+      darkvisionRangeInput.disabled = !enabled;
+      darkvisionRangeInput.required = enabled;
+      if (enabled && !darkvisionRangeInput.value) darkvisionRangeInput.value = '18';
+    }
+  };
+  darkvisionInput?.addEventListener('change', syncDarkvisionRange);
+  syncDarkvisionRange();
+
   form.addEventListener('click', (event) => {
     if (!event.target.closest('.field-help')) {
       hideHelpTooltips();
@@ -1208,6 +1238,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     class_name: formData.get('class_name')?.trim() || null,
     archetype: formData.get('archetype')?.trim() || null,
     speed: toNumberOrNull(formData.get('speed')),
+    darkvision_enabled: formData.has('darkvision_enabled'),
+    darkvision_range_m: formData.has('darkvision_enabled') ? (toNumberOrNull(formData.get('darkvision_range_m')) ?? 18) : null,
     proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
     initiative: toNumberOrNull(formData.get('initiative')),
     attack_bonus_melee: toNumberOrNull(formData.get('attack_bonus_melee')) ?? (Number(characterData.attack_bonus_melee ?? characterData.attack_bonus) || 0),
