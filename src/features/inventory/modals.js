@@ -14,14 +14,33 @@ export async function openItemModal(character, item, items, onSave) {
     });
   };
   const fields = document.createElement('div');
-  fields.className = 'drawer-form modal-form-grid';
-  const buildSection = (title, elements = []) => {
+  fields.className = 'drawer-form modal-form-grid item-editor-form';
+  const buildSection = (title, elements = [], { icon = '', description = '', className = '' } = {}) => {
     const section = document.createElement('section');
-    section.className = 'item-modal-section';
+    section.className = ['item-modal-section', className].filter(Boolean).join(' ');
+    const header = document.createElement('div');
+    header.className = 'item-modal-section__header';
+    if (icon) {
+      const iconEl = document.createElement('span');
+      iconEl.className = 'item-modal-section__icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.textContent = icon;
+      header.appendChild(iconEl);
+    }
+    const headingGroup = document.createElement('div');
+    headingGroup.className = 'item-modal-section__heading';
     const heading = document.createElement('h4');
     heading.className = 'item-modal-section__title';
     heading.textContent = title;
-    section.appendChild(heading);
+    headingGroup.appendChild(heading);
+    if (description) {
+      const helper = document.createElement('p');
+      helper.className = 'item-modal-section__description';
+      helper.textContent = description;
+      headingGroup.appendChild(helper);
+    }
+    header.appendChild(headingGroup);
+    section.appendChild(header);
     elements.filter(Boolean).forEach((element) => section.appendChild(element));
     return section;
   };
@@ -56,7 +75,11 @@ export async function openItemModal(character, item, items, onSave) {
     placeholder: 'https://.../oggetto.png',
     value: item?.image_url ?? ''
   });
-  const basicSection = buildSection('Dati principali', [buildRow([nameField, imageField], 'balanced')]);
+  const identitySection = buildSection(
+    'Identità oggetto',
+    [buildRow([nameField, imageField], 'balanced')],
+    { icon: '✦', description: 'Parti dalle informazioni che riconosci subito nella lista inventario.', className: 'item-modal-section--identity' }
+  );
   const qtyField = buildInput({ label: 'Quantità', name: 'qty', type: 'number', value: item?.qty ?? 1 });
   const qtyInput = qtyField.querySelector('input');
   if (qtyInput) {
@@ -82,7 +105,11 @@ export async function openItemModal(character, item, items, onSave) {
     valueInput.min = '0';
     valueInput.step = '1';
   }
-  basicSection.appendChild(buildRow([qtyField, weightField, volumeField, valueField], 'compact'));
+  const logisticsSection = buildSection(
+    'Quantità, peso e valore',
+    [buildRow([qtyField, weightField, volumeField, valueField], 'compact')],
+    { icon: '⚖️', description: 'Numeri essenziali per carico, scorte e tesoro.' }
+  );
   const categorySelect = buildSelect(
     [{ value: '', label: 'Seleziona' }, ...itemCategories],
     item?.category ?? ''
@@ -120,7 +147,7 @@ export async function openItemModal(character, item, items, onSave) {
   ammunitionTypeField.appendChild(ammunitionTypeSelect);
   const categoryKindField = document.createElement('div');
   categoryKindField.className = 'item-modal-kind';
-  categoryKindField.innerHTML = '<span class="item-modal-kind__label">Tipologia rapida</span>';
+  categoryKindField.innerHTML = '<span class="item-modal-kind__label">Tipologia rapida</span><p class="item-modal-kind__hint">Scegli una tipologia per mostrare solo i campi davvero utili.</p>';
   const categoryKindList = document.createElement('div');
   categoryKindList.className = 'condition-modal__list item-modal-kind__list';
   const kindOptions = [
@@ -142,9 +169,12 @@ export async function openItemModal(character, item, items, onSave) {
     return optionLabel.querySelector('input');
   });
   categoryKindField.appendChild(categoryKindList);
-  basicSection.appendChild(categoryKindField);
   const categoryRow = buildRow([categoryField, containerField, maxVolumeField, ammunitionTypeField], 'balanced');
-  basicSection.appendChild(categoryRow);
+  const classificationSection = buildSection(
+    'Categoria e collocazione',
+    [categoryKindField, categoryRow],
+    { icon: '🧭', description: 'Definisci tipo, contenitore e dettagli contestuali.' }
+  );
 
   const basicToggleList = document.createElement('div');
   basicToggleList.className = 'condition-modal__list item-modal-toggle-list';
@@ -160,7 +190,11 @@ export async function openItemModal(character, item, items, onSave) {
   });
   basicToggleList.appendChild(attunement);
   basicToggleList.appendChild(magicField);
-  basicSection.appendChild(basicToggleList);
+  const statusSection = buildSection(
+    'Stato speciale',
+    [basicToggleList],
+    { icon: '✨', description: 'Flag rapidi per magia e sintonia.' }
+  );
 
   const equipToggleList = document.createElement('div');
   equipToggleList.className = 'condition-modal__list item-modal-toggle-list';
@@ -194,9 +228,17 @@ export async function openItemModal(character, item, items, onSave) {
     return input;
   });
   equipSlotsField.appendChild(equipSlotList);
-  const equipmentSection = buildSection('Equipaggiamento', [equipToggleList, equipSlotsField]);
+  const equipmentSection = buildSection(
+    'Equipaggiamento',
+    [equipToggleList, equipSlotsField],
+    { icon: '🛡️', description: 'Attiva l’equipaggiamento solo se l’oggetto occupa slot del corpo.' }
+  );
 
-  const notesSection = buildSection('Dettagli', [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })]);
+  const notesSection = buildSection(
+    'Note e descrizione',
+    [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })],
+    { icon: '📝', description: 'Descrizione, effetti particolari o promemoria di gioco.' }
+  );
 
   const proficiencySection = document.createElement('div');
   proficiencySection.className = 'drawer-form modal-form-grid';
@@ -423,8 +465,15 @@ export async function openItemModal(character, item, items, onSave) {
   proficiencySection.appendChild(rangeGrid);
   proficiencySection.appendChild(armorPrimaryRow);
   proficiencySection.appendChild(armorBonusRow);
-  const combatSection = buildSection('Statistiche arma / armatura', [proficiencySection]);
-  fields.appendChild(basicSection);
+  const combatSection = buildSection(
+    'Statistiche da combattimento',
+    [proficiencySection],
+    { icon: '⚔️', description: 'Questa sezione appare solo per armi e armature.' }
+  );
+  fields.appendChild(identitySection);
+  fields.appendChild(logisticsSection);
+  fields.appendChild(classificationSection);
+  fields.appendChild(statusSection);
   fields.appendChild(equipmentSection);
   fields.appendChild(combatSection);
   fields.appendChild(notesSection);
@@ -563,7 +612,7 @@ export async function openItemModal(character, item, items, onSave) {
     title: item ? 'Modifica oggetto' : 'Nuovo oggetto',
     submitLabel: item ? 'Salva' : 'Crea',
     content: fields,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable']
+    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--item-editor']
   });
   if (!formData) return;
   const equipableEnabled = formData.get('equipable') === 'on';

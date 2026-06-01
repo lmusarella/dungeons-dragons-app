@@ -200,18 +200,32 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     });
   };
   const form = document.createElement('div');
-  form.className = 'character-edit-form';
-  const buildEditGroup = (title, sections) => {
+  form.className = 'character-edit-form character-edit-form--guided';
+  const buildEditGroup = (title, sections, { icon = '', description = '' } = {}) => {
     const group = document.createElement('section');
     group.className = 'character-edit-group';
-  
+
+    const header = document.createElement('header');
+    header.className = 'character-edit-group__header';
+    if (icon) {
+      const iconEl = document.createElement('span');
+      iconEl.className = 'character-edit-group__icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.textContent = icon;
+      header.appendChild(iconEl);
+    }
+    const heading = document.createElement('div');
+    heading.className = 'character-edit-group__heading';
+    heading.innerHTML = `<h3>${title}</h3>${description ? `<p>${description}</p>` : ''}`;
+    header.appendChild(heading);
+
     const content = document.createElement('div');
     content.className = 'character-edit-group__content';
     sections.forEach((section) => {
       section.classList.add('character-edit-subsection');
       content.appendChild(section);
     });
-    group.appendChild(content);
+    group.append(header, content);
     return group;
   };
 
@@ -829,44 +843,89 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const steps = [
     {
       title: 'Identità',
-      content: buildEditGroup('Identità', [mainSection])
+      icon: '🪪',
+      description: 'Nome, classe, livello e ritratto: ciò che identifica subito il personaggio.',
+      content: buildEditGroup('Identità', [mainSection], {
+        icon: '🪪',
+        description: 'Compila solo i dati narrativi e di scheda che vuoi vedere sempre in evidenza.'
+      })
     },
     {
       title: 'Background',
-      content: buildEditGroup('Background', [backgroundSection])
+      icon: '📜',
+      description: 'Origini, storia e tratti descrittivi.',
+      content: buildEditGroup('Background', [backgroundSection], {
+        icon: '📜',
+        description: 'Tieni qui storia, provenienza e dettagli di interpretazione senza mescolarli ai numeri.'
+      })
     },
     {
-      title: 'Caratteristiche e Tiri Salvezza',
-      content: buildEditGroup('Caratteristiche e Tiri Salvezza', [abilitySection, savingSection])
+      title: 'Caratteristiche e TS',
+      icon: '🎲',
+      description: 'Punteggi base, iniziativa, velocità e tiri salvezza.',
+      content: buildEditGroup('Caratteristiche e Tiri Salvezza', [abilitySection, savingSection], {
+        icon: '🎲',
+        description: 'Imposta i punteggi principali: da qui derivano bonus, CD e molte prove.'
+      })
     },
     {
       title: 'Abilità',
-      content: buildEditGroup('Abilità', [skillSection, specialSkillSection])
+      icon: '🧠',
+      description: 'Competenze, maestrie e prove speciali.',
+      content: buildEditGroup('Abilità', [skillSection, specialSkillSection], {
+        icon: '🧠',
+        description: 'Gestisci competenza, maestria e abilità personalizzate in un unico punto.'
+      })
     },
     {
-      title: 'Competenze e Talenti',
+      title: 'Competenze e talenti',
+      icon: '🏅',
+      description: 'Equipaggiamenti, strumenti, lingue e talenti.',
       content: buildEditGroup('Competenze e Talenti', [
         proficiencySection,
         proficiencyNotesSection,
         languageNotesSection,
         talentNotesSection
-      ])
+      ], {
+        icon: '🏅',
+        description: 'Separa le competenze operative dalle note libere su lingue e talenti.'
+      })
     },
     {
-      title: 'Vita e Classe Armatura',
-      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection])
+      title: 'Vita e CA',
+      icon: '❤️',
+      description: 'Punti ferita, dadi vita e classe armatura.',
+      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection], {
+        icon: '❤️',
+        description: 'Controlla sopravvivenza e difesa senza cercare tra le impostazioni avanzate.'
+      })
     },
     {
       title: 'Combattimento e magia',
-      content: buildEditGroup('Combattimento e magia', [combatSection])
+      icon: '⚔️',
+      description: 'Attacchi, danni, incantesimi e slot.',
+      content: buildEditGroup('Combattimento e magia', [combatSection], {
+        icon: '⚔️',
+        description: 'Raccoglie i parametri usati durante il turno: attacchi, bonus, incantesimi e risorse.'
+      })
     },
     {
       title: 'Vantaggi & Svantaggi',
-      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection])
+      icon: '↕️',
+      description: 'Override manuali per tiri e prove.',
+      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection], {
+        icon: '↕️',
+        description: 'Imposta solo le eccezioni manuali: gli effetti automatici restano indicati nelle righe.'
+      })
     },
     {
       title: 'Resistenze & Immunità',
-      content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection])
+      icon: '🛡️',
+      description: 'Riduzioni e immunità per tipo di danno.',
+      content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection], {
+        icon: '🛡️',
+        description: 'Seleziona difese e immunità in modo compatto, raggruppate per famiglia di danno.'
+      })
     }
   ];
 
@@ -896,7 +955,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'character-edit-stepper-button';
-    button.innerHTML = `<span class="step-index">${index + 1}</span><span>${step.title}</span>`;
+    button.innerHTML = `
+      <span class="step-index">${index + 1}</span>
+      <span class="character-edit-stepper-label">
+        <span class="character-edit-stepper-title">${step.icon ? `${step.icon} ` : ''}${step.title}</span>
+        <span class="character-edit-stepper-description">${step.description ?? ''}</span>
+      </span>
+    `;
     item.appendChild(button);
     stepperNav.appendChild(item);
     stepButtons.push(button);
