@@ -920,6 +920,19 @@ export function openResourceDrawer(character, onSave, resource = null) {
     elements.filter(Boolean).forEach((element) => row.appendChild(element));
     return row;
   };
+  const buildSection = ({ title, description, content, variant = '' }) => {
+    const section = document.createElement('section');
+    section.className = ['ability-modal-section', variant].filter(Boolean).join(' ');
+    const header = document.createElement('div');
+    header.className = 'ability-modal-section__header';
+    header.innerHTML = `
+      <h4>${title}</h4>
+      ${description ? `<p class="muted">${description}</p>` : ''}
+    `;
+    section.appendChild(header);
+    content.filter(Boolean).forEach((element) => section.appendChild(element));
+    return section;
+  };
   const nameField = buildInput({ label: 'Nome abilità', name: 'name', placeholder: 'Es. Azione Impetuosa', value: resource?.name ?? '' });
   const imageField = buildInput({
     label: 'Foto (URL)',
@@ -941,8 +954,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
 
-  form.appendChild(buildRow([nameField, castTimeField, imageField], 'balanced'));
-
+  const identitySectionRows = [buildRow([nameField, castTimeField, imageField], 'balanced')];
 
   const passiveField = document.createElement('div');
   passiveField.className = 'modal-toggle-field';
@@ -959,7 +971,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   const usedField = buildInput({ label: 'Cariche consumate', name: 'used', type: 'number', value: resource?.used ?? 0 });
   enhanceNumericField(usedField, { decrementLabel: 'Riduci cariche consumate', incrementLabel: 'Aumenta cariche consumate' });
 
-  form.appendChild(buildRow([passiveField, maxUsesField, usedField], 'compact'));
+  const chargeSectionRows = [buildRow([passiveField, maxUsesField, usedField], 'compact')];
 
   const inputRiposoCorto = buildInput({
     label: 'Recupero riposo breve',
@@ -986,7 +998,7 @@ export function openResourceDrawer(character, onSave, resource = null) {
   ], resource?.reset_on ?? 'long_rest');
   resetSelect.name = 'reset_on';
   resetField.appendChild(resetSelect);
-  form.appendChild(buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'balanced'));
+  chargeSectionRows.push(buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'balanced'));
 
   const damageDiceNotationField = buildInput({
     label: 'Notazione dado',
@@ -1001,13 +1013,33 @@ export function openResourceDrawer(character, onSave, resource = null) {
     value: resource?.damage_modifier ?? ''
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
-  form.appendChild(buildRow([damageDiceNotationField, damageModifierField], 'compact'));
 
-  form.appendChild(buildTextarea({
+  const descriptionField = buildTextarea({
     label: 'Descrizione',
     name: 'description',
-    placeholder: 'Inserisci una descrizione...',
+    placeholder: 'Inserisci una descrizione, effetti e note di utilizzo...',
     value: resource?.description ?? ''
+  });
+  form.appendChild(buildSection({
+    title: 'Dettagli abilità',
+    description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
+    content: identitySectionRows
+  }));
+  form.appendChild(buildSection({
+    title: 'Cariche e recupero',
+    description: 'Usa “Passiva” per abilità sempre attive; le abilità con cariche compaiono tra le risorse attive.',
+    content: chargeSectionRows
+  }));
+  form.appendChild(buildSection({
+    title: 'Tiro automatico',
+    description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
+    content: [buildRow([damageDiceNotationField, damageModifierField], 'compact')]
+  }));
+  form.appendChild(buildSection({
+    title: 'Descrizione',
+    description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.',
+    content: [descriptionField],
+    variant: 'ability-modal-section--description'
   }));
 
   const maxUsesInput = form.querySelector('input[name="max_uses"]');

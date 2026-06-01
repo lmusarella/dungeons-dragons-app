@@ -1,6 +1,7 @@
 import {
   abilityShortLabel,
   conditionList,
+  damageTypeList,
   equipmentProficiencyList,
   RESOURCE_CAST_TIME_ORDER,
   savingThrowList,
@@ -437,6 +438,16 @@ export function buildSavingThrowSection(character) {
   `;
 }
 
+function buildDefenseTags(damageDefenses, type) {
+  const keys = Array.isArray(damageDefenses?.[type]) ? damageDefenses[type] : [];
+  const labels = keys
+    .map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key)
+    .filter(Boolean);
+  return labels.length
+    ? `<div class="tag-row">${labels.map((label) => `<span class="chip chip--defense">${label}</span>`).join('')}</div>`
+    : '<p class="muted">Nessuna voce configurata.</p>';
+}
+
 export function buildProficiencyOverview(character, items = [], canEditCharacter = false) {
   const data = character.data || {};
   const proficiencies = data.proficiencies || {};
@@ -446,6 +457,7 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const explicitLanguages = parseProficiencyNotes(languageNotes);
   const talentNotes = data.talents || '';
   const talents = parseProficiencyNotes(talentNotes);
+  const damageDefenses = data.damage_defenses || {};
   const combinedLanguages = [...explicitLanguages, ...legacyLanguages];
   const languages = combinedLanguages.reduce((acc, entry) => {
     const cleaned = entry.trim();
@@ -475,6 +487,9 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="talents">
             Talenti
           </button>
+          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="defenses">
+            Resistenze & Immunità
+          </button>
         </div>
         <div class="detail-card detail-card--text tab-panel is-active" role="tabpanel" data-proficiency-panel="equipment">
           ${equipped.length
@@ -495,6 +510,18 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           ${talents.length
     ? `<div class="tag-row">${talents.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
+        </div>
+        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="defenses">
+          <div class="defense-summary-grid">
+            <div class="defense-summary-card">
+              <span>Resistenze</span>
+              ${buildDefenseTags(damageDefenses, 'resistances')}
+            </div>
+            <div class="defense-summary-card">
+              <span>Immunità</span>
+              ${buildDefenseTags(damageDefenses, 'immunities')}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -968,31 +995,40 @@ export function buildResourceSections(resources, canManageResources) {
   const sortedResources = sortResourcesByCastTime(resources);
   const passiveResources = sortedResources.filter((resource) => resource.reset_on === null || resource.reset_on === 'none');
   const activeResources = sortedResources.filter((resource) => resource.reset_on !== null && resource.reset_on !== 'none');
-  const activeSection = activeResources.length
-    ? `
-      <div class="resource-section resource-section--active">
-        <div class="resource-section__body">
-          ${buildResourceList(activeResources, canManageResources, { showUseButton: true })}
-        </div>
+  const activeSection = `
+    <details class="resource-accordion resource-section resource-section--active" open>
+      <summary class="resource-accordion__summary">
+        <span>Attive</span>
+        <span class="resource-accordion__meta">${activeResources.length} risorse</span>
+        <span class="resource-accordion__icon" aria-hidden="true">▾</span>
+      </summary>
+      <div class="resource-section__body resource-accordion__body">
+        ${activeResources.length
+    ? buildResourceList(activeResources, canManageResources, { showUseButton: true })
+    : '<p class="muted">Nessuna risorsa attiva.</p>'}
       </div>
-    `
-    : '<p class="muted">Nessuna risorsa attiva.</p>';
-  const passiveSection = passiveResources.length
-    ? `
-      <div class="resource-section">
-        <header class="card-header"><div><p class="eyebrow">Risorse Passive</p></div></header>
-        <div class="resource-section__body">
-          ${buildResourceList(passiveResources, canManageResources, {
-    showCharges: false,
-    showUseButton: false,
-    showDescription: true,
-    showCastTime: true
-  })}
-        </div>
+    </details>
+  `;
+  const passiveSection = `
+    <details class="resource-accordion resource-section" ${activeResources.length ? '' : 'open'}>
+      <summary class="resource-accordion__summary">
+        <span>Passive</span>
+        <span class="resource-accordion__meta">${passiveResources.length} risorse</span>
+        <span class="resource-accordion__icon" aria-hidden="true">▾</span>
+      </summary>
+      <div class="resource-section__body resource-accordion__body">
+        ${passiveResources.length
+    ? buildResourceList(passiveResources, canManageResources, {
+      showCharges: false,
+      showUseButton: false,
+      showDescription: true,
+      showCastTime: true
+    })
+    : '<p class="muted">Nessuna risorsa passiva.</p>'}
       </div>
-    `
-    : '';
-  return `${activeSection}${passiveSection}`;
+    </details>
+  `;
+  return `<div class="resource-accordion-stack">${activeSection}${passiveSection}</div>`;
 }
 
 export function buildResourceCharges(resource) {

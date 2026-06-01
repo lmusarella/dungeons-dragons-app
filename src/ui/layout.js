@@ -45,17 +45,37 @@ export function renderLayout(container) {
       <main class="app-main" data-route-outlet></main>
       <div class="actions-fab" data-actions-fab>
         <div class="actions-fab-menu" data-actions-menu>
-          <button class="actions-fab-item" type="button" data-rest="short_rest">Riposo Breve</button>
-          <button class="actions-fab-item" type="button" data-add-loot>Loot</button>
-          <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory">Paga</button>
-          <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory">Ricevi</button>
-          <button class="actions-fab-item" type="button" data-hp-action="heal">Cura</button>
-          <button class="actions-fab-item" type="button" data-hp-action="damage">Danno</button>
-          <button class="actions-fab-item" type="button" data-edit-resistances data-fab-scope="home">Resistente</button>
-          <button class="actions-fab-item" type="button" data-edit-roll-adjustments data-fab-scope="home">Vant/Svant</button>
-          <button class="actions-fab-item" type="button" data-edit-conditions data-fab-scope="home">Condizioni</button>
-          <button class="actions-fab-item" type="button" data-open-dice="roller">Dadi</button>
-          <button class="actions-fab-item" type="button" data-rest="long_rest">Riposo Lungo</button>
+          <section class="actions-fab-group" data-fab-group aria-label="Riposo">
+            <p class="actions-fab-group__title">Riposo</p>
+            <div class="actions-fab-group__items">
+              <button class="actions-fab-item" type="button" data-rest="short_rest">Breve</button>
+              <button class="actions-fab-item" type="button" data-rest="long_rest">Lungo</button>
+            </div>
+          </section>
+          <section class="actions-fab-group" data-fab-group aria-label="Azioni">
+            <p class="actions-fab-group__title">Azioni</p>
+            <div class="actions-fab-group__items">
+              <button class="actions-fab-item" type="button" data-hp-action="heal">Cura</button>
+              <button class="actions-fab-item" type="button" data-hp-action="damage">Danno</button>
+              <button class="actions-fab-item" type="button" data-open-dice="roller">Dadi</button>
+            </div>
+          </section>
+          <section class="actions-fab-group" data-fab-group aria-label="Effetti temporanei">
+            <p class="actions-fab-group__title">Effetti temporanei</p>
+            <div class="actions-fab-group__items">
+              <button class="actions-fab-item" type="button" data-edit-conditions data-fab-scope="home">Condizioni</button>
+              <button class="actions-fab-item" type="button" data-edit-resistances data-fab-scope="home">Resistenze</button>
+              <button class="actions-fab-item" type="button" data-edit-roll-adjustments data-fab-scope="home">Vant/Svant</button>
+            </div>
+          </section>
+          <section class="actions-fab-group" data-fab-group aria-label="Inventario">
+            <p class="actions-fab-group__title">Inventario</p>
+            <div class="actions-fab-group__items">
+              <button class="actions-fab-item" type="button" data-add-loot>Loot</button>
+              <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory">Paga</button>
+              <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory">Ricevi</button>
+            </div>
+          </section>
         </div>
         <button class="actions-fab-toggle" type="button" data-actions-toggle aria-expanded="false">
           Azioni
