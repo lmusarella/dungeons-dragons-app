@@ -142,13 +142,13 @@ function buildOverlayMarkup() {
           <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
             ${[4, 6, 8, 10, 12].map((die) => `
               <div class="diceov-quick-die">
-                <span class="diceov-quick-die-label">D${die}</span>
                 <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
+                <span class="diceov-quick-die-label">D${die}</span>
                 <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
               </div>
             `).join('')}
           </div>
-          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio puoi cliccare un dado nel risultato per ritirarlo.</p>
+          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
           <p class="diceov-warning" data-custom-warning hidden></p>
         </div>
       </div>
@@ -522,20 +522,6 @@ function stringifyEditableDiceNotation({ counts, constant }) {
   return parts.join('+').replace(/\+\-/g, '-') || '1d20';
 }
 
-function getDieMaxValue(type) {
-  if (type === 'd10' || type === 'd100') return 9;
-  if (type === 'd9') return 9;
-  const sides = Number(String(type || '').replace(/^d/i, ''));
-  return Number.isFinite(sides) && sides > 0 ? sides : 20;
-}
-
-function rollSingleDie(type) {
-  const max = getDieMaxValue(type);
-  const startsAtZero = type === 'd10' || type === 'd100' || type === 'd9';
-  return startsAtZero
-    ? Math.floor(Math.random() * (max + 1))
-    : Math.floor(Math.random() * max) + 1;
-}
 
 function refreshNotationSummary(notation) {
   const result = Array.isArray(notation?.result) ? notation.result : [];
@@ -677,7 +663,8 @@ export function openDiceOverlay({
     selectionRollMode: null,
     selectionRollModeReason: null,
     lastCriticalSignature: null,
-    rerollHint: null
+    rerollHint: null,
+    pendingReroll: null
   };
 
   resetResult();
@@ -738,6 +725,7 @@ export function openDiceOverlay({
     state.lastRoll = null;
     state.lastBuff = null;
     state.rerollHint = null;
+    state.pendingReroll = null;
     renderRerollTray(null);
   }
 
@@ -1100,7 +1088,7 @@ export function openDiceOverlay({
     rerollTray.innerHTML = `
       <span class="diceov-reroll-label">Ritira:</span>
       ${dice.map((die) => `
-        <button class="diceov-reroll-die" type="button" data-reroll-index="${die.index}" aria-label="Ritira ${die.label} con risultato ${die.value}">
+        <button class="diceov-reroll-die${state.pendingReroll?.index === die.index ? ' is-pending' : ''}" type="button" data-reroll-index="${die.index}" aria-label="Prepara ritiro ${die.label} con risultato ${die.value}">
           <span class="diceov-reroll-die-type">${die.label.toUpperCase()}</span>
           <span class="diceov-reroll-die-value">${die.value}</span>
         </button>
@@ -1109,17 +1097,44 @@ export function openDiceOverlay({
     rerollTray.removeAttribute('hidden');
   }
 
-  function rerollDieAt(index) {
+  function prepareSwipeReroll(index) {
     if (!state.lastRoll || !Array.isArray(state.lastRoll.result)) return;
     const dice = getRerollableDice(state.lastRoll);
     const die = dice.find((entry) => entry.index === index);
     if (!die) return;
-    const nextValue = rollSingleDie(die.type);
-    const previousValue = state.lastRoll.result[index];
-    state.lastRoll.result[index] = nextValue;
+    const currentInput = state.pendingReroll?.returnInput || overlayEl.querySelector('#textInput')?.value || null;
+    state.pendingReroll = {
+      ...die,
+      previousValue: state.lastRoll.result[index],
+      returnInput: currentInput
+    };
+    state.rerollHint = `Swipe sul tavolo per ritirare ${die.label.toUpperCase()} (${die.value}).`;
+    resetLegacyDiceScene();
+    updateDiceInput(overlayEl, `1${die.type}`);
+    renderRollResult(state.lastRoll, { playCriticalSound: false });
+  }
+
+  function completePendingReroll(rolledNotation) {
+    const pending = state.pendingReroll;
+    if (!pending || !state.lastRoll || !Array.isArray(state.lastRoll.result)) return false;
+    if (!rolledNotation || hasInvalidRolls(rolledNotation)) {
+      state.rerollHint = 'Ritiro non valido: riprova con uno swipe sul tavolo.';
+      renderRollResult(state.lastRoll, { playCriticalSound: false });
+      return true;
+    }
+    const nextValue = Array.isArray(rolledNotation.result) ? rolledNotation.result[0] : null;
+    if (typeof nextValue !== 'number') {
+      state.rerollHint = 'Ritiro non valido: riprova con uno swipe sul tavolo.';
+      renderRollResult(state.lastRoll, { playCriticalSound: false });
+      return true;
+    }
+    state.lastRoll.result[pending.index] = nextValue;
     refreshNotationSummary(state.lastRoll);
-    state.rerollHint = `${die.label.toUpperCase()} ritirato: ${previousValue} → ${nextValue}`;
+    state.pendingReroll = null;
+    state.rerollHint = `${pending.label.toUpperCase()} ritirato: ${pending.previousValue} → ${nextValue}`;
+    if (pending.returnInput) updateDiceInput(overlayEl, pending.returnInput);
     renderRollResult(state.lastRoll, { playCriticalSound: true });
+    return true;
   }
 
   function renderRollResult(notation, { playCriticalSound = false } = {}) {
@@ -1293,7 +1308,7 @@ export function openDiceOverlay({
     rerollTray.onclick = (event) => {
       const button = event.target.closest('[data-reroll-index]');
       if (!button) return;
-      rerollDieAt(Number(button.dataset.rerollIndex));
+      prepareSwipeReroll(Number(button.dataset.rerollIndex));
     };
   }
 
@@ -1388,7 +1403,12 @@ export function openDiceOverlay({
 
   const onRoll = (event) => {
     if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
-    state.lastRoll = event.detail ? refreshNotationSummary(event.detail) : null;
+    const rolledNotation = event.detail ? refreshNotationSummary(event.detail) : null;
+    if (state.pendingReroll) {
+      completePendingReroll(rolledNotation);
+      return;
+    }
+    state.lastRoll = rolledNotation;
     state.lastBuff = null;
     state.rerollHint = null;
     if (state.lastRoll) {

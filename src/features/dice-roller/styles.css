@@ -816,7 +816,7 @@ header {
 
 .diceov-quick-die {
   display: inline-grid;
-  grid-template-columns: auto 30px 30px;
+  grid-template-columns: 30px auto 30px;
   align-items: center;
   gap: 4px;
   padding: 4px 5px;
@@ -852,10 +852,15 @@ header {
 }
 
 .diceov-quick-die-btn:hover,
-.diceov-reroll-die:hover {
+.diceov-reroll-die:hover,
+.diceov-reroll-die.is-pending {
   border-color: #ffdc7a;
   box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.18);
   transform: translateY(-1px);
+}
+
+.diceov-reroll-die.is-pending {
+  background: rgba(255, 220, 122, 0.14);
 }
 
 .diceov-reroll-tray {
@@ -910,7 +915,7 @@ header {
   }
 
   .diceov-quick-die {
-    grid-template-columns: 1fr 28px 28px;
+    grid-template-columns: 28px 1fr 28px;
   }
 
   .diceov-reroll-tray {
