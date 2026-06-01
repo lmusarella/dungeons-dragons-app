@@ -358,6 +358,15 @@ header {
   width: 100%;
 }
 
+
+.diceov-generic-builder {
+  display: contents;
+}
+
+.diceov-generic-builder[hidden] {
+  display: none;
+}
+
 .diceov-generic-row input[name="dice-count"] {
   width: 72px;
 }

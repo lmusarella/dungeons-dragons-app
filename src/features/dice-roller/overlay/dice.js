@@ -90,21 +90,23 @@ function buildOverlayMarkup() {
        
         <div class="diceov-control" data-dice-control="generic">       
           <div class="diceov-generic-row">
-            <div class="diceov-field">
-              <label class="diceov-label" for="dice-count">Dadi</label>
-              <input id="dice-count" type="number" name="dice-count" min="1" value="1" />
-            </div>
-            <div class="diceov-field">
-              <label class="diceov-label" for="dice-type">Tipo dado</label>
-              <select id="dice-type" name="dice-type">
-                <option value="d4">d4</option>
-                <option value="d6">d6</option>
-                <option value="d8">d8</option>
-                <option value="d10">d10</option>
-                <option value="d12">d12</option>
-                <option value="d20" selected>d20</option>
-                <option value="d100">d100</option>
-              </select>
+            <div class="diceov-generic-builder" data-generic-dice-builder>
+              <div class="diceov-field">
+                <label class="diceov-label" for="dice-count">Dadi</label>
+                <input id="dice-count" type="number" name="dice-count" min="1" value="1" />
+              </div>
+              <div class="diceov-field">
+                <label class="diceov-label" for="dice-type">Tipo dado</label>
+                <select id="dice-type" name="dice-type">
+                  <option value="d4">d4</option>
+                  <option value="d6">d6</option>
+                  <option value="d8">d8</option>
+                  <option value="d10">d10</option>
+                  <option value="d12">d12</option>
+                  <option value="d20" selected>d20</option>
+                  <option value="d100">d100</option>
+                </select>
+              </div>
             </div>
             <div class="diceov-field">
               <label class="diceov-label" for="dice-notation">Notazione</label>
@@ -142,7 +144,7 @@ function buildOverlayMarkup() {
           <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
           <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
             <span class="diceov-quick-dice-title">Aggiungi dadi</span>
-            ${[4, 6, 8, 10, 12].map((die) => `
+            ${[4, 6, 8, 10, 12, 20].map((die) => `
               <div class="diceov-quick-die">
                 <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
                 <span class="diceov-quick-die-label">D${die}</span>
@@ -483,7 +485,7 @@ function scaleDiceNotation(value, multiplier = 2) {
 }
 
 
-const QUICK_DICE_SIDES = [4, 6, 8, 10, 12];
+const QUICK_DICE_SIDES = [4, 6, 8, 10, 12, 20];
 
 function parseEditableDiceNotation(value) {
   const counts = new Map();
@@ -642,6 +644,7 @@ export function openDiceOverlay({
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
+  const genericDiceBuilder = overlayEl.querySelector('[data-generic-dice-builder]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
 
@@ -1335,6 +1338,7 @@ export function openDiceOverlay({
   setSelectionOptions();
   setBuffVisibility();
   const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
+  if (genericDiceBuilder) genericDiceBuilder.toggleAttribute('hidden', isDamageGenericRoll);
   if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
   if (criticalDamageInput) criticalDamageInput.checked = false;
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
