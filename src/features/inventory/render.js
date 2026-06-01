@@ -125,10 +125,10 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
               ${volumeLabel ? `<span class="muted">${volumeLabel}</span>` : ''}
             </div>
           </div>
-          <div class="inventory-table__cell">${getCategoryLabel(container.category)}</div>
-          <div class="inventory-table__cell">${container.qty}</div>
-          <div class="inventory-table__cell">${formatWeight(container.weight ?? 0, weightUnit)}</div>
-          <div class="inventory-table__cell">${container.max_volume ?? '-'}</div>
+          <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(container.category)}</span></div>
+          <div class="inventory-table__cell" data-label="Quantità">${container.qty}</div>
+          <div class="inventory-table__cell" data-label="Peso">${formatWeight(container.weight ?? 0, weightUnit)}</div>
+          <div class="inventory-table__cell" data-label="Volume">${container.max_volume ?? '-'}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
             <button class="resource-action-button icon-button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
               <span aria-hidden="true">✏️</span>
@@ -189,10 +189,10 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
                 ${item.damage_type ? `<span class="muted">Danno: ${damageTypeLabels.get(item.damage_type) || item.damage_type}</span>` : ''}
               </div>
             </div>
-            <div class="inventory-table__cell">${getCategoryLabel(item.category)}</div>
-            <div class="inventory-table__cell">${item.qty}</div>
-            <div class="inventory-table__cell">${formatWeight(item.weight ?? 0, weightUnit)}</div>
-            <div class="inventory-table__cell">${volumeValue}</div>
+            <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(item.category)}</span></div>
+            <div class="inventory-table__cell" data-label="Quantità">${item.qty}</div>
+            <div class="inventory-table__cell" data-label="Peso">${formatWeight(item.weight ?? 0, weightUnit)}</div>
+            <div class="inventory-table__cell" data-label="Volume">${volumeValue}</div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Consuma</button>` : ''}
               <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">
