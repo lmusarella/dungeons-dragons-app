@@ -11,6 +11,7 @@ import {
   calculateArmorClass,
   calculatePassivePerception,
   calculateSkillModifier,
+  buildSpellDamageOverlayConfig,
   formatHitDice,
   formatModifier,
   formatSigned,
@@ -815,6 +816,7 @@ export function buildSpellSection(character, canManageSpells = false) {
     const level = Number(spell.level) || 0;
     const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
     const castTimeClass = getResourceCastTimeClass(castTimeLabel);
+    const damageOverlay = buildSpellDamageOverlayConfig(spell, level);
     return `
       <div class="modifier-card attack-card resource-card spell-prepared-list__card">
         <div class="resource-card__badges spell-card__badges">
@@ -827,6 +829,11 @@ export function buildSpellSection(character, canManageSpells = false) {
           ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
         </button>
         <div class="resource-card-actions spell-card-actions">
+          ${damageOverlay ? `
+            <button class="icon-button icon-button--fire spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
+              <span aria-hidden="true">🔥</span>
+            </button>
+          ` : ''}
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
           ${canManageSpells ? `
             <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
