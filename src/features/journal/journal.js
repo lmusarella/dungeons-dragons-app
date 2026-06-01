@@ -91,35 +91,56 @@ export async function renderJournal(container) {
     return acc;
   }, {});
 
+  const pinnedCount = entries.filter((entry) => entry.is_pinned).length;
   container.innerHTML = `
     <div class="journal-layout">
+      <section class="card journal-hero-card">
+        <div class="journal-hero-card__copy">
+          <p class="eyebrow">Diario</p>
+          <h2>Appunti di avventura</h2>
+          <p class="muted">Organizza sessioni, PNG, indizi e file del personaggio.</p>
+        </div>
+        <div class="journal-hero-card__stats" aria-label="Statistiche diario">
+          <span><strong>${entries.length}</strong> voci</span>
+          <span><strong>${pinnedCount}</strong> in evidenza</span>
+          <span><strong>${tags.length}</strong> tag</span>
+          <span><strong>${sessionFiles.length}</strong> file</span>
+        </div>
+      </section>
       <section class="card journal-section-card journal-section-card--entries">
-        <header class="card-header">
+        <header class="card-header journal-card-header">
           <div>
-            <p class="eyebrow">Diario</p>         
+            <p class="eyebrow">Voci diario</p>
+            <p class="muted">Cerca, espandi e aggiorna rapidamente gli appunti.</p>
           </div>
           <button class="icon-button icon-button--add" data-add-entry aria-label="Nuova voce" title="Nuova voce">
             <span aria-hidden="true">+</span>
           </button>
         </header>
         <div class="filters journal-filters-row">
-          <input type="search" placeholder="Cerca per titolo o contenuto" data-search />
-          <button data-add-tag class="icon-button" aria-label="Gestisci tag" title="Gestisci tag">
-            <span aria-hidden="true">🏷️</span>
+          <label class="journal-search-field">
+            <span aria-hidden="true">🔎</span>
+            <input type="search" placeholder="Cerca per titolo o contenuto" data-search />
+          </label>
+          <button data-add-tag class="ghost-button journal-tag-button" aria-label="Gestisci tag" title="Gestisci tag">
+            <span aria-hidden="true">🏷️</span> Tag
           </button>
         </div>
         <div data-journal-list></div>
       </section>
 
       <section class="card journal-section-card journal-section-card--files">
-        <header class="card-header">
-          <p class="eyebrow">File sessioni</p>
+        <header class="card-header journal-card-header">
+          <div>
+            <p class="eyebrow">File sessioni</p>
+            <p class="muted">PDF, mappe e handout consultabili al volo.</p>
+          </div>
           <button class="icon-button" type="button" data-upload-session-file aria-label="Carica file sessione" title="Carica file sessione (PDF)">
             <span aria-hidden="true">📎</span>
           </button>
         </header>
         <input type="file" accept="application/pdf,.pdf" hidden data-session-file-input />
-        <p class="muted" data-upload-feedback>${state.offline ? 'Modalità offline: upload non disponibile.' : 'Carica un PDF di sessione per salvarlo nel diario.'}</p>
+        <p class="journal-upload-feedback" data-upload-feedback>${state.offline ? 'Modalità offline: upload non disponibile.' : 'Carica un PDF di sessione per salvarlo nel diario.'}</p>
         <div data-session-files-list></div>
       </section>
     </div>
@@ -137,7 +158,7 @@ export async function renderJournal(container) {
     const filteredEntries = filterEntries(entries, term);
     listEl.innerHTML = filteredEntries.length
       ? buildEntryList(filteredEntries, entryTagMap, tagMap)
-      : '<p class="muted">Nessuna voce trovata.</p>';
+      : '<div class="journal-empty-state"><strong>Nessuna voce trovata</strong><span>Prova una ricerca diversa o crea una nuova voce.</span></div>';
 
     listEl.querySelectorAll('[data-edit]')
       .forEach((btn) => btn.addEventListener('click', async (event) => {
@@ -192,7 +213,7 @@ export async function renderJournal(container) {
   function renderSessionFiles() {
     filesListEl.innerHTML = sessionFiles.length
       ? buildFileList(sessionFiles)
-      : '<p class="muted">Nessun file caricato.</p>';
+      : '<div class="journal-empty-state"><strong>Nessun file caricato</strong><span>Aggiungi un PDF di sessione per averlo sempre a portata di mano.</span></div>';
 
     filesListEl.querySelectorAll('[data-delete-file]')
       .forEach((button) => button.addEventListener('click', async () => {
@@ -362,17 +383,23 @@ function filterEntries(entries, term) {
 }
 
 function buildEntryList(entries, entryTagMap, tagMap) {
+  const sortedEntries = [...entries].sort((a, b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)));
   return `
     <ul class="journal-entry-list">
-      ${entries.map((entry) => {
+      ${sortedEntries.map((entry) => {
     const tagIds = entryTagMap[entry.id] ?? [];
     const formattedContent = renderPrettyContent(entry.content || '');
+    const preview = getContentPreview(entry.content || '');
     return `
-          <li class="journal-entry-card journal-entry-card--entry" data-entry-card>
+          <li class="journal-entry-card journal-entry-card--entry ${entry.is_pinned ? 'is-pinned' : ''}" data-entry-card>
             <div class="journal-entry-card__header">
               <div class="journal-entry-card__summary">
-                <strong>${entry.title || 'Senza titolo'}</strong>
+                <div class="journal-entry-card__title-row">
+                  <strong>${entry.title || 'Senza titolo'}</strong>
+                  ${entry.is_pinned ? '<span class="journal-entry-card__pin">In evidenza</span>' : ''}
+                </div>
                 <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
+                ${preview ? `<p class="journal-entry-card__preview">${preview}</p>` : ''}
               </div>
               <div class="actions journal-entry-card__actions">
                 <button class="icon-button" data-quick-append="${entry.id}" aria-label="Aggiunta rapida" title="Aggiunta rapida testo">
@@ -386,9 +413,10 @@ function buildEntryList(entries, entryTagMap, tagMap) {
                 </button>
               </div>
             </div>
-            <div class="tag-row">
+            ${tagIds.length ? `
+            <div class="tag-row journal-entry-card__tags">
               ${tagIds.map((id) => `<span class="chip">${tagMap.get(id)?.name ?? ''}</span>`).join('')}
-            </div>
+            </div>` : ''}
             <div class="journal-entry-card__content" data-entry-content hidden>
               ${formattedContent || '<p class="muted">Nessun contenuto.</p>'}
             </div>
@@ -397,6 +425,15 @@ function buildEntryList(entries, entryTagMap, tagMap) {
   }).join('')}
     </ul>
   `;
+}
+
+function getContentPreview(rawText) {
+  const cleaned = escapeHtml(rawText || '')
+    .replace(/[#>*_`-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return '';
+  return cleaned.length > 150 ? `${cleaned.slice(0, 150)}…` : cleaned;
 }
 
 function renderPrettyContent(rawText) {
@@ -442,12 +479,15 @@ function buildFileList(files) {
     <ul class="journal-entry-list">
       ${files.map((file) => `
         <li class="journal-entry-card journal-entry-card--file">
-          <div>
+          <div class="journal-file-card__icon" aria-hidden="true">PDF</div>
+          <div class="journal-file-card__body">
             <strong>${file.file_name}</strong>
             <p class="muted">${formatFileSize(file.size_bytes)} · ${file.mime_type || 'application/pdf'}</p>
-            ${file.session_no !== null && file.session_no !== undefined ? `<p class="muted">Sessione ${file.session_no}</p>` : ''}
-            ${file.notes ? `<p class="muted">${file.notes}</p>` : ''}
-            <p class="muted">${formatDate(file.created_at)}</p>
+            <div class="journal-file-card__meta">
+              ${file.session_no !== null && file.session_no !== undefined ? `<span>Sessione ${file.session_no}</span>` : ''}
+              <span>${formatDate(file.created_at)}</span>
+            </div>
+            ${file.notes ? `<p class="journal-file-card__notes">${file.notes}</p>` : ''}
           </div>
           <div class="actions">
             <button class="icon-button" data-preview-file="${file.id}" aria-label="Visualizza file" title="Visualizza">
@@ -530,12 +570,29 @@ function openFileInNewTab(url) {
   fallbackLink.remove();
 }
 
+function buildJournalModalSection(title, description, children = []) {
+  const section = document.createElement('section');
+  section.className = 'journal-modal-section';
+  section.innerHTML = `
+    <div class="journal-modal-section__header">
+      <h4>${title}</h4>
+      ${description ? `<p class="muted">${description}</p>` : ''}
+    </div>
+  `;
+  children.filter(Boolean).forEach((child) => section.appendChild(child));
+  return section;
+}
+
 async function openSessionFileUploadModal(file) {
   const content = document.createElement('div');
-  content.className = 'drawer-form modal-form-grid';
-  content.appendChild(buildInput({ label: 'Nome file visibile', name: 'display_name', value: file.name }));
-  content.appendChild(buildInput({ label: 'Sessione (opzionale)', name: 'session_no', type: 'number' }));
-  content.appendChild(buildTextarea({ label: 'Note (opzionale)', name: 'notes', placeholder: 'Aggiungi contesto o descrizione del file' }));
+  content.className = 'drawer-form modal-form-grid journal-file-modal';
+  content.appendChild(buildJournalModalSection('Dettagli file', 'Rinomina il file e collegalo a una sessione, se utile.', [
+    buildInput({ label: 'Nome file visibile', name: 'display_name', value: file.name }),
+    buildInput({ label: 'Sessione (opzionale)', name: 'session_no', type: 'number' })
+  ]));
+  content.appendChild(buildJournalModalSection('Note', 'Aggiungi contesto, scena o riferimento al contenuto del PDF.', [
+    buildTextarea({ label: 'Note (opzionale)', name: 'notes', placeholder: 'Aggiungi contesto o descrizione del file' })
+  ]));
 
   const formData = await openFormModal({
     title: 'Dettagli file sessione',
@@ -573,7 +630,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     value: entry?.entry_date ?? new Date().toISOString().split('T')[0]
   }));
   metaRow.appendChild(buildInput({ label: 'Sessione', name: 'session_no', type: 'number', value: entry?.session_no ?? '' }));
-  content.appendChild(metaRow);
+  content.appendChild(buildJournalModalSection('Informazioni', 'Titolo, data e numero sessione aiutano a ritrovare la voce.', [metaRow]));
   const pinnedToggle = buildToggleField({ label: 'In evidenza', name: 'is_pinned', checked: Boolean(entry?.is_pinned) });
   pinnedToggle.classList.add('journal-entry-modal__pin-toggle-inline');
 
@@ -586,8 +643,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   editorHeader.className = 'journal-entry-modal__editor-header';
   editorHeader.appendChild(buildEditorToolbar(textarea));
   editorHeader.appendChild(pinnedToggle);
-  content.appendChild(editorHeader);
-  content.appendChild(editorField);
+  content.appendChild(buildJournalModalSection('Contenuto', 'Usa la toolbar per formattare appunti, indizi, PNG e promemoria.', [editorHeader, editorField]));
 
   const tagWrap = document.createElement('div');
   tagWrap.className = 'tag-selector journal-entry-modal__tag-selector';
@@ -609,7 +665,7 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     });
     tagWrap.appendChild(label);
   });
-  content.appendChild(tagWrap);
+  content.appendChild(buildJournalModalSection('Tag', 'Etichetta la voce per filtri e consultazione rapida.', [tagWrap]));
 
   const formData = await openFormModal({
     title: entry ? 'Modifica voce' : 'Nuova voce',
@@ -742,12 +798,14 @@ function unprefixLine(textarea, prefix) {
 
 async function openQuickAppendModal(entry, onSave) {
   const content = document.createElement('div');
-  content.className = 'drawer-form modal-form-grid';
-  content.appendChild(buildTextarea({
-    label: `Aggiungi testo a "${entry.title || 'Senza titolo'}"`,
-    name: 'append_content',
-    placeholder: 'Scrivi qui appunti veloci da aggiungere alla voce...'
-  }));
+  content.className = 'drawer-form modal-form-grid journal-quick-modal';
+  content.appendChild(buildJournalModalSection('Nota rapida', 'Il testo verrà aggiunto in fondo alla voce selezionata.', [
+    buildTextarea({
+      label: `Aggiungi testo a "${entry.title || 'Senza titolo'}"`,
+      name: 'append_content',
+      placeholder: 'Scrivi qui appunti veloci da aggiungere alla voce...'
+    })
+  ]));
 
   const formData = await openFormModal({
     title: 'Aggiunta rapida al diario',
@@ -792,7 +850,9 @@ ${appendContent}`
 async function openTagModal(character, tags, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid journal-tag-manager';
-  content.appendChild(buildInput({ label: 'Nome nuovo tag', name: 'name' }));
+  content.appendChild(buildJournalModalSection('Nuovo tag', 'Crea etichette brevi per catalogare le voci del diario.', [
+    buildInput({ label: 'Nome nuovo tag', name: 'name' })
+  ]));
 
   const existing = document.createElement('div');
   existing.className = 'journal-tag-manager__list';
@@ -806,7 +866,7 @@ async function openTagModal(character, tags, onSave) {
       </div>
     `).join('')
     : '<p class="muted">Nessun tag disponibile.</p>';
-  content.appendChild(existing);
+  content.appendChild(buildJournalModalSection('Tag esistenti', 'Eliminare un tag lo rimuove da tutte le voci collegate.', [existing]));
 
   const formData = await openFormModal({
     title: 'Gestione tag diario',

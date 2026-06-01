@@ -335,7 +335,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   darkvisionField.className = 'modal-toggle-field compact-darkvision-toggle';
   darkvisionField.innerHTML = `
     <span class="modal-toggle-field__label">Scurovisione</span>
-    <label class="diceov-toggle">
+    <label class="diceov-toggle condition-modal__toggle">
       <input type="checkbox" name="darkvision_enabled" ${characterData.darkvision_enabled ? 'checked' : ''} />
       <span class="diceov-toggle-track" aria-hidden="true"></span>
     </label>

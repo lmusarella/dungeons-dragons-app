@@ -138,17 +138,38 @@ export async function openConditionsModal(character) {
   const list = document.createElement('div');
   list.className = 'condition-modal__list';
   conditionList.forEach((condition) => {
-    const label = document.createElement('label');
+    const label = document.createElement('div');
     const isChecked = current.includes(condition.key);
     label.className = `condition-modal__item${isChecked ? ' is-selected' : ''}`;
+    label.setAttribute('role', 'group');
     label.innerHTML = `
       <span class="condition-modal__item-label"><strong>${condition.label}</strong></span>
-      <span class="diceov-toggle condition-modal__toggle">
-        <input type="checkbox" name="conditions" value="${condition.key}" ${isChecked ? 'checked' : ''} />
-        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      <span class="condition-modal__actions">
+        <details class="info-tooltip condition-modal__tooltip">
+          <summary aria-label="Descrivi ${condition.label}">?</summary>
+          <div class="info-tooltip__panel">
+            <p><strong>${condition.label}</strong></p>
+            <p>${condition.effect}</p>
+          </div>
+        </details>
+        <label class="diceov-toggle condition-modal__toggle">
+          <input type="checkbox" name="conditions" value="${condition.key}" ${isChecked ? 'checked' : ''} />
+          <span class="diceov-toggle-track" aria-hidden="true"></span>
+        </label>
       </span>
     `;
     const checkbox = label.querySelector('input[type="checkbox"]');
+    const tooltip = label.querySelector('.condition-modal__tooltip');
+    tooltip?.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+    tooltip?.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+    });
+    label.addEventListener('click', (event) => {
+      if (event.target.closest('.condition-modal__tooltip, .condition-modal__toggle')) return;
+      checkbox?.click();
+    });
     checkbox?.addEventListener('change', () => {
       label.classList.toggle('is-selected', checkbox.checked);
     });
