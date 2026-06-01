@@ -92,16 +92,29 @@ export function openBackgroundModal(character) {
   const content = document.createElement('div');
   content.className = 'background-modal';
 
+  const hero = document.createElement('div');
+  hero.className = 'background-modal-hero';
+  hero.innerHTML = `
+    <span class="background-modal-hero__eyebrow">Storia del personaggio</span>
+    <strong>${escapeHtml(character.name || 'Background')}</strong>
+  `;
+
   const descriptionCard = document.createElement('div');
-  descriptionCard.className = 'detail-card detail-card--text';
+  descriptionCard.className = 'detail-card detail-card--text background-modal-card';
   const descriptionBlock = document.createElement('div');
   descriptionBlock.className = 'background-modal-block';
+  const quoteMark = document.createElement('span');
+  quoteMark.className = 'background-modal-quote-mark';
+  quoteMark.setAttribute('aria-hidden', 'true');
+  quoteMark.textContent = '“';
   const descriptionText = document.createElement('p');
   descriptionText.className = 'background-modal-description';
   descriptionText.textContent = description;
+  descriptionBlock.appendChild(quoteMark);
   descriptionBlock.appendChild(descriptionText);
   descriptionCard.appendChild(descriptionBlock);
 
+  content.appendChild(hero);
   content.appendChild(descriptionCard);
 
   openFormModal({

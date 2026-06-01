@@ -156,7 +156,7 @@ export async function renderLibrary(container) {
         const traits = [spell.concentration ? 'Concentrazione' : '', spell.ritual ? 'Rituale' : '', spell.rules_version ? `Regole ${spell.rules_version}` : '']
           .filter(Boolean);
         return `
-        <article class="character-card library-spell-card">
+        <article class="character-card library-spell-card" data-library-view-spell="${spell.id}" role="button" tabindex="0" aria-label="Apri dettaglio incantesimo ${spell.name}">
           <div class="library-spell-card__level" aria-label="Livello ${spell.level ?? 0}">
             <span>Lv</span>
             <strong>${spell.level ?? 0}</strong>
@@ -170,7 +170,6 @@ export async function renderLibrary(container) {
             ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
           </div>
           <div class="button-row library-spell-card__actions">
-            <button class="secondary library-spell-card__detail" type="button" data-library-view-spell="${spell.id}" aria-label="Dettagli incantesimo ${spell.name}">Dettagli</button>
             <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>
         </article>`;
@@ -182,15 +181,26 @@ export async function renderLibrary(container) {
          <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
       : '';
 
-    list.querySelectorAll('[data-library-view-spell]').forEach((button) => button.addEventListener('click', () => {
-      const spell = sortedSpells.find((entry) => entry.id === button.dataset.libraryViewSpell);
+    const openLibrarySpell = (spellId) => {
+      const spell = sortedSpells.find((entry) => entry.id === spellId);
       if (!spell) return;
       openSpellQuickDetailModal(null, {
         ...spell,
         kind: Number(spell.level) === 0 ? 'cantrip' : 'spell',
         is_ritual: Boolean(spell.ritual || spell.is_ritual)
       });
-    }));
+    };
+    list.querySelectorAll('[data-library-view-spell]').forEach((card) => {
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('button')) return;
+        openLibrarySpell(card.dataset.libraryViewSpell);
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openLibrarySpell(card.dataset.libraryViewSpell);
+      });
+    });
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;
       if (!spellId) return;
