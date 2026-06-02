@@ -6507,3 +6507,210 @@ button:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+.familiars-layout {
+  max-width: 1120px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.familiars-column {
+  width: 100%;
+}
+
+.familiars-page-header .card-header {
+  margin-bottom: 8px;
+}
+
+.familiar-empty-state {
+  text-align: center;
+}
+
+.familiar-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.familiar-sheet__header {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(234, 223, 201, 0.85);
+}
+
+.familiar-overview {
+  gap: 12px;
+}
+
+.familiar-summary {
+  align-items: center;
+}
+
+.familiar-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #eadfc9;
+  background: linear-gradient(140deg, #fef6e5 0%, #f3d5a9 100%);
+  box-shadow: 0 8px 16px rgba(var(--accent-rgb), 0.12);
+  font-size: 2rem;
+}
+
+.familiar-ability-grid .stat-card--button {
+  appearance: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.familiar-ability-grid .stat-card--button:hover,
+.familiar-ability-grid .stat-card--button:focus-visible {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.familiar-vitals-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.familiar-hp-row {
+  margin-top: 0;
+}
+
+.familiar-speed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.familiar-speed-card {
+  min-width: 0;
+}
+
+.familiar-speed-card strong {
+  font-size: 0.88rem;
+}
+
+.familiar-sheet__details {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+  gap: 12px;
+}
+
+.familiar-detail-panel {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #eadfc9;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.familiar-attack-card,
+.weapon-card.familiar-attack-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #eadfc9;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.06);
+}
+
+.familiar-attack-card + .familiar-attack-card {
+  margin-top: 8px;
+}
+
+.familiar-attack-card .weapon-card__main {
+  min-width: 0;
+}
+
+.familiar-attack-card .weapon-card__main p {
+  margin: 2px 0 0;
+}
+
+.familiar-notes {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.familiar-notes p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.modal-card--familiar-editor .character-edit-stepper-nav {
+  justify-content: center;
+}
+
+.familiar-edit-form .character-edit-group__heading p,
+.familiar-edit-section-header p {
+  margin: 2px 0 0;
+}
+
+.familiar-edit-identity-grid,
+.familiar-edit-vitals-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.familiar-edit-ability-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.familiar-edit-attacks-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.familiar-edit-attack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.familiar-edit-attack-row {
+  align-items: stretch;
+}
+
+.familiar-edit-attack-grid {
+  grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.55fr) minmax(160px, 1fr);
+}
+
+.familiar-edit-attack-actions {
+  justify-content: flex-end;
+}
+
+.familiar-edit-empty-attacks {
+  margin: 0;
+  padding: 10px;
+  border: 1px dashed #d8c5a5;
+  border-radius: 12px;
+  background: #fffaf1;
+}
+
+.familiar-edit-add-attack {
+  align-self: flex-start;
+}
+
+@media (min-width: 1024px) {
+  .familiars-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .familiar-sheet__details,
+  .familiar-edit-attack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .familiar-edit-ability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
