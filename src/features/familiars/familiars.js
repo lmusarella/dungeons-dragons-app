@@ -120,9 +120,11 @@ function buildCompanionCard(companion, isSelected = false) {
     const isProficient = Boolean(statBlock.saving_throws?.[key]);
     return `
       <button class="modifier-card modifier-card--interactive familiar-save-card ${isProficient ? 'modifier-card--proficiency' : ''}" type="button" data-roll-save="${escapeHtml(companion.id)}:${key}" aria-label="Tira salvezza ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
-        <div class="modifier-title">
-          <strong>${ABILITY_LABELS[key]}</strong>
-          ${isProficient ? '<span class="modifier-ability">Comp.</span>' : ''}
+        <div>
+          <div class="modifier-title">
+            <strong>${ABILITY_LABELS[key]}</strong>
+            <span class="modifier-ability modifier-ability--${key}">TS${isProficient ? ' · C' : ''}</span>
+          </div>
         </div>
         <div class="modifier-value">${formatSigned(modifier)}</div>
       </button>
@@ -191,12 +193,21 @@ function buildCompanionCard(companion, isSelected = false) {
         </div>
       </header>
       <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
-        <div class="stat-panel familiar-abilities-panel">
+        <section class="home-section familiar-detail-panel familiar-rolls-panel">
           <header class="familiar-panel-title">
-            <p class="eyebrow">Tiri abilità</p>
+            <p class="eyebrow">Tiri abilità & salvezza</p>
           </header>
-          <div class="detail-grid detail-grid--compact familiar-ability-grid">${abilities}</div>
-        </div>
+          <div class="familiar-rolls-grid">
+            <div class="familiar-rolls-group">
+              <p class="familiar-rolls-label">Abilità</p>
+              <div class="detail-grid detail-grid--compact familiar-ability-grid">${abilities}</div>
+            </div>
+            <div class="familiar-rolls-group">
+              <p class="familiar-rolls-label">Salvezza</p>
+              <div class="familiar-save-grid">${savingThrows}</div>
+            </div>
+          </div>
+        </section>
         <div class="hp-panel familiar-vitals-panel">
           <div class="hp-bar-row familiar-hp-row">
             <div class="hp-bar-stack">
@@ -213,12 +224,6 @@ function buildCompanionCard(companion, isSelected = false) {
           </div>
           <div class="familiar-speed-grid">${speeds}</div>
         </div>
-        <section class="home-section familiar-detail-panel familiar-saves-panel">
-          <header class="familiar-panel-title">
-            <p class="eyebrow">Tiri salvezza</p>
-          </header>
-          <div class="familiar-save-grid">${savingThrows}</div>
-        </section>
         <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel">
           <header class="familiar-panel-title">
             <p class="eyebrow">Attacchi</p>

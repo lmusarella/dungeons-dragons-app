@@ -7331,3 +7331,89 @@ button:focus-visible,
     grid-template-columns: 1fr auto;
   }
 }
+
+/* Unified familiar rolls panel */
+.familiar-rolls-panel {
+  grid-area: abilities;
+  background: #fffaf1;
+  border-color: #eadfc9;
+}
+
+.familiar-dashboard {
+  grid-template-areas:
+    "vitals abilities abilities"
+    "attacks attacks notes";
+}
+
+.familiar-rolls-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.familiar-rolls-group {
+  min-width: 0;
+}
+
+.familiar-rolls-label {
+  margin: 0 0 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #665a48;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.familiar-rolls-panel .modifier-card {
+  border-color: #eadfc9;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
+}
+
+.familiar-rolls-panel .modifier-card--proficiency {
+  border-color: #64b48c;
+  background: linear-gradient(135deg, #e2f7ee, #d5f1e6);
+}
+
+.familiar-sheet__toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: 100%;
+}
+
+.familiar-sheet__title {
+  width: 100%;
+}
+
+.familiar-edit-attack-grid {
+  grid-template-columns: minmax(160px, 1.1fr) minmax(140px, 0.75fr) minmax(150px, 0.9fr) minmax(150px, 0.8fr);
+}
+
+.familiar-edit-attack-grid .field {
+  min-width: 0;
+}
+
+.familiar-edit-attack-grid .number-stepper {
+  grid-template-columns: 32px minmax(58px, 1fr) 32px;
+}
+
+@media (max-width: 1180px) {
+  .familiar-dashboard {
+    grid-template-areas:
+      "vitals abilities"
+      "attacks notes";
+  }
+
+  .familiar-rolls-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .familiar-dashboard {
+    grid-template-areas:
+      "vitals"
+      "abilities"
+      "attacks"
+      "notes";
+  }
+}
