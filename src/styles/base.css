@@ -7226,3 +7226,108 @@ button:focus-visible,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Familiar quick panel integration and character-sheet style roll lists */
+.familiars-layout {
+  grid-template-areas: "quick detail";
+}
+
+.familiars-quick-panel__header .muted {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.familiars-quick-panel__header .icon-button--add {
+  flex: 0 0 auto;
+}
+
+.familiar-ability-grid,
+.familiar-save-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 6px;
+}
+
+.familiar-ability-card,
+.familiar-save-card {
+  min-height: 40px;
+  padding: 5px 7px;
+  font-size: 0.82rem;
+}
+
+.familiar-ability-card .modifier-value,
+.familiar-save-card .modifier-value {
+  font-size: 0.95rem;
+}
+
+.familiar-sheet__toggle {
+  flex: 1 1 auto;
+}
+
+.familiar-sheet__title > strong {
+  font-size: 1.12rem;
+}
+
+.familiar-sheet__hp-summary {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  color: #5a381f;
+  font-size: 0.82rem;
+}
+
+.familiar-sheet__hp-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #f0e1c7;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.08);
+}
+
+.familiar-sheet__hp-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #c34a36, #e08c3c);
+}
+
+.familiar-sheet.is-collapsed .familiar-sheet__title > strong {
+  font-size: 1.18rem;
+}
+
+.familiar-sheet.is-collapsed .familiar-avatar {
+  width: 58px;
+  height: 58px;
+}
+
+.familiar-edit-attack-grid {
+  grid-template-columns: minmax(150px, 1fr) minmax(110px, 0.55fr) minmax(140px, 0.85fr) minmax(100px, 0.5fr);
+}
+
+@media (max-width: 860px) {
+  .familiars-layout {
+    grid-template-areas:
+      "quick"
+      "detail";
+  }
+
+  .familiar-ability-grid,
+  .familiar-save-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .familiar-ability-grid,
+  .familiar-save-grid,
+  .familiar-edit-attack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .familiar-sheet__hp-summary {
+    grid-template-columns: 1fr auto;
+  }
+}

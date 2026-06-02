@@ -104,10 +104,14 @@ function buildCompanionCard(companion, isSelected = false) {
     const score = Number(statBlock.abilities?.[key]) || 10;
     const mod = getAbilityModifier(score) ?? 0;
     return `
-      <button class="stat-card stat-card--${key} stat-card--button" type="button" data-roll-ability="${escapeHtml(companion.id)}:${key}" aria-label="Tira ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
-        <span>${ABILITY_LABELS[key]}</span>
-        <strong>${score}</strong>
-        <span class="stat-card__modifier">${formatSigned(mod)}</span>
+      <button class="modifier-card modifier-card--interactive familiar-ability-card" type="button" data-roll-ability="${escapeHtml(companion.id)}:${key}" aria-label="Tira ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
+        <div>
+          <div class="modifier-title">
+            <strong>${ABILITY_LABELS[key]}</strong>
+            <span class="modifier-ability modifier-ability--${key}">${score}</span>
+          </div>
+        </div>
+        <div class="modifier-value">${formatSigned(mod)}</div>
       </button>
     `;
   }).join('');
@@ -132,18 +136,22 @@ function buildCompanionCard(companion, isSelected = false) {
     </div>
   `).join('');
   const attacks = statBlock.attacks.length
-    ? statBlock.attacks.map((attack, index) => `
+    ? statBlock.attacks.map((attack, index) => {
+      const damageModifier = Number(attack.damage_modifier) || 0;
+      const damageLabel = `${attack.damage || '-'}${damageModifier ? ` (${formatSigned(damageModifier)})` : ''}`;
+      return `
       <div class="weapon-card familiar-attack-card">
         <div class="weapon-card__main">
           <strong>${escapeHtml(attack.name || `Attacco ${index + 1}`)}</strong>
-          <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(attack.damage || '-')}</p>
+          <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
         </div>
         <div class="familiar-attack-actions">
           <button class="icon-button icon-button--dice" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🎲</button>
           <button class="icon-button icon-button--damage" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🔥</button>
         </div>
       </div>
-    `).join('')
+    `;
+    }).join('')
     : '<p class="muted">Nessun attacco configurato.</p>';
   const notes = companion.notes?.trim()
     ? `<div class="detail-card detail-card--text familiar-notes"><p>${escapeHtml(companion.notes)}</p></div>`
@@ -170,6 +178,10 @@ function buildCompanionCard(companion, isSelected = false) {
               <span class="meta-tag">HP ${hpCurrent}/${hpMax}</span>
               <span class="meta-tag">Bonus comp. ${formatSigned(statBlock.proficiency_bonus)}</span>
             </span>
+            <span class="familiar-sheet__hp-summary" aria-label="Punti ferita ${hpCurrent} su ${hpMax}, ${Math.round(hpPercent)} percento">
+              <span class="familiar-sheet__hp-track"><span style="width: ${hpPercent}%;"></span></span>
+              <strong>${Math.round(hpPercent)}%</strong>
+            </span>
           </span>
           <span class="familiar-sheet__chevron" aria-hidden="true">⌄</span>
         </button>
@@ -183,7 +195,7 @@ function buildCompanionCard(companion, isSelected = false) {
           <header class="familiar-panel-title">
             <p class="eyebrow">Tiri abilità</p>
           </header>
-          <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-ability-grid">${abilities}</div>
+          <div class="detail-grid detail-grid--compact familiar-ability-grid">${abilities}</div>
         </div>
         <div class="hp-panel familiar-vitals-panel">
           <div class="hp-bar-row familiar-hp-row">
@@ -258,37 +270,29 @@ export async function renderFamiliars(container) {
   const selectedCompanionId = companions[0]?.id;
   container.innerHTML = `
     <div class="home-layout familiars-layout">
-      <section class="card home-card home-section familiars-page-header">
-        <header class="card-header">
+      <aside class="card home-card home-section familiars-quick-panel" aria-label="Seleziona famiglio">
+        <div class="familiars-quick-panel__header">
           <div>
             <p class="eyebrow">Famigli & Evocazioni</p>
+            <span class="muted">Selezione rapida</span>
           </div>
-          <div class="button-row">
-            <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
-          </div>
-        </header>
-        <p class="muted">Seleziona rapidamente una creatura e gestisci tiri, HP e attacchi.</p>
-      </section>
-      ${companions.length ? `
-        <aside class="card home-card home-section familiars-quick-panel" aria-label="Seleziona famiglio">
-          <div class="familiars-quick-panel__header">
-            <p class="eyebrow">Selezione rapida</p>
-            <span class="meta-tag">${companions.length} schede</span>
-          </div>
+          <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
+        </div>
+        ${companions.length ? `
           <div class="familiars-quick-list">
             ${companions.map((companion) => buildCompanionQuickButton(companion, companion.id === selectedCompanionId)).join('')}
           </div>
-        </aside>
-        <main class="familiars-detail-area">
-          ${companions.map((companion) => buildCompanionCard(companion, companion.id === selectedCompanionId)).join('')}
-        </main>
-      ` : `
-        <section class="card home-card home-section familiar-empty-state">
-          <p class="eyebrow">Nessuna scheda</p>
-          <h3>Crea il primo famiglio</h3>
-          <p class="muted">Aggiungi foto, caratteristiche, punti ferita, velocità, tiri salvezza e attacchi per tirare rapidamente durante la sessione.</p>
-        </section>
-      `}
+        ` : '<p class="muted">Nessuna evocazione o famiglio creato.</p>'}
+      </aside>
+      <main class="familiars-detail-area">
+        ${companions.length ? companions.map((companion) => buildCompanionCard(companion, companion.id === selectedCompanionId)).join('') : `
+          <section class="card home-card home-section familiar-empty-state">
+            <p class="eyebrow">Nessuna scheda</p>
+            <h3>Crea il primo famiglio</h3>
+            <p class="muted">Aggiungi foto, caratteristiche, punti ferita, velocità, tiri salvezza e attacchi per tirare rapidamente durante la sessione.</p>
+          </section>
+        `}
+      </main>
     </div>
   `;
 
@@ -297,7 +301,8 @@ export async function renderFamiliars(container) {
     let draftAttacks = (current.attacks || []).map((attack) => ({
       name: attack?.name || '',
       to_hit: Number(attack?.to_hit) || 0,
-      damage: attack?.damage || ''
+      damage: attack?.damage || '',
+      damage_modifier: Number(attack?.damage_modifier) || 0
     }));
 
     const form = document.createElement('div');
@@ -443,7 +448,8 @@ export async function renderFamiliars(container) {
       draftAttacks = Array.from(attackList.querySelectorAll('[data-attack-row]')).map((row) => ({
         name: row.querySelector('[name^="attack_name_"]')?.value || '',
         to_hit: Number(row.querySelector('[name^="attack_to_hit_"]')?.value) || 0,
-        damage: row.querySelector('[name^="attack_damage_"]')?.value || ''
+        damage: row.querySelector('[name^="attack_damage_"]')?.value || '',
+        damage_modifier: Number(row.querySelector('[name^="attack_damage_modifier_"]')?.value) || 0
       }));
     };
 
@@ -468,7 +474,10 @@ export async function renderFamiliars(container) {
         const hitInput = hitField.querySelector('input');
         hitInput.step = '1';
         grid.appendChild(hitField);
-        grid.appendChild(buildInput({ label: 'Danni', name: `attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d6+2' }));
+        grid.appendChild(buildInput({ label: 'Danni', name: `attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d6' }));
+        const damageModifierField = buildInput({ label: 'Mod. danni', name: `attack_damage_modifier_${index}`, type: 'number', value: attack.damage_modifier ?? 0 });
+        damageModifierField.querySelector('input').step = '1';
+        grid.appendChild(damageModifierField);
         const actions = document.createElement('div');
         actions.className = 'character-toggle-group familiar-edit-attack-actions';
         const removeButton = document.createElement('button');
@@ -489,7 +498,7 @@ export async function renderFamiliars(container) {
 
     addAttackButton.addEventListener('click', () => {
       readAttackRows();
-      draftAttacks.push({ name: '', to_hit: 0, damage: '' });
+      draftAttacks.push({ name: '', to_hit: 0, damage: '', damage_modifier: 0 });
       renderAttackRows();
       attachNumberSteppers(attackList);
     });
@@ -635,7 +644,8 @@ export async function renderFamiliars(container) {
     const attacks = Array.from({ length: attackCount }, (_, index) => ({
       name: String(formData.get(`attack_name_${index}`) || '').trim(),
       to_hit: Number(formData.get(`attack_to_hit_${index}`) || 0),
-      damage: String(formData.get(`attack_damage_${index}`) || '').trim()
+      damage: String(formData.get(`attack_damage_${index}`) || '').trim(),
+      damage_modifier: Number(formData.get(`attack_damage_modifier_${index}`) || 0)
     })).filter((attack) => attack.name || attack.damage);
 
     const payload = {
@@ -739,7 +749,7 @@ export async function renderFamiliars(container) {
       title: `${companion.name} · Danni ${attack.name || 'Attacco'}`,
       mode: 'generic',
       notation: damageNotation,
-      modifier: 0,
+      modifier: Number(attack.damage_modifier) || 0,
       rollType: 'DMG',
       historyLabel: `${companion.name} · ${attack.name || 'Danni'}`
     });
