@@ -6714,3 +6714,249 @@ button:focus-visible,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.familiars-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  grid-template-areas:
+    "header header"
+    "quick detail";
+  align-items: start;
+  max-width: 1380px;
+}
+
+.familiars-page-header {
+  grid-area: header;
+}
+
+.familiars-quick-panel {
+  grid-area: quick;
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.familiars-quick-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.familiars-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.familiar-quick-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid #eadfc9;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.familiar-quick-card:hover,
+.familiar-quick-card:focus-visible,
+.familiar-quick-card.is-active {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.familiar-quick-card.is-active {
+  background: linear-gradient(135deg, #f8ebcf, #fff8e8);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+}
+
+.familiar-quick-card__avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eadfc9;
+  background: #fffaf1;
+  overflow: hidden;
+  font-size: 1.35rem;
+}
+
+.familiar-quick-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.familiar-quick-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.familiar-quick-card__body strong,
+.familiar-quick-card__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.familiar-quick-card__body span {
+  color: #665a48;
+  font-size: 0.78rem;
+}
+
+.familiars-detail-area {
+  grid-area: detail;
+  min-width: 0;
+}
+
+.familiars-detail-area .familiar-sheet {
+  margin: 0;
+  max-width: none;
+}
+
+.familiar-dashboard {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.9fr) minmax(260px, 1.2fr) minmax(240px, 1fr);
+  grid-template-areas:
+    "summary abilities vitals"
+    "saves attacks attacks"
+    "notes attacks attacks";
+  gap: 12px;
+  align-items: start;
+}
+
+.familiar-dashboard .familiar-summary {
+  grid-area: summary;
+}
+
+.familiar-abilities-panel {
+  grid-area: abilities;
+}
+
+.familiar-vitals-panel {
+  grid-area: vitals;
+}
+
+.familiar-saves-panel {
+  grid-area: saves;
+}
+
+.familiar-attacks-panel {
+  grid-area: attacks;
+}
+
+.familiar-notes-panel {
+  grid-area: notes;
+}
+
+.familiar-panel-title {
+  margin-bottom: 8px;
+}
+
+.familiar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.familiar-avatar--image {
+  padding: 0;
+  overflow: hidden;
+  font-size: 0;
+}
+
+.familiar-save-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.familiar-save-card {
+  min-height: 44px;
+  padding: 7px 9px;
+}
+
+.familiar-save-card .modifier-title {
+  gap: 5px;
+}
+
+.familiar-edit-saves-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .familiar-dashboard {
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1fr);
+    grid-template-areas:
+      "summary vitals"
+      "abilities saves"
+      "attacks attacks"
+      "notes notes";
+  }
+}
+
+@media (max-width: 860px) {
+  .familiars-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "quick"
+      "detail";
+  }
+
+  .familiars-quick-panel {
+    position: static;
+  }
+
+  .familiars-quick-list {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 8px;
+  }
+
+  .familiar-quick-card {
+    min-width: 220px;
+  }
+
+  .familiar-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "summary"
+      "vitals"
+      "abilities"
+      "saves"
+      "attacks"
+      "notes";
+  }
+}
+
+@media (max-width: 560px) {
+  .familiar-save-grid,
+  .familiar-edit-saves-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.familiar-sheet[hidden] {
+  display: none;
+}

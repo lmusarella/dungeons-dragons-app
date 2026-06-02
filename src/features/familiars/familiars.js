@@ -43,7 +43,10 @@ function formatSpeed(value) {
 
 function getDefaultStatBlock() {
   return {
+    image_url: '',
+    proficiency_bonus: 2,
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    saving_throws: {},
     hp: { current: 1, max: 1 },
     speeds: { walk: 9, fly: null, climb: null, burrow: null },
     attacks: []
@@ -54,15 +57,49 @@ function normalizeStatBlock(raw) {
   const base = getDefaultStatBlock();
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
+    image_url: source.image_url || '',
+    proficiency_bonus: Number(source.proficiency_bonus) || base.proficiency_bonus,
     abilities: { ...base.abilities, ...(source.abilities || {}) },
+    saving_throws: { ...base.saving_throws, ...(source.saving_throws || {}) },
     hp: { ...base.hp, ...(source.hp || {}) },
     speeds: { ...base.speeds, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
   };
 }
 
-function buildCompanionCard(companion) {
+function getSavingThrowModifier(statBlock, abilityKey) {
+  const score = Number(statBlock.abilities?.[abilityKey]) || 10;
+  const abilityModifier = getAbilityModifier(score) ?? 0;
+  const proficiencyBonus = Number(statBlock.proficiency_bonus) || 0;
+  return abilityModifier + (statBlock.saving_throws?.[abilityKey] ? proficiencyBonus : 0);
+}
+
+function buildCompanionQuickButton(companion, isSelected = false) {
   const statBlock = normalizeStatBlock(companion.stat_block);
+  const hpCurrent = Number(statBlock.hp.current) || 0;
+  const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
+  const imageUrl = statBlock.image_url?.trim();
+  const avatar = imageUrl
+    ? `<img src="${escapeHtml(imageUrl)}" alt="Foto di ${escapeHtml(companion.name)}" />`
+    : '<span aria-hidden="true">🐾</span>';
+
+  return `
+    <button class="familiar-quick-card ${isSelected ? 'is-active' : ''}" type="button" data-select-companion="${escapeHtml(companion.id)}" aria-pressed="${isSelected}">
+      <span class="familiar-quick-card__avatar">${avatar}</span>
+      <span class="familiar-quick-card__body">
+        <strong>${escapeHtml(companion.name)}</strong>
+        <span>${escapeHtml(formatKind(companion.kind))} · HP ${hpCurrent}/${hpMax}</span>
+      </span>
+    </button>
+  `;
+}
+
+function buildCompanionCard(companion, isSelected = false) {
+  const statBlock = normalizeStatBlock(companion.stat_block);
+  const imageUrl = statBlock.image_url?.trim();
+  const avatar = imageUrl
+    ? `<img src="${escapeHtml(imageUrl)}" alt="Foto di ${escapeHtml(companion.name)}" />`
+    : '<span aria-hidden="true">🐾</span>';
   const abilities = ABILITY_KEYS.map((key) => {
     const score = Number(statBlock.abilities?.[key]) || 10;
     const mod = getAbilityModifier(score) ?? 0;
@@ -71,6 +108,19 @@ function buildCompanionCard(companion) {
         <span>${ABILITY_LABELS[key]}</span>
         <strong>${score}</strong>
         <span class="stat-card__modifier">${formatSigned(mod)}</span>
+      </button>
+    `;
+  }).join('');
+  const savingThrows = ABILITY_KEYS.map((key) => {
+    const modifier = getSavingThrowModifier(statBlock, key);
+    const isProficient = Boolean(statBlock.saving_throws?.[key]);
+    return `
+      <button class="modifier-card modifier-card--interactive familiar-save-card ${isProficient ? 'modifier-card--proficiency' : ''}" type="button" data-roll-save="${escapeHtml(companion.id)}:${key}" aria-label="Tira salvezza ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
+        <div class="modifier-title">
+          <strong>${ABILITY_LABELS[key]}</strong>
+          ${isProficient ? '<span class="modifier-ability">Comp.</span>' : ''}
+        </div>
+        <div class="modifier-value">${formatSigned(modifier)}</div>
       </button>
     `;
   }).join('');
@@ -100,7 +150,7 @@ function buildCompanionCard(companion) {
   const hpPercent = Math.min(Math.max((hpCurrent / hpMax) * 100, 0), 100);
 
   return `
-    <article class="card home-card home-section familiar-sheet">
+    <article class="card home-card home-section familiar-sheet ${isSelected ? 'is-active' : ''}" data-familiar-panel="${escapeHtml(companion.id)}" ${isSelected ? '' : 'hidden'}>
       <header class="card-header familiar-sheet__header">
         <div>
           <p class="eyebrow">${escapeHtml(formatKind(companion.kind))}</p>
@@ -111,20 +161,24 @@ function buildCompanionCard(companion) {
           <button class="icon-button" data-delete-companion="${escapeHtml(companion.id)}" type="button" aria-label="Elimina ${escapeHtml(companion.name)}">🗑️</button>
         </div>
       </header>
-      <div class="character-overview familiar-overview">
+      <div class="familiar-dashboard">
         <div class="character-summary familiar-summary">
           <div class="character-hero">
-            <div class="familiar-avatar" aria-hidden="true">🐾</div>
+            <div class="familiar-avatar ${imageUrl ? 'familiar-avatar--image' : ''}">${avatar}</div>
             <div>
               <h3 class="character-name">${escapeHtml(companion.name)}</h3>
               <div class="character-meta">
                 <span class="meta-tag">${escapeHtml(formatKind(companion.kind))}</span>
                 <span class="meta-tag">Regole ${escapeHtml(companion.rules_version || '2024')}</span>
+                <span class="meta-tag">Bonus comp. ${formatSigned(statBlock.proficiency_bonus)}</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="stat-panel">
+        <div class="stat-panel familiar-abilities-panel">
+          <header class="familiar-panel-title">
+            <p class="eyebrow">Tiri abilità</p>
+          </header>
           <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-ability-grid">${abilities}</div>
         </div>
         <div class="hp-panel familiar-vitals-panel">
@@ -143,20 +197,24 @@ function buildCompanionCard(companion) {
           </div>
           <div class="familiar-speed-grid">${speeds}</div>
         </div>
-        <div class="familiar-sheet__details">
-          <section class="home-section home-scroll-panel familiar-detail-panel">
-            <header class="card-header">
-              <div><p class="eyebrow">Attacchi</p></div>
-            </header>
-            <div class="home-scroll-body">${attacks}</div>
-          </section>
-          <section class="home-section familiar-detail-panel">
-            <header class="card-header">
-              <div><p class="eyebrow">Note</p></div>
-            </header>
-            ${notes}
-          </section>
-        </div>
+        <section class="home-section familiar-detail-panel familiar-saves-panel">
+          <header class="familiar-panel-title">
+            <p class="eyebrow">Tiri salvezza</p>
+          </header>
+          <div class="familiar-save-grid">${savingThrows}</div>
+        </section>
+        <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel">
+          <header class="familiar-panel-title">
+            <p class="eyebrow">Attacchi</p>
+          </header>
+          <div class="home-scroll-body">${attacks}</div>
+        </section>
+        <section class="home-section familiar-detail-panel familiar-notes-panel">
+          <header class="familiar-panel-title">
+            <p class="eyebrow">Note</p>
+          </header>
+          ${notes}
+        </section>
       </div>
     </article>
   `;
@@ -193,29 +251,41 @@ export async function renderFamiliars(container) {
     setGlobalLoading(false);
   }
 
+  const selectedCompanionId = companions[0]?.id;
   container.innerHTML = `
     <div class="home-layout familiars-layout">
-      <div class="home-column home-column--center familiars-column">
-        <section class="card home-card home-section familiars-page-header">
-          <header class="card-header">
-            <div>
-              <p class="eyebrow">Famigli & Mostri</p>
-              <h3>Schede famiglio</h3>
-            </div>
-            <div class="button-row">
-              <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
-            </div>
-          </header>
-          <p class="muted">Gestisci famigli, evocazioni e trasformazioni con una scheda rapida ispirata alla scheda personaggio.</p>
+      <section class="card home-card home-section familiars-page-header">
+        <header class="card-header">
+          <div>
+            <p class="eyebrow">Famigli & Mostri</p>
+            <h3>Schede famiglio</h3>
+          </div>
+          <div class="button-row">
+            <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
+          </div>
+        </header>
+        <p class="muted">Gestisci più famigli con una selezione rapida e una scheda compatta ispirata alla scheda personaggio.</p>
+      </section>
+      ${companions.length ? `
+        <aside class="card home-card home-section familiars-quick-panel" aria-label="Seleziona famiglio">
+          <div class="familiars-quick-panel__header">
+            <p class="eyebrow">Selezione rapida</p>
+            <span class="meta-tag">${companions.length} schede</span>
+          </div>
+          <div class="familiars-quick-list">
+            ${companions.map((companion) => buildCompanionQuickButton(companion, companion.id === selectedCompanionId)).join('')}
+          </div>
+        </aside>
+        <main class="familiars-detail-area">
+          ${companions.map((companion) => buildCompanionCard(companion, companion.id === selectedCompanionId)).join('')}
+        </main>
+      ` : `
+        <section class="card home-card home-section familiar-empty-state">
+          <p class="eyebrow">Nessuna scheda</p>
+          <h3>Crea il primo famiglio</h3>
+          <p class="muted">Aggiungi foto, caratteristiche, punti ferita, velocità, tiri salvezza e attacchi per tirare rapidamente durante la sessione.</p>
         </section>
-        ${companions.length ? companions.map(buildCompanionCard).join('') : `
-          <section class="card home-card home-section familiar-empty-state">
-            <p class="eyebrow">Nessuna scheda</p>
-            <h3>Crea il primo famiglio</h3>
-            <p class="muted">Aggiungi caratteristiche, punti ferita, velocità e attacchi per tirare rapidamente durante la sessione.</p>
-          </section>
-        `}
-      </div>
+      `}
     </div>
   `;
 
@@ -282,6 +352,12 @@ export async function renderFamiliars(container) {
     identityGrid.appendChild(kindField);
     identityGrid.appendChild(buildInput({ label: 'Versione regole', name: 'rules_version', value: companion?.rules_version || '2024' }));
     identitySection.appendChild(identityGrid);
+    identitySection.appendChild(buildInput({
+      label: 'Foto (URL)',
+      name: 'image_url',
+      value: current.image_url || '',
+      placeholder: 'https://.../famiglio.png'
+    }));
 
     const notesSection = document.createElement('div');
     notesSection.className = 'character-edit-section compact-character-section';
@@ -306,6 +382,20 @@ export async function renderFamiliars(container) {
     });
     abilitiesSection.appendChild(abilityGrid);
 
+    const savesSection = document.createElement('div');
+    savesSection.className = 'character-edit-section compact-character-section familiar-edit-saves-section';
+    savesSection.innerHTML = `
+      <h4>Tiri salvezza</h4>
+      <div class="compact-pill-grid familiar-edit-saves-grid">
+        ${ABILITY_KEYS.map((key) => `
+          <label class="toggle-pill">
+            <input type="checkbox" name="save_${key}" ${current.saving_throws?.[key] ? 'checked' : ''} />
+            <span>${ABILITY_LABELS[key]}</span>
+          </label>
+        `).join('')}
+      </div>
+    `;
+
     const vitalsSection = document.createElement('div');
     vitalsSection.className = 'character-edit-section compact-character-section';
     vitalsSection.innerHTML = '<h4>Punti ferita e velocità</h4>';
@@ -314,6 +404,7 @@ export async function renderFamiliars(container) {
     [
       { label: 'HP attuali', name: 'hp_current', value: current.hp.current ?? 1 },
       { label: 'HP massimi', name: 'hp_max', value: current.hp.max ?? 1 },
+      { label: 'Bonus competenza', name: 'proficiency_bonus', value: current.proficiency_bonus ?? 2 },
       { label: 'Terra (m)', name: 'speed_walk', value: current.speeds.walk ?? 9 },
       { label: 'Volo (m)', name: 'speed_fly', value: current.speeds.fly ?? '' },
       { label: 'Scalata (m)', name: 'speed_climb', value: current.speeds.climb ?? '' },
@@ -416,7 +507,7 @@ export async function renderFamiliars(container) {
         title: 'Statistiche',
         icon: '📊',
         description: 'Caratteristiche, HP e velocità.',
-        content: buildEditGroup('Statistiche', [abilitiesSection, vitalsSection], {
+        content: buildEditGroup('Statistiche', [abilitiesSection, savesSection, vitalsSection], {
           icon: '📊',
           description: 'Valori usati per la mini-scheda e per i tiri rapidi.'
         })
@@ -551,7 +642,13 @@ export async function renderFamiliars(container) {
       kind: formData.get('kind') || 'familiar',
       rules_version: String(formData.get('rules_version') || '2024').trim() || '2024',
       stat_block: {
+        image_url: String(formData.get('image_url') || '').trim(),
+        proficiency_bonus: Number(formData.get('proficiency_bonus') || 2),
         abilities,
+        saving_throws: ABILITY_KEYS.reduce((acc, key) => {
+          acc[key] = formData.get(`save_${key}`) === 'on';
+          return acc;
+        }, {}),
         hp: { current: Number(formData.get('hp_current') || 1), max: Number(formData.get('hp_max') || 1) },
         speeds: {
           walk: Number(formData.get('speed_walk') || 0),
@@ -575,6 +672,19 @@ export async function renderFamiliars(container) {
   };
 
   container.querySelector('[data-add-companion]')?.addEventListener('click', () => { void openCompanionForm(); });
+  container.querySelectorAll('[data-select-companion]').forEach((btn) => btn.addEventListener('click', () => {
+    const companionId = btn.dataset.selectCompanion;
+    container.querySelectorAll('[data-select-companion]').forEach((entry) => {
+      const isActive = entry.dataset.selectCompanion === companionId;
+      entry.classList.toggle('is-active', isActive);
+      entry.setAttribute('aria-pressed', String(isActive));
+    });
+    container.querySelectorAll('[data-familiar-panel]').forEach((panel) => {
+      const isActive = panel.dataset.familiarPanel === companionId;
+      panel.hidden = !isActive;
+      panel.classList.toggle('is-active', isActive);
+    });
+  }));
   container.querySelectorAll('[data-edit-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companion = companions.find((entry) => entry.id === btn.dataset.editCompanion);
     if (companion) void openCompanionForm(companion);
@@ -595,6 +705,13 @@ export async function renderFamiliars(container) {
     const score = Number(normalizeStatBlock(companion.stat_block).abilities[abilityKey]) || 10;
     const modifier = getAbilityModifier(score) ?? 0;
     openRollWithModifier(`${companion.name} · ${ABILITY_LABELS[abilityKey]}`, modifier);
+  }));
+  container.querySelectorAll('[data-roll-save]').forEach((btn) => btn.addEventListener('click', () => {
+    const [companionId, abilityKey] = String(btn.dataset.rollSave || '').split(':');
+    const companion = companions.find((entry) => String(entry.id) === companionId);
+    if (!companion || !ABILITY_KEYS.includes(abilityKey)) return;
+    const modifier = getSavingThrowModifier(normalizeStatBlock(companion.stat_block), abilityKey);
+    openRollWithModifier(`${companion.name} · TS ${ABILITY_LABELS[abilityKey]}`, modifier);
   }));
   container.querySelectorAll('[data-roll-attack]').forEach((btn) => btn.addEventListener('click', () => {
     const [companionId, attackIndex] = String(btn.dataset.rollAttack || '').split(':');
