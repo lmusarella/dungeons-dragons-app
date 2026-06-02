@@ -7556,3 +7556,19 @@ button:focus-visible,
     max-width: none;
   }
 }
+
+/* Familiar accordion readability and attack action cleanup */
+.familiar-sheet__title > strong {
+  color: #3e2a1a;
+  text-shadow: none;
+}
+
+.familiar-sheet__toggle:hover .familiar-sheet__title > strong,
+.familiar-sheet__toggle:focus-visible .familiar-sheet__title > strong {
+  color: var(--accent);
+}
+
+.familiar-attack-actions {
+  min-width: 34px;
+  justify-content: flex-end;
+}

@@ -143,7 +143,6 @@ function buildCompanionCard(companion, isSelected = false) {
           <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
         </div>
         <div class="familiar-attack-actions">
-          <button class="icon-button icon-button--dice" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🎲</button>
           <button class="icon-button icon-button--damage" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🔥</button>
         </div>
       </div>
@@ -747,7 +746,7 @@ export async function renderFamiliars(container) {
     if (!companion) return;
     const attack = normalizeStatBlock(companion.stat_block).attacks[Number(attackIndex) || 0];
     if (!attack) return;
-    openRollWithModifier(`${companion.name} · ${attack.name || 'Attacco'}`, Number(attack.to_hit) || 0);
+    openRollWithModifier(`${companion.name} · Tiro per colpire · ${attack.name || 'Attacco'}`, Number(attack.to_hit) || 0);
   };
   container.querySelectorAll('[data-roll-attack-card]').forEach((card) => {
     card.addEventListener('click', (event) => {
