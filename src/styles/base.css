@@ -6960,3 +6960,269 @@ button:focus-visible,
 .familiar-sheet[hidden] {
   display: none;
 }
+
+/* Compact familiar sheet refinements */
+.familiars-page-header {
+  padding: 8px 12px;
+}
+
+.familiars-page-header .card-header {
+  margin-bottom: 2px;
+}
+
+.familiars-page-header .eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+}
+
+.familiars-page-header .muted {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+}
+
+.familiar-sheet {
+  gap: 8px;
+  padding: 10px;
+}
+
+.familiar-sheet__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+.familiar-sheet__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.familiar-sheet__toggle:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.45);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.familiar-sheet__title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.familiar-sheet__title > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+.familiar-sheet__title .character-meta {
+  gap: 5px;
+}
+
+.familiar-sheet__title .meta-tag {
+  padding: 1px 7px;
+  font-size: 0.7rem;
+}
+
+.familiar-sheet__chevron {
+  margin-left: 2px;
+  color: #6a5540;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.familiar-sheet.is-collapsed .familiar-sheet__chevron {
+  transform: rotate(-90deg);
+}
+
+.familiar-sheet.is-collapsed .familiar-sheet__header {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.familiar-sheet__actions {
+  gap: 6px;
+}
+
+.familiar-sheet__actions .icon-button,
+.familiar-attack-actions .icon-button {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.familiar-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 1.45rem;
+}
+
+.familiar-dashboard {
+  grid-template-columns: minmax(170px, 0.8fr) minmax(220px, 1fr) minmax(190px, 0.85fr);
+  grid-template-areas:
+    "vitals abilities saves"
+    "attacks attacks notes";
+  gap: 8px;
+}
+
+.familiar-detail-panel,
+.familiar-vitals-panel,
+.familiar-abilities-panel {
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.familiar-panel-title {
+  margin-bottom: 5px;
+}
+
+.familiar-panel-title .eyebrow {
+  margin-bottom: 0;
+}
+
+.familiar-ability-grid.stat-grid--compact {
+  grid-template-columns: repeat(6, minmax(54px, 1fr));
+  gap: 5px;
+}
+
+.familiar-ability-grid.stat-grid--compact .stat-card {
+  min-height: 50px;
+  padding: 5px 4px;
+}
+
+.familiar-ability-grid.stat-grid--compact .stat-card strong {
+  font-size: 0.82rem;
+}
+
+.familiar-ability-grid.stat-grid--compact .stat-card__modifier {
+  width: 22px;
+  height: 22px;
+  top: -7px;
+  right: -5px;
+}
+
+.familiar-speed-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.familiar-speed-card {
+  padding: 5px;
+  border-width: 2px;
+}
+
+.familiar-speed-card strong {
+  font-size: 0.78rem;
+}
+
+.familiar-save-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.familiar-save-card {
+  min-height: 38px;
+  padding: 5px 7px;
+}
+
+.familiar-save-card .modifier-value {
+  font-size: 0.9rem;
+}
+
+.familiar-attacks-panel .home-scroll-body {
+  max-height: 260px;
+}
+
+.familiar-attack-card,
+.weapon-card.familiar-attack-card {
+  padding: 7px 8px;
+  gap: 8px;
+}
+
+.familiar-attack-card + .familiar-attack-card {
+  margin-top: 6px;
+}
+
+.familiar-attack-card .weapon-card__main strong {
+  font-size: 0.88rem;
+}
+
+.familiar-attack-card .weapon-card__main p {
+  font-size: 0.74rem;
+}
+
+.familiar-attack-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.icon-button--damage {
+  border-color: rgba(224, 106, 60, 0.35);
+  background: #fff3e9;
+}
+
+.familiar-notes p,
+.familiar-notes-panel > .muted {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1180px) {
+  .familiar-dashboard {
+    grid-template-columns: minmax(170px, 0.75fr) minmax(0, 1fr);
+    grid-template-areas:
+      "vitals abilities"
+      "saves saves"
+      "attacks notes";
+  }
+
+  .familiar-save-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .familiar-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "vitals"
+      "abilities"
+      "saves"
+      "attacks"
+      "notes";
+  }
+
+  .familiar-ability-grid.stat-grid--compact,
+  .familiar-save-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .familiar-sheet__header {
+    grid-template-columns: 1fr;
+  }
+
+  .familiar-sheet__actions {
+    justify-content: flex-end;
+  }
+
+  .familiar-ability-grid.stat-grid--compact,
+  .familiar-save-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

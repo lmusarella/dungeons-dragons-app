@@ -136,9 +136,12 @@ function buildCompanionCard(companion, isSelected = false) {
       <div class="weapon-card familiar-attack-card">
         <div class="weapon-card__main">
           <strong>${escapeHtml(attack.name || `Attacco ${index + 1}`)}</strong>
-          <p class="muted">Tiro per colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(attack.damage || '-')}</p>
+          <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(attack.damage || '-')}</p>
         </div>
-        <button class="icon-button icon-button--dice" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🎲</button>
+        <div class="familiar-attack-actions">
+          <button class="icon-button icon-button--dice" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🎲</button>
+          <button class="icon-button icon-button--damage" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🔥</button>
+        </div>
       </div>
     `).join('')
     : '<p class="muted">Nessun attacco configurato.</p>';
@@ -152,29 +155,30 @@ function buildCompanionCard(companion, isSelected = false) {
   return `
     <article class="card home-card home-section familiar-sheet ${isSelected ? 'is-active' : ''}" data-familiar-panel="${escapeHtml(companion.id)}" ${isSelected ? '' : 'hidden'}>
       <header class="card-header familiar-sheet__header">
-        <div>
-          <p class="eyebrow">${escapeHtml(formatKind(companion.kind))}</p>
-          <h3>${escapeHtml(companion.name)}</h3>
-        </div>
-        <div class="button-row">
+        <button
+          class="familiar-sheet__toggle"
+          type="button"
+          data-toggle-familiar-sheet="${escapeHtml(companion.id)}"
+          aria-expanded="true"
+          aria-controls="familiar-content-${escapeHtml(companion.id)}"
+        >
+          <span class="familiar-avatar ${imageUrl ? 'familiar-avatar--image' : ''}">${avatar}</span>
+          <span class="familiar-sheet__title">
+            <span class="eyebrow">${escapeHtml(formatKind(companion.kind))}</span>
+            <strong>${escapeHtml(companion.name)}</strong>
+            <span class="character-meta">
+              <span class="meta-tag">HP ${hpCurrent}/${hpMax}</span>
+              <span class="meta-tag">Bonus comp. ${formatSigned(statBlock.proficiency_bonus)}</span>
+            </span>
+          </span>
+          <span class="familiar-sheet__chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="button-row familiar-sheet__actions">
           <button class="icon-button" data-edit-companion="${escapeHtml(companion.id)}" type="button" aria-label="Modifica ${escapeHtml(companion.name)}">✏️</button>
           <button class="icon-button" data-delete-companion="${escapeHtml(companion.id)}" type="button" aria-label="Elimina ${escapeHtml(companion.name)}">🗑️</button>
         </div>
       </header>
-      <div class="familiar-dashboard">
-        <div class="character-summary familiar-summary">
-          <div class="character-hero">
-            <div class="familiar-avatar ${imageUrl ? 'familiar-avatar--image' : ''}">${avatar}</div>
-            <div>
-              <h3 class="character-name">${escapeHtml(companion.name)}</h3>
-              <div class="character-meta">
-                <span class="meta-tag">${escapeHtml(formatKind(companion.kind))}</span>
-                <span class="meta-tag">Regole ${escapeHtml(companion.rules_version || '2024')}</span>
-                <span class="meta-tag">Bonus comp. ${formatSigned(statBlock.proficiency_bonus)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
         <div class="stat-panel familiar-abilities-panel">
           <header class="familiar-panel-title">
             <p class="eyebrow">Tiri abilità</p>
@@ -257,14 +261,13 @@ export async function renderFamiliars(container) {
       <section class="card home-card home-section familiars-page-header">
         <header class="card-header">
           <div>
-            <p class="eyebrow">Famigli & Mostri</p>
-            <h3>Schede famiglio</h3>
+            <p class="eyebrow">Famigli & Evocazioni</p>
           </div>
           <div class="button-row">
             <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
           </div>
         </header>
-        <p class="muted">Gestisci più famigli con una selezione rapida e una scheda compatta ispirata alla scheda personaggio.</p>
+        <p class="muted">Seleziona rapidamente una creatura e gestisci tiri, HP e attacchi.</p>
       </section>
       ${companions.length ? `
         <aside class="card home-card home-section familiars-quick-panel" aria-label="Seleziona famiglio">
@@ -685,6 +688,14 @@ export async function renderFamiliars(container) {
       panel.classList.toggle('is-active', isActive);
     });
   }));
+  container.querySelectorAll('[data-toggle-familiar-sheet]').forEach((btn) => btn.addEventListener('click', () => {
+    const panel = btn.closest('[data-familiar-panel]');
+    const content = panel?.querySelector('[data-familiar-content]');
+    const isExpanded = btn.getAttribute('aria-expanded') !== 'false';
+    btn.setAttribute('aria-expanded', String(!isExpanded));
+    panel?.classList.toggle('is-collapsed', isExpanded);
+    if (content) content.hidden = isExpanded;
+  }));
   container.querySelectorAll('[data-edit-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companion = companions.find((entry) => entry.id === btn.dataset.editCompanion);
     if (companion) void openCompanionForm(companion);
@@ -712,6 +723,26 @@ export async function renderFamiliars(container) {
     if (!companion || !ABILITY_KEYS.includes(abilityKey)) return;
     const modifier = getSavingThrowModifier(normalizeStatBlock(companion.stat_block), abilityKey);
     openRollWithModifier(`${companion.name} · TS ${ABILITY_LABELS[abilityKey]}`, modifier);
+  }));
+  container.querySelectorAll('[data-roll-damage]').forEach((btn) => btn.addEventListener('click', () => {
+    const [companionId, attackIndex] = String(btn.dataset.rollDamage || '').split(':');
+    const companion = companions.find((entry) => String(entry.id) === companionId);
+    if (!companion) return;
+    const attack = normalizeStatBlock(companion.stat_block).attacks[Number(attackIndex) || 0];
+    const damageNotation = String(attack?.damage || '').trim();
+    if (!damageNotation || damageNotation === '-') {
+      createToast('Danni non configurati per questo attacco', 'error');
+      return;
+    }
+    openDiceOverlay({
+      keepOpen: true,
+      title: `${companion.name} · Danni ${attack.name || 'Attacco'}`,
+      mode: 'generic',
+      notation: damageNotation,
+      modifier: 0,
+      rollType: 'DMG',
+      historyLabel: `${companion.name} · ${attack.name || 'Danni'}`
+    });
   }));
   container.querySelectorAll('[data-roll-attack]').forEach((btn) => btn.addEventListener('click', () => {
     const [companionId, attackIndex] = String(btn.dataset.rollAttack || '').split(':');
