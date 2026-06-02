@@ -7417,3 +7417,142 @@ button:focus-visible,
       "notes";
   }
 }
+
+/* Final familiar sheet composition tweaks */
+.familiar-dashboard {
+  grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(260px, 1.25fr);
+  grid-template-areas:
+    "vitals characteristics characteristics"
+    "attacks notes notes";
+}
+
+.familiar-characteristics-panel {
+  grid-area: characteristics;
+  background: #fffaf1;
+  border-color: #eadfc9;
+}
+
+.familiar-characteristics-grid.stat-grid--compact {
+  grid-template-columns: repeat(6, minmax(62px, 1fr));
+  gap: 7px;
+}
+
+.familiar-characteristics-grid .stat-card--button {
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.familiar-characteristics-grid .stat-card--button:hover,
+.familiar-characteristics-grid .stat-card--button:focus-visible {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.familiar-vitals-panel {
+  grid-area: vitals;
+}
+
+.familiar-attacks-panel {
+  grid-area: attacks;
+}
+
+.familiar-notes-panel {
+  grid-area: notes;
+}
+
+.familiar-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.familiar-vital-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #eadfc9;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff8e8, #fdf1d6);
+  font-size: 0.76rem;
+}
+
+.familiar-vital-chip strong {
+  color: #5a381f;
+  white-space: nowrap;
+}
+
+.familiar-vital-chip--wide {
+  grid-column: 1 / -1;
+}
+
+.familiar-vital-chip--highlight {
+  border-color: #e4c994;
+  background: linear-gradient(135deg, #fbe9c8, #f6d8a8);
+}
+
+.familiar-attack-card {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.familiar-attack-card:hover,
+.familiar-attack-card:focus-visible {
+  border-color: #c7a174;
+  box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.16);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.familiar-sheet__toggle {
+  grid-template-columns: auto minmax(220px, 520px) auto;
+  justify-content: start;
+}
+
+.familiar-sheet__title {
+  max-width: 520px;
+}
+
+.familiar-sheet__title > strong {
+  font-size: 1.16rem;
+}
+
+.familiar-sheet__title .character-meta {
+  margin-top: 2px;
+}
+
+@media (max-width: 1180px) {
+  .familiar-dashboard {
+    grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1fr);
+    grid-template-areas:
+      "vitals characteristics"
+      "attacks notes";
+  }
+
+  .familiar-characteristics-grid.stat-grid--compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .familiar-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "characteristics"
+      "vitals"
+      "attacks"
+      "notes";
+  }
+
+  .familiar-sheet__toggle {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .familiar-sheet__title {
+    max-width: none;
+  }
+}

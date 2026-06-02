@@ -4,8 +4,8 @@ import { attachNumberSteppers, buildInput, buildTextarea, createToast, openConfi
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { getAbilityModifier } from '../character/home/utils.js';
 
-const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'WIS', cha: 'CAR' };
+const ABILITY_KEYS = ['str', 'dex', 'con', 'wis', 'int', 'cha'];
+const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', wis: 'SAG', int: 'INT', cha: 'CAR' };
 const KIND_OPTIONS = [
   { value: 'familiar', label: 'Famiglio' },
   { value: 'summon', label: 'Evocazione' },
@@ -47,6 +47,8 @@ function getDefaultStatBlock() {
     proficiency_bonus: 2,
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
     saving_throws: {},
+    initiative: null,
+    darkvision_range_m: null,
     hp: { current: 1, max: 1 },
     speeds: { walk: 9, fly: null, climb: null, burrow: null },
     attacks: []
@@ -61,6 +63,8 @@ function normalizeStatBlock(raw) {
     proficiency_bonus: Number(source.proficiency_bonus) || base.proficiency_bonus,
     abilities: { ...base.abilities, ...(source.abilities || {}) },
     saving_throws: { ...base.saving_throws, ...(source.saving_throws || {}) },
+    initiative: source.initiative ?? base.initiative,
+    darkvision_range_m: source.darkvision_range_m ?? base.darkvision_range_m,
     hp: { ...base.hp, ...(source.hp || {}) },
     speeds: { ...base.speeds, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
@@ -104,45 +108,36 @@ function buildCompanionCard(companion, isSelected = false) {
     const score = Number(statBlock.abilities?.[key]) || 10;
     const mod = getAbilityModifier(score) ?? 0;
     return `
-      <button class="modifier-card modifier-card--interactive familiar-ability-card" type="button" data-roll-ability="${escapeHtml(companion.id)}:${key}" aria-label="Tira ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
-        <div>
-          <div class="modifier-title">
-            <strong>${ABILITY_LABELS[key]}</strong>
-            <span class="modifier-ability modifier-ability--${key}">${score}</span>
-          </div>
-        </div>
-        <div class="modifier-value">${formatSigned(mod)}</div>
-      </button>
-    `;
-  }).join('');
-  const savingThrows = ABILITY_KEYS.map((key) => {
-    const modifier = getSavingThrowModifier(statBlock, key);
-    const isProficient = Boolean(statBlock.saving_throws?.[key]);
-    return `
-      <button class="modifier-card modifier-card--interactive familiar-save-card ${isProficient ? 'modifier-card--proficiency' : ''}" type="button" data-roll-save="${escapeHtml(companion.id)}:${key}" aria-label="Tira salvezza ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
-        <div>
-          <div class="modifier-title">
-            <strong>${ABILITY_LABELS[key]}</strong>
-            <span class="modifier-ability modifier-ability--${key}">TS${isProficient ? ' · C' : ''}</span>
-          </div>
-        </div>
-        <div class="modifier-value">${formatSigned(modifier)}</div>
+      <button class="stat-card stat-card--${key} stat-card--button familiar-ability-card" type="button" data-roll-ability="${escapeHtml(companion.id)}:${key}" aria-label="Tira ${ABILITY_LABELS[key]} per ${escapeHtml(companion.name)}">
+        <span>${ABILITY_LABELS[key]}</span>
+        <strong>${score}</strong>
+        <span class="stat-card__modifier">${formatSigned(mod)}</span>
       </button>
     `;
   }).join('');
   const speeds = Object.entries(SPEED_LABELS).map(([key, config]) => `
-    <div class="armor-class-card armor-class-card--speed familiar-speed-card">
-      <span>${config.label}</span>
+    <div class="familiar-vital-chip">
+      <span>${config.icon} ${config.label}</span>
       <strong>${formatSpeed(statBlock.speeds?.[key])}</strong>
-      <span class="armor-class-card__sigil" aria-hidden="true">${config.icon}</span>
     </div>
   `).join('');
+  const initiative = statBlock.initiative === null || statBlock.initiative === undefined || statBlock.initiative === ''
+    ? (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0)
+    : Number(statBlock.initiative) || 0;
+  const darkvisionLabel = statBlock.darkvision_range_m === null || statBlock.darkvision_range_m === undefined || statBlock.darkvision_range_m === ''
+    ? '-'
+    : `${Number(statBlock.darkvision_range_m) || 0} m`;
+  const vitalStats = `
+    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Bonus comp.</span><strong>${formatSigned(statBlock.proficiency_bonus)}</strong></div>
+    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Iniziativa</span><strong>${formatSigned(initiative)}</strong></div>
+    <div class="familiar-vital-chip familiar-vital-chip--wide"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></div>
+  `;
   const attacks = statBlock.attacks.length
     ? statBlock.attacks.map((attack, index) => {
       const damageModifier = Number(attack.damage_modifier) || 0;
       const damageLabel = `${attack.damage || '-'}${damageModifier ? ` (${formatSigned(damageModifier)})` : ''}`;
       return `
-      <div class="weapon-card familiar-attack-card">
+      <div class="weapon-card familiar-attack-card" data-roll-attack-card="${escapeHtml(companion.id)}:${index}" role="button" tabindex="0" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">
         <div class="weapon-card__main">
           <strong>${escapeHtml(attack.name || `Attacco ${index + 1}`)}</strong>
           <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
@@ -174,7 +169,6 @@ function buildCompanionCard(companion, isSelected = false) {
         >
           <span class="familiar-avatar ${imageUrl ? 'familiar-avatar--image' : ''}">${avatar}</span>
           <span class="familiar-sheet__title">
-            <span class="eyebrow">${escapeHtml(formatKind(companion.kind))}</span>
             <strong>${escapeHtml(companion.name)}</strong>
             <span class="character-meta">
               <span class="meta-tag">HP ${hpCurrent}/${hpMax}</span>
@@ -193,37 +187,21 @@ function buildCompanionCard(companion, isSelected = false) {
         </div>
       </header>
       <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
-        <section class="home-section familiar-detail-panel familiar-rolls-panel">
+        <section class="home-section familiar-detail-panel familiar-characteristics-panel">
           <header class="familiar-panel-title">
-            <p class="eyebrow">Tiri abilità & salvezza</p>
+            <p class="eyebrow">Caratteristiche</p>
           </header>
-          <div class="familiar-rolls-grid">
-            <div class="familiar-rolls-group">
-              <p class="familiar-rolls-label">Abilità</p>
-              <div class="detail-grid detail-grid--compact familiar-ability-grid">${abilities}</div>
-            </div>
-            <div class="familiar-rolls-group">
-              <p class="familiar-rolls-label">Salvezza</p>
-              <div class="familiar-save-grid">${savingThrows}</div>
-            </div>
+          <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-characteristics-grid familiar-ability-grid">${abilities}</div>
+        </section>
+        <section class="home-section familiar-detail-panel familiar-vitals-panel">
+          <header class="familiar-panel-title">
+            <p class="eyebrow">Movimento & sensi</p>
+          </header>
+          <div class="familiar-vitals-grid">
+            ${vitalStats}
+            ${speeds}
           </div>
         </section>
-        <div class="hp-panel familiar-vitals-panel">
-          <div class="hp-bar-row familiar-hp-row">
-            <div class="hp-bar-stack">
-              <div class="hp-bar-label">
-                <span>HP</span>
-                <strong>${hpCurrent}/${hpMax}</strong>
-              </div>
-              <div class="hp-bar-track">
-                <div class="hp-bar" style="flex: 1;">
-                  <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="familiar-speed-grid">${speeds}</div>
-        </div>
         <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel">
           <header class="familiar-panel-title">
             <p class="eyebrow">Attacchi</p>
@@ -418,6 +396,8 @@ export async function renderFamiliars(container) {
       { label: 'HP attuali', name: 'hp_current', value: current.hp.current ?? 1 },
       { label: 'HP massimi', name: 'hp_max', value: current.hp.max ?? 1 },
       { label: 'Bonus competenza', name: 'proficiency_bonus', value: current.proficiency_bonus ?? 2 },
+      { label: 'Iniziativa', name: 'initiative', value: current.initiative ?? (getAbilityModifier(Number(current.abilities.dex) || 10) ?? 0), allowNegative: true },
+      { label: 'Scurovisione (m)', name: 'darkvision_range_m', value: current.darkvision_range_m ?? '' },
       { label: 'Terra (m)', name: 'speed_walk', value: current.speeds.walk ?? 9 },
       { label: 'Volo (m)', name: 'speed_fly', value: current.speeds.fly ?? '' },
       { label: 'Scalata (m)', name: 'speed_climb', value: current.speeds.climb ?? '' },
@@ -425,7 +405,7 @@ export async function renderFamiliars(container) {
     ].forEach((config) => {
       const field = buildInput({ label: config.label, name: config.name, type: 'number', value: config.value });
       const input = field.querySelector('input');
-      input.min = '0';
+      if (!config.allowNegative) input.min = '0';
       input.step = '1';
       vitalsGrid.appendChild(field);
     });
@@ -662,6 +642,8 @@ export async function renderFamiliars(container) {
       stat_block: {
         image_url: String(formData.get('image_url') || '').trim(),
         proficiency_bonus: Number(formData.get('proficiency_bonus') || 2),
+        initiative: toNumberOrNull(formData.get('initiative')),
+        darkvision_range_m: toNumberOrNull(formData.get('darkvision_range_m')),
         abilities,
         saving_throws: ABILITY_KEYS.reduce((acc, key) => {
           acc[key] = formData.get(`save_${key}`) === 'on';
@@ -759,12 +741,26 @@ export async function renderFamiliars(container) {
       historyLabel: `${companion.name} · ${attack.name || 'Danni'}`
     });
   }));
-  container.querySelectorAll('[data-roll-attack]').forEach((btn) => btn.addEventListener('click', () => {
-    const [companionId, attackIndex] = String(btn.dataset.rollAttack || '').split(':');
+  const rollCompanionAttack = (rollKey) => {
+    const [companionId, attackIndex] = String(rollKey || '').split(':');
     const companion = companions.find((entry) => String(entry.id) === companionId);
     if (!companion) return;
     const attack = normalizeStatBlock(companion.stat_block).attacks[Number(attackIndex) || 0];
     if (!attack) return;
     openRollWithModifier(`${companion.name} · ${attack.name || 'Attacco'}`, Number(attack.to_hit) || 0);
+  };
+  container.querySelectorAll('[data-roll-attack-card]').forEach((card) => {
+    card.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      rollCompanionAttack(card.dataset.rollAttackCard);
+    });
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      rollCompanionAttack(card.dataset.rollAttackCard);
+    });
+  });
+  container.querySelectorAll('[data-roll-attack]').forEach((btn) => btn.addEventListener('click', () => {
+    rollCompanionAttack(btn.dataset.rollAttack);
   }));
 }
