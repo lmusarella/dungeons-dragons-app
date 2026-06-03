@@ -576,7 +576,10 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const equipped = equipmentProficiencyList
     .filter((prof) => proficiencies[prof.key])
     .map((prof) => prof.label);
-  const weaponMasteries = Array.isArray(data.weapon_masteries) ? data.weapon_masteries : [];
+  const weaponMasteries = (Boolean(data.weapon_mastery_enabled) || (Array.isArray(data.weapon_masteries) && data.weapon_masteries.length > 0))
+    ? (Array.isArray(data.weapon_masteries) ? data.weapon_masteries : [])
+    : [];
+  const weaponMasteryTab = weaponMasteries.length > 0 || Boolean(data.weapon_mastery_enabled);
   return `
     <div class="detail-section">
       <div class="proficiency-tabs" data-proficiency-tabs>
@@ -584,9 +587,9 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           <button class="tab-bar__button is-active" type="button" role="tab" aria-selected="true" data-proficiency-tab="equipment">
             Equipaggiamento
           </button>
-          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="weapon-masteries">
+          ${weaponMasteryTab ? `<button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="weapon-masteries">
             Maestrie armi
-          </button>
+          </button>` : ''}
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="tools">
             Strumenti
           </button>
@@ -605,11 +608,11 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
         </div>
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="weapon-masteries">
+        ${weaponMasteryTab ? `<div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="weapon-masteries">
           ${weaponMasteries.length
     ? `<div class="weapon-mastery-list">${weaponMasteries.map((key) => `<div class="weapon-mastery-card__body"><strong>${getWeaponMasteryLabel(key)}</strong><small>${getWeaponMasterySummary(key)}</small></div>`).join('')}</div>`
     : '<p class="muted">Nessuna maestria arma selezionata.</p>'}
-        </div>
+        </div>` : ''}
         <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="tools">
           ${tools.length
     ? `<div class="tag-row">${tools.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
