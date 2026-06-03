@@ -1,4 +1,4 @@
-import{k as f,f as w,l as y,c as r}from"./index-B3mIQOv_.js";function S(l){const b="/dungeons-dragons-app/";l.innerHTML=`
+import{k as f,f as w,l as y,c as r}from"./index-DtIC5mHn.js";function S(l){const b="/dungeons-dragons-app/";l.innerHTML=`
     <section class="login-view auth-screen">
       <div class="card login-card">
         <div class="login-header">

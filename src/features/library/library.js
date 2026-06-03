@@ -72,6 +72,9 @@ export async function renderLibrary(container) {
           <span>Livello</span>
           <span>Incantesimo</span>
           <span>Scuola</span>
+          <span>Regole</span>
+          <span>Concentrazione</span>
+          <span>Rituale</span>
           <span>Azioni</span>
         </div>
         <div class="character-card-grid library-results-grid" data-library-spells></div>
@@ -140,6 +143,41 @@ export async function renderLibrary(container) {
     });
   versionFilterField.appendChild(versionFilterSelect);
   filtersRow.appendChild(versionFilterField);
+
+  const concentrationFilterField = document.createElement('label');
+  concentrationFilterField.className = 'field';
+  concentrationFilterField.innerHTML = '<span>Concentrazione</span>';
+  const concentrationFilterSelect = document.createElement('select');
+  concentrationFilterSelect.name = 'concentration';
+  [
+    { value: '', label: 'Tutte' },
+    { value: 'true', label: 'Sì' },
+    { value: 'false', label: 'No' }
+  ].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    concentrationFilterSelect.appendChild(option);
+  });
+  concentrationFilterField.appendChild(concentrationFilterSelect);
+  filtersRow.appendChild(concentrationFilterField);
+  const ritualFilterField = document.createElement('label');
+  ritualFilterField.className = 'field';
+  ritualFilterField.innerHTML = '<span>Rituale</span>';
+  const ritualFilterSelect = document.createElement('select');
+  ritualFilterSelect.name = 'ritual';
+  [
+    { value: '', label: 'Tutti' },
+    { value: 'true', label: 'Sì' },
+    { value: 'false', label: 'No' }
+  ].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    ritualFilterSelect.appendChild(option);
+  });
+  ritualFilterField.appendChild(ritualFilterSelect);
+  filtersRow.appendChild(ritualFilterField);
   const searchButton = document.createElement('button');
   searchButton.className = 'primary library-search-button';
   searchButton.type = 'button';
@@ -174,12 +212,16 @@ export async function renderLibrary(container) {
     const school = filters.querySelector('select[name="school"]')?.value || '';
     const casterClass = filters.querySelector('select[name="caster"]')?.value || '';
     const rulesVersion = filters.querySelector('select[name="rules_version"]')?.value || '';
+    const concentration = filters.querySelector('select[name="concentration"]')?.value || '';
+    const ritual = filters.querySelector('select[name="ritual"]')?.value || '';
     const result = await loadSharedSpellsForLibrary({
       query,
       level,
       school,
       rulesVersion,
-      casterClasses: casterClass ? [casterClass] : []
+      casterClasses: casterClass ? [casterClass] : [],
+      concentration,
+      ritual
     });
     const spells = result.items || [];
     const sortMode = filters.querySelector('select[name="sort"]')?.value || 'name';
@@ -203,8 +245,9 @@ export async function renderLibrary(container) {
     list.innerHTML = pagedSpells.length
       ? pagedSpells.map((spell) => {
         const classes = (spell.caster_classes || []).join(', ') || 'Nessuna classe';
-        const traits = [spell.concentration ? 'Concentrazione' : '', spell.ritual ? 'Rituale' : '', spell.rules_version ? `Regole ${spell.rules_version}` : '']
-          .filter(Boolean);
+        const rulesVersionLabel = spell.rules_version || '—';
+        const concentrationLabel = spell.concentration ? 'Sì' : 'No';
+        const ritualLabel = spell.ritual ? 'Sì' : 'No';
         return `
         <article class="character-card library-spell-card" data-library-view-spell="${spell.id}" role="button" tabindex="0" aria-label="Apri dettaglio incantesimo ${spell.name}">
           <div class="library-spell-card__level" aria-label="Livello ${spell.level ?? 0}">
@@ -214,9 +257,11 @@ export async function renderLibrary(container) {
           <div class="character-card-info library-spell-card__info">
             <h3>${spell.name}</h3>
             <p class="muted library-spell-card__classes">${classes}</p>
-            ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
           </div>
           <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
+          <span class="library-spell-card__rules">${rulesVersionLabel}</span>
+          <span class="library-spell-card__flag ${spell.concentration ? 'is-active' : ''}">${concentrationLabel}</span>
+          <span class="library-spell-card__flag ${spell.ritual ? 'is-active' : ''}">${ritualLabel}</span>
           <div class="button-row library-spell-card__actions">
             <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>
