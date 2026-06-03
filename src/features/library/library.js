@@ -39,16 +39,23 @@ async function loadSharedSpellsForLibrary(filters) {
   };
 }
 
-function sortSpells(spells, mode) {
+function compareSpellNames(a, b) {
+  return String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' });
+}
+
+function sortSpells(spells, sortState) {
   const items = [...spells];
-  if (mode === 'level') {
+  const direction = sortState.direction === 'desc' ? -1 : 1;
+
+  if (sortState.key === 'level') {
     return items.sort((a, b) => {
       const levelDiff = (Number(a.level) || 0) - (Number(b.level) || 0);
-      if (levelDiff !== 0) return levelDiff;
-      return String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' });
+      if (levelDiff !== 0) return levelDiff * direction;
+      return compareSpellNames(a, b);
     });
   }
-  return items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }));
+
+  return items.sort((a, b) => compareSpellNames(a, b) * direction);
 }
 
 export async function renderLibrary(container) {
@@ -68,9 +75,9 @@ export async function renderLibrary(container) {
         </header>
         <div class="library-filter-panel" data-library-filters></div>
         <div class="library-results-heading" data-library-results-heading></div>
-        <div class="library-spell-list-header" aria-hidden="true">
-          <span>Livello</span>
-          <span>Incantesimo</span>
+        <div class="library-spell-list-header">
+          <button class="library-sort-header" type="button" data-library-sort="level" aria-label="Ordina per livello crescente" aria-sort="none">Livello <span aria-hidden="true" data-library-sort-icon="level">↕</span></button>
+          <button class="library-sort-header is-active" type="button" data-library-sort="name" aria-label="Ordina alfabeticamente dalla Z alla A" aria-sort="ascending">Incantesimo <span aria-hidden="true" data-library-sort-icon="name">↑</span></button>
           <span>Scuola</span>
           <span>Regole</span>
           <span>Concentrazione</span>
@@ -185,7 +192,11 @@ export async function renderLibrary(container) {
   const filtersActions = document.createElement('div');
   filtersActions.className = 'library-filter-actions';
   filtersActions.appendChild(searchButton);
-
+  const resetButton = document.createElement('button');
+  resetButton.className = 'secondary library-reset-button';
+  resetButton.type = 'button';
+  resetButton.innerHTML = '<span aria-hidden="true">↺</span><span>Reset filtri</span>';
+  filtersActions.appendChild(resetButton);
 
   filters.append(filtersRow, filtersActions);
 
@@ -195,6 +206,23 @@ export async function renderLibrary(container) {
   list.insertAdjacentElement('afterend', pagination);
 
   let currentPage = 1;
+  const sortState = { key: 'name', direction: 'asc' };
+
+  const updateSortHeaders = () => {
+    container.querySelectorAll('[data-library-sort]').forEach((button) => {
+      const key = button.dataset.librarySort;
+      const isActive = key === sortState.key;
+      const icon = button.querySelector('[data-library-sort-icon]');
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-sort', isActive ? (sortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      if (icon) icon.textContent = isActive ? (sortState.direction === 'asc' ? '↑' : '↓') : '↕';
+      if (key === 'level') {
+        button.setAttribute('aria-label', `Ordina per livello ${isActive && sortState.direction === 'asc' ? 'decrescente' : 'crescente'}`);
+      } else {
+        button.setAttribute('aria-label', `Ordina alfabeticamente ${isActive && sortState.direction === 'asc' ? 'dalla Z alla A' : 'dalla A alla Z'}`);
+      }
+    });
+  };
 
   const renderSpells = async () => {
     const query = filters.querySelector('input[name="q"]')?.value || '';
@@ -214,8 +242,8 @@ export async function renderLibrary(container) {
       ritual
     });
     const spells = result.items || [];
-    const sortMode = filters.querySelector('select[name="sort"]')?.value || 'name';
-    const sortedSpells = sortSpells(spells, sortMode);
+    updateSortHeaders();
+    const sortedSpells = sortSpells(spells, sortState);
     const totalPages = Math.max(1, Math.ceil(sortedSpells.length / PAGE_SIZE));
     currentPage = Math.min(currentPage, totalPages);
     const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -259,9 +287,9 @@ export async function renderLibrary(container) {
       }).join('')
       : '<div class="library-empty-state"><strong>Nessun incantesimo trovato</strong><span class="muted">Prova a rimuovere un filtro o cerca un altro nome.</span></div>';
     pagination.innerHTML = sortedSpells.length
-      ? `<button class="secondary" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}>← Precedente</button>
-         <span class="muted">Pagina ${currentPage} di ${totalPages}</span>
-         <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
+      ? `<button class="secondary library-pagination__button" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}><span aria-hidden="true">←</span><span>Pagina precedente</span></button>
+         <span class="library-pagination__status">Pagina ${currentPage} di ${totalPages}</span>
+         <button class="secondary library-pagination__button" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}><span>Pagina successiva</span><span aria-hidden="true">→</span></button>`
       : '';
 
     const openLibrarySpell = (spellId) => {
@@ -320,7 +348,26 @@ export async function renderLibrary(container) {
   };
 
   searchButton.addEventListener('click', () => { currentPage = 1; void renderSpells(); });
-  filters.querySelector('select[name="sort"]')?.addEventListener('change', () => { currentPage = 1; void renderSpells(); });
+  resetButton.addEventListener('click', () => {
+    filters.querySelectorAll('input, select').forEach((field) => {
+      field.value = '';
+    });
+    currentPage = 1;
+    void renderSpells();
+  });
+  container.querySelectorAll('[data-library-sort]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const key = button.dataset.librarySort === 'level' ? 'level' : 'name';
+      if (sortState.key === key) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.key = key;
+        sortState.direction = 'asc';
+      }
+      currentPage = 1;
+      void renderSpells();
+    });
+  });
   container.querySelector('[data-library-add-spell]')?.addEventListener('click', async () => {
     const { user } = getState();
     await openSpellDrawer(null, async (createdSpell) => {

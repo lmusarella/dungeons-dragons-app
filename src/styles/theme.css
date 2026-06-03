@@ -1208,8 +1208,10 @@ body {
   padding-block: 6px;
 }
 
-.library-filters-row .primary {
-  height: 34px;
+.library-filters-row .primary,
+.library-filter-actions .primary,
+.library-filter-actions .secondary {
+  height: 48px;
   min-width: 92px;
   padding-inline: 12px;
 }
@@ -1221,6 +1223,7 @@ body {
 
 .library-pagination {
   grid-column: 1 / -1;
+  justify-self: center;
 }
 
 .library-spell-card {
