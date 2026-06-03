@@ -1,5 +1,5 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, createToast, openConfirmModal } from '../../ui/components.js';
+import { attachNumberStepper, buildInput, createToast, openConfirmModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 import { openSpellDrawer, openSpellQuickDetailModal } from '../character/home/modals.js';
@@ -80,7 +80,19 @@ export async function renderLibrary(container) {
   const filtersRow = document.createElement('div');
   filtersRow.className = 'modal-form-row modal-form-row--compact library-filters-row';
   filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
-  filtersRow.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
+  const levelFilterField = buildInput({ label: 'Livello', name: 'level', type: 'number' });
+  const levelFilterInput = levelFilterField.querySelector('input[name="level"]');
+  if (levelFilterInput) {
+    levelFilterInput.min = '0';
+    levelFilterInput.max = '9';
+    levelFilterInput.step = '1';
+    levelFilterInput.inputMode = 'numeric';
+    attachNumberStepper(levelFilterInput, {
+      decrementLabel: 'Riduci livello incantesimo',
+      incrementLabel: 'Aumenta livello incantesimo'
+    });
+  }
+  filtersRow.appendChild(levelFilterField);
   const schoolFilterField = document.createElement('label');
   schoolFilterField.className = 'field';
   schoolFilterField.innerHTML = '<span>Scuola</span>';
@@ -122,11 +134,13 @@ export async function renderLibrary(container) {
   versionFilterField.appendChild(versionFilterSelect);
   filtersRow.appendChild(versionFilterField);
   const searchButton = document.createElement('button');
-  searchButton.className = 'primary';
+  searchButton.className = 'primary library-search-button';
   searchButton.type = 'button';
   searchButton.innerHTML = '<span aria-hidden="true">🔎</span><span>Cerca</span>';
-  filtersRow.appendChild(searchButton);
-  filters.appendChild(filtersRow);
+  const filtersActions = document.createElement('div');
+  filtersActions.className = 'library-filter-actions';
+  filtersActions.appendChild(searchButton);
+  filters.append(filtersRow, filtersActions);
 
   const listToolbar = document.createElement('div');
   listToolbar.className = 'library-list-toolbar';
@@ -144,7 +158,7 @@ export async function renderLibrary(container) {
   const resultsHeading = container.querySelector('[data-library-results-heading]');
   const pagination = document.createElement('div');
   pagination.className = 'library-pagination';
-  filters.appendChild(pagination);
+  list.insertAdjacentElement('afterend', pagination);
 
   let currentPage = 1;
 
@@ -196,7 +210,7 @@ export async function renderLibrary(container) {
               <h3>${spell.name}</h3>
               <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
             </div>
-            <p class="muted">${classes}</p>
+            <p class="muted library-spell-card__classes">${classes}</p>
             ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
           </div>
           <div class="button-row library-spell-card__actions">
