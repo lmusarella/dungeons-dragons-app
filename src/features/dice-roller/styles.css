@@ -427,6 +427,17 @@ header {
   margin-top: 8px;
 }
 
+.diceov-accordion-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-items: start;
+}
+
+.diceov-accordion-row--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .diceov-result,
 .diceov-quick-dice,
 .diceov-reroll-card,
@@ -859,8 +870,12 @@ header {
 .diceov-quick-dice {
   display: grid;
   gap: 4px;
-  margin: 4px 0 2px;
+  margin: 0;
   text-align: center;
+}
+
+.diceov-quick-dice[hidden] {
+  display: none;
 }
 
 .diceov-quick-dice-toggle,
@@ -1020,6 +1035,10 @@ header {
 }
 
 @media (max-width: 560px) {
+  .diceov-accordion-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .diceov-quick-dice-controls {
     justify-content: flex-start;
     gap: 4px;

@@ -144,8 +144,16 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
+          <p class="diceov-warning" data-custom-warning hidden></p>
+        </div>
+      </div>
+      <div class="diceov-results">
+        <div class="diceov-accordion-row" data-dice-accordion-row>
           <div class="diceov-quick-dice" data-quick-dice>
-            <button class="diceov-quick-dice-toggle" type="button" data-quick-dice-toggle aria-expanded="false">Aggiungi dadi</button>
+            <button class="diceov-quick-dice-toggle" type="button" data-quick-dice-toggle aria-expanded="false">
+              <span aria-hidden="true">🎲</span>
+              <span>Aggiungi dadi</span>
+            </button>
             <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
               <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
               <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
@@ -159,17 +167,15 @@ function buildOverlayMarkup() {
               </div>
             </div>
           </div>
-          <p class="diceov-warning" data-custom-warning hidden></p>
-        </div>
-      </div>
-      <div class="diceov-results">
-        <div class="diceov-reroll-card" data-reroll-card hidden>
-          <button class="diceov-reroll-toggle" type="button" data-reroll-toggle aria-expanded="false">
-            <span>Ritira dadi</span>
-          </button>
-          <div class="diceov-reroll-content" data-reroll-content hidden>
-            <p class="diceov-reroll-status" data-reroll-status hidden></p>
-            <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
+          <div class="diceov-reroll-card" data-reroll-card>
+            <button class="diceov-reroll-toggle" type="button" data-reroll-toggle aria-expanded="false">
+              <span aria-hidden="true">🔁</span>
+              <span>Ritira dadi</span>
+            </button>
+            <div class="diceov-reroll-content" data-reroll-content hidden>
+              <p class="diceov-reroll-status" data-reroll-status hidden></p>
+              <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
+            </div>
           </div>
         </div>
         <div class="diceov-result diceov-result--final">
@@ -675,6 +681,7 @@ export function openDiceOverlay({
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
   const quickDiceToggle = overlayEl.querySelector('[data-quick-dice-toggle]');
   const quickDiceContent = overlayEl.querySelector('[data-quick-dice-content]');
+  const accordionRow = overlayEl.querySelector('[data-dice-accordion-row]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
   const rerollToggle = overlayEl.querySelector('[data-reroll-toggle]');
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
@@ -1157,11 +1164,9 @@ export function openDiceOverlay({
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
-      rerollCard?.setAttribute('hidden', '');
-      setRerollAccordionOpen(false);
       if (rerollStatus) {
-        rerollStatus.textContent = '';
-        rerollStatus.setAttribute('hidden', '');
+        rerollStatus.textContent = 'Lancia i dadi per scegliere cosa ritirare.';
+        rerollStatus.removeAttribute('hidden');
       }
       return;
     }
@@ -1419,6 +1424,8 @@ export function openDiceOverlay({
   setBuffVisibility();
   const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
   if (genericDiceBuilder) genericDiceBuilder.toggleAttribute('hidden', isDamageGenericRoll);
+  if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', mode !== 'generic');
+  accordionRow?.classList.toggle('diceov-accordion-row--single', mode !== 'generic');
   if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
   if (criticalDamageInput) criticalDamageInput.checked = false;
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
