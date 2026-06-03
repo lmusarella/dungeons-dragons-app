@@ -218,14 +218,13 @@ function buildCompanionCard(companion, isSelected = false) {
   `;
 }
 
-function openRollWithModifier(label, modifier) {
+function openRollWithModifier(label, modifier, rollType = 'TA') {
   openDiceOverlay({
     keepOpen: true,
     title: label,
-    mode: 'generic',
-    notation: '1d20',
+    mode: 'd20',
     modifier: Number(modifier) || 0,
-    rollType: 'CHECK',
+    rollType,
     historyLabel: label
   });
 }
@@ -711,14 +710,14 @@ export async function renderFamiliars(container) {
     if (!companion || !ABILITY_KEYS.includes(abilityKey)) return;
     const score = Number(normalizeStatBlock(companion.stat_block).abilities[abilityKey]) || 10;
     const modifier = getAbilityModifier(score) ?? 0;
-    openRollWithModifier(`${companion.name} · ${ABILITY_LABELS[abilityKey]}`, modifier);
+    openRollWithModifier(`${companion.name} · ${ABILITY_LABELS[abilityKey]}`, modifier, 'TA');
   }));
   container.querySelectorAll('[data-roll-save]').forEach((btn) => btn.addEventListener('click', () => {
     const [companionId, abilityKey] = String(btn.dataset.rollSave || '').split(':');
     const companion = companions.find((entry) => String(entry.id) === companionId);
     if (!companion || !ABILITY_KEYS.includes(abilityKey)) return;
     const modifier = getSavingThrowModifier(normalizeStatBlock(companion.stat_block), abilityKey);
-    openRollWithModifier(`${companion.name} · TS ${ABILITY_LABELS[abilityKey]}`, modifier);
+    openRollWithModifier(`${companion.name} · TS ${ABILITY_LABELS[abilityKey]}`, modifier, 'TS');
   }));
   container.querySelectorAll('[data-roll-damage]').forEach((btn) => btn.addEventListener('click', () => {
     const [companionId, attackIndex] = String(btn.dataset.rollDamage || '').split(':');
@@ -746,7 +745,7 @@ export async function renderFamiliars(container) {
     if (!companion) return;
     const attack = normalizeStatBlock(companion.stat_block).attacks[Number(attackIndex) || 0];
     if (!attack) return;
-    openRollWithModifier(`${companion.name} · Tiro per colpire · ${attack.name || 'Attacco'}`, Number(attack.to_hit) || 0);
+    openRollWithModifier(`${companion.name} · Tiro per colpire · ${attack.name || 'Attacco'}`, Number(attack.to_hit) || 0, 'TC');
   };
   container.querySelectorAll('[data-roll-attack-card]').forEach((card) => {
     card.addEventListener('click', (event) => {

@@ -71,6 +71,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
   const hpTrackFlex = hasTempHp ? hpPool : 1;
   const tempTrackFlex = hasTempHp ? tempHpValue : 0;
   const hpLabel = maxHp ? `${currentHp ?? '-'}/${maxHp}` : `${currentHp ?? '-'}`;
+  const hpPercentLabel = maxHp ? `${Math.round(hpPercent)}%` : '-';
   const tempHpLabel = tempHp ?? '-';
   const weakPoints = Math.max(0, Math.min(6, Number(hp.weak_points) || 0));
   const conditionState = Array.isArray(data.conditions)
@@ -223,6 +224,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = []) 
             <div class="hp-bar-label">
               <span>HP</span>
               <strong>${hpLabel}</strong>
+              <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
               <span class="hp-bar-label__divider" aria-hidden="true">•</span>
               <span class="hp-bar-label__temp-group ${hasTempHp ? 'is-active' : ''}">
                 <span class="hp-bar-label__temp">HP temporanei</span>

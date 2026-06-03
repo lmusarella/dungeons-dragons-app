@@ -1746,6 +1746,16 @@ button:focus-visible,
   font-weight: 600;
 }
 
+.hp-bar-label__percent {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(122, 36, 36, 0.12);
+  color: #7a2424;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .hp-bar-label__divider {
   margin-left: auto;
   color: #6a5540;
