@@ -1929,7 +1929,13 @@ function getAutomaticSkillRollEffects(character, items, skill) {
   return effects;
 }
 
-function getAutomaticSpecialSkillRollEffects(character, items, abilityKey) {
+function isInitiativeSpecialSkill(skill) {
+  const id = String(skill?.id ?? '').toLowerCase();
+  const name = String(skill?.name ?? '').trim().toLowerCase();
+  return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+}
+
+function getAutomaticSpecialSkillRollEffects(character, items, abilityKey, skill = null) {
   const conditionState = getConditionState(character);
   const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
   const hasHeavyArmor = hasEquippedHeavyArmor(items);
@@ -1937,7 +1943,7 @@ function getAutomaticSpecialSkillRollEffects(character, items, abilityKey) {
   if (poisonedConditions.length) {
     effects.push({ mode: 'disadvantage', source: 'condition', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
   }
-  if (abilityKey === 'dex' && hasHeavyArmor) {
+  if (abilityKey === 'dex' && hasHeavyArmor && !isInitiativeSpecialSkill(skill)) {
     effects.push({ mode: 'disadvantage', source: 'armor', reason: 'Svantaggio automatico: armatura pesante su tiri speciali basati su DES.' });
   }
   return effects;
@@ -2079,7 +2085,7 @@ function buildSpecialSkillRollOptions(character, items = []) {
     const extraBonus = Number(skill.bonus) || 0;
     const total = (baseTotal ?? 0) + extraBonus;
     const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
-    const rollEffects = getAutomaticSpecialSkillRollEffects(character, items, abilityKey);
+    const rollEffects = getAutomaticSpecialSkillRollEffects(character, items, abilityKey, skill);
     const rollMode = resolveRollModeEffects(rollEffects);
     return {
       value: String(skill.id ?? index),

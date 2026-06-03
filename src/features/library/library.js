@@ -8,6 +8,36 @@ const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
 const SPELL_RULES_VERSION_OPTIONS = ['2024', '2014', 'Custom'];
 const PAGE_SIZE = 8;
+const LIBRARY_SEARCH_PAGE_SIZE = 50;
+
+async function loadSharedSpellsForLibrary(filters) {
+  const firstPage = await searchSharedSpells({
+    ...filters,
+    page: 1,
+    pageSize: LIBRARY_SEARCH_PAGE_SIZE
+  });
+  const items = [...(firstPage.items || [])];
+  const total = Number(firstPage.total) || items.length;
+  let page = 2;
+
+  while (items.length < total) {
+    const nextPage = await searchSharedSpells({
+      ...filters,
+      page,
+      pageSize: LIBRARY_SEARCH_PAGE_SIZE
+    });
+    const nextItems = nextPage.items || [];
+    if (!nextItems.length) break;
+    items.push(...nextItems);
+    page += 1;
+  }
+
+  return {
+    ...firstPage,
+    items,
+    total
+  };
+}
 
 function sortSpells(spells, mode) {
   const items = [...spells];
@@ -124,7 +154,7 @@ export async function renderLibrary(container) {
     const school = filters.querySelector('select[name="school"]')?.value || '';
     const casterClass = filters.querySelector('select[name="caster"]')?.value || '';
     const rulesVersion = filters.querySelector('select[name="rules_version"]')?.value || '';
-    const result = await searchSharedSpells({
+    const result = await loadSharedSpellsForLibrary({
       query,
       level,
       school,
