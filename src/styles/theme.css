@@ -1178,7 +1178,6 @@ body {
 }
 
 .library-filter-panel {
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 180px);
   align-items: end;
   gap: 8px;
   padding: 10px;
@@ -1187,7 +1186,6 @@ body {
 
 .library-filters-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) minmax(74px, 0.45fr) minmax(130px, 0.8fr) minmax(120px, 0.75fr) minmax(132px, 0.9fr) auto;
   align-items: end;
   gap: 8px;
 }

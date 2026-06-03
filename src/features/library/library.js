@@ -186,18 +186,8 @@ export async function renderLibrary(container) {
   filtersActions.className = 'library-filter-actions';
   filtersActions.appendChild(searchButton);
 
-  const listToolbar = document.createElement('div');
-  listToolbar.className = 'library-list-toolbar';
-  listToolbar.innerHTML = `
-    <label class="field">
-      <span>Ordina per</span>
-      <select name="sort">
-        <option value="name">Nome (A-Z)</option>
-        <option value="level">Livello (0-9)</option>
-      </select>
-    </label>
-  `;
-  filters.append(filtersRow, listToolbar, filtersActions);
+
+  filters.append(filtersRow, filtersActions);
 
   const resultsHeading = container.querySelector('[data-library-results-heading]');
   const pagination = document.createElement('div');
