@@ -2400,11 +2400,13 @@ function handleDiceAction(type) {
 
 
 async function openLongRestWeaponMasteryModal(character, items = [], container = null) {
+  const currentMasteries = Array.isArray(character?.data?.weapon_masteries) ? character.data.weapon_masteries : [];
+  const canUseWeaponMasteries = Boolean(character?.data?.weapon_mastery_enabled) || currentMasteries.length > 0;
+  if (!canUseWeaponMasteries) return;
   const availableMasteryKeys = [...new Set((items || [])
     .filter((item) => item.category === 'weapon' && item.weapon_mastery)
     .map((item) => item.weapon_mastery))];
   if (!availableMasteryKeys.length) return;
-  const currentMasteries = Array.isArray(character?.data?.weapon_masteries) ? character.data.weapon_masteries : [];
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid';
   content.innerHTML = `

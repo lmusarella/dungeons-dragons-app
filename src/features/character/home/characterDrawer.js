@@ -186,6 +186,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
+  const hasWeaponMasteryFeature = Boolean(characterData.weapon_mastery_enabled) || selectedWeaponMasteries.length > 0;
   const damageDefenses = characterData.damage_defenses || {};
   const rollAdjustments = characterData.roll_adjustments || {};
   const drawerItems = getState().cache.items || [];
@@ -619,6 +620,19 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.sneak_attack_dice ?? ''
   }));
   combatSection.appendChild(combatOtherRow);
+  const weaponMasteryFeatureField = document.createElement('div');
+  weaponMasteryFeatureField.className = 'modal-toggle-field';
+  weaponMasteryFeatureField.innerHTML = `
+    <span class="modal-toggle-field__label">Maestria armi</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="weapon_mastery_enabled" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const weaponMasteryFeatureInput = weaponMasteryFeatureField.querySelector('input');
+  if (weaponMasteryFeatureInput) {
+    weaponMasteryFeatureInput.checked = hasWeaponMasteryFeature;
+  }
   const spellcasterField = document.createElement('div');
   spellcasterField.className = 'modal-toggle-field';
   spellcasterField.innerHTML = `
@@ -646,6 +660,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     wildShapeInput.checked = Boolean(characterData.wild_shape_enabled);
   }
   combatSection.appendChild(wildShapeField);
+  combatSection.appendChild(weaponMasteryFeatureField);
   combatSection.appendChild(spellcasterField);
   const spellcastingSection = document.createElement('div');
   spellcastingSection.className = 'character-edit-section spellcasting-section';
@@ -905,7 +920,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   weaponMasterySection.className = 'character-edit-section';
   weaponMasterySection.innerHTML = `
     <h4>Maestrie delle armi (2024)</h4>
-    <p class="muted compact-settings-help">Seleziona le maestrie conosciute dal personaggio. Ogni arma dell'inventario può indicare quale maestria usa.</p>
+    <p class="muted compact-settings-help">Attiva il flag "Maestria armi" in questo step per selezionare le maestrie conosciute dal personaggio. Ogni arma dell'inventario può indicare quale maestria usa.</p>
     <div class="weapon-mastery-list">
       ${weaponMasteries2024.map((mastery) => `
         <label class="toggle-pill weapon-mastery-card">
@@ -918,6 +933,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       `).join('')}
     </div>
   `;
+  const syncWeaponMasteryControls = () => {
+    const enabled = Boolean(weaponMasteryFeatureInput?.checked);
+    weaponMasterySection.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.disabled = !enabled;
+    });
+    weaponMasterySection.classList.toggle('is-disabled', !enabled);
+  };
+  weaponMasteryFeatureInput?.addEventListener('change', syncWeaponMasteryControls);
+  syncWeaponMasteryControls();
 
   const steps = [
     {
@@ -971,7 +995,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       description: 'Equipaggiamenti, strumenti, lingue e talenti.',
       content: buildEditGroup('Competenze e Talenti', [
         proficiencySection,
-        weaponMasterySection,
         proficiencyNotesSection,
         languageNotesSection,
         talentNotesSection
@@ -984,7 +1007,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       title: 'Combattimento e magia',
       icon: '⚔️',
       description: 'Attacchi, danni, incantesimi e slot.',
-      content: buildEditGroup('Combattimento e magia', [combatSection], {
+      content: buildEditGroup('Combattimento e magia', [combatSection, weaponMasterySection], {
         icon: '⚔️',
         description: 'Raccoglie i parametri usati durante il turno: attacchi, bonus, incantesimi e risorse.'
       })
@@ -1334,9 +1357,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
-    weapon_masteries: weaponMasteries2024
-      .filter((mastery) => formData.has(`weapon_mastery_${mastery.key}`))
-      .map((mastery) => mastery.key),
+    weapon_mastery_enabled: formData.has('weapon_mastery_enabled'),
+    weapon_masteries: formData.has('weapon_mastery_enabled')
+      ? weaponMasteries2024
+        .filter((mastery) => formData.has(`weapon_mastery_${mastery.key}`))
+        .map((mastery) => mastery.key)
+      : [],
     proficiencies: nextProficiencies,
     damage_defenses: nextDamageDefenses,
     roll_adjustments: nextRollAdjustments

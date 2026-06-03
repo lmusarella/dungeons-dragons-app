@@ -1,42 +1,42 @@
 export const weaponMasteries2024 = [
   {
     key: 'cleave',
-    label: 'Cleave',
+    label: 'Fendente',
     summary: 'Dopo aver colpito, puoi fare un attacco extra contro una seconda creatura entro 1,5 m dal bersaglio originale e dalla tua portata.'
   },
   {
     key: 'graze',
-    label: 'Graze',
+    label: 'Di striscio',
     summary: 'Se manchi con un attacco, infliggi comunque danni pari al modificatore di caratteristica usato per il tiro.'
   },
   {
     key: 'nick',
-    label: 'Nick',
+    label: 'Colpo rapido',
     summary: 'Quando fai l’attacco extra della proprietà Leggera, puoi includerlo nell’azione Attacco invece di usare l’azione bonus.'
   },
   {
     key: 'push',
-    label: 'Push',
+    label: 'Spingere',
     summary: 'Quando colpisci una creatura Grande o più piccola, puoi spingerla fino a 3 m lontano da te.'
   },
   {
     key: 'sap',
-    label: 'Sap',
+    label: 'Fiaccare',
     summary: 'Quando colpisci una creatura, il suo prossimo tiro per colpire prima dell’inizio del tuo prossimo turno ha svantaggio.'
   },
   {
     key: 'slow',
-    label: 'Slow',
+    label: 'Rallentare',
     summary: 'Quando colpisci e infliggi danni, puoi ridurre la velocità del bersaglio di 3 m fino all’inizio del tuo prossimo turno.'
   },
   {
     key: 'topple',
-    label: 'Topple',
+    label: 'Abbattere',
     summary: 'Quando colpisci, il bersaglio deve superare un TS Costituzione o cadere prono.'
   },
   {
     key: 'vex',
-    label: 'Vex',
+    label: 'Incalzare',
     summary: 'Quando colpisci e infliggi danni, hai vantaggio al prossimo tiro per colpire contro quel bersaglio prima della fine del tuo prossimo turno.'
   }
 ];
