@@ -57,24 +57,14 @@ function buildCoinField(label, name, value, iconSrc, coinClass) {
 }
 
 
-export function buildTransactionList(transactions) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'transaction-list';
-  if (!transactions.length) {
-    wrapper.innerHTML = '<p class="muted">Nessuna transazione registrata.</p>';
-    return wrapper;
-  }
-  const list = document.createElement('ul');
-  list.className = 'transaction-items';
-  const shouldScroll = transactions.length > TRANSACTION_SCROLL_THRESHOLD;
-  transactions.forEach((transaction) => {
-    const item = document.createElement('li');
-    const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
-    const amountLabel = buildTransactionAmount(transaction.amount);
-    const amountLabelText = buildTransactionAmountLabel(transaction.amount);
-    const directionClass = transaction.direction === 'pay' ? 'transaction-item--outgoing' : 'transaction-item--incoming';
-    item.className = `transaction-item ${directionClass}`;
-    item.innerHTML = `
+function buildTransactionItem(transaction) {
+  const item = document.createElement('li');
+  const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
+  const amountLabel = buildTransactionAmount(transaction.amount);
+  const amountLabelText = buildTransactionAmountLabel(transaction.amount);
+  const directionClass = transaction.direction === 'pay' ? 'transaction-item--outgoing' : 'transaction-item--incoming';
+  item.className = `transaction-item ${directionClass}`;
+  item.innerHTML = `
       <div class="transaction-info">
         <p class="muted">${transaction.reason || 'Nessuna nota'}</p>
       </div>
@@ -91,10 +81,47 @@ export function buildTransactionList(transactions) {
         </div>
       </div>
     `;
-    list.appendChild(item);
-  });
-  wrapper.classList.toggle('transaction-list--scrollable', shouldScroll);
-  wrapper.appendChild(list);
+  return item;
+}
+
+function buildTransactionGroup({ title, transactions, open = false }) {
+  const details = document.createElement('details');
+  details.className = 'transaction-accordion';
+  details.open = open;
+  const totalCount = transactions.length;
+  const summary = document.createElement('summary');
+  summary.className = 'transaction-accordion__summary';
+  summary.innerHTML = `
+    <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
+    <span class="transaction-accordion__title">${title}</span>
+    <span class="transaction-accordion__count">${totalCount} ${totalCount === 1 ? 'movimento' : 'movimenti'}</span>
+  `;
+  const body = document.createElement('div');
+  body.className = 'transaction-accordion__body';
+  if (!transactions.length) {
+    body.innerHTML = `<p class="muted">Nessuna ${title.toLowerCase()} registrata.</p>`;
+  } else {
+    const list = document.createElement('ul');
+    list.className = 'transaction-items';
+    transactions.forEach((transaction) => list.appendChild(buildTransactionItem(transaction)));
+    body.appendChild(list);
+  }
+  details.classList.toggle('transaction-list--scrollable', transactions.length > TRANSACTION_SCROLL_THRESHOLD);
+  details.append(summary, body);
+  return details;
+}
+
+export function buildTransactionList(transactions) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'transaction-list transaction-list--grouped';
+  if (!transactions.length) {
+    wrapper.innerHTML = '<p class="muted">Nessuna transazione registrata.</p>';
+    return wrapper;
+  }
+  const incoming = transactions.filter((transaction) => transaction.direction !== 'pay');
+  const outgoing = transactions.filter((transaction) => transaction.direction === 'pay');
+  wrapper.appendChild(buildTransactionGroup({ title: 'Entrate', transactions: incoming, open: incoming.length > 0 }));
+  wrapper.appendChild(buildTransactionGroup({ title: 'Uscite', transactions: outgoing, open: incoming.length === 0 && outgoing.length > 0 }));
   return wrapper;
 }
 

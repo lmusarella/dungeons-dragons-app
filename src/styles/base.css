@@ -7651,3 +7651,82 @@ button:focus-visible,
   border-color: rgba(var(--accent-rgb), 0.48);
   background: #fff6e6;
 }
+
+.transaction-list--grouped {
+  gap: 8px;
+}
+
+.transaction-accordion {
+  border: 1px solid rgba(139, 123, 99, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 250, 241, 0.72);
+  overflow: hidden;
+}
+
+.transaction-accordion__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.transaction-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.transaction-accordion__title {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.transaction-accordion__count {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: rgba(28, 27, 26, 0.62);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.transaction-accordion__body {
+  padding: 0 10px 10px;
+}
+
+.transaction-accordion:not([open]) .inventory-container-accordion__icon {
+  transform: rotate(-90deg);
+}
+
+.transaction-accordion.transaction-list--scrollable .transaction-items {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.weapon-mastery-help {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.weapon-mastery-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.weapon-mastery-card {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.weapon-mastery-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weapon-mastery-card__body small {
+  color: rgba(28, 27, 26, 0.68);
+  line-height: 1.35;
+}

@@ -42,6 +42,9 @@ function buildOverlayMarkup() {
         <div>      
           <p class="diceov-eyebrow" data-dice-title>Lancia dadi</h3>
         </div>
+        <button class="diceov-history-icon-button" type="button" data-history-toggle aria-expanded="false" aria-label="Apri storico tiri" title="Storico tiri">
+          <span aria-hidden="true">🕘</span>
+        </button>
       </header>
       <div class="diceov-controls">   
         <div class="diceov-control diceov-control--row" data-modifier-home>
@@ -166,12 +169,12 @@ function buildOverlayMarkup() {
       </div>
     </section>
     ${buildDiceMarkup()}
-    <section class="diceov-history-accordion" data-history-accordion>
-      <button class="diceov-history-toggle" type="button" data-history-toggle aria-expanded="false">
-        <span>Storico tiri</span>
-        <span class="diceov-history-toggle-icon" aria-hidden="true">▾</span>
-      </button>
+    <section class="diceov-history-accordion" data-history-accordion hidden>
       <div class="diceov-history-panel" data-dice-history-panel hidden>
+        <div class="diceov-history-popover-header">
+          <strong>Storico tiri</strong>
+          <button class="diceov-history-popover-close" type="button" data-history-close aria-label="Chiudi storico">×</button>
+        </div>
         <div class="diceov-history-list" data-dice-history></div>
       </div>
     </section>
@@ -1004,7 +1007,9 @@ export function openDiceOverlay({
   function setHistoryOpen(open) {
     if (!historyAccordion || !historyToggle || !historyPanel) return;
     historyAccordion.classList.toggle('is-open', open);
+    historyAccordion.toggleAttribute('hidden', !open);
     historyToggle.setAttribute('aria-expanded', String(open));
+    historyToggle.setAttribute('aria-label', open ? 'Chiudi storico tiri' : 'Apri storico tiri');
     historyPanel.toggleAttribute('hidden', !open);
     stage?.classList.toggle('diceov-stage--history-open', open);
     if (open) {
@@ -1334,6 +1339,8 @@ export function openDiceOverlay({
       setHistoryOpen(shouldOpen);
     };
   }
+  const historyCloseButton = overlayEl.querySelector('[data-history-close]');
+  if (historyCloseButton) historyCloseButton.onclick = () => setHistoryOpen(false);
 
   setSelectionOptions();
   setBuffVisibility();
