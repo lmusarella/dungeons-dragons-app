@@ -177,7 +177,7 @@ header {
   position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  width: min(1120px, 98vw);
+  width: min(970px, 98vw);
   max-height: 96vh;
   overflow: auto;
   background: #111;
@@ -739,7 +739,7 @@ header {
 
 .diceov-stage {
   padding: 8px;
-  width: min(1120px, 98vw);
+  width: min(970px, 98vw);
   max-height: min(96vh, 980px);
 }
 /* Il contenitore del popup crea un nuovo stacking context */

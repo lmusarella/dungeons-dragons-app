@@ -162,7 +162,7 @@ function buildOverlayMarkup() {
           </div>
         </div>
         <div class="diceov-result diceov-result--final">
-          <p class="diceov-result-label">Totale:</p>
+          <p class="diceov-result-label">Totale</p>
           <p class="diceov-result-detail" data-dice-detail>Lancia per vedere i dettagli.</p>
           <p class="diceov-result-value" data-dice-result>—</p>
         </div>
