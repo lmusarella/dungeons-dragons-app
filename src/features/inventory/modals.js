@@ -1,6 +1,7 @@
 import { createItem, updateItem } from './inventoryApi.js';
 import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { ammunitionTypes, armorTypes, bodyParts, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
+import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMasteries.js';
 import { getEquipSlots, getWeightUnit, hasProficiencyForItem } from './utils.js';
 
 export async function openItemModal(character, item, items, onSave) {
@@ -260,6 +261,20 @@ export async function openItemModal(character, item, items, onSave) {
   const weaponAbilitySelect = buildSelect(weaponAbilities, item?.attack_ability ?? '');
   weaponAbilitySelect.name = 'attack_ability';
   weaponAbilityField.appendChild(weaponAbilitySelect);
+  const weaponMasteryField = document.createElement('label');
+  weaponMasteryField.className = 'field';
+  weaponMasteryField.innerHTML = '<span>Maestria arma (2024)</span>';
+  const weaponMasterySelect = buildSelect(weaponMasteryOptions, item?.weapon_mastery ?? '');
+  weaponMasterySelect.name = 'weapon_mastery';
+  weaponMasteryField.appendChild(weaponMasterySelect);
+  const weaponMasteryHelp = document.createElement('p');
+  weaponMasteryHelp.className = 'muted weapon-mastery-help';
+  weaponMasteryField.appendChild(weaponMasteryHelp);
+  const updateWeaponMasteryHelp = () => {
+    weaponMasteryHelp.textContent = getWeaponMasterySummary(weaponMasterySelect.value);
+  };
+  weaponMasterySelect.addEventListener('change', updateWeaponMasteryHelp);
+  updateWeaponMasteryHelp();
   const damageDieField = buildInput({
     label: 'Dado danno',
     name: 'damage_die',
@@ -451,6 +466,7 @@ export async function openItemModal(character, item, items, onSave) {
   const shieldBonusInput = shieldBonusField.querySelector('input');
 
   const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField], 'balanced');
+  const weaponMasteryRow = buildRow([weaponMasteryField], 'balanced');
   const weaponDamageRow = buildRow([damageDieField, damageTypeField, attackModifierField, damageModifierField], 'compact');
   const weaponAmmoRow = buildRow([consumesAmmoField, weaponAmmoTypeField], 'compact');
   const weaponThrownRow = buildRow([thrownField], 'compact');
@@ -458,6 +474,7 @@ export async function openItemModal(character, item, items, onSave) {
   const armorBonusRow = buildRow([armorBonusField, shieldBonusField, shieldField], 'compact');
   armorBonusRow.classList.add('item-modal-row--armor-bonus');
   proficiencySection.appendChild(weaponPrimaryRow);
+  proficiencySection.appendChild(weaponMasteryRow);
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(weaponAmmoRow);
   proficiencySection.appendChild(weaponDamageModesField);
@@ -534,6 +551,7 @@ export async function openItemModal(character, item, items, onSave) {
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
+    weaponMasterySelect.disabled = !isWeapon;
     damageDieField.querySelector('input').disabled = !isWeapon;
     damageTypeSelect.disabled = !isWeapon;
     attackModifierField.querySelector('input').disabled = !isWeapon;
@@ -577,6 +595,7 @@ export async function openItemModal(character, item, items, onSave) {
     const showWeaponFields = itemKind === 'weapon';
     const showArmorFields = itemKind === 'armor';
     toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
+    toggleFieldVisibility(weaponMasteryRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageRow, showWeaponFields);
     toggleFieldVisibility(weaponAmmoRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageModesField, showWeaponFields);
@@ -666,6 +685,7 @@ export async function openItemModal(character, item, items, onSave) {
     weapon_type: formData.get('weapon_type') || null,
     weapon_range: formData.get('weapon_range') || null,
     attack_ability: formData.get('attack_ability') || null,
+    weapon_mastery: formData.get('weapon_mastery') || null,
     ammunition_type: formData.get('ammunition_type') || null,
     required_ammunition_type: formData.get('required_ammunition_type') || null,
     consumes_ammunition: formData.get('consumes_ammunition') === 'on',

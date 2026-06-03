@@ -20,6 +20,7 @@ import { buildLootFields, moneyFields } from '../inventory/render.js';
 import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { bodyParts } from '../inventory/constants.js';
+import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
 import { fetchCompanions } from './companionsApi.js';
 import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
@@ -2397,6 +2398,44 @@ function handleDiceAction(type) {
   });
 }
 
+
+async function openLongRestWeaponMasteryModal(character, items = [], container = null) {
+  const availableMasteryKeys = [...new Set((items || [])
+    .filter((item) => item.category === 'weapon' && item.weapon_mastery)
+    .map((item) => item.weapon_mastery))];
+  if (!availableMasteryKeys.length) return;
+  const currentMasteries = Array.isArray(character?.data?.weapon_masteries) ? character.data.weapon_masteries : [];
+  const content = document.createElement('div');
+  content.className = 'drawer-form modal-form-grid';
+  content.innerHTML = `
+    <p class="muted">A fine riposo lungo puoi riconfigurare le maestrie tra quelle disponibili sulle armi nel tuo inventario.</p>
+    <div class="weapon-mastery-list">
+      ${availableMasteryKeys.map((key) => `
+        <label class="toggle-pill weapon-mastery-card">
+          <input type="checkbox" name="rest_weapon_mastery_${key}" ${currentMasteries.includes(key) ? 'checked' : ''} />
+          <span class="weapon-mastery-card__body">
+            <strong>${getWeaponMasteryLabel(key)}</strong>
+            <small>${getWeaponMasterySummary(key)}</small>
+          </span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  const formData = await openFormModal({
+    title: 'Maestrie armi dopo riposo lungo',
+    submitLabel: 'Salva maestrie',
+    content,
+    cardClass: ['modal-card--wide', 'modal-card--scrollable']
+  });
+  if (!formData) return;
+  const nextMasteries = availableMasteryKeys.filter((key) => formData.has(`rest_weapon_mastery_${key}`));
+  const nextData = {
+    ...(character.data || {}),
+    weapon_masteries: nextMasteries
+  };
+  await saveCharacterData(character, nextData, null, container ? () => renderHome(container) : null);
+}
+
 async function handleRestAction(resetOn, container) {
   const { activeCharacter } = getHomeContext();
   if (!activeCharacter) return;
@@ -2423,8 +2462,13 @@ async function handleRestAction(resetOn, container) {
     }
     if (resetOn === 'long_rest') {
       const refreshed = getState().characters.find((char) => char.id === activeCharacter.id);
-      if (refreshed?.data?.spellcasting?.can_prepare) {
-        await openPreparedSpellsModal(refreshed, container ? () => renderHome(container) : null);
+      const restItems = getState().cache.items || [];
+      if (refreshed) {
+        await openLongRestWeaponMasteryModal(refreshed, restItems, container);
+      }
+      const afterMastery = getState().characters.find((char) => char.id === activeCharacter.id) || refreshed;
+      if (afterMastery?.data?.spellcasting?.can_prepare) {
+        await openPreparedSpellsModal(afterMastery, container ? () => renderHome(container) : null);
       }
     }
   } catch (error) {

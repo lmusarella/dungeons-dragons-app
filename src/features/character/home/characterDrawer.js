@@ -16,6 +16,7 @@ import {
   savingThrowList,
   skillList
 } from './constants.js';
+import { weaponMasteries2024 } from '../../rules/weaponMasteries.js';
 import { getAbilityModifier, getEquipSlots, normalizeNumber } from './utils.js';
 
 
@@ -184,6 +185,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
+  const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
   const damageDefenses = characterData.damage_defenses || {};
   const rollAdjustments = characterData.roll_adjustments || {};
   const drawerItems = getState().cache.items || [];
@@ -899,6 +901,24 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.talents ?? ''
   }));
 
+  const weaponMasterySection = document.createElement('div');
+  weaponMasterySection.className = 'character-edit-section';
+  weaponMasterySection.innerHTML = `
+    <h4>Maestrie delle armi (2024)</h4>
+    <p class="muted compact-settings-help">Seleziona le maestrie conosciute dal personaggio. Ogni arma dell'inventario può indicare quale maestria usa.</p>
+    <div class="weapon-mastery-list">
+      ${weaponMasteries2024.map((mastery) => `
+        <label class="toggle-pill weapon-mastery-card">
+          <input type="checkbox" name="weapon_mastery_${mastery.key}" ${selectedWeaponMasteries.includes(mastery.key) ? 'checked' : ''} />
+          <span class="weapon-mastery-card__body">
+            <strong>${mastery.label}</strong>
+            <small>${mastery.summary}</small>
+          </span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+
   const steps = [
     {
       title: 'Identità',
@@ -951,6 +971,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       description: 'Equipaggiamenti, strumenti, lingue e talenti.',
       content: buildEditGroup('Competenze e Talenti', [
         proficiencySection,
+        weaponMasterySection,
         proficiencyNotesSection,
         languageNotesSection,
         talentNotesSection
@@ -1313,6 +1334,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
     saving_throws: nextSaving,
+    weapon_masteries: weaponMasteries2024
+      .filter((mastery) => formData.has(`weapon_mastery_${mastery.key}`))
+      .map((mastery) => mastery.key),
     proficiencies: nextProficiencies,
     damage_defenses: nextDamageDefenses,
     roll_adjustments: nextRollAdjustments

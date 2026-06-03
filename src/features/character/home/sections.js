@@ -7,6 +7,7 @@ import {
   savingThrowList,
   skillList
 } from './constants.js';
+import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
 import {
   calculateArmorClass,
   calculatePassivePerception,
@@ -575,12 +576,16 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const equipped = equipmentProficiencyList
     .filter((prof) => proficiencies[prof.key])
     .map((prof) => prof.label);
+  const weaponMasteries = Array.isArray(data.weapon_masteries) ? data.weapon_masteries : [];
   return `
     <div class="detail-section">
       <div class="proficiency-tabs" data-proficiency-tabs>
         <div class="tab-bar" role="tablist" aria-label="Competenze extra">
           <button class="tab-bar__button is-active" type="button" role="tab" aria-selected="true" data-proficiency-tab="equipment">
             Equipaggiamento
+          </button>
+          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="weapon-masteries">
+            Maestrie armi
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="tools">
             Strumenti
@@ -599,6 +604,11 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           ${equipped.length
     ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
+        </div>
+        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="weapon-masteries">
+          ${weaponMasteries.length
+    ? `<div class="weapon-mastery-list">${weaponMasteries.map((key) => `<div class="weapon-mastery-card__body"><strong>${getWeaponMasteryLabel(key)}</strong><small>${getWeaponMasterySummary(key)}</small></div>`).join('')}</div>`
+    : '<p class="muted">Nessuna maestria arma selezionata.</p>'}
         </div>
         <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="tools">
           ${tools.length
@@ -826,6 +836,9 @@ export function buildAttackSection(character, items = [], companions = []) {
       : '-';
     const modeLabel = selectedMode.id !== 'default' ? selectedMode.label : '';
     const modeText = modeLabel ? `Impugnatura: ${modeLabel}` : '';
+    const masteryLabel = weapon.weapon_mastery ? getWeaponMasteryLabel(weapon.weapon_mastery) : '';
+    const masteryKnown = weapon.weapon_mastery && Array.isArray(data.weapon_masteries) && data.weapon_masteries.includes(weapon.weapon_mastery);
+    const masteryText = masteryLabel ? `Maestria: ${masteryLabel}${masteryKnown ? '' : ' (non selezionata)'}` : '';
     const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
     const cycleButton = renderedModes.length > 1
       ? `<button class="icon-button icon-button--weapon-mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span aria-hidden="true">🔁</span></button>`
@@ -841,6 +854,7 @@ export function buildAttackSection(character, items = [], companions = []) {
               <div class="attack-card__meta">
                 <span class="attack-card__damage">${damageText}</span>
                 ${modeText ? `<span class="muted">${modeText}</span>` : ''}
+                ${masteryText ? `<span class="muted" title="${getWeaponMasterySummary(weapon.weapon_mastery)}">${masteryText}</span>` : ''}
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
