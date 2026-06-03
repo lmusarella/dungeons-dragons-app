@@ -239,11 +239,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
           <button class="ghost-button background-button" type="button" data-show-background>
             Background
           </button>
-          ${data.wild_shape_enabled ? `
-            <button class="ghost-button wild-shape-button" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
-              ${activeWildShape ? 'Cambia forma' : 'Forma selvatica'}
-            </button>
-          ` : ''}
         </div>
       </div>
       <div class="stat-panel">     

@@ -1,4 +1,4 @@
-import{g as p}from"./constants-aeYu7nqQ.js";import{s as d,f as u,a as v,c as g,n as h,h as f,m,g as $}from"./index-_fTQz7em.js";import{o as b}from"./characterDrawer-D1azoetx.js";import"./utils-Tv02vTp-.js";async function y(e){const t=$(),{user:a,offline:s}=t;d(!0);let r=t.characters;try{if(!s&&a)try{r=await p(a.id),u({characters:r}),await v({characters:r})}catch{g("Errore caricamento personaggi","error")}const l=h(t.activeCharacterId),o=r.find(c=>h(c.id)===l),n=!!a&&!s;e.innerHTML=`
+import{g as p}from"./constants-CyQG1mJs.js";import{s as d,f as u,a as v,c as g,n as h,h as f,m,g as $}from"./index-DI--AiGI.js";import{o as b}from"./characterDrawer-Cfz9jgcd.js";import"./utils-Tv02vTp-.js";async function y(e){const t=$(),{user:a,offline:s}=t;d(!0);let r=t.characters;try{if(!s&&a)try{r=await p(a.id),u({characters:r}),await v({characters:r})}catch{g("Errore caricamento personaggi","error")}const l=h(t.activeCharacterId),o=r.find(c=>h(c.id)===l),n=!!a&&!s;e.innerHTML=`
     <section class="auth-screen character-select-view">
       <div class="card character-select-card">
       <header class="character-select-header">
