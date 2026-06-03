@@ -32,7 +32,7 @@ const DICE = (function() {
         stop_velocity_threshold: 7.5,
         stop_frames_to_confirm: 2,
         max_iterations_before_force_stop: 10,
-
+        
         material_options: {
             specular: 0x172022,
             color: 0xf0f0f0,
@@ -52,16 +52,16 @@ const DICE = (function() {
 
     const CONSTS = {
         known_types: ['d4', 'd6', 'd8', 'd9', 'd10', 'd12', 'd20', 'd100'],
-        dice_face_range: { 'd4': [1, 4], 'd6': [1, 6], 'd8': [1, 8], 'd9': [0, 9], 'd10': [0, 9],
+        dice_face_range: { 'd4': [1, 4], 'd6': [1, 6], 'd8': [1, 8], 'd9': [0, 9], 'd10': [0, 9], 
             'd12': [1, 12], 'd20': [1, 20], 'd100': [0, 9] },
         dice_mass: { 'd4': 300, 'd6': 300, 'd8': 340, 'd9': 350, 'd10': 350, 'd12': 350, 'd20': 400, 'd100': 350 },
         dice_inertia: { 'd4': 5, 'd6': 13, 'd8': 10, 'd9': 9, 'd10': 9, 'd12': 8, 'd20': 6, 'd100': 9 },
-
+        
         standart_d20_dice_face_labels: [' ', '0', '1', '2', '3', '4', '5', '6', '7', '8',
                 '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'],
         standart_d100_dice_face_labels: [' ', '00', '10', '20', '30', '40', '50',
                 '60', '70', '80', '90'],
-
+                
         d4_labels: [
             [[], [0, 0, 0], [2, 4, 3], [1, 3, 4], [2, 1, 4], [1, 2, 3]],
             [[], [0, 0, 0], [2, 3, 4], [3, 1, 4], [2, 4, 1], [3, 2, 1]],
@@ -154,7 +154,7 @@ const DICE = (function() {
         this.h = this.ch;
         this.aspect = Math.min(this.cw / this.w, this.ch / this.h);
         vars.scale = Math.sqrt(this.w * this.w + this.h * this.h) / 8;
-
+      
         this.renderer.setSize(this.cw * 2, this.ch * 2);
 
         this.wh = this.ch / this.aspect / Math.tan(10 * Math.PI / 180);
@@ -179,10 +179,10 @@ const DICE = (function() {
         this.scene.add(this.light);
 
         if (this.desk) this.scene.remove(this.desk);
-        this.desk = new THREE.Mesh(new THREE.PlaneGeometry(this.w * 2, this.h * 2, 1, 1),
+        this.desk = new THREE.Mesh(new THREE.PlaneGeometry(this.w * 2, this.h * 2, 1, 1), 
                 new THREE.MeshPhongMaterial({ color: vars.desk_color, opacity: vars.desk_opacity, transparent: true }));
         this.desk.receiveShadow = vars.use_shadows;
-        this.scene.add(this.desk);
+        this.scene.add(this.desk); 
 
         this.renderer.render(this.scene, this.camera);
     }
@@ -212,7 +212,7 @@ const DICE = (function() {
             box.mouse_start = $t.get_mouse_coords(ev);
         });
         $t.bind(container, ['mouseup', 'touchend'], function(ev) {
-            if (box.rolling) return;
+            if (box.rolling) return; 
             if (box.mouse_start == undefined) return;
             var m = $t.get_mouse_coords(ev);
             var vector = { x: m.x - box.mouse_start.x, y: -(m.y - box.mouse_start.y) };
@@ -221,7 +221,7 @@ const DICE = (function() {
             if (dist < Math.sqrt(box.w * box.h * 0.01)) return;
             var time_int = (new Date()).getTime() - box.mouse_time;
             if (time_int > 2000) time_int = 2000;
-            var boost = Math.sqrt((2500 - time_int) / 2500) * dist * 2;
+            var boost = Math.sqrt((2500 - time_int) / 2500) * dist * 2;           
             throw_dices(box, vector, boost, dist, before_roll, after_roll);
         });
     }
@@ -235,7 +235,7 @@ const DICE = (function() {
         //TODO: how do large numbers of vectors affect performance?
         var vectors = box.generate_vectors(notation, vector, boost);
         box.rolling = true;
-        let request_results = null;
+        let request_results = null;        
 
         let numDice = vectors.length;
         numDice = numDice > 10 ? 10 : numDice;
@@ -262,7 +262,7 @@ const DICE = (function() {
                 if (notation.constant) {
                     if (notation.constant > 0) res += ' +' + notation.constant;
                     else res += ' -' + Math.abs(notation.constant);
-                }
+                }                
                 notation.resultTotal = (result.reduce(function(s, a) { return s + a; }) + notation.constant);
                 if (result.length > 1 || notation.constant) {
                     res += ' = ' + notation.resultTotal;
@@ -276,7 +276,7 @@ const DICE = (function() {
             });
         }
     }
-
+       
     //todo: the rest of these don't need to be public, but need to read the this properties
     that.dice_box.prototype.generate_vectors = function(notation, vector, boost) {
         var vectors = [];
@@ -399,7 +399,7 @@ const DICE = (function() {
         this.running = false;
         var dice;
         while (dice = this.dices.pop()) {
-            this.scene.remove(dice);
+            this.scene.remove(dice); 
             if (dice.body) this.world.remove(dice.body);
         }
         if (this.pane) this.scene.remove(this.pane);
@@ -434,7 +434,7 @@ const DICE = (function() {
 
     that.dice_box.prototype.search_dice_by_mouse = function(ev) {
         var m = $t.get_mouse_coords(ev);
-        var intersects = (new THREE.Raycaster(this.camera.position,
+        var intersects = (new THREE.Raycaster(this.camera.position, 
                     (new THREE.Vector3((m.x - this.cw) / this.aspect,
                                        1 - (m.y - this.ch) / this.aspect, this.w / 9))
                     .sub(this.camera.position).normalize())).intersectObjects(this.dices);
@@ -450,14 +450,14 @@ const DICE = (function() {
         var no = notation.split('@');
         var dr0 = /\s*(\d*)([a-z]+)(\d+)(\s*(\+|\-)\s*(\d+)){0,1}\s*(\+|$)/gi;
         var dr1 = /(\b)*(\d+)(\b)*/gi;
-        var ret = {
+        var ret = { 
             set: [], //set of dice to roll
             constant: 0, //modifier to add to result
             result: [], //array of results of each die
             resultTotal: 0, //dice results + constant
             resultString: '', //printable result
             error: false //input errors are ignored gracefully
-        };
+        }; 
         var res;
         //looks at each peice of the notation and adds dice and constants to results
         while (res = dr0.exec(no[0])) {
@@ -481,7 +481,7 @@ const DICE = (function() {
 
     that.stringify_notation = function(nn) {
         var dict = {}, notation = '';
-        for (var i in nn.set)
+        for (var i in nn.set) 
             if (!dict[nn.set[i]]) dict[nn.set[i]] = 1; else ++dict[nn.set[i]];
         for (var i in dict) {
             if (notation.length) notation += ' + ';
@@ -493,7 +493,7 @@ const DICE = (function() {
         }
         return notation;
     }
-
+    
     // PRIVATE FUNCTIONS
 
     // dice geometries
@@ -554,7 +554,7 @@ const DICE = (function() {
                 create_dice_materials(CONSTS.standart_d100_dice_face_labels, vars.scale / 2, 1.5));
         return new THREE.Mesh(this.d10_geometry, this.d100_material);
     }
-
+    
     function create_dice_materials(face_labels, size, margin) {
         function create_text_texture(text, color, back_color) {
             if (text == undefined) return null;
@@ -850,7 +850,7 @@ const DICE = (function() {
         }
         dice.geometry = geom;
     }
-
+    
     // keep a preloaded audio pool to avoid latency while creating/decoding audio on each roll
     var ROLL_SOUND_SRC = 'icons/diceroll.mp3';
     var rollSoundPool = [];
@@ -869,7 +869,7 @@ const DICE = (function() {
             rollSoundPool.push(audio);
         }
     }
-
+    
     function ensureRollSoundContext() {
         if (rollSoundContext || typeof window === 'undefined') return;
         var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -887,7 +887,7 @@ const DICE = (function() {
             rollSoundUnlockBound = true;
         }
     }
-
+    
     function preloadRollSoundBuffer() {
         ensureRollSoundContext();
         if (!rollSoundContext || rollSoundBuffer) return;
