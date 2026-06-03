@@ -461,11 +461,9 @@ header {
 }
 
 .diceov-result--final {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 10px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
   text-align: center;
   background:
     radial-gradient(circle at top, rgba(255, 220, 122, 0.12), transparent 55%),
@@ -477,6 +475,7 @@ header {
 }
 
 .diceov-result--final .diceov-result-value {
+  order: 3;
   min-width: 72px;
   padding: 1px 12px;
   border-radius: 999px;
@@ -486,8 +485,14 @@ header {
 }
 
 .diceov-result--final .diceov-result-detail {
-  flex: 1 1 260px;
-  text-align: left;
+  order: 2;
+  width: 100%;
+  text-align: center;
+}
+
+.diceov-result--final .diceov-result-label {
+  order: 1;
+  text-align: center;
 }
 
 .diceov-history-accordion {
@@ -849,24 +854,53 @@ header {
 }
 
 .diceov-quick-dice {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 2px;
+  text-align: center;
+}
+
+.diceov-quick-dice-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 3px 8px;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  background: #111;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diceov-quick-dice-toggle:hover,
+.diceov-quick-dice-toggle:focus-visible {
+  color: #ffdc7a;
+  border-color: #ffdc7a;
+  outline: none;
+}
+
+.diceov-quick-dice-content {
+  display: grid;
+  gap: 4px;
+}
+
+.diceov-quick-dice-content[hidden] {
+  display: none;
+}
+
+.diceov-quick-dice-controls {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  margin: 6px 0 2px;
   overflow-x: auto;
   padding-bottom: 2px;
-}
-
-.diceov-quick-dice-title {
-  flex: 0 0 auto;
-  margin-right: 2px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.62);
 }
 
 .diceov-quick-die {
@@ -953,13 +987,6 @@ header {
   outline: none;
 }
 
-.diceov-reroll-toggle-icon {
-  transition: transform 0.16s ease;
-}
-
-.diceov-reroll-toggle[aria-expanded="true"] .diceov-reroll-toggle-icon {
-  transform: rotate(180deg);
-}
 
 .diceov-reroll-content {
   display: grid;
@@ -1011,12 +1038,12 @@ header {
 }
 
 @media (max-width: 560px) {
-  .diceov-quick-dice {
+  .diceov-quick-dice-controls {
     justify-content: flex-start;
     gap: 4px;
   }
 
-  .diceov-quick-dice-title {
+  .diceov-quick-dice-toggle {
     font-size: 0.66rem;
   }
 

@@ -144,16 +144,20 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
-          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
-          <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
-            <span class="diceov-quick-dice-title">Aggiungi dadi</span>
-            ${[4, 6, 8, 10, 12, 20].map((die) => `
-              <div class="diceov-quick-die">
-                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
-                <span class="diceov-quick-die-label">D${die}</span>
-                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
+          <div class="diceov-quick-dice" data-quick-dice>
+            <button class="diceov-quick-dice-toggle" type="button" data-quick-dice-toggle aria-expanded="false">Aggiungi dadi</button>
+            <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
+              <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
+              <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
+                ${[4, 6, 8, 10, 12, 20].map((die) => `
+                  <div class="diceov-quick-die">
+                    <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
+                    <span class="diceov-quick-die-label">D${die}</span>
+                    <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
+                  </div>
+                `).join('')}
               </div>
-            `).join('')}
+            </div>
           </div>
           <p class="diceov-warning" data-custom-warning hidden></p>
         </div>
@@ -162,7 +166,6 @@ function buildOverlayMarkup() {
         <div class="diceov-reroll-card" data-reroll-card hidden>
           <button class="diceov-reroll-toggle" type="button" data-reroll-toggle aria-expanded="false">
             <span>Ritira dadi</span>
-            <span class="diceov-reroll-toggle-icon" aria-hidden="true">⌄</span>
           </button>
           <div class="diceov-reroll-content" data-reroll-content hidden>
             <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
@@ -670,6 +673,8 @@ export function openDiceOverlay({
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
   const genericDiceBuilder = overlayEl.querySelector('[data-generic-dice-builder]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
+  const quickDiceToggle = overlayEl.querySelector('[data-quick-dice-toggle]');
+  const quickDiceContent = overlayEl.querySelector('[data-quick-dice-content]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
   const rerollToggle = overlayEl.querySelector('[data-reroll-toggle]');
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
@@ -705,6 +710,7 @@ export function openDiceOverlay({
     selectionRollMode: null,
     selectionRollModeReason: null,
     lastCriticalSignature: null,
+    quickDiceOpen: false,
     rerollOpen: false,
     rerollHint: null,
     pendingReroll: null
@@ -1132,6 +1138,13 @@ export function openDiceOverlay({
     }));
   }
 
+  function setQuickDiceAccordionOpen(open) {
+    state.quickDiceOpen = Boolean(open);
+    quickDiceToggle?.setAttribute('aria-expanded', String(state.quickDiceOpen));
+    quickDiceContent?.toggleAttribute('hidden', !state.quickDiceOpen);
+    quickDiceControls?.classList.toggle('is-open', state.quickDiceOpen);
+  }
+
   function setRerollAccordionOpen(open) {
     state.rerollOpen = Boolean(open);
     rerollToggle?.setAttribute('aria-expanded', String(state.rerollOpen));
@@ -1360,6 +1373,11 @@ export function openDiceOverlay({
   };
   if (buffSelectD20) buffSelectD20.onchange = handleBuffChange;
   if (buffSelectDamage) buffSelectDamage.onchange = handleBuffChange;
+  if (quickDiceToggle) {
+    quickDiceToggle.onclick = () => setQuickDiceAccordionOpen(!state.quickDiceOpen);
+    setQuickDiceAccordionOpen(false);
+  }
+
   if (quickDiceControls) {
     quickDiceControls.onclick = (event) => {
       const button = event.target.closest('[data-quick-die]');
