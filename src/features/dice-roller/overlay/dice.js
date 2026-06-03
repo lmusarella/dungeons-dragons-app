@@ -159,11 +159,15 @@ function buildOverlayMarkup() {
         </div>
       </div>
       <div class="diceov-results">
-        <div class="diceov-result diceov-result--full">
-          <p class="diceov-result-label">Risultato</p>
+        <div class="diceov-reroll-card" data-reroll-card hidden>
+          <p class="diceov-reroll-card-label">Dadi da ritirare</p>
+          <div class="diceov-reroll-tray" data-reroll-tray></div>
+          <p class="diceov-reroll-status" data-reroll-status hidden></p>
+        </div>
+        <div class="diceov-result diceov-result--final">
+          <p class="diceov-result-label">Risultato finale</p>
           <p class="diceov-result-value" data-dice-result>—</p>
           <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
-          <div class="diceov-reroll-tray" data-reroll-tray hidden></div>
         </div>
         <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
@@ -253,22 +257,28 @@ const CRITICAL_AUDIO_FILES = {
   TS: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   },
   TA: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   },
   TC: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   }
 };
@@ -406,22 +416,28 @@ function playCriticalAudio(type, currentRollType) {
   const rollTypePresets = {
     TS: {
       criticalSuccess: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
-      excellent: { notes: [440, 554.37, 659.25], wave: 'sine' },
+      excellent: { notes: [493.88, 622.25, 739.99], wave: 'sine' },
+      good: { notes: [440, 554.37, 659.25], wave: 'sine' },
       mediocre: { notes: [293.66, 329.63, 293.66], wave: 'triangle' },
+      veryPoor: { notes: [261.63, 233.08, 220], wave: 'triangle' },
       poor: { notes: [246.94, 220, 196], wave: 'sawtooth' },
       criticalFailure: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
     },
     TA: {
       criticalSuccess: { notes: [659.25, 830.61, 987.77], wave: 'square' },
-      excellent: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      excellent: { notes: [587.33, 739.99, 880], wave: 'triangle' },
+      good: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
       mediocre: { notes: [329.63, 293.66, 261.63], wave: 'triangle' },
+      veryPoor: { notes: [261.63, 233.08, 207.65], wave: 'sine' },
       poor: { notes: [220, 196, 174.61], wave: 'sine' },
       criticalFailure: { notes: [196, 146.83, 110], wave: 'triangle' }
     },
     TC: {
       criticalSuccess: { notes: [587.33, 739.99, 880], wave: 'sine' },
-      excellent: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
+      excellent: { notes: [554.37, 698.46, 830.61], wave: 'triangle' },
+      good: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
       mediocre: { notes: [311.13, 293.66, 261.63], wave: 'square' },
+      veryPoor: { notes: [277.18, 246.94, 220], wave: 'sawtooth' },
       poor: { notes: [261.63, 233.08, 207.65], wave: 'sawtooth' },
       criticalFailure: { notes: [246.94, 185, 138.59], wave: 'square' }
     }
@@ -649,11 +665,13 @@ export function openDiceOverlay({
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
   const genericDiceBuilder = overlayEl.querySelector('[data-generic-dice-builder]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
+  const rerollCard = overlayEl.querySelector('[data-reroll-card]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
+  const rerollStatus = overlayEl.querySelector('[data-reroll-status]');
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
@@ -732,7 +750,7 @@ export function openDiceOverlay({
   function clearCriticalBanner() {
     if (!criticalBanner) return;
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
@@ -762,12 +780,20 @@ export function openDiceOverlay({
         message: '💀 Pessimo',
         className: 'diceov-critical-banner--poor'
       },
+      veryPoor: {
+        message: '😬 Poco pessimo',
+        className: 'diceov-critical-banner--very-poor'
+      },
       mediocre: {
         message: '😐 Mediocre',
         className: 'diceov-critical-banner--mediocre'
       },
-      excellent: {
+      good: {
         message: '✨ Ottimo',
+        className: 'diceov-critical-banner--good'
+      },
+      excellent: {
+        message: '🏆 Eccellente',
         className: 'diceov-critical-banner--excellent'
       },
       criticalSuccess: {
@@ -780,7 +806,7 @@ export function openDiceOverlay({
       clearCriticalBanner();
       return;
     }
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = presentation.message;
     criticalBanner.classList.add(presentation.className);
     criticalBanner.removeAttribute('hidden');
@@ -794,9 +820,11 @@ export function openDiceOverlay({
     if (!['TS', 'TA', 'TC'].includes(rollType)) return null;
     if (typeof info?.picked !== 'number') return null;
     if (info.picked === 1) return 'criticalFailure';
-    if (info.picked >= 2 && info.picked <= 5) return 'poor';
-    if (info.picked >= 6 && info.picked <= 14) return 'mediocre';
-    if (info.picked >= 15 && info.picked <= 19) return 'excellent';
+    if (info.picked >= 2 && info.picked <= 4) return 'poor';
+    if (info.picked >= 5 && info.picked <= 7) return 'veryPoor';
+    if (info.picked >= 8 && info.picked <= 13) return 'mediocre';
+    if (info.picked >= 14 && info.picked <= 17) return 'good';
+    if (info.picked >= 18 && info.picked <= 19) return 'excellent';
     if (info.picked === 20) return 'criticalSuccess';
     return null;
   }
@@ -1101,11 +1129,14 @@ export function openDiceOverlay({
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
-      rerollTray.setAttribute('hidden', '');
+      rerollCard?.setAttribute('hidden', '');
+      if (rerollStatus) {
+        rerollStatus.textContent = '';
+        rerollStatus.setAttribute('hidden', '');
+      }
       return;
     }
     rerollTray.innerHTML = `
-      <span class="diceov-reroll-label">Ritira:</span>
       ${dice.map((die) => `
         <button class="diceov-reroll-die${state.pendingReroll?.index === die.index ? ' is-pending' : ''}" type="button" data-reroll-index="${die.index}" aria-label="Prepara ritiro ${die.label} con risultato ${die.value}">
           <span class="diceov-reroll-die-type">${die.label.toUpperCase()}</span>
@@ -1113,7 +1144,11 @@ export function openDiceOverlay({
         </button>
       `).join('')}
     `;
-    rerollTray.removeAttribute('hidden');
+    if (rerollStatus) {
+      rerollStatus.textContent = state.rerollHint || 'Seleziona un dado e poi fai swipe sul tavolo per ritirare solo quello.';
+      rerollStatus.removeAttribute('hidden');
+    }
+    rerollCard?.removeAttribute('hidden');
   }
 
   function prepareSwipeReroll(index) {
@@ -1191,7 +1226,6 @@ export function openDiceOverlay({
             `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
           );
         }
-        if (state.rerollHint) pieces.push(state.rerollHint);
         resultDetail.textContent = pieces.join(' · ');
       }
       renderRerollTray(notation);
@@ -1219,7 +1253,6 @@ export function openDiceOverlay({
           `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
         );
       }
-      if (state.rerollHint) pieces.push(state.rerollHint);
       resultDetail.textContent = pieces.join(' · ');
     }
     renderRerollTray(notation);

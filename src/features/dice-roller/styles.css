@@ -235,6 +235,7 @@ header {
   display: block;
   font-weight: 600;
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .diceov-label--inline {
@@ -262,6 +263,8 @@ header {
   flex-wrap: wrap;
   gap: 8px;
   align-items: flex-end;
+  justify-content: center;
+  text-align: center;
 }
 
 .diceov-field--modifier {
@@ -342,14 +345,17 @@ header {
   margin: 4px 0 0;
   font-size: 0.8rem;
   color: #ff6b6b;
+  text-align: center;
 }
 
 .diceov-generic-row {
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   gap: 10px;
   margin-bottom: 6px;
   flex-wrap: wrap;
+  text-align: center;
 }
 
 .diceov-generic-notation {
@@ -393,6 +399,7 @@ header {
   color: #f1f1f1;
   padding: 4px 6px;
   font-size: 0.9rem;
+  text-align: center;
 }
 
 .diceov-control select {
@@ -411,14 +418,17 @@ header {
   margin: 6px 0 0;
   font-size: 0.8rem;
   color: rgba(255,255,255,0.6);
+  text-align: center;
 }
 
 .diceov-results {
-  display: block;
+  display: grid;
+  gap: 8px;
   margin-top: 12px;
 }
 
 .diceov-result,
+.diceov-reroll-card,
 .diceov-history-panel {
   padding: 8px 10px;
   border-radius: 10px;
@@ -450,25 +460,31 @@ header {
   line-height: 1.25;
 }
 
-.diceov-result--full {
-  display: flex;
-  align-items: center;
-  gap: 10px 12px;
-  justify-content: space-between;
-  flex-wrap: wrap;
+.diceov-result--final {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 220, 122, 0.12), transparent 55%),
+    #0f0f0f;
 }
 
-.diceov-result--full .diceov-result-label {
+.diceov-result--final .diceov-result-label {
   margin: 0;
 }
 
-.diceov-result--full .diceov-result-value {
-  text-align: right;
+.diceov-result--final .diceov-result-value {
+  min-width: 72px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: rgba(255, 220, 122, 0.12);
+  color: #ffdc7a;
+  text-align: center;
 }
 
-.diceov-result--full .diceov-result-detail {
-  flex: 1 1 320px;
-  text-align: right;
+.diceov-result--final .diceov-result-detail {
+  text-align: center;
 }
 
 .diceov-history-accordion {
@@ -781,16 +797,28 @@ header {
   border-color: rgba(255, 153, 87, 0.9);
 }
 
+.diceov-critical-banner--very-poor {
+  color: #fff0d6;
+  background: rgba(113, 78, 0, 0.42);
+  border-color: rgba(255, 190, 92, 0.88);
+}
+
 .diceov-critical-banner--mediocre {
   color: #e7ecf5;
   background: rgba(59, 69, 84, 0.44);
   border-color: rgba(154, 170, 191, 0.9);
 }
 
-.diceov-critical-banner--excellent {
+.diceov-critical-banner--good {
   color: #dff3ff;
   background: rgba(16, 92, 153, 0.44);
   border-color: rgba(107, 201, 255, 0.92);
+}
+
+.diceov-critical-banner--excellent {
+  color: #fff7d4;
+  background: rgba(135, 98, 10, 0.46);
+  border-color: rgba(255, 220, 122, 0.95);
 }
 
 .diceov-critical-banner--critical-success {
@@ -887,27 +915,40 @@ header {
   background: rgba(255, 220, 122, 0.14);
 }
 
-.diceov-reroll-tray {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+.diceov-reroll-card {
+  display: grid;
+  justify-items: center;
   gap: 6px;
-  flex: 1 1 100%;
-  width: 100%;
-  margin-top: 4px;
+  text-align: center;
 }
 
-.diceov-reroll-tray[hidden] {
+.diceov-reroll-card[hidden] {
   display: none;
 }
 
-.diceov-reroll-label {
+.diceov-reroll-card-label {
+  margin: 0;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.diceov-reroll-status {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.diceov-reroll-tray {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin-top: 0;
 }
 
 .diceov-reroll-die {
@@ -948,15 +989,29 @@ header {
   }
 
   .diceov-reroll-tray {
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
 
 .diceov-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+}
+
+.diceov-header::before {
+  content: "";
+  grid-column: 1;
+}
+
+.diceov-header > div {
+  grid-column: 2;
+  text-align: center;
+}
+
+.diceov-history-icon-button {
+  grid-column: 3;
 }
 
 .diceov-history-icon-button,
