@@ -1,4 +1,4 @@
-import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
+import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells, updateSharedSpell } from '../character/spellbookApi.js';
 import { attachNumberStepper, buildInput, createToast, openConfirmModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
@@ -39,16 +39,25 @@ async function loadSharedSpellsForLibrary(filters) {
   };
 }
 
-function sortSpells(spells, mode) {
+function compareSpellNames(a, b) {
+  return String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' });
+}
+
+function sortSpells(spells, sortState) {
   const items = [...spells];
-  if (mode === 'level') {
+  if (!sortState.key) return items;
+
+  const direction = sortState.direction === 'desc' ? -1 : 1;
+
+  if (sortState.key === 'level') {
     return items.sort((a, b) => {
       const levelDiff = (Number(a.level) || 0) - (Number(b.level) || 0);
-      if (levelDiff !== 0) return levelDiff;
-      return String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' });
+      if (levelDiff !== 0) return levelDiff * direction;
+      return compareSpellNames(a, b);
     });
   }
-  return items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }));
+
+  return items.sort((a, b) => compareSpellNames(a, b) * direction);
 }
 
 export async function renderLibrary(container) {
@@ -68,9 +77,9 @@ export async function renderLibrary(container) {
         </header>
         <div class="library-filter-panel" data-library-filters></div>
         <div class="library-results-heading" data-library-results-heading></div>
-        <div class="library-spell-list-header" aria-hidden="true">
-          <span>Livello</span>
-          <span>Incantesimo</span>
+        <div class="library-spell-list-header">
+          <button class="library-sort-header" type="button" data-library-sort="level" aria-label="Ordina per livello crescente" aria-sort="none">Livello <span aria-hidden="true" data-library-sort-icon="level">↕</span></button>
+          <button class="library-sort-header" type="button" data-library-sort="name" aria-label="Ordina alfabeticamente dalla A alla Z" aria-sort="none">Incantesimo <span aria-hidden="true" data-library-sort-icon="name">↕</span></button>
           <span>Scuola</span>
           <span>Regole</span>
           <span>Concentrazione</span>
@@ -184,8 +193,11 @@ export async function renderLibrary(container) {
   searchButton.innerHTML = '<span aria-hidden="true">🔎</span><span>Cerca</span>';
   const filtersActions = document.createElement('div');
   filtersActions.className = 'library-filter-actions';
-  filtersActions.appendChild(searchButton);
-
+  const resetButton = document.createElement('button');
+  resetButton.className = 'secondary library-reset-button';
+  resetButton.type = 'button';
+  resetButton.innerHTML = '<span aria-hidden="true">↺</span><span>Reset filtri</span>';
+  filtersActions.append(resetButton, searchButton);
 
   filters.append(filtersRow, filtersActions);
 
@@ -195,6 +207,23 @@ export async function renderLibrary(container) {
   list.insertAdjacentElement('afterend', pagination);
 
   let currentPage = 1;
+  const sortState = { key: null, direction: 'asc' };
+
+  const updateSortHeaders = () => {
+    container.querySelectorAll('[data-library-sort]').forEach((button) => {
+      const key = button.dataset.librarySort;
+      const isActive = key === sortState.key;
+      const icon = button.querySelector('[data-library-sort-icon]');
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-sort', isActive ? (sortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      if (icon) icon.textContent = isActive ? (sortState.direction === 'asc' ? '↑' : '↓') : '↕';
+      if (key === 'level') {
+        button.setAttribute('aria-label', `Ordina per livello ${isActive && sortState.direction === 'asc' ? 'decrescente' : 'crescente'}`);
+      } else {
+        button.setAttribute('aria-label', `Ordina alfabeticamente ${isActive && sortState.direction === 'asc' ? 'dalla Z alla A' : 'dalla A alla Z'}`);
+      }
+    });
+  };
 
   const renderSpells = async () => {
     const query = filters.querySelector('input[name="q"]')?.value || '';
@@ -214,8 +243,8 @@ export async function renderLibrary(container) {
       ritual
     });
     const spells = result.items || [];
-    const sortMode = filters.querySelector('select[name="sort"]')?.value || 'name';
-    const sortedSpells = sortSpells(spells, sortMode);
+    updateSortHeaders();
+    const sortedSpells = sortSpells(spells, sortState);
     const totalPages = Math.max(1, Math.ceil(sortedSpells.length / PAGE_SIZE));
     currentPage = Math.min(currentPage, totalPages);
     const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -253,15 +282,16 @@ export async function renderLibrary(container) {
           <span class="library-spell-card__flag ${spell.concentration ? 'is-active' : ''}">${concentrationLabel}</span>
           <span class="library-spell-card__flag ${spell.ritual ? 'is-active' : ''}">${ritualLabel}</span>
           <div class="button-row library-spell-card__actions">
+            <button class="icon-button" type="button" data-library-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}" title="Modifica">✏️</button>
             <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>
         </article>`;
       }).join('')
       : '<div class="library-empty-state"><strong>Nessun incantesimo trovato</strong><span class="muted">Prova a rimuovere un filtro o cerca un altro nome.</span></div>';
     pagination.innerHTML = sortedSpells.length
-      ? `<button class="secondary" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}>← Precedente</button>
-         <span class="muted">Pagina ${currentPage} di ${totalPages}</span>
-         <button class="secondary" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>Successiva →</button>`
+      ? `<button class="secondary library-pagination__button" type="button" data-library-page="prev" ${currentPage <= 1 ? 'disabled' : ''}><span aria-hidden="true">←</span><span>Pagina precedente</span></button>
+         <span class="library-pagination__status">Pagina ${currentPage} di ${totalPages}</span>
+         <button class="secondary library-pagination__button" type="button" data-library-page="next" ${currentPage >= totalPages ? 'disabled' : ''}><span>Pagina successiva</span><span aria-hidden="true">→</span></button>`
       : '';
 
     const openLibrarySpell = (spellId) => {
@@ -284,6 +314,77 @@ export async function renderLibrary(container) {
         openLibrarySpell(card.dataset.libraryViewSpell);
       });
     });
+    list.querySelectorAll('[data-library-edit-spell]').forEach((button) => button.addEventListener('click', async () => {
+      const spellId = button.dataset.libraryEditSpell;
+      if (!spellId) return;
+      const spell = sortedSpells.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      await openSpellDrawer(null, async (updatedSpell) => {
+        try {
+          const updatedSpellRow = await updateSharedSpell(spellId, {
+            name: updatedSpell.name,
+            rules_version: updatedSpell.rules_version || '2024',
+            level: Number(updatedSpell.level) || 0,
+            school: updatedSpell.school || null,
+            cast_time: updatedSpell.cast_time || null,
+            duration: updatedSpell.duration || null,
+            range: updatedSpell.range || null,
+            components: updatedSpell.components || null,
+            caster_classes: Array.isArray(updatedSpell.caster_classes) ? updatedSpell.caster_classes : [],
+            damage_die: updatedSpell.damage_die || null,
+            damage_modifier: updatedSpell.damage_modifier ?? null,
+            upcast_damage_die: updatedSpell.upcast_damage_die || null,
+            upcast_damage_modifier: updatedSpell.upcast_damage_modifier ?? null,
+            upcast_start_level: updatedSpell.upcast_start_level ?? null,
+            concentration: Boolean(updatedSpell.concentration),
+            attack_roll: Boolean(updatedSpell.attack_roll),
+            ritual: Boolean(updatedSpell.is_ritual),
+            description: updatedSpell.description || null
+          });
+          const activeCharacterId = getState().activeCharacterId;
+          const activeCharacter = getState().characters.find((char) => char.id === activeCharacterId);
+          if (activeCharacter) {
+            const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+            const nextSpells = currentSpells.map((entry) => (entry.shared_spell_id === spellId
+              ? {
+                ...entry,
+                name: updatedSpellRow.name,
+                level: updatedSpellRow.level,
+                kind: Number(updatedSpellRow.level) === 0 ? 'cantrip' : 'spell',
+                cast_time: updatedSpellRow.cast_time || null,
+                duration: updatedSpellRow.duration || null,
+                range: updatedSpellRow.range || null,
+                components: updatedSpellRow.components || null,
+                concentration: Boolean(updatedSpellRow.concentration),
+                attack_roll: Boolean(updatedSpellRow.attack_roll),
+                is_ritual: Boolean(updatedSpellRow.ritual),
+                damage_die: updatedSpellRow.damage_die || null,
+                damage_modifier: updatedSpellRow.damage_modifier ?? null,
+                upcast_damage_die: updatedSpellRow.upcast_damage_die || null,
+                upcast_damage_modifier: updatedSpellRow.upcast_damage_modifier ?? null,
+                upcast_start_level: updatedSpellRow.upcast_start_level ?? null,
+                description: updatedSpellRow.description || null,
+                school: updatedSpellRow.school || null,
+                caster_classes: updatedSpellRow.caster_classes || [],
+                rules_version: updatedSpellRow.rules_version || '2024'
+              }
+              : entry));
+            await saveCharacterData(activeCharacter, {
+              ...(activeCharacter.data || {}),
+              spells: nextSpells
+            }, 'Incantesimo centralizzato aggiornato');
+          }
+          createToast('Incantesimo centralizzato aggiornato', 'success');
+          await renderSpells();
+        } catch (error) {
+          createToast("Errore durante la modifica dell'incantesimo centralizzato", 'error');
+        }
+      }, {
+        ...spell,
+        kind: Number(spell.level) === 0 ? 'cantrip' : 'spell',
+        is_ritual: Boolean(spell.ritual || spell.is_ritual)
+      }, { catalogMode: true });
+    }));
     list.querySelectorAll('[data-library-delete-spell]').forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.libraryDeleteSpell;
       if (!spellId) return;
@@ -320,7 +421,26 @@ export async function renderLibrary(container) {
   };
 
   searchButton.addEventListener('click', () => { currentPage = 1; void renderSpells(); });
-  filters.querySelector('select[name="sort"]')?.addEventListener('change', () => { currentPage = 1; void renderSpells(); });
+  resetButton.addEventListener('click', () => {
+    filters.querySelectorAll('input, select').forEach((field) => {
+      field.value = '';
+    });
+    currentPage = 1;
+    void renderSpells();
+  });
+  container.querySelectorAll('[data-library-sort]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const key = button.dataset.librarySort === 'level' ? 'level' : 'name';
+      if (sortState.key === key) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.key = key;
+        sortState.direction = 'asc';
+      }
+      currentPage = 1;
+      void renderSpells();
+    });
+  });
   container.querySelector('[data-library-add-spell]')?.addEventListener('click', async () => {
     const { user } = getState();
     await openSpellDrawer(null, async (createdSpell) => {

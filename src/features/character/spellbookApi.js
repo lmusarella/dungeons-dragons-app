@@ -70,6 +70,17 @@ export async function createSharedSpell(payload) {
   return data;
 }
 
+export async function updateSharedSpell(id, payload) {
+  const { data, error } = await supabase
+    .from(SHARED_SPELLS_TABLE)
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchCharacterSpells(characterId) {
   const { data, error } = await supabase
     .from(CHARACTER_SPELLS_TABLE)
