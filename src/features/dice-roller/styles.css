@@ -54,12 +54,7 @@ header {
 }
 
 #diceLimit {
-    text-align: center;
-    color: red;
-    background-color: #050505;
-    padding: 0.5rem;
-    font-size: 10pt;
-    font-weight: bold;
+    display: none !important;
 }
 
 .top_field {
@@ -429,7 +424,7 @@ header {
 
 .diceov-accordion-row {
   display: grid;
-  grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+  grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
   gap: 6px;
   align-items: start;
 }
@@ -894,7 +889,7 @@ header {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: #ffdc7a;
   cursor: default;
   font-size: 0.76rem;
   font-weight: 800;

@@ -127,6 +127,7 @@ function buildOverlayMarkup() {
             </div>
           </div>
           <p class="diceov-warning" data-custom-warning hidden></p>
+          <p class="diceov-warning" data-dice-limit-warning hidden>Puoi lanciare al massimo 20 dadi alla volta.</p>
         </div>
       </div>
       <div class="diceov-results">
@@ -659,6 +660,7 @@ export function openDiceOverlay({
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
+  const diceLimitWarning = overlayEl.querySelector('[data-dice-limit-warning]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
   const accordionRow = overlayEl.querySelector('[data-dice-accordion-row]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
@@ -749,6 +751,17 @@ export function openDiceOverlay({
     criticalBanner.setAttribute('hidden', '');
     criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
+  }
+
+  function isRerollSupported() {
+    return rollType === 'DMG' && mode === 'generic';
+  }
+
+  function syncDiceLimitWarning() {
+    const legacyLimit = overlayEl.querySelector('#diceLimit');
+    const limitVisible = Boolean(legacyLimit && legacyLimit.style.display !== 'none');
+    if (legacyLimit) legacyLimit.style.display = 'none';
+    if (diceLimitWarning) diceLimitWarning.toggleAttribute('hidden', !limitVisible);
   }
 
   function resetResult(label = '—', detail = 'Lancia per vedere i dettagli.') {
@@ -1064,6 +1077,7 @@ export function openDiceOverlay({
       const buffConfig = getBuffConfig();
       const buffNotation = buffConfig ? `+1d${buffConfig.sides}` : '';
       updateDiceInput(overlayEl, `${diceCount}d${sides}${buffNotation}`);
+      syncDiceLimitWarning();
       resetResult();
     }
   }
@@ -1081,6 +1095,7 @@ export function openDiceOverlay({
       ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
       : baseValue;
     updateDiceInput(overlayEl, value);
+    syncDiceLimitWarning();
     resetResult();
   }
 
@@ -1124,6 +1139,13 @@ export function openDiceOverlay({
 
   function renderRerollTray(notation) {
     if (!rerollTray) return;
+    if (!isRerollSupported()) {
+      rerollTray.innerHTML = '';
+      rerollCard?.setAttribute('hidden', '');
+      return;
+    }
+    rerollCard?.removeAttribute('hidden');
+    rerollContent?.removeAttribute('hidden');
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
@@ -1380,8 +1402,12 @@ export function openDiceOverlay({
   setSelectionOptions();
   setBuffVisibility();
   const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
-  if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', mode !== 'generic');
-  accordionRow?.classList.toggle('diceov-accordion-row--single', mode !== 'generic');
+  const showQuickDice = mode === 'generic';
+  const showReroll = isRerollSupported();
+  if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', !showQuickDice);
+  if (rerollCard) rerollCard.toggleAttribute('hidden', !showReroll);
+  accordionRow?.toggleAttribute('hidden', !(showQuickDice || showReroll));
+  accordionRow?.classList.toggle('diceov-accordion-row--single', !(showQuickDice && showReroll));
   if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
   if (criticalDamageInput) criticalDamageInput.checked = false;
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
@@ -1397,6 +1423,7 @@ export function openDiceOverlay({
     customWarning.textContent = warning ? String(warning) : '';
     customWarning.toggleAttribute('hidden', !warning);
   }
+  if (diceLimitWarning) diceLimitWarning.setAttribute('hidden', '');
 
   overlayEl.removeAttribute('hidden');
 
