@@ -309,12 +309,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               ${wildShapeSpeedLabel ? `<span class="muted">${escapeHtml(wildShapeSpeedLabel)}</span>` : ''}
             </div>
             <div class="hp-bar-track hp-bar-track--wild-shape">
-              <div class="hp-bar hp-bar--wild-shape">
-                <div class="hp-bar__fill hp-bar__fill--wild-shape" style="width: ${wildShapeHpPercent}%;"></div>
+              <div class="hp-bar">
+                <div class="hp-bar__fill" style="width: ${wildShapeHpPercent}%;"></div>
               </div>
-              <div class="wild-shape-hp-actions">
-                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
-              </div>
+            </div>
+            <div class="wild-shape-hp-actions">
+              <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
             </div>
             ` : data.wild_shape_enabled ? `
             <div class="wild-shape-empty">
