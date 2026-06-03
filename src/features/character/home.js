@@ -21,6 +21,7 @@ import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { bodyParts } from '../inventory/constants.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
+import { fetchCompanions } from './companionsApi.js';
 import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
 import {
   openAvatarModal,
@@ -51,6 +52,115 @@ import {
   rollDie
 } from './home/utils.js';
 import { applyMoneyDelta } from '../../lib/calc.js';
+
+
+function normalizeWildShapeStatBlock(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(source.abilities || {}) },
+    hp: { current: 1, max: 1, ...(source.hp || {}) },
+    attacks: Array.isArray(source.attacks) ? source.attacks : []
+  };
+}
+
+function getActiveWildShapeDetails(character, companions = []) {
+  const data = character?.data || {};
+  if (!data.wild_shape_enabled) return null;
+  const wildShape = data.wild_shape || {};
+  if (!wildShape.active_companion_id) return null;
+  const companion = (companions || []).find((entry) => String(entry.id) === String(wildShape.active_companion_id));
+  if (!companion) return null;
+  const statBlock = normalizeWildShapeStatBlock(companion.stat_block);
+  const hpMax = Math.max(Number(statBlock.hp.max) || Number(statBlock.hp.current) || 1, 1);
+  const hpCurrent = Math.max(0, Math.min(Number(wildShape.hp_current ?? statBlock.hp.current ?? hpMax) || 0, hpMax));
+  return { companion, statBlock, hpCurrent, hpMax };
+}
+
+function buildWildShapeAdjustedCharacter(character, companions = []) {
+  const activeWildShape = getActiveWildShapeDetails(character, companions);
+  if (!character || !activeWildShape) return character;
+  const data = character.data || {};
+  const abilities = data.abilities || {};
+  return {
+    ...character,
+    data: {
+      ...data,
+      abilities: {
+        ...abilities,
+        str: activeWildShape.statBlock.abilities.str,
+        dex: activeWildShape.statBlock.abilities.dex,
+        con: activeWildShape.statBlock.abilities.con
+      }
+    }
+  };
+}
+
+function getWildShapeForms(companions = []) {
+  return (companions || []).filter((entry) => ['familiar', 'summon', 'transformation'].includes(entry.kind || 'familiar'));
+}
+
+async function openWildShapePicker(character, companions, container) {
+  if (!character?.data?.wild_shape_enabled) return;
+  const forms = getWildShapeForms(companions);
+  if (!forms.length) {
+    createToast('Crea prima una forma nella sezione Famigli', 'error');
+    return;
+  }
+  const currentWildShape = character.data?.wild_shape || {};
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid wild-shape-picker';
+  const field = document.createElement('label');
+  field.className = 'field';
+  field.innerHTML = '<span>Forma animale</span>';
+  const select = buildSelect(forms.map((form) => {
+    const statBlock = normalizeWildShapeStatBlock(form.stat_block);
+    const hpMax = Math.max(Number(statBlock.hp.max) || Number(statBlock.hp.current) || 1, 1);
+    return { value: form.id, label: `${form.name} · HP ${hpMax}` };
+  }), currentWildShape.active_companion_id || forms[0]?.id || '');
+  select.name = 'wild_shape_companion_id';
+  field.appendChild(select);
+  content.appendChild(field);
+  const formData = await openFormModal({
+    title: 'Scegli forma selvatica',
+    submitLabel: 'Trasformati',
+    content,
+    cardClass: 'modal-card--form'
+  });
+  if (!formData) return;
+  const companionId = String(formData.get('wild_shape_companion_id') || '');
+  const selected = forms.find((entry) => String(entry.id) === companionId);
+  if (!selected) return;
+  const statBlock = normalizeWildShapeStatBlock(selected.stat_block);
+  const hpMax = Math.max(Number(statBlock.hp.max) || Number(statBlock.hp.current) || 1, 1);
+  await saveCharacterData(character, {
+    ...(character.data || {}),
+    wild_shape: {
+      active_companion_id: selected.id,
+      hp_current: hpMax,
+      activated_at: new Date().toISOString()
+    }
+  }, `Forma selvatica: ${selected.name}`, () => renderHome(container));
+}
+
+async function endWildShape(character, container) {
+  await saveCharacterData(character, {
+    ...(character.data || {}),
+    wild_shape: null
+  }, 'Forma selvatica terminata', () => renderHome(container));
+}
+
+async function adjustWildShapeHp(character, companions, delta, container) {
+  const activeWildShape = getActiveWildShapeDetails(character, companions);
+  if (!activeWildShape) return;
+  await saveCharacterData(character, {
+    ...(character.data || {}),
+    wild_shape: {
+      ...(character.data?.wild_shape || {}),
+      active_companion_id: activeWildShape.companion.id,
+      hp_current: Math.max(0, Math.min(activeWildShape.hpCurrent + delta, activeWildShape.hpMax))
+    }
+  }, null, () => renderHome(container));
+}
 
 let fabHandlersBound = false;
 let lastHomeContainer = null;
@@ -349,11 +459,13 @@ export async function renderHome(container) {
 
   let resources = state.cache.resources;
   let items = state.cache.items;
+  let companions = [];
   if (!offline && activeCharacter) {
-    const [resourcesResult, itemsResult, characterSpellsResult] = await Promise.allSettled([
+    const [resourcesResult, itemsResult, characterSpellsResult, companionsResult] = await Promise.allSettled([
       fetchResources(activeCharacter.id),
       fetchItems(activeCharacter.id),
-      fetchCharacterSpells(activeCharacter.id)
+      fetchCharacterSpells(activeCharacter.id),
+      fetchCompanions(activeCharacter.id)
     ]);
     const snapshot = {};
     if (resourcesResult.status === 'fulfilled') {
@@ -369,6 +481,12 @@ export async function renderHome(container) {
       snapshot.items = items;
     } else {
       createToast('Errore caricamento equip', 'error');
+    }
+    if (companionsResult.status === 'fulfilled') {
+      companions = companionsResult.value || [];
+      updateCache('companions', companions);
+    } else {
+      createToast('Errore caricamento forme animali', 'error');
     }
     if (characterSpellsResult.status === 'fulfilled') {
       const linkedSpells = (characterSpellsResult.value || [])
@@ -389,6 +507,8 @@ export async function renderHome(container) {
     }
   }
 
+  const sheetCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
+
   container.innerHTML = `
     <div class="home-layout">
       <div class="home-column home-column--left">
@@ -404,7 +524,7 @@ export async function renderHome(container) {
               </button>
             </div>
           </header>
-          ${activeCharacter ? buildSavingThrowSection(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+          ${sheetCharacter ? buildSavingThrowSection(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
         </section>
         <section class="card home-card home-section home-scroll-panel">
           <header class="card-header">
@@ -418,7 +538,7 @@ export async function renderHome(container) {
             </div>
           </header>
           <div class="home-scroll-body">
-            ${activeCharacter ? buildSkillList(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+            ${sheetCharacter ? buildSkillList(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
         <section class="card home-card home-section home-scroll-panel">
@@ -433,7 +553,7 @@ export async function renderHome(container) {
             </div>
           </header>
           <div class="home-scroll-body">
-            ${activeCharacter ? buildSpecialSkillList(activeCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+            ${sheetCharacter ? buildSpecialSkillList(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
       </div>
@@ -451,7 +571,7 @@ export async function renderHome(container) {
               ` : ''}
             </div>
           </header>
-          ${activeCharacter ? buildCharacterOverview(activeCharacter, canEditCharacter, items) : buildEmptyState(canCreateCharacter, offline)}
+          ${sheetCharacter ? buildCharacterOverview(sheetCharacter, canEditCharacter, items, companions) : buildEmptyState(canCreateCharacter, offline)}
         </section>
         ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
       </div>
@@ -469,7 +589,7 @@ export async function renderHome(container) {
           </header>
           <div class="home-scroll-body">
             ${activeCharacter
-    ? buildAttackSection(activeCharacter, items || [])
+    ? buildAttackSection(sheetCharacter, items || [], companions)
     : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
@@ -850,6 +970,25 @@ export async function renderHome(container) {
     });
   }
 
+  container.querySelectorAll('[data-open-wild-shape]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter || !canEditCharacter) return;
+      void openWildShapePicker(activeCharacter, companions, container);
+    }));
+
+  container.querySelectorAll('[data-end-wild-shape]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter || !canEditCharacter) return;
+      void endWildShape(activeCharacter, container);
+    }));
+
+  container.querySelectorAll('[data-wild-shape-hp-delta]')
+    .forEach((button) => button.addEventListener('click', () => {
+      if (!activeCharacter || !canEditCharacter) return;
+      const delta = Number(button.dataset.wildShapeHpDelta) || 0;
+      void adjustWildShapeHp(activeCharacter, companions, delta, container);
+    }));
+
   container.querySelectorAll('[data-open-dice]')
     .forEach((button) => button.addEventListener('click', () => {
       handleDiceAction(button.dataset.openDice);
@@ -972,6 +1111,27 @@ export async function renderHome(container) {
       if (!activeCharacter) return;
       const rollKey = button.dataset.rollDamage;
       if (!rollKey) return;
+      if (rollKey.startsWith('wildshape:')) {
+        const attackIndex = Number(rollKey.replace('wildshape:', '')) || 0;
+        const activeWildShape = getActiveWildShapeDetails(activeCharacter, companions);
+        const attack = activeWildShape?.statBlock.attacks?.[attackIndex];
+        const damageNotation = String(attack?.damage || '').trim();
+        if (!damageNotation || damageNotation === '-') {
+          createToast('Danni non configurati per questo attacco', 'error');
+          return;
+        }
+        openDiceOverlay({
+          keepOpen: true,
+          title: `${activeWildShape.companion.name} · Danni ${attack.name || 'Attacco'}`,
+          mode: 'generic',
+          notation: damageNotation,
+          modifier: Number(attack.damage_modifier) || 0,
+          rollType: 'DMG',
+          characterId: activeCharacter?.id,
+          historyLabel: `${activeWildShape.companion.name} · ${attack.name || 'Danni'}`
+        });
+        return;
+      }
       if (rollKey.startsWith('spell:')) {
         const spellId = rollKey.replace('spell:', '');
         const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
@@ -1329,8 +1489,12 @@ function getHomeContext() {
   const { user, offline, characters, activeCharacterId } = state;
   const normalizedActiveId = normalizeCharacterId(activeCharacterId);
   const activeCharacter = characters.find((char) => normalizeCharacterId(char.id) === normalizedActiveId);
+  const companions = state.cache.companions || [];
+  const sheetCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
   return {
     activeCharacter,
+    sheetCharacter,
+    companions,
     canEditCharacter: Boolean(user) && !offline
   };
 }
@@ -1978,7 +2142,7 @@ function buildSavingThrowRollOptions(character) {
   });
 }
 
-function buildAttackRollOptions(character, items = []) {
+function buildAttackRollOptions(character, items = [], companions = []) {
   const data = character.data || {};
   const attackBonusMelee = Number(data.attack_bonus_melee ?? data.attack_bonus) || 0;
   const attackBonusRanged = Number(data.attack_bonus_ranged ?? data.attack_bonus) || 0;
@@ -2012,6 +2176,25 @@ function buildAttackRollOptions(character, items = []) {
       rollModeReason: rollMode.rollModeReason
     };
   });
+
+  const activeWildShape = getActiveWildShapeDetails(character, companions);
+  if (activeWildShape?.statBlock.attacks.length) {
+    activeWildShape.statBlock.attacks.forEach((attack, index) => {
+      const value = `wildshape:${index}`;
+      const rollMode = resolveRollModeEffects([
+        ...automaticAttackEffects,
+        getManualRollAdjustment(character, 'attack_rolls', value, attack.name || `Attacco ${index + 1}`)
+      ]);
+      options.push({
+        value,
+        label: `${attack.name || `Attacco ${index + 1}`} (${formatSigned(attack.to_hit || 0)})`,
+        shortLabel: attack.name || `Attacco ${index + 1}`,
+        modifier: Number(attack.to_hit) || 0,
+        rollMode: rollMode.rollMode,
+        rollModeReason: rollMode.rollModeReason
+      });
+    });
+  }
 
   const spellcasting = data.spellcasting || {};
   const spellAbilityKey = spellcasting.ability;
@@ -2121,10 +2304,10 @@ async function consumeWeaponAmmunition(items, weapon) {
 }
 
 function openPresetAttackRoll(attackKey) {
-  const { activeCharacter, canEditCharacter } = getHomeContext();
+  const { activeCharacter, sheetCharacter, canEditCharacter, companions } = getHomeContext();
   if (!activeCharacter || !attackKey) return;
   const items = getState().cache.items || [];
-  const options = buildAttackRollOptions(activeCharacter, items);
+  const options = buildAttackRollOptions(sheetCharacter || activeCharacter, items, companions);
   const selected = options.find((entry) => entry.value === attackKey);
   if (!selected) return;
   const weaponId = attackKey.startsWith('weapon:') ? attackKey.replace('weapon:', '') : null;
@@ -2160,7 +2343,7 @@ function openPresetAttackRoll(attackKey) {
 }
 
 function handleDiceAction(type) {
-  const { activeCharacter, canEditCharacter } = getHomeContext();
+  const { activeCharacter, sheetCharacter, companions, canEditCharacter } = getHomeContext();
   const items = getState().cache.items || [];
   const allowInspiration = Boolean(activeCharacter?.data?.inspiration) && canEditCharacter;
   const weakPoints = Number(activeCharacter?.data?.hp?.weak_points) || 0;
@@ -2182,7 +2365,7 @@ function handleDiceAction(type) {
       mode: 'd20',
       rollType: 'TS',
       selection: activeCharacter
-        ? { label: 'Tiro salvezza', options: buildSavingThrowRollOptions(activeCharacter) }
+        ? { label: 'Tiro salvezza', options: buildSavingThrowRollOptions(sheetCharacter || activeCharacter) }
         : null
     },
     skills: {
@@ -2190,7 +2373,7 @@ function handleDiceAction(type) {
       mode: 'd20',
       rollType: 'TA',
       selection: activeCharacter
-        ? { label: 'Abilità', options: buildSkillRollOptions(activeCharacter, items) }
+        ? { label: 'Abilità', options: buildSkillRollOptions(sheetCharacter || activeCharacter, items) }
         : null
     },
     'special-skills': {
@@ -2198,7 +2381,7 @@ function handleDiceAction(type) {
       mode: 'd20',
       rollType: 'TA',
       selection: activeCharacter
-        ? { label: 'Abilità speciale', options: buildSpecialSkillRollOptions(activeCharacter, items) }
+        ? { label: 'Abilità speciale', options: buildSpecialSkillRollOptions(sheetCharacter || activeCharacter, items) }
         : null
     },
     'attack-roll': {
@@ -2206,7 +2389,7 @@ function handleDiceAction(type) {
       mode: 'd20',
       rollType: 'TC',
       selection: activeCharacter
-        ? { label: 'Attacco', options: buildAttackRollOptions(activeCharacter, items) }
+        ? { label: 'Attacco', options: buildAttackRollOptions(sheetCharacter || activeCharacter, items, companions) }
         : null
     },
     'spell-attack': {
