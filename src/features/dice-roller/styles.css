@@ -182,7 +182,7 @@ header {
   position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  width: min(920px, 96vw);
+  width: min(1120px, 98vw);
   max-height: 96vh;
   overflow: auto;
   background: #111;
@@ -429,7 +429,7 @@ header {
 
 .diceov-accordion-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
   gap: 6px;
   align-items: start;
 }
@@ -473,9 +473,11 @@ header {
 }
 
 .diceov-result--final {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  flex-wrap: nowrap;
   text-align: center;
   background:
     radial-gradient(circle at top, rgba(255, 220, 122, 0.12), transparent 55%),
@@ -490,7 +492,8 @@ header {
 
 .diceov-result--final .diceov-result-value {
   order: 3;
-  min-width: 72px;
+  flex: 0 0 auto;
+  min-width: 48px;
   padding: 1px 12px;
   border-radius: 999px;
   background: rgba(255, 220, 122, 0.12);
@@ -500,12 +503,15 @@ header {
 
 .diceov-result--final .diceov-result-detail {
   order: 2;
-  width: 100%;
+  flex: 0 1 auto;
+  width: auto;
   text-align: center;
+  white-space: nowrap;
 }
 
 .diceov-result--final .diceov-result-label {
   order: 1;
+  flex: 0 0 auto;
   text-align: center;
 }
 
@@ -738,7 +744,7 @@ header {
 
 .diceov-stage {
   padding: 8px;
-  width: min(920px, 98vw);
+  width: min(1120px, 98vw);
   max-height: min(96vh, 980px);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
@@ -878,8 +884,7 @@ header {
   display: none;
 }
 
-.diceov-quick-dice-toggle,
-.diceov-reroll-toggle {
+.diceov-section-title {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -890,24 +895,18 @@ header {
   border-radius: 8px;
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
+  cursor: default;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.diceov-quick-dice-toggle:hover,
-.diceov-quick-dice-toggle:focus-visible,
-.diceov-reroll-toggle:hover,
-.diceov-reroll-toggle:focus-visible {
-  color: #ffdc7a;
-  outline: none;
-}
 
 .diceov-quick-dice-content {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .diceov-quick-dice-content[hidden] {
@@ -989,6 +988,7 @@ header {
   display: grid;
   justify-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .diceov-reroll-content[hidden] {
@@ -1039,12 +1039,20 @@ header {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .diceov-result--final {
+    flex-wrap: wrap;
+  }
+
+  .diceov-result--final .diceov-result-detail {
+    white-space: normal;
+  }
+
   .diceov-quick-dice-controls {
     justify-content: flex-start;
     gap: 4px;
   }
 
-  .diceov-quick-dice-toggle {
+  .diceov-section-title {
     font-size: 0.66rem;
   }
 
