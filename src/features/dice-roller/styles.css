@@ -461,9 +461,11 @@ header {
 }
 
 .diceov-result--final {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+  flex-wrap: wrap;
   text-align: center;
   background:
     radial-gradient(circle at top, rgba(255, 220, 122, 0.12), transparent 55%),
@@ -484,7 +486,8 @@ header {
 }
 
 .diceov-result--final .diceov-result-detail {
-  text-align: center;
+  flex: 1 1 260px;
+  text-align: left;
 }
 
 .diceov-history-accordion {
@@ -918,12 +921,53 @@ header {
 
 .diceov-reroll-card {
   display: grid;
-  justify-items: center;
   gap: 4px;
   text-align: center;
 }
 
 .diceov-reroll-card[hidden] {
+  display: none;
+}
+
+.diceov-reroll-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diceov-reroll-toggle:hover,
+.diceov-reroll-toggle:focus-visible {
+  color: #ffdc7a;
+  outline: none;
+}
+
+.diceov-reroll-toggle-icon {
+  transition: transform 0.16s ease;
+}
+
+.diceov-reroll-toggle[aria-expanded="true"] .diceov-reroll-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.diceov-reroll-content {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.diceov-reroll-content[hidden] {
   display: none;
 }
 

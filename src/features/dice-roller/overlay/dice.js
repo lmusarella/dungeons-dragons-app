@@ -160,8 +160,14 @@ function buildOverlayMarkup() {
       </div>
       <div class="diceov-results">
         <div class="diceov-reroll-card" data-reroll-card hidden>
-          <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
-          <p class="diceov-reroll-status" data-reroll-status hidden></p>
+          <button class="diceov-reroll-toggle" type="button" data-reroll-toggle aria-expanded="false">
+            <span>Ritira dadi</span>
+            <span class="diceov-reroll-toggle-icon" aria-hidden="true">⌄</span>
+          </button>
+          <div class="diceov-reroll-content" data-reroll-content hidden>
+            <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
+            <p class="diceov-reroll-status" data-reroll-status hidden></p>
+          </div>
         </div>
         <div class="diceov-result diceov-result--final">
           <p class="diceov-result-label">Totale</p>
@@ -665,6 +671,8 @@ export function openDiceOverlay({
   const genericDiceBuilder = overlayEl.querySelector('[data-generic-dice-builder]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
+  const rerollToggle = overlayEl.querySelector('[data-reroll-toggle]');
+  const rerollContent = overlayEl.querySelector('[data-reroll-content]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
   const rerollStatus = overlayEl.querySelector('[data-reroll-status]');
 
@@ -697,6 +705,7 @@ export function openDiceOverlay({
     selectionRollMode: null,
     selectionRollModeReason: null,
     lastCriticalSignature: null,
+    rerollOpen: false,
     rerollHint: null,
     pendingReroll: null
   };
@@ -1123,12 +1132,20 @@ export function openDiceOverlay({
     }));
   }
 
+  function setRerollAccordionOpen(open) {
+    state.rerollOpen = Boolean(open);
+    rerollToggle?.setAttribute('aria-expanded', String(state.rerollOpen));
+    rerollContent?.toggleAttribute('hidden', !state.rerollOpen);
+    rerollCard?.classList.toggle('is-open', state.rerollOpen);
+  }
+
   function renderRerollTray(notation) {
     if (!rerollTray) return;
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
       rerollCard?.setAttribute('hidden', '');
+      setRerollAccordionOpen(false);
       if (rerollStatus) {
         rerollStatus.textContent = '';
         rerollStatus.setAttribute('hidden', '');
@@ -1148,6 +1165,7 @@ export function openDiceOverlay({
       rerollStatus.removeAttribute('hidden');
     }
     rerollCard?.removeAttribute('hidden');
+    setRerollAccordionOpen(state.rerollOpen);
   }
 
   function prepareSwipeReroll(index) {
@@ -1162,6 +1180,7 @@ export function openDiceOverlay({
       returnInput: currentInput
     };
     state.rerollHint = `Swipe sul tavolo per ritirare ${die.label.toUpperCase()} (${die.value}).`;
+    setRerollAccordionOpen(true);
     resetLegacyDiceScene();
     updateDiceInput(overlayEl, `1${die.type}`);
     renderRollResult(state.lastRoll, { playCriticalSound: false });
@@ -1357,6 +1376,10 @@ export function openDiceOverlay({
       updateNotationFromGeneric();
     };
   }
+  if (rerollToggle) {
+    rerollToggle.onclick = () => setRerollAccordionOpen(!state.rerollOpen);
+  }
+
   if (rerollTray) {
     rerollTray.onclick = (event) => {
       const button = event.target.closest('[data-reroll-index]');
