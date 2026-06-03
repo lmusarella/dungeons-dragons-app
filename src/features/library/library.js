@@ -68,6 +68,12 @@ export async function renderLibrary(container) {
         </header>
         <div class="library-filter-panel" data-library-filters></div>
         <div class="library-results-heading" data-library-results-heading></div>
+        <div class="library-spell-list-header" aria-hidden="true">
+          <span>Livello</span>
+          <span>Incantesimo</span>
+          <span>Scuola</span>
+          <span>Azioni</span>
+        </div>
         <div class="character-card-grid library-results-grid" data-library-spells></div>
       </div>
     </section>
@@ -81,6 +87,7 @@ export async function renderLibrary(container) {
   filtersRow.className = 'modal-form-row modal-form-row--compact library-filters-row';
   filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
   const levelFilterField = buildInput({ label: 'Livello', name: 'level', type: 'number' });
+  levelFilterField.classList.add('library-level-filter');
   const levelFilterInput = levelFilterField.querySelector('input[name="level"]');
   if (levelFilterInput) {
     levelFilterInput.min = '0';
@@ -140,7 +147,6 @@ export async function renderLibrary(container) {
   const filtersActions = document.createElement('div');
   filtersActions.className = 'library-filter-actions';
   filtersActions.appendChild(searchButton);
-  filters.append(filtersRow, filtersActions);
 
   const listToolbar = document.createElement('div');
   listToolbar.className = 'library-list-toolbar';
@@ -153,7 +159,7 @@ export async function renderLibrary(container) {
       </select>
     </label>
   `;
-  filters.appendChild(listToolbar);
+  filters.append(filtersRow, listToolbar, filtersActions);
 
   const resultsHeading = container.querySelector('[data-library-results-heading]');
   const pagination = document.createElement('div');
@@ -206,13 +212,11 @@ export async function renderLibrary(container) {
             <strong>${spell.level ?? 0}</strong>
           </div>
           <div class="character-card-info library-spell-card__info">
-            <div class="library-spell-card__title-row">
-              <h3>${spell.name}</h3>
-              <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
-            </div>
+            <h3>${spell.name}</h3>
             <p class="muted library-spell-card__classes">${classes}</p>
             ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
           </div>
+          <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
           <div class="button-row library-spell-card__actions">
             <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>

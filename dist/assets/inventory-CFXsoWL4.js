@@ -1,4 +1,4 @@
-import{l as Ce,h as xe,r as Me,c as pe,g as qe,f as ge,s as ze,t as ke,m as be,i as K,w as Ie,v as Te,x as he,y as Oe,p as fe,z as De,o as ve,A as $e,u as R,j as je,B as We,C as Pe}from"./walletApi-B7jn7vOV.js";import{n as X,u as O,a as D,c as p,o as Y,i as Ve,b as ye,g as we,s as _e}from"./index-CEg3lb8Y.js";import"./weaponMasteries-zUcl4F-E.js";function He(t){const f="/dungeons-dragons-app/";return`
+import{l as Ce,h as xe,r as Me,c as pe,g as qe,f as ge,s as ze,t as ke,m as be,i as K,w as Ie,v as Te,x as he,y as Oe,p as fe,z as De,o as ve,A as $e,u as R,j as je,B as We,C as Pe}from"./walletApi-C6WlvUb8.js";import{n as X,u as O,a as D,c as p,o as Y,i as Ve,b as ye,g as we,s as _e}from"./index-B3mIQOv_.js";import"./weaponMasteries-zUcl4F-E.js";function He(t){const f="/dungeons-dragons-app/";return`
     <div class="wallet-summary">     
       <div class="wallet-list">
         ${[{key:"pp",label:"Platino",icon:`${f}icons/moneta_platino.png`},{key:"gp",label:"Oro",icon:`${f}icons/moneta_oro.png`},{key:"sp",label:"Argento",icon:`${f}icons/moneta_argento.png`},{key:"cp",label:"Rame",icon:`${f}icons/moneta_rame.png`}].map(b=>`
