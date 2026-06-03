@@ -1,5 +1,5 @@
 import { assignSharedSpellToCharacter, createSharedSpell, removeSharedSpellAndAssignments, searchSharedSpells } from '../character/spellbookApi.js';
-import { buildInput, createToast, openConfirmModal } from '../../ui/components.js';
+import { attachNumberStepper, buildInput, createToast, openConfirmModal } from '../../ui/components.js';
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 import { openSpellDrawer, openSpellQuickDetailModal } from '../character/home/modals.js';
@@ -8,6 +8,36 @@ const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
 const SPELL_RULES_VERSION_OPTIONS = ['2024', '2014', 'Custom'];
 const PAGE_SIZE = 8;
+const LIBRARY_SEARCH_PAGE_SIZE = 50;
+
+async function loadSharedSpellsForLibrary(filters) {
+  const firstPage = await searchSharedSpells({
+    ...filters,
+    page: 1,
+    pageSize: LIBRARY_SEARCH_PAGE_SIZE
+  });
+  const items = [...(firstPage.items || [])];
+  const total = Number(firstPage.total) || items.length;
+  let page = 2;
+
+  while (items.length < total) {
+    const nextPage = await searchSharedSpells({
+      ...filters,
+      page,
+      pageSize: LIBRARY_SEARCH_PAGE_SIZE
+    });
+    const nextItems = nextPage.items || [];
+    if (!nextItems.length) break;
+    items.push(...nextItems);
+    page += 1;
+  }
+
+  return {
+    ...firstPage,
+    items,
+    total
+  };
+}
 
 function sortSpells(spells, mode) {
   const items = [...spells];
@@ -38,6 +68,15 @@ export async function renderLibrary(container) {
         </header>
         <div class="library-filter-panel" data-library-filters></div>
         <div class="library-results-heading" data-library-results-heading></div>
+        <div class="library-spell-list-header" aria-hidden="true">
+          <span>Livello</span>
+          <span>Incantesimo</span>
+          <span>Scuola</span>
+          <span>Regole</span>
+          <span>Concentrazione</span>
+          <span>Rituale</span>
+          <span>Azioni</span>
+        </div>
         <div class="character-card-grid library-results-grid" data-library-spells></div>
       </div>
     </section>
@@ -50,7 +89,20 @@ export async function renderLibrary(container) {
   const filtersRow = document.createElement('div');
   filtersRow.className = 'modal-form-row modal-form-row--compact library-filters-row';
   filtersRow.appendChild(buildInput({ label: 'Nome', name: 'q', placeholder: 'Cerca incantesimo' }));
-  filtersRow.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number' }));
+  const levelFilterField = buildInput({ label: 'Livello', name: 'level', type: 'number' });
+  levelFilterField.classList.add('library-level-filter');
+  const levelFilterInput = levelFilterField.querySelector('input[name="level"]');
+  if (levelFilterInput) {
+    levelFilterInput.min = '0';
+    levelFilterInput.max = '9';
+    levelFilterInput.step = '1';
+    levelFilterInput.inputMode = 'numeric';
+    attachNumberStepper(levelFilterInput, {
+      decrementLabel: 'Riduci livello incantesimo',
+      incrementLabel: 'Aumenta livello incantesimo'
+    });
+  }
+  filtersRow.appendChild(levelFilterField);
   const schoolFilterField = document.createElement('label');
   schoolFilterField.className = 'field';
   schoolFilterField.innerHTML = '<span>Scuola</span>';
@@ -91,30 +143,56 @@ export async function renderLibrary(container) {
     });
   versionFilterField.appendChild(versionFilterSelect);
   filtersRow.appendChild(versionFilterField);
+
+  const concentrationFilterField = document.createElement('label');
+  concentrationFilterField.className = 'field';
+  concentrationFilterField.innerHTML = '<span>Concentrazione</span>';
+  const concentrationFilterSelect = document.createElement('select');
+  concentrationFilterSelect.name = 'concentration';
+  [
+    { value: '', label: 'Tutte' },
+    { value: 'true', label: 'Sì' },
+    { value: 'false', label: 'No' }
+  ].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    concentrationFilterSelect.appendChild(option);
+  });
+  concentrationFilterField.appendChild(concentrationFilterSelect);
+  filtersRow.appendChild(concentrationFilterField);
+  const ritualFilterField = document.createElement('label');
+  ritualFilterField.className = 'field';
+  ritualFilterField.innerHTML = '<span>Rituale</span>';
+  const ritualFilterSelect = document.createElement('select');
+  ritualFilterSelect.name = 'ritual';
+  [
+    { value: '', label: 'Tutti' },
+    { value: 'true', label: 'Sì' },
+    { value: 'false', label: 'No' }
+  ].forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry.value;
+    option.textContent = entry.label;
+    ritualFilterSelect.appendChild(option);
+  });
+  ritualFilterField.appendChild(ritualFilterSelect);
+  filtersRow.appendChild(ritualFilterField);
   const searchButton = document.createElement('button');
-  searchButton.className = 'primary';
+  searchButton.className = 'primary library-search-button';
   searchButton.type = 'button';
   searchButton.innerHTML = '<span aria-hidden="true">🔎</span><span>Cerca</span>';
-  filtersRow.appendChild(searchButton);
-  filters.appendChild(filtersRow);
+  const filtersActions = document.createElement('div');
+  filtersActions.className = 'library-filter-actions';
+  filtersActions.appendChild(searchButton);
 
-  const listToolbar = document.createElement('div');
-  listToolbar.className = 'library-list-toolbar';
-  listToolbar.innerHTML = `
-    <label class="field">
-      <span>Ordina per</span>
-      <select name="sort">
-        <option value="name">Nome (A-Z)</option>
-        <option value="level">Livello (0-9)</option>
-      </select>
-    </label>
-  `;
-  filters.appendChild(listToolbar);
+
+  filters.append(filtersRow, filtersActions);
 
   const resultsHeading = container.querySelector('[data-library-results-heading]');
   const pagination = document.createElement('div');
   pagination.className = 'library-pagination';
-  filters.appendChild(pagination);
+  list.insertAdjacentElement('afterend', pagination);
 
   let currentPage = 1;
 
@@ -124,12 +202,16 @@ export async function renderLibrary(container) {
     const school = filters.querySelector('select[name="school"]')?.value || '';
     const casterClass = filters.querySelector('select[name="caster"]')?.value || '';
     const rulesVersion = filters.querySelector('select[name="rules_version"]')?.value || '';
-    const result = await searchSharedSpells({
+    const concentration = filters.querySelector('select[name="concentration"]')?.value || '';
+    const ritual = filters.querySelector('select[name="ritual"]')?.value || '';
+    const result = await loadSharedSpellsForLibrary({
       query,
       level,
       school,
       rulesVersion,
-      casterClasses: casterClass ? [casterClass] : []
+      casterClasses: casterClass ? [casterClass] : [],
+      concentration,
+      ritual
     });
     const spells = result.items || [];
     const sortMode = filters.querySelector('select[name="sort"]')?.value || 'name';
@@ -153,8 +235,9 @@ export async function renderLibrary(container) {
     list.innerHTML = pagedSpells.length
       ? pagedSpells.map((spell) => {
         const classes = (spell.caster_classes || []).join(', ') || 'Nessuna classe';
-        const traits = [spell.concentration ? 'Concentrazione' : '', spell.ritual ? 'Rituale' : '', spell.rules_version ? `Regole ${spell.rules_version}` : '']
-          .filter(Boolean);
+        const rulesVersionLabel = spell.rules_version || '—';
+        const concentrationLabel = spell.concentration ? 'Sì' : 'No';
+        const ritualLabel = spell.ritual ? 'Sì' : 'No';
         return `
         <article class="character-card library-spell-card" data-library-view-spell="${spell.id}" role="button" tabindex="0" aria-label="Apri dettaglio incantesimo ${spell.name}">
           <div class="library-spell-card__level" aria-label="Livello ${spell.level ?? 0}">
@@ -162,13 +245,13 @@ export async function renderLibrary(container) {
             <strong>${spell.level ?? 0}</strong>
           </div>
           <div class="character-card-info library-spell-card__info">
-            <div class="library-spell-card__title-row">
-              <h3>${spell.name}</h3>
-              <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
-            </div>
-            <p class="muted">${classes}</p>
-            ${traits.length ? `<div class="library-spell-card__traits">${traits.map((trait) => `<span>${trait}</span>`).join('')}</div>` : ''}
+            <h3>${spell.name}</h3>
+            <p class="muted library-spell-card__classes">${classes}</p>
           </div>
+          <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
+          <span class="library-spell-card__rules">${rulesVersionLabel}</span>
+          <span class="library-spell-card__flag ${spell.concentration ? 'is-active' : ''}">${concentrationLabel}</span>
+          <span class="library-spell-card__flag ${spell.ritual ? 'is-active' : ''}">${ritualLabel}</span>
           <div class="button-row library-spell-card__actions">
             <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
           </div>

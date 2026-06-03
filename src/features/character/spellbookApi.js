@@ -9,6 +9,8 @@ export async function searchSharedSpells({
   level = null,
   school = '',
   casterClasses = [],
+  concentration = '',
+  ritual = '',
   page = 1,
   pageSize = 20
 } = {}) {
@@ -34,6 +36,12 @@ export async function searchSharedSpells({
   }
   if (school?.trim()) {
     request = request.ilike('school', `%${school.trim()}%`);
+  }
+  if (concentration !== null && concentration !== '') {
+    request = request.eq('concentration', concentration === true || concentration === 'true');
+  }
+  if (ritual !== null && ritual !== '') {
+    request = request.eq('ritual', ritual === true || ritual === 'true');
   }
   const normalizedClasses = Array.isArray(casterClasses)
     ? casterClasses.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean)
