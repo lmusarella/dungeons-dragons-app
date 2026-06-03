@@ -183,13 +183,13 @@ header {
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
   width: min(920px, 96vw);
-  max-height: 90vh;
+  max-height: 96vh;
   overflow: auto;
   background: #111;
   color: #eee;
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0,0,0,.4);
-  padding: 12px 12px 16px;
+  padding: 8px 10px 10px;
 }
 
 .diceov-close {
@@ -203,7 +203,7 @@ header {
   background: #161616;
   border-radius: 12px;
   border: 1px solid #242424;
-  padding: 0px 12px 12px 12px;
+  padding: 0 10px 10px;
   margin-bottom: 2px;
 }
 
@@ -223,8 +223,8 @@ header {
 
 .diceov-controls {
   display: grid;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .diceov-control[hidden] {
@@ -241,7 +241,7 @@ header {
 .diceov-label--inline {
   margin-bottom: 0;
   text-align: right;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: rgba(255,255,255,0.7);
 }
 
@@ -278,7 +278,7 @@ header {
 .diceov-inspiration {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 3px;
 }
 
@@ -415,7 +415,7 @@ header {
 }
 
 .diceov-hint {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   font-size: 0.8rem;
   color: rgba(255,255,255,0.6);
   text-align: center;
@@ -423,14 +423,14 @@ header {
 
 .diceov-results {
   display: grid;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .diceov-result,
 .diceov-reroll-card,
 .diceov-history-panel {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
   background: #0f0f0f;
   border: 1px solid #2b2b2b;
@@ -446,7 +446,7 @@ header {
 
 .diceov-result-value {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.32rem;
   font-weight: 700;
 }
 
@@ -476,7 +476,7 @@ header {
 
 .diceov-result--final .diceov-result-value {
   min-width: 72px;
-  padding: 2px 14px;
+  padding: 1px 12px;
   border-radius: 999px;
   background: rgba(255, 220, 122, 0.12);
   color: #ffdc7a;
@@ -715,8 +715,9 @@ header {
 }
 
 .diceov-stage {
-  padding: 10px 10px 12px;
+  padding: 8px;
   width: min(920px, 98vw);
+  max-height: min(96vh, 980px);
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
@@ -774,7 +775,7 @@ header {
 
 .diceov-critical-banner {
   margin: 8px 0 0;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
   border: 1px solid transparent;
   text-align: center;
@@ -918,7 +919,7 @@ header {
 .diceov-reroll-card {
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: 4px;
   text-align: center;
 }
 
@@ -926,18 +927,9 @@ header {
   display: none;
 }
 
-.diceov-reroll-card-label {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .diceov-reroll-status {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: rgba(255, 255, 255, 0.62);
 }
 
@@ -946,7 +938,7 @@ header {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   margin-top: 0;
 }
@@ -955,8 +947,8 @@ header {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 30px;
-  padding: 4px 8px;
+  min-height: 28px;
+  padding: 3px 7px;
   border-radius: 999px;
 }
 

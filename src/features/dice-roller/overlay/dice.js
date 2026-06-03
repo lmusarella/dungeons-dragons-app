@@ -160,14 +160,13 @@ function buildOverlayMarkup() {
       </div>
       <div class="diceov-results">
         <div class="diceov-reroll-card" data-reroll-card hidden>
-          <p class="diceov-reroll-card-label">Dadi da ritirare</p>
-          <div class="diceov-reroll-tray" data-reroll-tray></div>
+          <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
           <p class="diceov-reroll-status" data-reroll-status hidden></p>
         </div>
         <div class="diceov-result diceov-result--final">
-          <p class="diceov-result-label">Risultato finale</p>
+          <p class="diceov-result-label">Totale</p>
           <p class="diceov-result-value" data-dice-result>—</p>
-          <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
+          <p class="diceov-result-detail" data-dice-detail>Lancia per vedere i dettagli.</p>
         </div>
         <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
@@ -754,7 +753,7 @@ export function openDiceOverlay({
     criticalBanner.textContent = '';
   }
 
-  function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
+  function resetResult(label = '—', detail = 'Lancia per vedere i dettagli.') {
     if (resultValue) resultValue.textContent = label;
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
@@ -1145,7 +1144,7 @@ export function openDiceOverlay({
       `).join('')}
     `;
     if (rerollStatus) {
-      rerollStatus.textContent = state.rerollHint || 'Seleziona un dado e poi fai swipe sul tavolo per ritirare solo quello.';
+      rerollStatus.textContent = state.rerollHint || 'Tocca un dado, poi swipe per ritirarlo.';
       rerollStatus.removeAttribute('hidden');
     }
     rerollCard?.removeAttribute('hidden');
