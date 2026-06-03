@@ -93,24 +93,6 @@ function buildOverlayMarkup() {
        
         <div class="diceov-control" data-dice-control="generic">       
           <div class="diceov-generic-row">
-            <div class="diceov-generic-builder" data-generic-dice-builder>
-              <div class="diceov-field">
-                <label class="diceov-label" for="dice-count">Dadi</label>
-                <input id="dice-count" type="number" name="dice-count" min="1" value="1" />
-              </div>
-              <div class="diceov-field">
-                <label class="diceov-label" for="dice-type">Tipo dado</label>
-                <select id="dice-type" name="dice-type">
-                  <option value="d4">d4</option>
-                  <option value="d6">d6</option>
-                  <option value="d8">d8</option>
-                  <option value="d10">d10</option>
-                  <option value="d12">d12</option>
-                  <option value="d20" selected>d20</option>
-                  <option value="d100">d100</option>
-                </select>
-              </div>
-            </div>
             <div class="diceov-field">
               <label class="diceov-label" for="dice-notation">Notazione</label>
               <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="1d20" spellcheck="false" />
@@ -144,26 +126,45 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
-          <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4). Dopo un lancio scegli un dado nel risultato, poi fai swipe sul tavolo per ritirare solo quello.</p>
-          <div class="diceov-quick-dice" data-quick-dice aria-label="Modifica rapida notazione dadi">
-            <span class="diceov-quick-dice-title">Aggiungi dadi</span>
-            ${[4, 6, 8, 10, 12, 20].map((die) => `
-              <div class="diceov-quick-die">
-                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
-                <span class="diceov-quick-die-label">D${die}</span>
-                <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
-              </div>
-            `).join('')}
-          </div>
           <p class="diceov-warning" data-custom-warning hidden></p>
+          <p class="diceov-warning" data-dice-limit-warning hidden>Puoi lanciare al massimo 20 dadi alla volta.</p>
         </div>
       </div>
       <div class="diceov-results">
-        <div class="diceov-result diceov-result--full">
-          <p class="diceov-result-label">Risultato</p>
+        <div class="diceov-accordion-row" data-dice-accordion-row>
+          <div class="diceov-quick-dice" data-quick-dice>
+            <div class="diceov-section-title">
+              <span aria-hidden="true">🎲</span>
+              <span>Aggiungi dadi</span>
+            </div>
+            <div class="diceov-quick-dice-content" data-quick-dice-content>
+              <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
+              <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
+                ${[4, 6, 8, 10, 12, 20].map((die) => `
+                  <div class="diceov-quick-die">
+                    <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
+                    <span class="diceov-quick-die-label">D${die}</span>
+                    <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="increment" aria-label="Aggiungi un d${die} alla notazione">+</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="diceov-reroll-card" data-reroll-card>
+            <div class="diceov-section-title">
+              <span aria-hidden="true">🔁</span>
+              <span>Ritira dadi</span>
+            </div>
+            <div class="diceov-reroll-content" data-reroll-content>
+              <p class="diceov-reroll-status" data-reroll-status hidden></p>
+              <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
+            </div>
+          </div>
+        </div>
+        <div class="diceov-result diceov-result--final">
+          <p class="diceov-result-label">Totale</p>
+          <p class="diceov-result-detail" data-dice-detail>Lancia per vedere i dettagli.</p>
           <p class="diceov-result-value" data-dice-result>—</p>
-          <p class="diceov-result-detail" data-dice-detail>Lancia i dadi per vedere il totale.</p>
-          <div class="diceov-reroll-tray" data-reroll-tray hidden></div>
         </div>
         <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
@@ -253,22 +254,28 @@ const CRITICAL_AUDIO_FILES = {
   TS: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   },
   TA: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   },
   TC: {
     criticalFailure: 'audio/fallimento_critico.mp3',
     poor: 'audio/tiro_pessimo.mp3',
+    veryPoor: 'audio/tiro_poco_pessimo.mp3',
     mediocre: 'audio/tiro_medriocre.mp3',
-    excellent: 'audio/tiro_ottimo.mp3',
+    good: 'audio/tiro_ottimo.mp3',
+    excellent: 'audio/tiro_molto_ottimo.mp3',
     criticalSuccess: 'audio/successo_critico.mp3'
   }
 };
@@ -406,22 +413,28 @@ function playCriticalAudio(type, currentRollType) {
   const rollTypePresets = {
     TS: {
       criticalSuccess: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
-      excellent: { notes: [440, 554.37, 659.25], wave: 'sine' },
+      excellent: { notes: [493.88, 622.25, 739.99], wave: 'sine' },
+      good: { notes: [440, 554.37, 659.25], wave: 'sine' },
       mediocre: { notes: [293.66, 329.63, 293.66], wave: 'triangle' },
+      veryPoor: { notes: [261.63, 233.08, 220], wave: 'triangle' },
       poor: { notes: [246.94, 220, 196], wave: 'sawtooth' },
       criticalFailure: { notes: [220, 164.81, 130.81], wave: 'sawtooth' }
     },
     TA: {
       criticalSuccess: { notes: [659.25, 830.61, 987.77], wave: 'square' },
-      excellent: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
+      excellent: { notes: [587.33, 739.99, 880], wave: 'triangle' },
+      good: { notes: [523.25, 659.25, 783.99], wave: 'triangle' },
       mediocre: { notes: [329.63, 293.66, 261.63], wave: 'triangle' },
+      veryPoor: { notes: [261.63, 233.08, 207.65], wave: 'sine' },
       poor: { notes: [220, 196, 174.61], wave: 'sine' },
       criticalFailure: { notes: [196, 146.83, 110], wave: 'triangle' }
     },
     TC: {
       criticalSuccess: { notes: [587.33, 739.99, 880], wave: 'sine' },
-      excellent: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
+      excellent: { notes: [554.37, 698.46, 830.61], wave: 'triangle' },
+      good: { notes: [493.88, 622.25, 739.99], wave: 'triangle' },
       mediocre: { notes: [311.13, 293.66, 261.63], wave: 'square' },
+      veryPoor: { notes: [277.18, 246.94, 220], wave: 'sawtooth' },
       poor: { notes: [261.63, 233.08, 207.65], wave: 'sawtooth' },
       criticalFailure: { notes: [246.94, 185, 138.59], wave: 'square' }
     }
@@ -647,13 +660,17 @@ export function openDiceOverlay({
   const sneakAttackField = overlayEl.querySelector('[data-sneak-attack-field]');
   const sneakAttackInput = overlayEl.querySelector('input[name="dice-sneak-attack"]');
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
-  const genericDiceBuilder = overlayEl.querySelector('[data-generic-dice-builder]');
+  const diceLimitWarning = overlayEl.querySelector('[data-dice-limit-warning]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
+  const accordionRow = overlayEl.querySelector('[data-dice-accordion-row]');
+  const rerollCard = overlayEl.querySelector('[data-reroll-card]');
+  const rerollContent = overlayEl.querySelector('[data-reroll-content]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
+  const rerollStatus = overlayEl.querySelector('[data-reroll-status]');
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
@@ -732,11 +749,22 @@ export function openDiceOverlay({
   function clearCriticalBanner() {
     if (!criticalBanner) return;
     criticalBanner.setAttribute('hidden', '');
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = '';
   }
 
-  function resetResult(label = '—', detail = 'Lancia i dadi per vedere il totale.') {
+  function isRerollSupported() {
+    return rollType === 'DMG' && mode === 'generic';
+  }
+
+  function syncDiceLimitWarning() {
+    const legacyLimit = overlayEl.querySelector('#diceLimit');
+    const limitVisible = Boolean(legacyLimit && legacyLimit.style.display !== 'none');
+    if (legacyLimit) legacyLimit.style.display = 'none';
+    if (diceLimitWarning) diceLimitWarning.toggleAttribute('hidden', !limitVisible);
+  }
+
+  function resetResult(label = '—', detail = 'Lancia per vedere i dettagli.') {
     if (resultValue) resultValue.textContent = label;
     if (resultDetail) resultDetail.textContent = detail;
     state.lastRoll = null;
@@ -762,12 +790,20 @@ export function openDiceOverlay({
         message: '💀 Pessimo',
         className: 'diceov-critical-banner--poor'
       },
+      veryPoor: {
+        message: '😬 Poco pessimo',
+        className: 'diceov-critical-banner--very-poor'
+      },
       mediocre: {
         message: '😐 Mediocre',
         className: 'diceov-critical-banner--mediocre'
       },
-      excellent: {
+      good: {
         message: '✨ Ottimo',
+        className: 'diceov-critical-banner--good'
+      },
+      excellent: {
+        message: '🏆 Eccellente',
         className: 'diceov-critical-banner--excellent'
       },
       criticalSuccess: {
@@ -780,7 +816,7 @@ export function openDiceOverlay({
       clearCriticalBanner();
       return;
     }
-    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
+    criticalBanner.classList.remove('diceov-critical-banner--critical-failure', 'diceov-critical-banner--poor', 'diceov-critical-banner--very-poor', 'diceov-critical-banner--mediocre', 'diceov-critical-banner--good', 'diceov-critical-banner--excellent', 'diceov-critical-banner--critical-success');
     criticalBanner.textContent = presentation.message;
     criticalBanner.classList.add(presentation.className);
     criticalBanner.removeAttribute('hidden');
@@ -794,9 +830,11 @@ export function openDiceOverlay({
     if (!['TS', 'TA', 'TC'].includes(rollType)) return null;
     if (typeof info?.picked !== 'number') return null;
     if (info.picked === 1) return 'criticalFailure';
-    if (info.picked >= 2 && info.picked <= 5) return 'poor';
-    if (info.picked >= 6 && info.picked <= 14) return 'mediocre';
-    if (info.picked >= 15 && info.picked <= 19) return 'excellent';
+    if (info.picked >= 2 && info.picked <= 4) return 'poor';
+    if (info.picked >= 5 && info.picked <= 7) return 'veryPoor';
+    if (info.picked >= 8 && info.picked <= 13) return 'mediocre';
+    if (info.picked >= 14 && info.picked <= 17) return 'good';
+    if (info.picked >= 18 && info.picked <= 19) return 'excellent';
     if (info.picked === 20) return 'criticalSuccess';
     return null;
   }
@@ -1039,6 +1077,7 @@ export function openDiceOverlay({
       const buffConfig = getBuffConfig();
       const buffNotation = buffConfig ? `+1d${buffConfig.sides}` : '';
       updateDiceInput(overlayEl, `${diceCount}d${sides}${buffNotation}`);
+      syncDiceLimitWarning();
       resetResult();
     }
   }
@@ -1056,6 +1095,7 @@ export function openDiceOverlay({
       ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
       : baseValue;
     updateDiceInput(overlayEl, value);
+    syncDiceLimitWarning();
     resetResult();
   }
 
@@ -1096,16 +1136,27 @@ export function openDiceOverlay({
     }));
   }
 
+
   function renderRerollTray(notation) {
     if (!rerollTray) return;
+    if (!isRerollSupported()) {
+      rerollTray.innerHTML = '';
+      rerollCard?.setAttribute('hidden', '');
+      return;
+    }
+    rerollCard?.removeAttribute('hidden');
+    rerollContent?.removeAttribute('hidden');
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
-      rerollTray.setAttribute('hidden', '');
+      rerollContent?.removeAttribute('hidden');
+      if (rerollStatus) {
+        rerollStatus.textContent = 'Lancia i dadi per scegliere cosa ritirare.';
+        rerollStatus.removeAttribute('hidden');
+      }
       return;
     }
     rerollTray.innerHTML = `
-      <span class="diceov-reroll-label">Ritira:</span>
       ${dice.map((die) => `
         <button class="diceov-reroll-die${state.pendingReroll?.index === die.index ? ' is-pending' : ''}" type="button" data-reroll-index="${die.index}" aria-label="Prepara ritiro ${die.label} con risultato ${die.value}">
           <span class="diceov-reroll-die-type">${die.label.toUpperCase()}</span>
@@ -1113,7 +1164,12 @@ export function openDiceOverlay({
         </button>
       `).join('')}
     `;
-    rerollTray.removeAttribute('hidden');
+    if (rerollStatus) {
+      rerollStatus.textContent = state.rerollHint || 'Tocca un dado, poi swipe per ritirarlo.';
+      rerollStatus.removeAttribute('hidden');
+    }
+    rerollCard?.removeAttribute('hidden');
+    rerollContent?.removeAttribute('hidden');
   }
 
   function prepareSwipeReroll(index) {
@@ -1128,6 +1184,7 @@ export function openDiceOverlay({
       returnInput: currentInput
     };
     state.rerollHint = `Swipe sul tavolo per ritirare ${die.label.toUpperCase()} (${die.value}).`;
+    rerollContent?.removeAttribute('hidden');
     resetLegacyDiceScene();
     updateDiceInput(overlayEl, `1${die.type}`);
     renderRollResult(state.lastRoll, { playCriticalSound: false });
@@ -1191,8 +1248,7 @@ export function openDiceOverlay({
             `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
           );
         }
-        if (state.rerollHint) pieces.push(state.rerollHint);
-        resultDetail.textContent = pieces.join(' · ');
+        resultDetail.textContent = `${pieces.join(' · ')} =`;
       }
       renderRerollTray(notation);
       return;
@@ -1219,8 +1275,7 @@ export function openDiceOverlay({
           `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
         );
       }
-      if (state.rerollHint) pieces.push(state.rerollHint);
-      resultDetail.textContent = pieces.join(' · ');
+      resultDetail.textContent = `${pieces.join(' · ')} =`;
     }
     renderRerollTray(notation);
   }
@@ -1309,6 +1364,7 @@ export function openDiceOverlay({
   };
   if (buffSelectD20) buffSelectD20.onchange = handleBuffChange;
   if (buffSelectDamage) buffSelectDamage.onchange = handleBuffChange;
+
   if (quickDiceControls) {
     quickDiceControls.onclick = (event) => {
       const button = event.target.closest('[data-quick-die]');
@@ -1325,6 +1381,7 @@ export function openDiceOverlay({
       updateNotationFromGeneric();
     };
   }
+
   if (rerollTray) {
     rerollTray.onclick = (event) => {
       const button = event.target.closest('[data-reroll-index]');
@@ -1345,7 +1402,12 @@ export function openDiceOverlay({
   setSelectionOptions();
   setBuffVisibility();
   const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
-  if (genericDiceBuilder) genericDiceBuilder.toggleAttribute('hidden', isDamageGenericRoll);
+  const showQuickDice = mode === 'generic';
+  const showReroll = isRerollSupported();
+  if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', !showQuickDice);
+  if (rerollCard) rerollCard.toggleAttribute('hidden', !showReroll);
+  accordionRow?.toggleAttribute('hidden', !(showQuickDice || showReroll));
+  accordionRow?.classList.toggle('diceov-accordion-row--single', !(showQuickDice && showReroll));
   if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
   if (criticalDamageInput) criticalDamageInput.checked = false;
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
@@ -1361,6 +1423,7 @@ export function openDiceOverlay({
     customWarning.textContent = warning ? String(warning) : '';
     customWarning.toggleAttribute('hidden', !warning);
   }
+  if (diceLimitWarning) diceLimitWarning.setAttribute('hidden', '');
 
   overlayEl.removeAttribute('hidden');
 
