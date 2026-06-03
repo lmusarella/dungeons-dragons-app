@@ -428,6 +428,7 @@ header {
 }
 
 .diceov-result,
+.diceov-quick-dice,
 .diceov-reroll-card,
 .diceov-history-panel {
   padding: 6px 8px;
@@ -472,6 +473,8 @@ header {
 
 .diceov-result--final .diceov-result-label {
   margin: 0;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .diceov-result--final .diceov-result-value {
@@ -860,15 +863,17 @@ header {
   text-align: center;
 }
 
-.diceov-quick-dice-toggle {
+.diceov-quick-dice-toggle,
+.diceov-reroll-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 3px 8px;
-  border: 1px solid #2f2f2f;
+  border: 0;
   border-radius: 8px;
-  background: #111;
+  background: transparent;
   color: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   font-size: 0.76rem;
@@ -878,9 +883,10 @@ header {
 }
 
 .diceov-quick-dice-toggle:hover,
-.diceov-quick-dice-toggle:focus-visible {
+.diceov-quick-dice-toggle:focus-visible,
+.diceov-reroll-toggle:hover,
+.diceov-reroll-toggle:focus-visible {
   color: #ffdc7a;
-  border-color: #ffdc7a;
   outline: none;
 }
 
@@ -961,30 +967,6 @@ header {
 
 .diceov-reroll-card[hidden] {
   display: none;
-}
-
-.diceov-reroll-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 3px 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.diceov-reroll-toggle:hover,
-.diceov-reroll-toggle:focus-visible {
-  color: #ffdc7a;
-  outline: none;
 }
 
 

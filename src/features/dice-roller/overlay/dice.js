@@ -168,8 +168,8 @@ function buildOverlayMarkup() {
             <span>Ritira dadi</span>
           </button>
           <div class="diceov-reroll-content" data-reroll-content hidden>
-            <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
             <p class="diceov-reroll-status" data-reroll-status hidden></p>
+            <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
           </div>
         </div>
         <div class="diceov-result diceov-result--final">
