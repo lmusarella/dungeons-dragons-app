@@ -98,7 +98,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const abilities = data.abilities || {};
   const activeWildShape = getActiveWildShape(character, companions);
   const effectiveAbilities = activeWildShape
-    ? { ...abilities, str: activeWildShape.statBlock.abilities.str, dex: activeWildShape.statBlock.abilities.dex, con: activeWildShape.statBlock.abilities.con }
+    ? {
+      ...abilities,
+      str: Math.max(Number(abilities.str) || 0, Number(activeWildShape.statBlock.abilities.str) || 0),
+      dex: Math.max(Number(abilities.dex) || 0, Number(activeWildShape.statBlock.abilities.dex) || 0),
+      con: Math.max(Number(abilities.con) || 0, Number(activeWildShape.statBlock.abilities.con) || 0)
+    }
     : abilities;
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const hasInspiration = Boolean(data.inspiration);
@@ -308,9 +313,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                 <div class="hp-bar__fill hp-bar__fill--wild-shape" style="width: ${wildShapeHpPercent}%;"></div>
               </div>
               <div class="wild-shape-hp-actions">
-                <button class="icon-button" type="button" data-wild-shape-hp-delta="-1" ${canEditCharacter ? '' : 'disabled'} aria-label="Riduci HP forma selvatica">−</button>
-                <button class="icon-button" type="button" data-wild-shape-hp-delta="1" ${canEditCharacter ? '' : 'disabled'} aria-label="Aumenta HP forma selvatica">+</button>
-                <button class="ghost-button ghost-button--compact" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
+                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
               </div>
             </div>
             ` : data.wild_shape_enabled ? `

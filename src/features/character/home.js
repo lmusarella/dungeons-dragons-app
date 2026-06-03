@@ -87,9 +87,9 @@ function buildWildShapeAdjustedCharacter(character, companions = []) {
       ...data,
       abilities: {
         ...abilities,
-        str: activeWildShape.statBlock.abilities.str,
-        dex: activeWildShape.statBlock.abilities.dex,
-        con: activeWildShape.statBlock.abilities.con
+        str: Math.max(Number(abilities.str) || 0, Number(activeWildShape.statBlock.abilities.str) || 0),
+        dex: Math.max(Number(abilities.dex) || 0, Number(activeWildShape.statBlock.abilities.dex) || 0),
+        con: Math.max(Number(abilities.con) || 0, Number(activeWildShape.statBlock.abilities.con) || 0)
       }
     }
   };
@@ -149,18 +149,6 @@ async function endWildShape(character, container) {
   }, 'Forma selvatica terminata', () => renderHome(container));
 }
 
-async function adjustWildShapeHp(character, companions, delta, container) {
-  const activeWildShape = getActiveWildShapeDetails(character, companions);
-  if (!activeWildShape) return;
-  await saveCharacterData(character, {
-    ...(character.data || {}),
-    wild_shape: {
-      ...(character.data?.wild_shape || {}),
-      active_companion_id: activeWildShape.companion.id,
-      hp_current: Math.max(0, Math.min(activeWildShape.hpCurrent + delta, activeWildShape.hpMax))
-    }
-  }, null, () => renderHome(container));
-}
 
 let fabHandlersBound = false;
 let lastHomeContainer = null;
@@ -980,13 +968,6 @@ export async function renderHome(container) {
     .forEach((button) => button.addEventListener('click', () => {
       if (!activeCharacter || !canEditCharacter) return;
       void endWildShape(activeCharacter, container);
-    }));
-
-  container.querySelectorAll('[data-wild-shape-hp-delta]')
-    .forEach((button) => button.addEventListener('click', () => {
-      if (!activeCharacter || !canEditCharacter) return;
-      const delta = Number(button.dataset.wildShapeHpDelta) || 0;
-      void adjustWildShapeHp(activeCharacter, companions, delta, container);
     }));
 
   container.querySelectorAll('[data-open-dice]')
@@ -2521,7 +2502,7 @@ async function handleHitDiceHeal(activeCharacter, container) {
 }
 
 async function handleHpAction(action, container) {
-  const { activeCharacter, canEditCharacter } = getHomeContext();
+  const { activeCharacter, companions, canEditCharacter } = getHomeContext();
   if (!activeCharacter) return;
   if (!canEditCharacter) {
     createToast('Azioni HP disponibili solo con profilo online', 'error');
@@ -2584,6 +2565,9 @@ async function handleHpAction(action, container) {
   const currentHp = Number(activeCharacter.data?.hp?.current) || 0;
   const currentTempHp = Number(activeCharacter.data?.hp?.temp) || 0;
   const maxHp = activeCharacter.data?.hp?.max;
+  const activeWildShape = action === 'damage'
+    ? getActiveWildShapeDetails(activeCharacter, companions)
+    : null;
   const maxOverrideRaw = formData.get('hp_max_override');
   const maxOverrideValue = maxOverrideRaw === null || maxOverrideRaw === '' ? null : Number(maxOverrideRaw);
   if (action === 'damage' && maxOverrideValue !== null && (!Number.isFinite(maxOverrideValue) || maxOverrideValue <= 0)) {
@@ -2592,6 +2576,9 @@ async function handleHpAction(action, container) {
   }
   let nextCurrent = currentHp;
   let nextTemp = currentTempHp;
+  let nextWildShape = activeCharacter.data?.wild_shape ?? null;
+  let wildShapeDamageTaken = 0;
+  let normalDamageTaken = 0;
   if (action === 'heal' && useTempHp) {
     nextTemp = currentTempHp + amount;
   } else if (action === 'heal') {
@@ -2599,8 +2586,23 @@ async function handleHpAction(action, container) {
   } else {
     const absorbed = Math.min(currentTempHp, amount);
     nextTemp = currentTempHp - absorbed;
-    const remainingDamage = amount - absorbed;
-    nextCurrent = Math.max(currentHp - remainingDamage, 0);
+    let remainingDamage = amount - absorbed;
+    if (activeWildShape && remainingDamage > 0) {
+      wildShapeDamageTaken = Math.min(activeWildShape.hpCurrent, remainingDamage);
+      const nextWildHp = Math.max(activeWildShape.hpCurrent - wildShapeDamageTaken, 0);
+      remainingDamage -= wildShapeDamageTaken;
+      nextWildShape = nextWildHp > 0
+        ? {
+          ...(activeCharacter.data?.wild_shape || {}),
+          active_companion_id: activeWildShape.companion.id,
+          hp_current: nextWildHp
+        }
+        : null;
+    }
+    if (remainingDamage > 0) {
+      normalDamageTaken = remainingDamage;
+      nextCurrent = Math.max(currentHp - remainingDamage, 0);
+    }
   }
   const effectiveMax = maxOverrideValue !== null && maxOverrideValue !== undefined
     ? maxOverrideValue
@@ -2620,14 +2622,21 @@ async function handleHpAction(action, container) {
   const adjustmentLabel = action === 'damage' && damageAdjustment.reason
     ? ` (da ${rawDamageAmount}, ${damageAdjustment.reason})`
     : '';
+  const wildShapeLabel = action === 'damage' && wildShapeDamageTaken > 0
+    ? ` · forma selvatica -${wildShapeDamageTaken}`
+    : '';
+  const normalHpLabel = action === 'damage' && normalDamageTaken > 0
+    ? ` · PF -${normalDamageTaken}`
+    : '';
   const message = action === 'heal'
     ? `${useTempHp ? 'HP temporanei +' : 'PF curati +'}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
-    : `Danno${damageLabel} ${amount}${adjustmentLabel}`;
+    : `Danno${damageLabel} ${amount}${adjustmentLabel}${wildShapeLabel}${normalHpLabel}`;
   const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
   const saveOnComplete = async () => {
     if (container) renderHome(container);
     if (!shouldOpenConcentrationSave) return;
-    const options = buildSavingThrowRollOptions(activeCharacter);
+    const concentrationCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
+    const options = buildSavingThrowRollOptions(concentrationCharacter || activeCharacter);
     const conSave = options.find((entry) => entry.value === 'con');
     if (!conSave || conSave.disabled) return;
     openDiceRollerModal({
@@ -2653,6 +2662,7 @@ async function handleHpAction(action, container) {
       temp: nextTemp,
       max: maxOverrideValue !== null && maxOverrideValue !== undefined ? maxOverrideValue : maxHp
     },
+    wild_shape: nextWildShape,
     hit_dice: nextHitDice
   }, message, saveOnComplete);
 }

@@ -7584,15 +7584,15 @@ button:focus-visible,
 }
 
 .stat-card--wild-shape {
-  border-color: rgba(251, 191, 36, 0.72);
-  background: linear-gradient(145deg, rgba(120, 53, 15, 0.78), rgba(30, 41, 59, 0.92));
-  box-shadow: 0 0 0 1px rgba(253, 230, 138, 0.22), 0 16px 34px rgba(120, 53, 15, 0.28);
+  border-color: rgba(94, 234, 212, 0.72);
+  background: linear-gradient(145deg, rgba(15, 76, 117, 0.88), rgba(49, 46, 129, 0.9));
+  box-shadow: 0 0 0 1px rgba(165, 243, 252, 0.24), 0 16px 34px rgba(14, 116, 144, 0.24);
 }
 
 .stat-card--wild-shape small {
   display: block;
   margin-top: 0.15rem;
-  color: #fde68a;
+  color: #ccfbf1;
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
@@ -7600,9 +7600,9 @@ button:focus-visible,
 }
 
 .chip--wild-shape {
-  border-color: rgba(251, 191, 36, 0.72);
-  background: rgba(120, 53, 15, 0.72);
-  color: #fff7ed;
+  border-color: rgba(94, 234, 212, 0.72);
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.86), rgba(91, 33, 182, 0.78));
+  color: #ecfeff;
   font-weight: 800;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -7610,39 +7610,39 @@ button:focus-visible,
 .hp-bar-label--wild-shape {
   margin-top: 0.75rem;
   padding: 0.55rem 0.7rem;
-  border: 1px solid rgba(251, 191, 36, 0.6);
+  border: 1px solid rgba(94, 234, 212, 0.64);
   border-radius: 0.85rem;
-  background: rgba(67, 20, 7, 0.86);
-  color: #fff7ed;
-  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.12);
+  background: linear-gradient(135deg, rgba(12, 74, 110, 0.94), rgba(59, 7, 100, 0.9));
+  color: #ecfeff;
+  box-shadow: inset 0 0 0 1px rgba(165, 243, 252, 0.14), 0 10px 22px rgba(15, 23, 42, 0.18);
 }
 
 .hp-bar-label--wild-shape strong,
 .hp-bar-label--wild-shape .hp-bar-label__percent {
-  color: #fef3c7;
+  color: #ffffff;
   font-weight: 900;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .hp-bar-label--wild-shape .muted {
-  color: #fed7aa;
+  color: #a5f3fc;
 }
 
 .hp-bar-track--wild-shape {
   align-items: center;
   gap: 0.75rem;
   padding: 0.35rem 0.5rem;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(94, 234, 212, 0.38);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.76);
+  background: rgba(15, 23, 42, 0.82);
 }
 
 .hp-bar--wild-shape {
-  background: rgba(67, 20, 7, 0.82);
+  background: rgba(8, 47, 73, 0.88);
 }
 
 .hp-bar__fill--wild-shape {
-  background: linear-gradient(90deg, #f97316, #facc15, #fef3c7);
+  background: linear-gradient(90deg, #06b6d4, #8b5cf6, #f0abfc);
 }
 
 .wild-shape-hp-actions {
@@ -7659,18 +7659,30 @@ button:focus-visible,
   gap: 0.75rem;
   margin-top: 0.75rem;
   padding: 0.75rem 0.85rem;
-  border: 1px solid rgba(251, 191, 36, 0.58);
+  border: 1px solid rgba(94, 234, 212, 0.58);
   border-radius: 0.85rem;
-  color: #fff7ed;
-  background: linear-gradient(135deg, rgba(67, 20, 7, 0.88), rgba(30, 41, 59, 0.84));
-  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.1);
+  color: #ecfeff;
+  background: linear-gradient(135deg, rgba(12, 74, 110, 0.92), rgba(49, 46, 129, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(165, 243, 252, 0.12);
 }
 
 .attack-card--wild-shape {
-  border-color: rgba(251, 191, 36, 0.58);
-  background: linear-gradient(135deg, rgba(120, 53, 15, 0.58), rgba(15, 23, 42, 0.92));
+  border-color: rgba(94, 234, 212, 0.58);
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.48), rgba(49, 46, 129, 0.9));
 }
 
 .wild-shape-picker {
   min-width: min(26rem, 84vw);
+}
+
+.wild-shape-end-button {
+  border-color: rgba(165, 243, 252, 0.5);
+  background: rgba(15, 23, 42, 0.42);
+  color: #ecfeff;
+}
+
+.wild-shape-end-button:not(:disabled):hover,
+.wild-shape-end-button:not(:disabled):focus-visible {
+  border-color: rgba(240, 171, 252, 0.7);
+  background: rgba(91, 33, 182, 0.42);
 }
