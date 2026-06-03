@@ -630,6 +630,20 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   if (spellcasterInput) {
     spellcasterInput.checked = Boolean(characterData.is_spellcaster);
   }
+  const wildShapeField = document.createElement('div');
+  wildShapeField.className = 'modal-toggle-field';
+  wildShapeField.innerHTML = `
+    <span class="modal-toggle-field__label">Può trasformarsi</span>
+    <label class="diceov-toggle condition-modal__toggle">
+      <input type="checkbox" name="wild_shape_enabled" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const wildShapeInput = wildShapeField.querySelector('input');
+  if (wildShapeInput) {
+    wildShapeInput.checked = Boolean(characterData.wild_shape_enabled);
+  }
+  combatSection.appendChild(wildShapeField);
   combatSection.appendChild(spellcasterField);
   const spellcastingSection = document.createElement('div');
   spellcastingSection.className = 'character-edit-section spellcasting-section';
@@ -1280,6 +1294,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     sneak_attack_dice: formData.get('sneak_attack_dice')?.toString().trim() || null,
     ac_bonus: toNumberOrNull(formData.get('ac_bonus')) ?? 0,
     is_spellcaster: isSpellcaster,
+    wild_shape_enabled: formData.get('wild_shape_enabled') === 'on',
+    wild_shape: formData.get('wild_shape_enabled') === 'on' ? (characterData.wild_shape || null) : null,
     spellcasting: nextSpellcasting,
     ac_ability_modifiers: nextAcModifiers,
     proficiency_notes: formData.get('proficiency_notes')?.trim() || null,
