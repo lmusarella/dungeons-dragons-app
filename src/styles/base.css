@@ -3634,7 +3634,7 @@ button:focus-visible,
 
 .library-spell-list-header {
   display: grid;
-  grid-template-columns: 76px minmax(220px, 1fr) minmax(120px, 0.7fr) 86px 126px 82px 52px;
+  grid-template-columns: 76px minmax(220px, 1fr) minmax(84px, 0.42fr) 86px 126px 82px 92px;
   gap: 14px;
   align-items: center;
   justify-items: start;
@@ -3691,7 +3691,7 @@ button:focus-visible,
 .character-card.library-spell-card {
   position: relative;
   display: grid;
-  grid-template-columns: 76px minmax(220px, 1fr) minmax(120px, 0.7fr) 86px 126px 82px 52px;
+  grid-template-columns: 76px minmax(220px, 1fr) minmax(84px, 0.42fr) 86px 126px 82px 92px;
   align-items: center;
   justify-items: start;
   gap: 14px;
@@ -3823,6 +3823,9 @@ button:focus-visible,
   justify-self: end;
   margin-left: 0;
   align-self: center;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 6px;
 }
 
 .library-spell-card__actions .icon-button {

@@ -16,6 +16,7 @@ describe('src/features/character/spellbookApi.js', () => {
     expect(exports).toEqual([
       'searchSharedSpells',
       'createSharedSpell',
+      'updateSharedSpell',
       'fetchCharacterSpells',
       'assignSharedSpellToCharacter',
       'removeCharacterSpell',

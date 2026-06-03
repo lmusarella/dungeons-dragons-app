@@ -515,8 +515,8 @@ body {
 }
 
 .library-pagination {
-  justify-content: flex-end;
-  margin: 0;
+  justify-content: center;
+  margin: 18px auto 0;
 }
 
 .library-results-heading {
@@ -1223,6 +1223,7 @@ body {
 
 .library-pagination {
   grid-column: 1 / -1;
+  justify-content: center;
   justify-self: center;
 }
 
