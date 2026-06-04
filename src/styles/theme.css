@@ -394,7 +394,7 @@ body {
 
 .inventory-table__header,
 .inventory-table__row {
-  grid-template-columns: minmax(220px, 2.8fr) minmax(92px, 0.75fr) minmax(56px, 0.45fr) minmax(82px, 0.65fr) minmax(64px, 0.55fr) minmax(130px, 0.85fr);
+  grid-template-columns: minmax(160px, 1.9fr) minmax(92px, 0.75fr) minmax(56px, 0.45fr) minmax(82px, 0.65fr) minmax(64px, 0.55fr) minmax(190px, 1.35fr);
 }
 
 .inventory-table__header {
