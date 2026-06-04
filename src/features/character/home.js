@@ -1481,6 +1481,23 @@ function getHomeContext() {
   };
 }
 
+function getConsumeInspirationHandler(character, canEditCharacter) {
+  const characterId = normalizeCharacterId(character?.id);
+  const allowInspiration = Boolean(character?.data?.inspiration) && canEditCharacter;
+  if (!allowInspiration || !characterId) return null;
+  return async () => {
+    const latestCharacter = getState().characters.find((entry) => normalizeCharacterId(entry.id) === characterId) || character;
+    const currentData = latestCharacter.data || {};
+    if (!currentData.inspiration) return;
+    await saveCharacterData(
+      latestCharacter,
+      { ...currentData, inspiration: false },
+      'Ispirazione consumata',
+      lastHomeContainer ? () => renderHome(lastHomeContainer) : null
+    );
+  };
+}
+
 async function handleConditionsAction(container) {
   const { activeCharacter, canEditCharacter } = getHomeContext();
   if (!activeCharacter || !canEditCharacter) return;
@@ -2357,18 +2374,7 @@ function handleDiceAction(type) {
   const items = getState().cache.items || [];
   const allowInspiration = Boolean(activeCharacter?.data?.inspiration) && canEditCharacter;
   const weakPoints = Number(activeCharacter?.data?.hp?.weak_points) || 0;
-  const onConsumeInspiration = allowInspiration && activeCharacter
-    ? async () => {
-      const currentData = activeCharacter.data || {};
-      if (!currentData.inspiration) return;
-      await saveCharacterData(
-        activeCharacter,
-        { ...currentData, inspiration: false },
-        'Ispirazione consumata',
-        lastHomeContainer ? () => renderHome(lastHomeContainer) : null
-      );
-    }
-    : null;
+  const onConsumeInspiration = getConsumeInspirationHandler(activeCharacter, canEditCharacter);
   const configs = {
     'saving-throws': {
       title: 'Tiro Salvezza',
@@ -2754,13 +2760,16 @@ function openDiceRollerModal({
   onRollComplete = null,
   warning = null
 }) {
+  const { activeCharacter, canEditCharacter } = getHomeContext();
+  const resolvedConsumeInspiration = onConsumeInspiration
+    || (allowInspiration ? getConsumeInspirationHandler(activeCharacter, canEditCharacter) : null);
   openDiceOverlay({
     keepOpen: true,
     title,
     mode,
     selection,
     allowInspiration,
-    onConsumeInspiration,
+    onConsumeInspiration: resolvedConsumeInspiration,
     rollType,
     weakPoints,
     characterId,

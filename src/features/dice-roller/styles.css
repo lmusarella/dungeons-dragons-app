@@ -429,7 +429,8 @@ header {
   align-items: start;
 }
 
-.diceov-accordion-row--single {
+.diceov-accordion-row--single,
+.diceov-stage--damage-roll .diceov-accordion-row {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -746,6 +747,10 @@ header {
 .diceov-stage--compact-roll {
   width: min(780px, calc(100vw - 24px));
 }
+
+.diceov-stage--damage-roll {
+  width: min(760px, calc(100vw - 24px));
+}
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
   position: relative;       /* importa! */
@@ -899,6 +904,16 @@ header {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.diceov-section-title--button {
+  cursor: pointer;
+}
+
+.diceov-section-title--button:hover,
+.diceov-section-title--button:focus-visible {
+  background: rgba(255, 220, 122, 0.08);
+  outline: none;
 }
 
 
