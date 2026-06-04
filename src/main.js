@@ -9,6 +9,15 @@ import { loadCachedData } from './lib/offline/cache.js';
 import { registerSW } from 'virtual:pwa-register';
 
 const app = document.querySelector('#app');
+const launchScreen = document.querySelector('[data-launch-screen]');
+
+const hideLaunchScreen = () => {
+  if (!launchScreen) return;
+
+  launchScreen.classList.add('launch-screen--closing');
+  window.setTimeout(() => launchScreen.remove(), 420);
+};
+
 renderLayout(app);
 
 const ensureFabHandlers = async () => {
@@ -107,4 +116,9 @@ const bootstrapApp = async () => {
 
 registerSW({ immediate: true });
 
-bootstrapApp();
+bootstrapApp()
+  .then(hideLaunchScreen)
+  .catch((error) => {
+    hideLaunchScreen();
+    throw error;
+  });
