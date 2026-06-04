@@ -3254,7 +3254,7 @@ button:focus-visible,
   align-items: center;
   gap: 12px;
   width: min(460px, calc(100vw - 28px));
-  z-index: 3000;
+  z-index: 100000;
   pointer-events: none;
 }
 
