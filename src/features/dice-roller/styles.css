@@ -742,6 +742,10 @@ header {
   width: min(970px, 98vw);
   max-height: min(96vh, 980px);
 }
+
+.diceov-stage--compact-roll {
+  width: min(640px, calc(100vw - 24px));
+}
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
   position: relative;       /* importa! */

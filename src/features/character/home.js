@@ -19,7 +19,7 @@ import {
 import { buildLootFields, moneyFields } from '../inventory/render.js';
 import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
-import { bodyParts } from '../inventory/constants.js';
+import { ammunitionTypeLabels, bodyParts } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
 import { fetchCompanions } from './companionsApi.js';
@@ -2300,10 +2300,14 @@ function openPresetAttackRoll(attackKey) {
   if (!selected) return;
   const weaponId = attackKey.startsWith('weapon:') ? attackKey.replace('weapon:', '') : null;
   const weapon = weaponId ? items.find((entry) => String(entry.id) === weaponId || entry.name === weaponId) : null;
-  if (weapon?.consumes_ammunition && !findAmmunitionForWeapon(items, weapon)) {
+  const ammunition = weapon?.consumes_ammunition ? findAmmunitionForWeapon(items, weapon) : null;
+  if (weapon?.consumes_ammunition && !ammunition) {
     createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
     return;
   }
+  const ammunitionWarning = ammunition
+    ? `Questo tiro consumerà 1 munizione: ${ammunition.name || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type) || 'munizione'} (${Math.max((Number(ammunition.qty) || 0) - 1, 0)} rimaste).`
+    : null;
   let ammunitionConsumed = false;
   openDiceRollerModal({
     title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
@@ -2318,6 +2322,7 @@ function openPresetAttackRoll(attackKey) {
     weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
     characterId: activeCharacter.id,
     historyLabel: selected.shortLabel || selected.label,
+    warning: ammunitionWarning,
     onRollComplete: async () => {
       if (!weapon?.consumes_ammunition || ammunitionConsumed) return;
       ammunitionConsumed = true;
@@ -2729,7 +2734,8 @@ function openDiceRollerModal({
   weakPoints = 0,
   characterId = null,
   historyLabel = null,
-  onRollComplete = null
+  onRollComplete = null,
+  warning = null
 }) {
   openDiceOverlay({
     keepOpen: true,
@@ -2742,6 +2748,7 @@ function openDiceRollerModal({
     weakPoints,
     characterId,
     historyLabel,
+    warning,
     onRollComplete
   });
 }
