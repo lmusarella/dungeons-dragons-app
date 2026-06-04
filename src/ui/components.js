@@ -211,24 +211,16 @@ export function attachNumberStepper(input, {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  const keepFocusOnPress = (event) => {
-    event.preventDefault();
-    input.focus({ preventScroll: true });
-  };
-
   const onStepButtonKeydown = (event, direction) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     stepValue(direction);
   };
 
-  decrementButton.addEventListener('pointerdown', keepFocusOnPress);
-  incrementButton.addEventListener('pointerdown', keepFocusOnPress);
-  decrementButton.addEventListener('mousedown', keepFocusOnPress);
-  incrementButton.addEventListener('mousedown', keepFocusOnPress);
-  decrementButton.addEventListener('touchstart', keepFocusOnPress, { passive: false });
-  incrementButton.addEventListener('touchstart', keepFocusOnPress, { passive: false });
-
+  // Do not force focus back to the number input when the step buttons are
+  // tapped. On tablets that opens the virtual keyboard and can swallow the
+  // following tap on the same stepper. Let the clicked button keep focus
+  // instead; keyboard users can still activate it with Enter/Space below.
   decrementButton.addEventListener('click', () => stepValue(-1));
   incrementButton.addEventListener('click', () => stepValue(1));
   decrementButton.addEventListener('keydown', (event) => onStepButtonKeydown(event, -1));
