@@ -22,4 +22,16 @@ describe('src/ui/components.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('does not force number steppers to focus the input on pointer use', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    const attachNumberStepperStart = source.indexOf('export function attachNumberStepper');
+    const attachNumberSteppersStart = source.indexOf('export function attachNumberSteppers');
+    const attachNumberStepperSource = source.slice(attachNumberStepperStart, attachNumberSteppersStart);
+
+    expect(attachNumberStepperSource).not.toContain('input.focus');
+    expect(attachNumberStepperSource).not.toContain('touchstart');
+    expect(attachNumberStepperSource).toContain('keydown');
+  });
+
 });
