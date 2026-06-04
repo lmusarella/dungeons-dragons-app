@@ -7,4 +7,9 @@ describe('applyMoneyDelta', () => {
     const delta = { cp: -5, gp: 3 };
     expect(applyMoneyDelta(wallet, delta)).toEqual({ cp: 5, sp: 5, gp: 5 });
   });
+
+  it('ignores malformed money values instead of propagating NaN', () => {
+    expect(applyMoneyDelta({ gp: 'bad' }, { gp: 3, cp: 'bad' })).toEqual({ gp: 3, cp: 0 });
+    expect(applyMoneyDelta(undefined, undefined)).toEqual({});
+  });
 });

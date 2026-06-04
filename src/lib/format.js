@@ -1,18 +1,19 @@
 export function formatWeight(value, unit = 'lb') {
-  if (value === null || value === undefined || Number.isNaN(value)) return '-';
+  if (value === null || value === undefined || value === '') return '-';
   const weight = Number(value);
+  if (!Number.isFinite(weight)) return '-';
   return `${weight.toFixed(2).replace(/\.00$/, '')} ${unit}`;
 }
 
 export function formatCoin(value, label) {
   const amount = Number(value ?? 0);
-  return `${amount} ${label}`;
+  return `${Number.isFinite(amount) ? amount : 0} ${label}`;
 }
 
-export function formatWallet(wallet, unit = 'gp') {
+export function formatWallet(wallet) {
   if (!wallet) return '-';
   const entries = ['pp', 'gp', 'sp', 'cp'];
   return entries
-    .map((coin) => `${wallet[coin] ?? 0} ${coin}`)
+    .map((coin) => formatCoin(wallet[coin], coin))
     .join(' · ');
 }

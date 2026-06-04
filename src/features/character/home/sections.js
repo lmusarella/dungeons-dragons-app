@@ -707,24 +707,6 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
   `;
 }
 
-export function buildEquipmentOverview(character) {
-  const data = character.data || {};
-  const proficiencies = data.proficiencies || {};
-  const equipped = equipmentProficiencyList
-    .filter((prof) => proficiencies[prof.key])
-    .map((prof) => prof.label);
-
-  return `
-    <div class="detail-section">
-      <div class="detail-card detail-card--text">
-        ${equipped.length
-    ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
-    : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
-      </div>
-    </div>
-  `;
-}
-
 export function buildAttackSection(character, items = [], companions = []) {
   const data = character.data || {};
   const attackBonusMelee = Number(data.attack_bonus_melee ?? data.attack_bonus) || 0;

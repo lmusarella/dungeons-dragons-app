@@ -6,11 +6,13 @@ describe('src/lib/format.js', () => {
     expect(formatWeight(10)).toBe('10 lb');
     expect(formatWeight(2.5, 'kg')).toBe('2.50 kg');
     expect(formatWeight(null)).toBe('-');
+    expect(formatWeight('bad')).toBe('-');
   });
 
   it('formatCoin formats numeric values', () => {
     expect(formatCoin(12, 'gp')).toBe('12 gp');
     expect(formatCoin(undefined, 'sp')).toBe('0 sp');
+    expect(formatCoin('bad', 'cp')).toBe('0 cp');
   });
 
   it('formatWallet formats all coins in order', () => {
