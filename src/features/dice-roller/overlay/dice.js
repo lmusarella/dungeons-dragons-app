@@ -151,11 +151,12 @@ function buildOverlayMarkup() {
             </div>
           </div>
           <div class="diceov-reroll-card" data-reroll-card>
-            <div class="diceov-section-title">
+            <button class="diceov-section-title diceov-section-title--button" type="button" data-reroll-toggle aria-expanded="false">
               <span aria-hidden="true">🔁</span>
               <span>Ritira dadi</span>
-            </div>
-            <div class="diceov-reroll-content" data-reroll-content>
+              <span class="diceov-reroll-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="diceov-reroll-content" data-reroll-content hidden>
               <p class="diceov-reroll-status" data-reroll-status hidden></p>
               <div class="diceov-reroll-tray" data-reroll-tray aria-label="Dadi da ritirare"></div>
             </div>
@@ -667,8 +668,11 @@ export function openDiceOverlay({
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
   const rerollStatus = overlayEl.querySelector('[data-reroll-status]');
+  const rerollToggle = overlayEl.querySelector('[data-reroll-toggle]');
 
+  const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
   stage?.classList.toggle('diceov-stage--compact-roll', ['TC', 'TA', 'TS'].includes(rollType));
+  stage?.classList.toggle('diceov-stage--damage-roll', isDamageGenericRoll);
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
@@ -698,6 +702,7 @@ export function openDiceOverlay({
     history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null,
+    rerollOpen: false,
     lastCriticalSignature: null,
     rerollHint: null,
     pendingReroll: null
@@ -793,7 +798,7 @@ export function openDiceOverlay({
         className: 'diceov-critical-banner--poor'
       },
       veryPoor: {
-        message: '😬 Poco pessimo',
+        message: '😬 Molto male',
         className: 'diceov-critical-banner--very-poor'
       },
       mediocre: {
@@ -1064,6 +1069,13 @@ export function openDiceOverlay({
     }
   }
 
+  function setRerollOpen(open) {
+    state.rerollOpen = Boolean(open);
+    rerollCard?.classList.toggle('is-open', state.rerollOpen);
+    rerollToggle?.setAttribute('aria-expanded', String(state.rerollOpen));
+    rerollContent?.toggleAttribute('hidden', !state.rerollOpen);
+  }
+
   function getSelectionLabel() {
     if (!selectInput) return null;
     const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
@@ -1147,11 +1159,9 @@ export function openDiceOverlay({
       return;
     }
     rerollCard?.removeAttribute('hidden');
-    rerollContent?.removeAttribute('hidden');
     const dice = notation ? getRerollableDice(notation) : [];
     if (!dice.length) {
       rerollTray.innerHTML = '';
-      rerollContent?.removeAttribute('hidden');
       if (rerollStatus) {
         rerollStatus.textContent = 'Lancia i dadi per scegliere cosa ritirare.';
         rerollStatus.removeAttribute('hidden');
@@ -1171,7 +1181,7 @@ export function openDiceOverlay({
       rerollStatus.removeAttribute('hidden');
     }
     rerollCard?.removeAttribute('hidden');
-    rerollContent?.removeAttribute('hidden');
+    setRerollOpen(state.rerollOpen);
   }
 
   function prepareSwipeReroll(index) {
@@ -1186,7 +1196,7 @@ export function openDiceOverlay({
       returnInput: currentInput
     };
     state.rerollHint = `Swipe sul tavolo per ritirare ${die.label.toUpperCase()} (${die.value}).`;
-    rerollContent?.removeAttribute('hidden');
+    setRerollOpen(true);
     resetLegacyDiceScene();
     updateDiceInput(overlayEl, `1${die.type}`);
     renderRollResult(state.lastRoll, { playCriticalSound: false });
@@ -1392,6 +1402,10 @@ export function openDiceOverlay({
     };
   }
 
+  if (rerollToggle) {
+    rerollToggle.onclick = () => setRerollOpen(!state.rerollOpen);
+  }
+
   if (historyToggle) {
     historyToggle.onclick = () => {
       const shouldOpen = !historyAccordion?.classList.contains('is-open');
@@ -1403,11 +1417,11 @@ export function openDiceOverlay({
 
   setSelectionOptions();
   setBuffVisibility();
-  const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
   const showQuickDice = mode === 'generic';
   const showReroll = isRerollSupported();
   if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', !showQuickDice);
   if (rerollCard) rerollCard.toggleAttribute('hidden', !showReroll);
+  setRerollOpen(false);
   accordionRow?.toggleAttribute('hidden', !(showQuickDice || showReroll));
   accordionRow?.classList.toggle('diceov-accordion-row--single', !(showQuickDice && showReroll));
   if (criticalDamageField) criticalDamageField.toggleAttribute('hidden', !isDamageGenericRoll);
