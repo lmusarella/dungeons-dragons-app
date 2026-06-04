@@ -2309,9 +2309,9 @@ function openPresetAttackRoll(attackKey) {
     return;
   }
   const ammunitionWarning = ammunition
-    ? `Questo tiro consumerà 1 munizione: ${ammunition.name || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type) || 'munizione'} (${Math.max((Number(ammunition.qty) || 0) - 1, 0)} rimaste).`
+    ? `Questo tiro consumerà 1 munizione: ${ammunition.name || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type) || 'munizione'} (${Number(ammunition.qty) || 0} disponibili).`
     : null;
-  let ammunitionConsumed = false;
+  let ammunitionConsumptionQueue = Promise.resolve();
   openDiceRollerModal({
     title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
     mode: 'd20',
@@ -2326,14 +2326,16 @@ function openPresetAttackRoll(attackKey) {
     characterId: activeCharacter.id,
     historyLabel: selected.shortLabel || selected.label,
     warning: ammunitionWarning,
-    onRollComplete: async () => {
-      if (!weapon?.consumes_ammunition || ammunitionConsumed) return;
-      ammunitionConsumed = true;
-      try {
-        await consumeWeaponAmmunition(getState().cache.items || items, weapon);
-      } catch (error) {
-        createToast('Errore consumo munizioni', 'error');
-      }
+    onRollComplete: () => {
+      if (!weapon?.consumes_ammunition) return;
+      ammunitionConsumptionQueue = ammunitionConsumptionQueue
+        .then(async () => {
+          const consumed = await consumeWeaponAmmunition(getState().cache.items || items, weapon);
+          if (!consumed) {
+            createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
+          }
+        })
+        .catch(() => createToast('Errore consumo munizioni', 'error'));
     }
   });
 }
