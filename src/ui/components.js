@@ -19,23 +19,65 @@ export function setGlobalLoading(isLoading) {
 }
 
 export function createToast(message, type = 'info') {
-  const allowedTypes = new Set(['info', 'success', 'error']);
+  const allowedTypes = new Set(['info', 'success', 'warning', 'error']);
+  const toastIcons = {
+    info: '✦',
+    success: '✓',
+    warning: '⚠',
+    error: '!'
+  };
+  const toastTitles = {
+    info: 'Nota',
+    success: 'Fatto',
+    warning: 'Avviso',
+    error: 'Attenzione'
+  };
   const resolvedType = allowedTypes.has(type) ? type : 'info';
   const toast = document.createElement('div');
   toast.className = `toast toast-${resolvedType}`;
   toast.setAttribute('role', resolvedType === 'error' ? 'alert' : 'status');
   toast.setAttribute('aria-live', resolvedType === 'error' ? 'assertive' : 'polite');
   toast.setAttribute('aria-atomic', 'true');
-  toast.textContent = message;
+  toast.setAttribute('aria-label', `${toastTitles[resolvedType]}: ${message}`);
+  toast.title = 'Chiudi notifica';
+
+  const icon = document.createElement('span');
+  icon.className = 'toast__icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = toastIcons[resolvedType];
+
+  const content = document.createElement('span');
+  content.className = 'toast__content';
+
+  const title = document.createElement('span');
+  title.className = 'toast__title';
+  title.textContent = toastTitles[resolvedType];
+
+  const text = document.createElement('span');
+  text.className = 'toast__message';
+  text.textContent = message;
+
+  content.append(title, text);
+  toast.append(icon, content);
+
   const container = document.querySelector('[data-toast-container]');
   if (container) {
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.add('visible'), 20);
-    setTimeout(() => {
+    let dismissTimer = null;
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      if (dismissTimer) clearTimeout(dismissTimer);
       toast.classList.remove('visible');
       toast.classList.add('toast-leaving');
       toast.addEventListener('transitionend', () => toast.remove(), { once: true });
-    }, 3200);
+      setTimeout(() => toast.remove(), 420);
+    };
+
+    toast.addEventListener('click', dismiss);
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('visible'), 20);
+    dismissTimer = setTimeout(dismiss, 3600);
   }
 }
 

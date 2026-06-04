@@ -3,7 +3,7 @@ import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
 import { buildInput, buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
-import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
+import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
 import {
   buildAttackSection,
@@ -19,7 +19,7 @@ import {
 import { buildLootFields, moneyFields } from '../inventory/render.js';
 import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
-import { bodyParts } from '../inventory/constants.js';
+import { ammunitionTypeLabels, bodyParts } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
 import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
 import { fetchCompanions } from './companionsApi.js';
@@ -2276,19 +2276,33 @@ function findAmmunitionForWeapon(items, weapon) {
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }))[0] || null;
 }
 
+function buildAmmunitionWarning(weapon, ammunition) {
+  if (!ammunition) return null;
+  const ammunitionName = ammunition.name
+    || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type)
+    || 'munizione';
+  const availableQty = Number(ammunition.qty) || 0;
+  if (availableQty <= 0) return `Munizioni esaurite: ${ammunitionName}.`;
+  return `Questo tiro consumerà 1 munizione: ${ammunitionName} (${availableQty} disponibili).`;
+}
+
 async function consumeWeaponAmmunition(items, weapon) {
   const ammunition = findAmmunitionForWeapon(items, weapon);
-  if (!ammunition) return false;
+  if (!ammunition) return null;
   const nextQty = Math.max((Number(ammunition.qty) || 0) - 1, 0);
   const saved = await updateItem(ammunition.id, { qty: nextQty });
   const cachedItems = getState().cache.items || [];
+  const updatedAmmunition = { ...ammunition, ...(saved || {}), qty: nextQty };
   const nextItems = cachedItems.map((entry) => String(entry.id) === String(ammunition.id)
-    ? { ...entry, ...(saved || {}), qty: nextQty }
+    ? { ...entry, ...updatedAmmunition }
     : entry);
   updateCache('items', nextItems);
   await cacheSnapshot({ items: nextItems });
-  createToast(`${ammunition.name} consumato (${nextQty} rimasti)`);
-  return true;
+  createToast(`${ammunition.name} consumato (${nextQty} rimasti)`, 'warning');
+  if (lastHomeContainer) {
+    void renderHome(lastHomeContainer);
+  }
+  return { ammunition: updatedAmmunition, nextQty };
 }
 
 function openPresetAttackRoll(attackKey) {
@@ -2300,11 +2314,13 @@ function openPresetAttackRoll(attackKey) {
   if (!selected) return;
   const weaponId = attackKey.startsWith('weapon:') ? attackKey.replace('weapon:', '') : null;
   const weapon = weaponId ? items.find((entry) => String(entry.id) === weaponId || entry.name === weaponId) : null;
-  if (weapon?.consumes_ammunition && !findAmmunitionForWeapon(items, weapon)) {
+  const ammunition = weapon?.consumes_ammunition ? findAmmunitionForWeapon(items, weapon) : null;
+  if (weapon?.consumes_ammunition && !ammunition) {
     createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
     return;
   }
-  let ammunitionConsumed = false;
+  const ammunitionWarning = buildAmmunitionWarning(weapon, ammunition);
+  let ammunitionConsumptionQueue = Promise.resolve();
   openDiceRollerModal({
     title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
     mode: 'd20',
@@ -2318,14 +2334,20 @@ function openPresetAttackRoll(attackKey) {
     weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
     characterId: activeCharacter.id,
     historyLabel: selected.shortLabel || selected.label,
-    onRollComplete: async () => {
-      if (!weapon?.consumes_ammunition || ammunitionConsumed) return;
-      ammunitionConsumed = true;
-      try {
-        await consumeWeaponAmmunition(getState().cache.items || items, weapon);
-      } catch (error) {
-        createToast('Errore consumo munizioni', 'error');
-      }
+    warning: ammunitionWarning,
+    onRollComplete: () => {
+      if (!weapon?.consumes_ammunition) return;
+      ammunitionConsumptionQueue = ammunitionConsumptionQueue
+        .then(async () => {
+          const consumed = await consumeWeaponAmmunition(getState().cache.items || items, weapon);
+          if (!consumed) {
+            createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
+            updateDiceOverlayWarning('Munizioni esaurite o non disponibili per questa arma.');
+            return;
+          }
+          updateDiceOverlayWarning(buildAmmunitionWarning(weapon, consumed.ammunition));
+        })
+        .catch(() => createToast('Errore consumo munizioni', 'error'));
     }
   });
 }
@@ -2729,7 +2751,8 @@ function openDiceRollerModal({
   weakPoints = 0,
   characterId = null,
   historyLabel = null,
-  onRollComplete = null
+  onRollComplete = null,
+  warning = null
 }) {
   openDiceOverlay({
     keepOpen: true,
@@ -2742,6 +2765,7 @@ function openDiceRollerModal({
     weakPoints,
     characterId,
     historyLabel,
+    warning,
     onRollComplete
   });
 }

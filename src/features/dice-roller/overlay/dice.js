@@ -126,10 +126,10 @@ function buildOverlayMarkup() {
               </label>
             </div>
           </div>
-          <p class="diceov-warning" data-custom-warning hidden></p>
           <p class="diceov-warning" data-dice-limit-warning hidden>Puoi lanciare al massimo 20 dadi alla volta.</p>
         </div>
       </div>
+      <p class="diceov-warning diceov-warning--custom" data-custom-warning hidden></p>
       <div class="diceov-results">
         <div class="diceov-accordion-row" data-dice-accordion-row>
           <div class="diceov-quick-dice" data-quick-dice>
@@ -667,6 +667,8 @@ export function openDiceOverlay({
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
   const rerollTray = overlayEl.querySelector('[data-reroll-tray]');
   const rerollStatus = overlayEl.querySelector('[data-reroll-status]');
+
+  stage?.classList.toggle('diceov-stage--compact-roll', ['TC', 'TA', 'TS'].includes(rollType));
 
   if (criticalBanner) {
     criticalBanner.setAttribute('hidden', '');
@@ -1565,6 +1567,15 @@ export function openDiceOverlay({
 
 function escClose(e) {
   if (e.key === 'Escape') closeDiceOverlay();
+}
+
+
+export function updateDiceOverlayWarning(message = null) {
+  if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
+  const customWarning = overlayEl.querySelector('[data-custom-warning]');
+  if (!customWarning) return;
+  customWarning.textContent = message ? String(message) : '';
+  customWarning.toggleAttribute('hidden', !message);
 }
 
 export function closeDiceOverlay() {
