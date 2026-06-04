@@ -133,11 +133,11 @@ function buildOverlayMarkup() {
       <div class="diceov-results">
         <div class="diceov-accordion-row" data-dice-accordion-row>
           <div class="diceov-quick-dice" data-quick-dice>
-            <div class="diceov-section-title">
+            <button class="diceov-section-title diceov-section-title--button" type="button" data-quick-dice-toggle aria-expanded="false">
               <span aria-hidden="true">🎲</span>
               <span>Aggiungi dadi</span>
-            </div>
-            <div class="diceov-quick-dice-content" data-quick-dice-content>
+            </button>
+            <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
               <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
               <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
                 ${[4, 6, 8, 10, 12, 20].map((die) => `
@@ -662,6 +662,8 @@ export function openDiceOverlay({
   const customWarning = overlayEl.querySelector('[data-custom-warning]');
   const diceLimitWarning = overlayEl.querySelector('[data-dice-limit-warning]');
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
+  const quickDiceContent = overlayEl.querySelector('[data-quick-dice-content]');
+  const quickDiceToggle = overlayEl.querySelector('[data-quick-dice-toggle]');
   const accordionRow = overlayEl.querySelector('[data-dice-accordion-row]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
@@ -701,6 +703,7 @@ export function openDiceOverlay({
     history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null,
+    quickDiceOpen: false,
     rerollOpen: false,
     lastCriticalSignature: null,
     rerollHint: null,
@@ -1075,6 +1078,13 @@ export function openDiceOverlay({
     rerollContent?.toggleAttribute('hidden', !state.rerollOpen);
   }
 
+  function setQuickDiceOpen(open) {
+    state.quickDiceOpen = Boolean(open);
+    quickDiceControls?.classList.toggle('is-open', state.quickDiceOpen);
+    quickDiceToggle?.setAttribute('aria-expanded', String(state.quickDiceOpen));
+    quickDiceContent?.toggleAttribute('hidden', !state.quickDiceOpen);
+  }
+
   function getSelectionLabel() {
     if (!selectInput) return null;
     const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
@@ -1401,6 +1411,10 @@ export function openDiceOverlay({
     };
   }
 
+  if (quickDiceToggle) {
+    quickDiceToggle.onclick = () => setQuickDiceOpen(!state.quickDiceOpen);
+  }
+
   if (rerollToggle) {
     rerollToggle.onclick = () => setRerollOpen(!state.rerollOpen);
   }
@@ -1420,6 +1434,7 @@ export function openDiceOverlay({
   const showReroll = isRerollSupported();
   if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', !showQuickDice);
   if (rerollCard) rerollCard.toggleAttribute('hidden', !showReroll);
+  setQuickDiceOpen(false);
   setRerollOpen(false);
   accordionRow?.toggleAttribute('hidden', !(showQuickDice || showReroll));
   accordionRow?.classList.toggle('diceov-accordion-row--single', !(showQuickDice && showReroll));
