@@ -3259,9 +3259,10 @@ button:focus-visible,
 }
 
 .toast {
-  --toast-color: #3b5d60;
-  --toast-accent: #74d3ca;
-  --toast-surface: rgba(255, 252, 246, 0.94);
+  --toast-color: #2f6668;
+  --toast-accent: #4fb8ad;
+  --toast-surface: #eefafa;
+  --toast-border: #b6e5df;
   --toast-ink: #1f2a2c;
   position: relative;
   isolation: isolate;
@@ -3269,12 +3270,8 @@ button:focus-visible,
   color: var(--toast-ink);
   padding: 14px 16px 14px 14px;
   border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--toast-accent) 42%, rgba(255, 255, 255, 0.86));
-  background:
-    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--toast-accent) 34%, transparent) 0 22%, transparent 46%),
-    radial-gradient(circle at 92% 12%, rgba(255, 255, 255, 0.94) 0 16%, transparent 36%),
-    linear-gradient(135deg, color-mix(in srgb, var(--toast-accent) 22%, transparent), transparent 48%),
-    linear-gradient(180deg, var(--toast-surface), rgba(255, 248, 235, 0.88));
+  border: 1px solid var(--toast-border);
+  background: var(--toast-surface);
   box-shadow:
     0 22px 54px rgba(24, 28, 32, 0.22),
     0 8px 18px color-mix(in srgb, var(--toast-color) 22%, transparent),
@@ -3302,7 +3299,7 @@ button:focus-visible,
   position: absolute;
   inset: 0 auto 0 0;
   width: 5px;
-  background: linear-gradient(180deg, var(--toast-accent), var(--toast-color));
+  background: var(--toast-accent);
   z-index: -1;
 }
 
@@ -3312,8 +3309,8 @@ button:focus-visible,
   inset: auto 16px 0 16px;
   height: 3px;
   border-radius: 999px 999px 0 0;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--toast-accent) 72%, #ffffff), transparent);
-  opacity: 0.72;
+  background: var(--toast-accent);
+  opacity: 0.34;
 }
 
 .toast__icon {
@@ -3325,9 +3322,7 @@ button:focus-visible,
   justify-content: center;
   flex: 0 0 34px;
   color: #ffffff;
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.44), transparent 34%),
-    linear-gradient(135deg, var(--toast-accent), var(--toast-color));
+  background: var(--toast-color);
   box-shadow:
     0 0 0 5px color-mix(in srgb, var(--toast-accent) 18%, transparent),
     0 10px 22px color-mix(in srgb, var(--toast-color) 28%, transparent);
@@ -3367,19 +3362,24 @@ button:focus-visible,
 }
 
 .toast-error {
-  --toast-color: #9f2d3e;
-  --toast-accent: #ff6f8b;
+  --toast-color: #a43b4b;
+  --toast-accent: #ef7b8f;
+  --toast-surface: #fff1f3;
+  --toast-border: #f5b6c0;
 }
 
 .toast-warning {
   --toast-color: #9b5a16;
-  --toast-accent: #ffbd4a;
-  --toast-surface: rgba(255, 248, 231, 0.94);
+  --toast-accent: #f4b24d;
+  --toast-surface: #fff6df;
+  --toast-border: #f1d28d;
 }
 
 .toast-success {
-  --toast-color: #256c56;
-  --toast-accent: #56d8a7;
+  --toast-color: #286b53;
+  --toast-accent: #62c99f;
+  --toast-surface: #eefbf5;
+  --toast-border: #a9e2c8;
 }
 
 @media (max-width: 860px) {
