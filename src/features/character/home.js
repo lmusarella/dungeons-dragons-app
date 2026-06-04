@@ -2287,7 +2287,7 @@ async function consumeWeaponAmmunition(items, weapon) {
     : entry);
   updateCache('items', nextItems);
   await cacheSnapshot({ items: nextItems });
-  createToast(`${ammunition.name} consumato (${nextQty} rimasti)`);
+  createToast(`${ammunition.name} consumato (${nextQty} rimasti)`, 'warning');
   return true;
 }
 
