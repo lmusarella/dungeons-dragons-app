@@ -41,8 +41,10 @@ export function getBodyPartLabel(part) {
   return bodyPartLabels.get(part) ?? part;
 }
 
-export function getBodyPartLabels(parts) {
-  return parts.map((part) => getBodyPartLabel(part)).join(', ');
+export function getBodyPartLabels(parts = []) {
+  return (Array.isArray(parts) ? parts : [])
+    .map((part) => getBodyPartLabel(part))
+    .join(', ');
 }
 
 export function getEquipSlots(item) {
@@ -63,7 +65,7 @@ export function getEquipSlots(item) {
 }
 
 export function getWeightUnit(character) {
-  return character.data?.settings?.weight_unit ?? 'lb';
+  return character?.data?.settings?.weight_unit ?? 'lb';
 }
 
 export function getItemStatusLabels(item = {}) {

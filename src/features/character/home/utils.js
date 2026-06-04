@@ -136,7 +136,7 @@ export function formatHitDice(hitDice) {
   return `${remaining} / ${max}${die}`;
 }
 
-export function calculateArmorClass(data, abilities, items) {
+export function calculateArmorClass(data = {}, abilities = {}, items = []) {
   const equippedItems = (items || []).filter((item) => item.equipable && getEquipSlots(item).length);
   const dexMod = getAbilityModifier(abilities.dex) ?? 0;
   const acAbilityModifiers = data.ac_ability_modifiers || {};
@@ -179,27 +179,6 @@ export function getEquipSlots(item) {
   return [];
 }
 
-export function formatResourceRecovery(resource) {
-  const maxUses = Number(resource.max_uses) || 0;
-  if (maxUses === 0) return 'Passiva';
-  const shortRecovery = Number(resource.recovery_short);
-  const longRecovery = Number(resource.recovery_long);
-  const hasShort = !Number.isNaN(shortRecovery) && shortRecovery > 0;
-  const hasLong = !Number.isNaN(longRecovery) && longRecovery > 0;
-  if ((resource.reset_on === 'none' || resource.reset_on === null) && !hasShort && !hasLong) {
-    return 'Nessuna ricarica';
-  }
-  if (!hasShort && !hasLong) {
-    return resource.reset_on === 'short_rest'
-      ? 'Recupera tutte le cariche (riposo breve)'
-      : 'Recupera tutte le cariche (riposo lungo)';
-  }
-  const parts = [];
-  if (hasShort) parts.push(`Riposo breve +${shortRecovery}`);
-  if (hasLong) parts.push(`Riposo lungo +${longRecovery}`);
-  return parts.join(' · ');
-}
-
 export function sortSpellsByLevel(spells) {
   return [...spells].sort((a, b) => {
     const levelDiff = Number(a.level) - Number(b.level);
@@ -218,11 +197,6 @@ export function getCastableSpellSlotLevels(slots, spellLevel) {
     options.push({ level, available });
   }
   return options;
-}
-
-export function getSpellTypeLabel(spell) {
-  const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
-  return isCantrip ? 'Trucchetto' : 'Incantesimo';
 }
 
 export function getWeaponDamageModes(weapon) {
@@ -419,65 +393,5 @@ function applySpellSlotRecovery(data, resetOn) {
       slots,
       slots_max: slotsMax
     }
-  };
-}
-
-export function calculateWeaponDamageRoll(character, weapon) {
-  if (!character || !weapon) return null;
-  const data = character.data || {};
-  const weaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
-  const attackAbility = weapon.attack_ability
-    || (weaponRange === 'ranged' ? 'dex' : 'str');
-  const abilityMod = getAbilityModifier(data.abilities?.[attackAbility]) ?? 0;
-  const damageBonusMelee = Number(data.damage_bonus_melee ?? data.damage_bonus) || 0;
-  const damageBonusRanged = Number(data.damage_bonus_ranged ?? data.damage_bonus) || 0;
-  const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
-  const damageTotal = abilityMod + (Number(weapon.damage_modifier) || 0) + damageBonus;
-  const dice = parseDamageDice(weapon.damage_die);
-  if (!dice) return null;
-  const rollGroups = dice.parts.map((part) => ({
-    ...part,
-    rolls: Array.from({ length: part.count }, () => rollDie(part.sides))
-  }));
-  const diceTotal = rollGroups.reduce((sum, group) => (
-    sum + group.sign * group.rolls.reduce((innerSum, value) => innerSum + value, 0)
-  ), 0);
-  const total = diceTotal + damageTotal;
-  const bonusLabel = damageTotal ? ` ${formatSigned(damageTotal)}` : '';
-  const rollsLabel = rollGroups
-    .map((group, index) => {
-      const prefix = group.sign < 0 ? '-' : index === 0 ? '' : '+';
-      return `${prefix}${group.count}d${group.sides}: ${group.rolls.join(' + ')}`;
-    })
-    .join(' ');
-  return {
-    total,
-    label: `${weapon.name} (${dice.notation}: ${rollsLabel}${bonusLabel})`
-  };
-}
-
-export function calculateSpellDamageRoll(spell) {
-  if (!spell) return null;
-  const dice = parseDamageDice(spell.damage_die);
-  if (!dice) return null;
-  const damageModifier = Number(spell.damage_modifier) || 0;
-  const rollGroups = dice.parts.map((part) => ({
-    ...part,
-    rolls: Array.from({ length: part.count }, () => rollDie(part.sides))
-  }));
-  const diceTotal = rollGroups.reduce((sum, group) => (
-    sum + group.sign * group.rolls.reduce((innerSum, value) => innerSum + value, 0)
-  ), 0);
-  const total = diceTotal + damageModifier;
-  const bonusLabel = damageModifier ? ` ${formatSigned(damageModifier)}` : '';
-  const rollsLabel = rollGroups
-    .map((group, index) => {
-      const prefix = group.sign < 0 ? '-' : index === 0 ? '' : '+';
-      return `${prefix}${group.count}d${group.sides}: ${group.rolls.join(' + ')}`;
-    })
-    .join(' ');
-  return {
-    total,
-    label: `${spell.name} (${dice.notation}: ${rollsLabel}${bonusLabel})`
   };
 }

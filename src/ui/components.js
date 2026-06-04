@@ -100,26 +100,6 @@ export function closeDrawer() {
   }
 }
 
-export function buildDrawerLayout(titleText, formEl, actions = []) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'drawer-content';
-
-  const title = document.createElement('h2');
-  title.textContent = titleText;
-  wrapper.appendChild(title);
-
-  wrapper.appendChild(formEl);
-
-  if (actions.length) {
-    const footer = document.createElement('div');
-    footer.className = 'drawer-actions';
-    actions.forEach((action) => footer.appendChild(action));
-    wrapper.appendChild(footer);
-  }
-
-  return wrapper;
-}
-
 export function buildSelect(options, value) {
   const select = document.createElement('select');
   options.forEach((opt) => {

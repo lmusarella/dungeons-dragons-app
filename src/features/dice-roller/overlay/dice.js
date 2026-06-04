@@ -182,14 +182,6 @@ function buildOverlayMarkup() {
   </div>`;
 }
 
-export function createDiceRollerEmbed() {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'dice-roller-embed';
-  wrapper.innerHTML = buildDiceMarkup();
-  return wrapper;
-}
-
-
 function hasInvalidRolls(notation) {
   const rolls = Array.isArray(notation?.result) ? notation.result : [];
   return rolls.some((value) => typeof value === 'number' && value < 0);

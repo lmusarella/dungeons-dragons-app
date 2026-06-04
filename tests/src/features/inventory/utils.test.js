@@ -5,6 +5,8 @@ import {
   formatTransactionDate,
   getCategoryLabel,
   getEquipSlots,
+  getWeightUnit,
+  getBodyPartLabels,
   hasProficiencyForItem
 } from '../../../../src/features/inventory/utils.js';
 
@@ -25,6 +27,8 @@ describe('src/features/inventory/utils.js', () => {
     expect(getEquipSlots({ equip_slots: ['head', ''] })).toEqual(['head']);
     expect(getEquipSlots({ equip_slots: '["body"]' })).toEqual(['body']);
     expect(getEquipSlots({ equip_slot: 'ring' })).toEqual(['ring']);
+    expect(getBodyPartLabels(null)).toBe('');
+    expect(getWeightUnit(undefined)).toBe('lb');
   });
 
   it('evaluates weapon proficiency from form data', () => {
