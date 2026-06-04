@@ -154,7 +154,6 @@ function buildOverlayMarkup() {
             <button class="diceov-section-title diceov-section-title--button" type="button" data-reroll-toggle aria-expanded="false">
               <span aria-hidden="true">🔁</span>
               <span>Ritira dadi</span>
-              <span class="diceov-reroll-chevron" aria-hidden="true">⌄</span>
             </button>
             <div class="diceov-reroll-content" data-reroll-content hidden>
               <p class="diceov-reroll-status" data-reroll-status hidden></p>

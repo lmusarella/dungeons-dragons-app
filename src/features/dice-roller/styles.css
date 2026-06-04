@@ -916,15 +916,6 @@ header {
   outline: none;
 }
 
-.diceov-reroll-chevron {
-  margin-left: auto;
-  transition: transform 0.15s ease;
-}
-
-.diceov-reroll-card.is-open .diceov-reroll-chevron {
-  transform: rotate(180deg);
-}
-
 
 .diceov-quick-dice-content {
   display: grid;
