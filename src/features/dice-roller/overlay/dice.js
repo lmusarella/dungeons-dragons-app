@@ -1569,6 +1569,15 @@ function escClose(e) {
   if (e.key === 'Escape') closeDiceOverlay();
 }
 
+
+export function updateDiceOverlayWarning(message = null) {
+  if (!overlayEl || overlayEl.hasAttribute('hidden')) return;
+  const customWarning = overlayEl.querySelector('[data-custom-warning]');
+  if (!customWarning) return;
+  customWarning.textContent = message ? String(message) : '';
+  customWarning.toggleAttribute('hidden', !message);
+}
+
 export function closeDiceOverlay() {
   overlaySessionToken += 1;
   if (typeof activeOverlaySessionCleanup === 'function') {

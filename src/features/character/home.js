@@ -3,7 +3,7 @@ import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
 import { buildInput, buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
-import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
+import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
 import {
   buildAttackSection,
@@ -2276,14 +2276,25 @@ function findAmmunitionForWeapon(items, weapon) {
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it', { sensitivity: 'base' }))[0] || null;
 }
 
+function buildAmmunitionWarning(weapon, ammunition) {
+  if (!ammunition) return null;
+  const ammunitionName = ammunition.name
+    || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type)
+    || 'munizione';
+  const availableQty = Number(ammunition.qty) || 0;
+  if (availableQty <= 0) return `Munizioni esaurite: ${ammunitionName}.`;
+  return `Questo tiro consumerà 1 munizione: ${ammunitionName} (${availableQty} disponibili).`;
+}
+
 async function consumeWeaponAmmunition(items, weapon) {
   const ammunition = findAmmunitionForWeapon(items, weapon);
-  if (!ammunition) return false;
+  if (!ammunition) return null;
   const nextQty = Math.max((Number(ammunition.qty) || 0) - 1, 0);
   const saved = await updateItem(ammunition.id, { qty: nextQty });
   const cachedItems = getState().cache.items || [];
+  const updatedAmmunition = { ...ammunition, ...(saved || {}), qty: nextQty };
   const nextItems = cachedItems.map((entry) => String(entry.id) === String(ammunition.id)
-    ? { ...entry, ...(saved || {}), qty: nextQty }
+    ? { ...entry, ...updatedAmmunition }
     : entry);
   updateCache('items', nextItems);
   await cacheSnapshot({ items: nextItems });
@@ -2291,7 +2302,7 @@ async function consumeWeaponAmmunition(items, weapon) {
   if (lastHomeContainer) {
     void renderHome(lastHomeContainer);
   }
-  return true;
+  return { ammunition: updatedAmmunition, nextQty };
 }
 
 function openPresetAttackRoll(attackKey) {
@@ -2308,9 +2319,7 @@ function openPresetAttackRoll(attackKey) {
     createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
     return;
   }
-  const ammunitionWarning = ammunition
-    ? `Questo tiro consumerà 1 munizione: ${ammunition.name || ammunitionTypeLabels.get(weapon.required_ammunition_type || weapon.ammunition_type) || 'munizione'} (${Number(ammunition.qty) || 0} disponibili).`
-    : null;
+  const ammunitionWarning = buildAmmunitionWarning(weapon, ammunition);
   let ammunitionConsumptionQueue = Promise.resolve();
   openDiceRollerModal({
     title: `Tiro per Colpire • ${selected.shortLabel || selected.label}`,
@@ -2333,7 +2342,10 @@ function openPresetAttackRoll(attackKey) {
           const consumed = await consumeWeaponAmmunition(getState().cache.items || items, weapon);
           if (!consumed) {
             createToast('Munizioni esaurite o non disponibili per questa arma.', 'error');
+            updateDiceOverlayWarning('Munizioni esaurite o non disponibili per questa arma.');
+            return;
           }
+          updateDiceOverlayWarning(buildAmmunitionWarning(weapon, consumed.ammunition));
         })
         .catch(() => createToast('Errore consumo munizioni', 'error'));
     }
