@@ -744,7 +744,7 @@ header {
 }
 
 .diceov-stage--compact-roll {
-  width: min(640px, calc(100vw - 24px));
+  width: min(780px, calc(100vw - 24px));
 }
 /* Il contenitore del popup crea un nuovo stacking context */
 .diceov-stage {
