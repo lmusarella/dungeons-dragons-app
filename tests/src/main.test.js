@@ -7,7 +7,9 @@ describe('main bootstrap flow', () => {
     expect(source).toContain("registerRoute('login'");
     expect(source).toContain("registerRoute('home'");
     expect(source).toContain('initRouter()');
-    expect(source).toContain('registerSW({ immediate: true })');
+    expect(source).toContain('const registerServiceWorker = () =>');
+    expect(source).toContain('navigator.serviceWorker');
+    expect(source).toContain('.register(`${import.meta.env.BASE_URL}sw.js`)');
     expect(source).toContain('bootstrapApp()');
   });
 });
