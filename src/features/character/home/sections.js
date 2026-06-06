@@ -203,19 +203,16 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <h3 class="character-name">${character.name}</h3>
             <div class="character-meta">
               <span class="meta-tag meta-tag--level"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              <span class="meta-tag meta-tag--level"><small>Bonus Competenza</small><strong>${formatSigned(proficiencyBonus)}</strong></span>
               <span class="meta-tag"><small>Razza</small><strong>${data.race ?? '-'}</strong></span>
               <span class="meta-tag"><small>Classe</small><strong>${data.class_name ?? data.class_archetype ?? '-'}</strong></span>
               <span class="meta-tag"><small>Archetipo</small><strong>${data.archetype ?? '-'}</strong></span>
-              <span class="meta-tag meta-tag--background"><small>Background</small><strong>${data.background ?? '-'}</strong></span>
+              <span class="meta-tag"><small>Background</small><strong>${data.background ?? '-'}</strong></span>
               <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
             </div>
           </div>
         </div>
         <div class="character-summary-actions" aria-label="Stato del personaggio">
-          <div class="profile-status-card profile-status-card--proficiency">
-            <span class="profile-status-card__label">Competenza</span>
-            <strong class="profile-status-card__value">${formatSigned(proficiencyBonus)}</strong>
-          </div>
           <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
             <span class="profile-status-card__text">
               <span class="profile-status-card__label">Ispirazione</span>
@@ -254,7 +251,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             data-show-background
             title="${escapeHtml(data.background ?? 'Apri dettagli background')}"
           >
-            <span class="profile-status-card__label">Background</span>
+            <span class="profile-status-card__label">Storia Personaggio</span>
             <span class="profile-status-card__arrow" aria-hidden="true">›</span>
           </button>
         </div>

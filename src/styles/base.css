@@ -1575,17 +1575,12 @@ button:focus-visible,
   background: #fff3d3;
 }
 
-.character-meta .meta-tag--background {
-  border-color: #d8c9ac;
-  background: #f8f1e4;
-}
-
 .character-summary-actions {
   position: relative;
   z-index: 1;
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(100px, 0.9fr) minmax(106px, 1fr) minmax(126px, 1.1fr) minmax(104px, 1fr);
+  grid-template-columns: minmax(112px, 1fr) minmax(132px, 1.08fr) minmax(136px, 1fr);
   gap: 7px;
   min-width: 0;
   overflow-x: auto;
@@ -1636,16 +1631,6 @@ button:focus-visible,
 
 .profile-status-card.is-active .profile-status-card__state {
   color: var(--accent);
-}
-
-.profile-status-card__value {
-  color: var(--accent);
-  font-size: 0.95rem;
-  line-height: 1;
-}
-
-.profile-status-card--proficiency {
-  background: #fff2cf;
 }
 
 .profile-status-card--inspiration.is-active {
@@ -1738,7 +1723,7 @@ button:focus-visible,
   }
 
   .character-summary-actions {
-    grid-template-columns: 100px 106px 126px 104px;
+    grid-template-columns: 112px 132px 136px;
   }
 
   .profile-status-card {
