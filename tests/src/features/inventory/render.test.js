@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { buildInventoryTree } from '../../../../src/features/inventory/render.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -21,5 +22,32 @@ describe('src/features/inventory/render.js', () => {
       expect(source).toContain(`export`);
       expect(source).toContain(name);
     });
+  });
+
+  it('renders a quick insert action on container accordions', () => {
+    const markup = buildInventoryTree([
+      {
+        id: 'bag-1',
+        name: 'Zaino',
+        category: 'container',
+        qty: 1,
+        weight: 2,
+        max_volume: 30
+      },
+      {
+        id: 'rope-1',
+        name: 'Corda',
+        category: 'gear',
+        qty: 1,
+        weight: 10,
+        volume: 2,
+        container_item_id: null
+      }
+    ]);
+
+    expect(markup).toContain('data-insert-container="bag-1"');
+    expect(markup).toContain('Inserisci oggetti sfusi in Zaino');
+    expect(markup).toContain('<span>Inserisci</span>');
+    expect(markup).toContain('Oggetti Sfusi');
   });
 });
