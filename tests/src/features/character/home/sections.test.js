@@ -55,6 +55,15 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('data-weakness-level');
     expect(source).toContain('data-death-save');
     expect(source).toContain('role="meter"');
+    expect(source).toContain('data-edit-conditions');
+    expect(source).toContain("const isActive = level.value <= weakPoints");
+    expect(source).toContain("const isCurrent = level.value === weakPoints");
+    expect(source).toContain('Punti ferita temporanei');
+    expect(source).toContain('Percezione passiva');
+    expect(source).toContain('Scurovisione');
+    expect(source).toContain('Dadi vita');
+    expect(source).not.toContain('${weaknessEffectsTooltip}');
+    expect(source).not.toContain('${conditionsEffectsTooltip}');
     expect(styles).toContain('.combat-vitals-grid');
     expect(styles).toContain('.combat-status-card--weakness');
     expect(styles).toContain('@container (max-width: 470px)');

@@ -8829,3 +8829,150 @@ button:focus-visible,
     justify-content: space-between;
   }
 }
+
+/* Compact combat vitals refinements */
+.combat-stat {
+  min-height: 50px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 6px;
+  padding: 5px 7px;
+}
+
+.combat-stat__icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.combat-stat__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.combat-stat__label {
+  overflow: hidden;
+  font-size: 0.56rem;
+  letter-spacing: 0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-stat strong {
+  font-size: 1.05rem;
+}
+
+.hp-vitals-card__icon {
+  font-size: 1.25rem;
+}
+
+.hp-bar-label__title {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.hp-bar-label__value {
+  font-size: 1.18rem;
+}
+
+.hp-bar-label__temp-group {
+  gap: 5px;
+  font-size: 0.64rem;
+}
+
+.hp-panel-hit-dice {
+  font-size: 0.66rem;
+}
+
+.vital-mini-chip {
+  gap: 5px;
+}
+
+.vital-mini-chip span {
+  font-weight: 700;
+}
+
+.vital-mini-chip strong {
+  color: #4f3425;
+  font-size: 0.7rem;
+}
+
+.weakness-track__description {
+  display: grid;
+  gap: 2px;
+  overflow: visible;
+  text-overflow: initial;
+  white-space: normal;
+}
+
+.weakness-track__description span {
+  display: block;
+}
+
+.condition-track {
+  position: relative;
+}
+
+.condition-track__add {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 7px;
+  background: rgba(255, 250, 241, 0.88);
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.condition-track__add:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.condition-track__add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.condition-track__add:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@container (max-width: 470px) {
+  .combat-stat {
+    min-height: 48px;
+    grid-template-columns: 20px minmax(0, 1fr);
+    padding: 5px;
+  }
+
+  .combat-stat__icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .combat-stat__label {
+    font-size: 0.5rem;
+  }
+
+  .hp-bar-label__temp-group {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}
+
+.combat-stat__label {
+  overflow: visible;
+  line-height: 1.05;
+  text-overflow: initial;
+  white-space: normal;
+}

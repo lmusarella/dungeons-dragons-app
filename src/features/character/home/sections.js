@@ -137,21 +137,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const conditionsLabel = activeConditions.length
     ? activeConditions.map((condition) => condition.label).join(', ')
     : 'Nessuna condizione';
-  const conditionsEffects = activeConditions.length
-    ? `
-      <ul class="condition-track__list">
-        ${activeConditions.map((condition) => `<li><strong>${condition.label}:</strong> ${condition.effect}</li>`).join('')}
-      </ul>
-    `
-    : '<p class="muted">Nessun effetto attivo.</p>';
-  const conditionsEffectsTooltip = `
-    <details class="info-tooltip">
-      <summary aria-label="Vedi effetti delle condizioni">?</summary>
-      <div class="info-tooltip__panel">
-        ${conditionsEffects}
-      </div>
-    </details>
-  `;
   const weaknessLevels = [
     { value: 1, description: 'Svantaggio sulle prove di caratteristica.' },
     { value: 2, description: 'Velocità dimezzata.' },
@@ -161,21 +146,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     { value: 6, description: 'Morte.' }
   ];
   const activeWeaknesses = weaknessLevels.filter((level) => level.value <= weakPoints);
-  const weaknessEffects = activeWeaknesses.length
-    ? `
-      <ul class="weakness-track__list">
-        ${activeWeaknesses.map((level) => `<li>${level.description}</li>`).join('')}
-      </ul>
-    `
-    : '<p class="muted">Nessun indebolimento.</p>';
-  const weaknessEffectsTooltip = `
-    <details class="info-tooltip">
-      <summary aria-label="Vedi effetti dei punti indebolimento">?</summary>
-      <div class="info-tooltip__panel">
-        ${weaknessEffects}
-      </div>
-    </details>
-  `;
   const armorClass = calculateArmorClass(data, abilities, items);
   const hasDarkvision = Boolean(data.darkvision_enabled);
   const darkvisionRange = normalizeNumber(data.darkvision_range_m);
@@ -276,32 +246,32 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
             </span>
-            <span class="combat-stat__label">CA</span>
+            <span class="combat-stat__label">Classe armatura</span>
             <strong>${armorClass ?? '-'}</strong>
           </div>
           <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
             </span>
-            <span class="combat-stat__label">Iniz.</span>
+            <span class="combat-stat__label">Iniziativa</span>
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
           </div>
           <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${data.speed ?? '-'} metri">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
             </span>
-            <span class="combat-stat__label">Vel.</span>
+            <span class="combat-stat__label">Velocità</span>
             <strong>${data.speed ?? '-'}<small>m</small></strong>
           </div>
           <div class="hp-vitals-card">
             <div class="hp-bar-label">
               <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
-              <span class="hp-bar-label__title">HP</span>
+              <span class="hp-bar-label__title">Punti ferita</span>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
               ${hasTempHp ? `
-              <span class="hp-bar-label__temp-group is-active" title="HP temporanei">
-                <span aria-hidden="true">◇</span><strong>${tempHpLabel}</strong>
+              <span class="hp-bar-label__temp-group is-active">
+                <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
               </span>
               ` : ''}
             </div>
@@ -317,7 +287,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </div>
             <div class="hp-vitals-card__footer">
               <div class="hp-panel-hit-dice" title="Dadi vita disponibili">
-                <span aria-hidden="true">◆</span>
+                <span>Dadi vita</span>
                 <strong>${formatHitDice(hitDice)}</strong>
                 <button
                   class="icon-button icon-button--dice hp-panel-hit-dice__roll"
@@ -329,8 +299,8 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                 ><span aria-hidden="true">🎲</span></button>
               </div>
               <div class="hp-panel-insights" aria-label="Sensi e percezione">
-                <span class="vital-mini-chip" title="Percezione passiva"><span aria-hidden="true">◉</span> ${passivePerception ?? '-'}</span>
-                <span class="vital-mini-chip" title="Scurovisione"><span aria-hidden="true">☾</span> ${darkvisionLabel}</span>
+                <span class="vital-mini-chip"><span>Percezione passiva</span><strong>${passivePerception ?? '-'}</strong></span>
+                <span class="vital-mini-chip"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></span>
               </div>
             </div>
             ${activeWildShape ? `
@@ -361,21 +331,20 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
           <div class="combat-status-card combat-status-card--weakness weakness-track">
             <div class="combat-status-card__header">
               <div class="track-label-row">
-                <span class="combat-status-card__icon" aria-hidden="true">!</span>
-                <span class="weakness-track__label">Indebolimento</span>
-                ${weaknessEffectsTooltip}
+                <span class="weakness-track__label">Punti indebolimento</span>
               </div>
               <strong class="combat-status-card__value">${weakPoints}<small>/6</small></strong>
             </div>
             <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
               ${weaknessLevels.map((level) => {
-    const isFilled = level.value === weakPoints;
+    const isActive = level.value <= weakPoints;
+    const isCurrent = level.value === weakPoints;
     return `
                 <button
-                  class="death-save-dot ${isFilled ? 'is-filled' : ''}"
+                  class="death-save-dot ${isActive ? 'is-filled' : ''} ${isCurrent ? 'is-current' : ''}"
                   type="button"
                   role="radio"
-                  aria-checked="${isFilled}"
+                  aria-checked="${isCurrent}"
                   data-weakness-level="${level.value}"
                   aria-label="Livello ${level.value}: ${level.description}"
                   title="Livello ${level.value}: ${level.description}"
@@ -384,15 +353,25 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               `;
   }).join('')}
             </div>
-            <div class="weakness-track__description">${weakPoints ? activeWeaknesses.at(-1)?.description : 'Nessun effetto attivo'}</div>
+            <div class="weakness-track__description">
+              ${activeWeaknesses.length
+    ? activeWeaknesses.map((level) => `<span><strong>${level.value}.</strong> ${level.description}</span>`).join('')
+    : '<span>Nessun effetto attivo</span>'}
+            </div>
           </div>
           <div class="combat-status-card condition-track">
             <div class="combat-status-card__header">
               <div class="track-label-row">
-                <span class="combat-status-card__icon combat-status-card__icon--condition" aria-hidden="true">✦</span>
                 <span class="condition-track__label">Condizioni</span>
-                ${conditionsEffectsTooltip}
               </div>
+              <button
+                class="condition-track__add"
+                type="button"
+                data-edit-conditions
+                aria-label="Modifica condizioni"
+                title="Modifica condizioni"
+                ${canEditCharacter ? '' : 'disabled'}
+              >+</button>
             </div>
             <span class="condition-track__value">${conditionsLabel}</span>
           </div>
