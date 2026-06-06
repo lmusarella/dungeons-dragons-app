@@ -22,4 +22,14 @@ describe('src/features/character/home.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('keeps the death save dice modal open after a roll', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const deathSaveHandler = source.slice(
+      source.indexOf("const deathSaveRollButton = container.querySelector('[data-roll-death-save]')"),
+      source.indexOf("container.querySelectorAll('[data-death-save]')")
+    );
+    expect(deathSaveHandler).toContain('keepOpen: true');
+  });
+
 });
