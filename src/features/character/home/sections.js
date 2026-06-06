@@ -270,43 +270,40 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   }).join('')}
         </div>
       </div>
-      <section class="hp-panel" aria-labelledby="combat-vitals-title">
-        <header class="hp-panel__header">
-          <div>
-            <p class="eyebrow">Stato in combattimento</p>
-            <h3 id="combat-vitals-title">Difesa e vitalità</h3>
+      <section class="hp-panel" aria-label="Statistiche di combattimento">
+        <div class="combat-vitals-grid">
+          <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${armorClass ?? '-'}">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
+            </span>
+            <span class="combat-stat__label">CA</span>
+            <strong>${armorClass ?? '-'}</strong>
           </div>
-          <div class="hp-panel__quick-stats" aria-label="Statistiche di combattimento">
-            <div class="armor-class-card">
-              <span class="armor-class-card__sigil" aria-hidden="true">🛡️</span>
-              <span class="armor-class-card__label">Classe armatura</span>
-              <strong>${armorClass ?? '-'}</strong>
-              <small>CA</small>
-            </div>
-            <div class="armor-class-card armor-class-card--initiative">
-              <span class="armor-class-card__sigil" aria-hidden="true">⚡</span>
-              <span class="armor-class-card__label">Iniziativa</span>
-              <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-              <small>al tiro</small>
-            </div>
-            <div class="armor-class-card armor-class-card--speed">
-              <span class="armor-class-card__sigil" aria-hidden="true">🏃</span>
-              <span class="armor-class-card__label">Velocità</span>
-              <strong>${data.speed ?? '-'}</strong>
-              <small>metri</small>
-            </div>
+          <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
+            </span>
+            <span class="combat-stat__label">Iniz.</span>
+            <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
           </div>
-        </header>
-        <div class="hp-bar-row">
-          <div class="hp-bar-stack">
+          <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${data.speed ?? '-'} metri">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
+            </span>
+            <span class="combat-stat__label">Vel.</span>
+            <strong>${data.speed ?? '-'}<small>m</small></strong>
+          </div>
+          <div class="hp-vitals-card">
             <div class="hp-bar-label">
-              <span class="hp-bar-label__title">Punti ferita</span>
+              <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
+              <span class="hp-bar-label__title">HP</span>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
-              <span class="hp-bar-label__temp-group ${hasTempHp ? 'is-active' : ''}">
-                <span class="hp-bar-label__temp">Temporanei</span>
-                <strong>${tempHpLabel}</strong>
+              ${hasTempHp ? `
+              <span class="hp-bar-label__temp-group is-active" title="HP temporanei">
+                <span aria-hidden="true">◇</span><strong>${tempHpLabel}</strong>
               </span>
+              ` : ''}
             </div>
             <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
               <div class="hp-bar" style="flex: ${hpTrackFlex};">
@@ -318,137 +315,118 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               </div>
               ` : ''}
             </div>
-            <div class="hp-panel-hit-dice">
-              <span>Dadi vita</span>
-              <strong>${formatHitDice(hitDice)}</strong>
-              <button
-                class="icon-button icon-button--dice hp-panel-hit-dice__roll"
-                type="button"
-                data-roll-hit-dice
-                aria-label="Lancia dado vita per curare PF"
-                title="Lancia dado vita"
-                ${canEditCharacter ? '' : 'disabled'}
-              >
-                <span aria-hidden="true">🎲</span>
-              </button>
+            <div class="hp-vitals-card__footer">
+              <div class="hp-panel-hit-dice" title="Dadi vita disponibili">
+                <span aria-hidden="true">◆</span>
+                <strong>${formatHitDice(hitDice)}</strong>
+                <button
+                  class="icon-button icon-button--dice hp-panel-hit-dice__roll"
+                  type="button"
+                  data-roll-hit-dice
+                  aria-label="Lancia dado vita per curare PF"
+                  title="Lancia dado vita"
+                  ${canEditCharacter ? '' : 'disabled'}
+                ><span aria-hidden="true">🎲</span></button>
+              </div>
+              <div class="hp-panel-insights" aria-label="Sensi e percezione">
+                <span class="vital-mini-chip" title="Percezione passiva"><span aria-hidden="true">◉</span> ${passivePerception ?? '-'}</span>
+                <span class="vital-mini-chip" title="Scurovisione"><span aria-hidden="true">☾</span> ${darkvisionLabel}</span>
+              </div>
             </div>
             ${activeWildShape ? `
             <div class="wild-shape-vitals">
               <div class="hp-bar-label hp-bar-label--wild-shape">
-                <span>Forma selvatica</span>
+                <span>Forma</span>
                 <strong>${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
                 <span class="hp-bar-label__percent">${Math.round(wildShapeHpPercent)}%</span>
                 <span>${escapeHtml(activeWildShape.companion.name)}</span>
                 ${wildShapeSpeedLabel ? `<span class="muted">${escapeHtml(wildShapeSpeedLabel)}</span>` : ''}
+                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
               </div>
               <div class="hp-bar-track hp-bar-track--wild-shape">
-                <div class="hp-bar">
-                  <div class="hp-bar__fill" style="width: ${wildShapeHpPercent}%;"></div>
-                </div>
-              </div>
-              <div class="wild-shape-hp-actions">
-                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
+                <div class="hp-bar"><div class="hp-bar__fill" style="width: ${wildShapeHpPercent}%;"></div></div>
               </div>
             </div>
             ` : data.wild_shape_enabled ? `
             <div class="wild-shape-empty">
               <span>Forma selvatica pronta</span>
               <button class="ghost-button ghost-button--compact" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
-                Scegli forma (${wildShapeForms.length})
+                Scegli (${wildShapeForms.length})
               </button>
             </div>
             ` : ''}
           </div>
         </div>
-        <div class="hp-panel-subgrid">
-          <div class="hp-panel-insights" aria-label="Sensi e percezione">
-            <div class="stat-chip stat-chip--highlight">
-              <span>Percezione passiva</span>
-              <strong>${passivePerception ?? '-'}</strong>
-            </div>
-            <div class="stat-chip stat-chip--highlight stat-chip--darkvision">
-              <span>Scurovisione</span>
-              <strong>${darkvisionLabel}</strong>
-            </div>
-          </div>
-          <div class="hp-panel-status-row">
-            <div class="combat-status-card combat-status-card--weakness weakness-track">
-              <div class="combat-status-card__header">
-                <div class="track-label-row">
-                  <span class="weakness-track__label">Indebolimento</span>
-                  ${weaknessEffectsTooltip}
-                </div>
-                <strong class="combat-status-card__value">${weakPoints}<small>/6</small></strong>
+        <div class="hp-panel-status-row">
+          <div class="combat-status-card combat-status-card--weakness weakness-track">
+            <div class="combat-status-card__header">
+              <div class="track-label-row">
+                <span class="combat-status-card__icon" aria-hidden="true">!</span>
+                <span class="weakness-track__label">Indebolimento</span>
+                ${weaknessEffectsTooltip}
               </div>
-              <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
-                ${weaknessLevels.map((level) => {
+              <strong class="combat-status-card__value">${weakPoints}<small>/6</small></strong>
+            </div>
+            <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
+              ${weaknessLevels.map((level) => {
     const isFilled = level.value === weakPoints;
     return `
-                  <button
-                    class="death-save-dot ${isFilled ? 'is-filled' : ''}"
-                    type="button"
-                    role="radio"
-                    aria-checked="${isFilled}"
-                    data-weakness-level="${level.value}"
-                    aria-label="Livello ${level.value}: ${level.description}"
-                    title="Livello ${level.value}: ${level.description}"
-                    ${canEditCharacter ? '' : 'disabled'}
-                  >
-                    <span aria-hidden="true">${level.value}</span>
-                  </button>
-                `;
-  }).join('')}
-              </div>
-              <div class="weakness-track__description">${weakPoints ? activeWeaknesses.at(-1)?.description : 'Nessun effetto attivo.'}</div>
-            </div>
-            <div class="combat-status-card condition-track">
-              <div class="combat-status-card__header">
-                <div class="track-label-row">
-                  <span class="condition-track__label">Condizioni</span>
-                  ${conditionsEffectsTooltip}
-                </div>
-              </div>
-              <div class="condition-track__row">
-                <span class="condition-track__value">${conditionsLabel}</span>
-              </div>
-            </div>
-            <div class="combat-status-card death-saves">
-              <div class="combat-status-card__header death-saves__heading">
-                <span class="death-saves__label">TS morte</span>
                 <button
-                  class="icon-button icon-button--dice death-saves__roll"
+                  class="death-save-dot ${isFilled ? 'is-filled' : ''}"
                   type="button"
-                  data-roll-death-save
-                  aria-label="Tira il tiro salvezza su morte"
-                  title="Tira TS morte"
+                  role="radio"
+                  aria-checked="${isFilled}"
+                  data-weakness-level="${level.value}"
+                  aria-label="Livello ${level.value}: ${level.description}"
+                  title="Livello ${level.value}: ${level.description}"
                   ${canEditCharacter ? '' : 'disabled'}
-                ><span aria-hidden="true">🎲</span></button>
+                ><span aria-hidden="true">${level.value}</span></button>
+              `;
+  }).join('')}
+            </div>
+            <div class="weakness-track__description">${weakPoints ? activeWeaknesses.at(-1)?.description : 'Nessun effetto attivo'}</div>
+          </div>
+          <div class="combat-status-card condition-track">
+            <div class="combat-status-card__header">
+              <div class="track-label-row">
+                <span class="combat-status-card__icon combat-status-card__icon--condition" aria-hidden="true">✦</span>
+                <span class="condition-track__label">Condizioni</span>
+                ${conditionsEffectsTooltip}
               </div>
-              <div class="death-saves__tracks">
-                <div class="death-saves__group" aria-label="Successi">
-                  <span class="death-saves__tag death-saves__tag--success">Successi</span>
-                  ${Array.from({ length: 3 }, (_, index) => {
+            </div>
+            <span class="condition-track__value">${conditionsLabel}</span>
+          </div>
+          <div class="combat-status-card death-saves">
+            <div class="combat-status-card__header death-saves__heading">
+              <div class="track-label-row">
+                <span class="combat-status-card__icon combat-status-card__icon--death" aria-hidden="true">†</span>
+                <span class="death-saves__label">TS morte</span>
+              </div>
+              <button
+                class="icon-button icon-button--dice death-saves__roll"
+                type="button"
+                data-roll-death-save
+                aria-label="Tira il tiro salvezza su morte"
+                title="Tira TS morte"
+                ${canEditCharacter ? '' : 'disabled'}
+              ><span aria-hidden="true">🎲</span></button>
+            </div>
+            <div class="death-saves__tracks">
+              <div class="death-saves__group" aria-label="Successi">
+                <span class="death-saves__tag death-saves__tag--success">✓</span>
+                ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveSuccesses;
-    return `
-                    <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}" ${canEditCharacter ? '' : 'disabled'}>
-                      <span aria-hidden="true"></span>
-                    </button>
-                  `;
+    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
   }).join('')}
-                </div>
-                <div class="death-saves__group" aria-label="Fallimenti">
-                  <span class="death-saves__tag death-saves__tag--failure">Fallimenti</span>
-                  ${Array.from({ length: 3 }, (_, index) => {
+              </div>
+              <div class="death-saves__group" aria-label="Fallimenti">
+                <span class="death-saves__tag death-saves__tag--failure">✕</span>
+                ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveFailures;
-    return `
-                    <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}" ${canEditCharacter ? '' : 'disabled'}>
-                      <span aria-hidden="true"></span>
-                    </button>
-                  `;
+    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
   }).join('')}
-                </div>
               </div>
             </div>
           </div>

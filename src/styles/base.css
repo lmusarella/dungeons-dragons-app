@@ -8389,237 +8389,304 @@ button:focus-visible,
   line-height: 1.35;
 }
 
-/* Character combat vitals */
+/* Compact character combat vitals */
 .hp-panel {
   display: grid;
-  gap: 16px;
-  padding: 18px;
-  border-color: rgba(126, 91, 55, 0.22);
-  background:
-    radial-gradient(circle at top right, rgba(196, 74, 54, 0.08), transparent 34%),
-    linear-gradient(145deg, #fffaf1 0%, #f8ecd8 100%);
-  box-shadow: 0 12px 28px rgba(92, 63, 32, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-}
-
-.hp-panel__header {
-  display: grid;
-  grid-template-columns: minmax(150px, 0.7fr) minmax(340px, 1.3fr);
-  gap: 18px;
-  align-items: end;
-}
-
-.hp-panel__header .eyebrow {
-  margin: 0 0 3px;
-}
-
-.hp-panel__header h3 {
-  margin: 0;
-  color: #3d2a1c;
-  font-size: clamp(1.05rem, 2vw, 1.35rem);
-}
-
-.hp-panel__quick-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(125, 87, 51, 0.2);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(199, 82, 60, 0.08), transparent 36%),
+    linear-gradient(145deg, #fffaf1, #f8ecd8);
+  box-shadow: 0 8px 20px rgba(91, 61, 31, 0.07), inset 0 1px rgba(255, 255, 255, 0.8);
 }
 
-.armor-class-card {
-  min-width: 0;
-  min-height: 74px;
-  padding: 10px 10px 9px 45px;
-  border: 1px solid rgba(133, 61, 61, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 247, 232, 0.88);
-  box-shadow: none;
-  text-align: left;
-  justify-content: center;
-}
-
-.armor-class-card__label {
-  color: #775f49;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.15;
-  text-transform: uppercase;
-}
-
-.armor-class-card strong {
-  color: #44291f;
-  font-size: 1.45rem;
-  line-height: 1.05;
-}
-
-.armor-class-card small {
-  color: #8b725b;
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-
-.armor-class-card__sigil {
-  top: 50%;
-  left: 10px;
-  right: auto;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+.combat-vitals-grid {
   display: grid;
-  place-items: center;
-  transform: translateY(-50%);
-  font-size: 0.8rem;
+  grid-template-columns: repeat(3, minmax(72px, 0.32fr)) minmax(280px, 1.8fr);
+  gap: 7px;
 }
 
-.armor-class-card--initiative,
-.armor-class-card--speed {
+.combat-stat {
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(130, 80, 55, 0.14);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.62);
 }
 
-.hp-bar-row {
-  margin: 0;
-  padding: 16px;
-  border: 1px solid rgba(139, 93, 56, 0.14);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.64);
+.combat-stat__icon {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(158, 59, 48, 0.1);
+  color: #9e3b30;
+}
+
+.combat-stat__icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.combat-stat__label {
+  align-self: end;
+  color: #7b6450;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.combat-stat strong {
+  color: #3e2a20;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.combat-stat strong small {
+  margin-left: 2px;
+  color: #7b6450;
+  font-size: 0.58rem;
+}
+
+.combat-stat--initiative .combat-stat__icon {
+  background: rgba(91, 73, 154, 0.1);
+  color: #5b499a;
+}
+
+.combat-stat--speed .combat-stat__icon {
+  background: rgba(47, 127, 97, 0.1);
+  color: #2f7f61;
+}
+
+.hp-vitals-card {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(158, 59, 48, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .hp-bar-label {
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hp-vitals-card__icon {
+  color: #bd4939;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .hp-bar-label__title {
-  color: #5c3a2b;
-  font-size: 0.78rem;
-  font-weight: 800;
+  color: #6d5140;
+  font-size: 0.65rem;
+  font-weight: 900;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .hp-bar-label__value {
   color: #3d241c;
-  font-size: 1.25rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.hp-bar-label__percent {
+  padding: 2px 5px;
+  font-size: 0.62rem;
 }
 
 .hp-bar-label__temp-group {
   margin-left: auto;
-  padding: 4px 8px;
+  padding: 2px 6px;
+  border: 1px solid rgba(62, 103, 164, 0.16);
   border-radius: 999px;
   background: #edf3ff;
-}
-
-.hp-bar-label__divider {
-  display: none;
+  color: #3a568c;
+  font-size: 0.68rem;
 }
 
 .hp-bar-track {
-  margin-top: 10px;
+  margin-top: 6px;
+  gap: 5px;
 }
 
 .hp-bar,
 .hp-bar--temp.is-active {
-  height: 12px;
-  box-shadow: inset 0 1px 2px rgba(76, 42, 24, 0.13);
+  height: 7px;
+  box-shadow: inset 0 1px 2px rgba(76, 42, 24, 0.12);
+}
+
+.hp-vitals-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
 }
 
 .hp-panel-hit-dice {
   width: fit-content;
-  margin-top: 10px;
-  padding: 4px 5px 4px 10px;
-  border: 1px solid rgba(139, 93, 56, 0.16);
-  border-radius: 999px;
-  background: #fffaf1;
+  margin: 0;
+  gap: 5px;
+  color: #6a5540;
+  font-size: 0.7rem;
 }
 
-.wild-shape-vitals,
-.wild-shape-empty {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(139, 93, 56, 0.15);
-}
-
-.hp-panel-subgrid {
-  display: grid;
-  gap: 10px;
-  margin-top: 0;
+.hp-panel-hit-dice__roll,
+.death-saves__roll {
+  width: 24px;
+  height: 24px;
+  font-size: 0.85rem;
 }
 
 .hp-panel-insights {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 5px;
 }
 
-.hp-panel-insights .stat-chip {
-  margin: 0;
+.vital-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f5ead7;
+  color: #684c38;
+  font-size: 0.65rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wild-shape-vitals,
+.wild-shape-empty {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(139, 93, 56, 0.13);
+}
+
+.hp-bar-label--wild-shape {
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+}
+
+.hp-bar-label--wild-shape .wild-shape-end-button {
+  margin-left: auto;
 }
 
 .hp-panel-status-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1.15fr) minmax(180px, 0.9fr) minmax(210px, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(250px, 1.35fr) minmax(150px, 0.8fr) minmax(170px, 0.85fr);
+  gap: 7px;
   align-items: stretch;
 }
 
 .combat-status-card {
   min-width: 0;
   max-width: none;
-  min-height: 112px;
-  padding: 13px;
-  border: 1px solid rgba(139, 93, 56, 0.16);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.58);
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid rgba(125, 87, 51, 0.14);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.5);
   align-items: stretch;
   text-align: left;
 }
 
 .combat-status-card--weakness {
-  background: linear-gradient(145deg, rgba(255, 248, 236, 0.95), rgba(252, 232, 215, 0.72));
+  background: rgba(255, 246, 235, 0.78);
 }
 
 .combat-status-card__header {
   width: 100%;
-  min-height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+}
+
+.combat-status-card__icon {
+  width: 17px;
+  height: 17px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(168, 71, 56, 0.12);
+  color: #a84738;
+  font-size: 0.67rem;
+  font-weight: 900;
+}
+
+.combat-status-card__icon--condition {
+  background: rgba(85, 94, 153, 0.11);
+  color: #555e99;
+}
+
+.combat-status-card__icon--death {
+  background: rgba(82, 75, 68, 0.1);
+  color: #524b44;
 }
 
 .combat-status-card__value {
   color: #8f362c;
-  font-size: 1.25rem;
+  font-size: 0.9rem;
   line-height: 1;
 }
 
 .combat-status-card__value small {
-  margin-left: 2px;
+  margin-left: 1px;
   color: #8b725b;
-  font-size: 0.65rem;
+  font-size: 0.55rem;
 }
 
 .weakness-track__label,
 .condition-track__label,
 .death-saves__label {
-  color: #634936;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  color: #604735;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .weakness-track__group {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(6, minmax(28px, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(6, minmax(24px, 1fr));
+  gap: 4px;
 }
 
 .weakness-track .death-save-dot {
   width: 100%;
-  height: 30px;
-  border-radius: 9px;
+  height: 23px;
+  border-radius: 7px;
   color: #886c56;
-  font-size: 0.68rem;
-  font-weight: 800;
+  font-size: 0.61rem;
+  font-weight: 900;
 }
 
 .weakness-track .death-save-dot span {
@@ -8632,7 +8699,7 @@ button:focus-visible,
   border-color: #a84738;
   background: #a84738;
   color: #fff;
-  box-shadow: 0 4px 10px rgba(168, 71, 56, 0.22);
+  box-shadow: 0 3px 8px rgba(168, 71, 56, 0.2);
 }
 
 .weakness-track .death-save-dot.is-filled span {
@@ -8641,45 +8708,45 @@ button:focus-visible,
 
 .weakness-track__description {
   max-width: none;
-  min-height: 2.4em;
-  line-height: 1.35;
-}
-
-.condition-track__row {
-  flex: 1;
-  align-items: center;
+  overflow: hidden;
+  color: #806754;
+  font-size: 0.65rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .condition-track__value {
-  font-size: 0.82rem;
+  overflow: hidden;
+  color: #6b5542;
+  font-size: 0.7rem;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .death-saves {
-  gap: 8px;
-  align-items: stretch;
-}
-
-.death-saves__heading {
-  justify-content: space-between;
+  gap: 4px;
 }
 
 .death-saves__tracks {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  gap: 10px;
 }
 
 .death-saves__group {
-  display: grid;
-  grid-template-columns: minmax(62px, 1fr) repeat(3, 24px);
-  gap: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .death-saves__tag {
-  align-self: center;
+  width: 12px;
   color: #6c5542;
   font-size: 0.7rem;
+  font-weight: 900;
+  text-align: center;
 }
 
 .death-saves__tag--success {
@@ -8691,8 +8758,8 @@ button:focus-visible,
 }
 
 .death-saves .death-save-dot {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
 }
 
 .death-saves__group[aria-label="Successi"] .death-save-dot.is-filled span {
@@ -8704,10 +8771,13 @@ button:focus-visible,
   opacity: 0.72;
 }
 
-@container (max-width: 720px) {
-  .hp-panel__header {
-    grid-template-columns: 1fr;
-    align-items: start;
+@container (max-width: 760px) {
+  .combat-vitals-grid {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
+
+  .hp-vitals-card {
+    grid-column: 1 / -1;
   }
 
   .hp-panel-status-row {
@@ -8719,41 +8789,32 @@ button:focus-visible,
   }
 }
 
-@container (max-width: 480px) {
-  .hp-panel {
-    padding: 14px;
+@container (max-width: 470px) {
+  .combat-stat {
+    min-height: 56px;
+    grid-template-columns: 22px 1fr;
+    column-gap: 5px;
+    padding: 6px;
   }
 
-  .hp-panel__quick-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .combat-stat__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
   }
 
-  .armor-class-card {
-    min-height: 86px;
-    padding: 10px 6px 8px;
-    align-items: center;
-    text-align: center;
+  .combat-stat__icon svg {
+    width: 14px;
+    height: 14px;
   }
 
-  .armor-class-card__sigil {
-    position: static;
-    transform: none;
-    margin-bottom: 3px;
+  .combat-stat strong {
+    font-size: 1rem;
   }
 
-  .armor-class-card__label {
-    min-height: 2.3em;
-  }
-
-  .hp-bar-label {
+  .hp-vitals-card__footer {
     align-items: flex-start;
     flex-wrap: wrap;
-  }
-
-  .hp-bar-label__temp-group {
-    width: 100%;
-    margin-left: 0;
-    justify-content: space-between;
   }
 
   .hp-panel-status-row {
@@ -8762,5 +8823,9 @@ button:focus-visible,
 
   .combat-status-card--weakness {
     grid-column: auto;
+  }
+
+  .death-saves__tracks {
+    justify-content: space-between;
   }
 }
