@@ -170,12 +170,11 @@ export async function openItemModal(character, item, items, onSave) {
     return optionLabel.querySelector('input');
   });
   categoryKindField.appendChild(categoryKindList);
-  const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'compact');
+  const categoryRow = buildRow([categoryField, containerField, maxVolumeField, ammunitionTypeField], 'compact');
   categoryRow.classList.add('item-modal-row--classification');
-  const ammunitionTypeRow = buildRow([ammunitionTypeField], 'balanced');
   const classificationSection = buildSection(
     'Categoria e collocazione',
-    [categoryKindField, categoryRow, ammunitionTypeRow],
+    [categoryKindField, categoryRow],
     { icon: '🧭', description: 'Definisci tipo, contenitore e dettagli contestuali.' }
   );
 
@@ -601,7 +600,7 @@ export async function openItemModal(character, item, items, onSave) {
     toggleFieldVisibility(armorShieldRow, showArmorFields);
     toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
     toggleFieldVisibility(maxVolumeField, isContainer);
-    toggleFieldVisibility(ammunitionTypeRow, isConsumable);
+    toggleFieldVisibility(ammunitionTypeField, isConsumable);
     ammunitionTypeSelect.disabled = !isConsumable;
     if (maxVolumeInput) {
       maxVolumeInput.disabled = !isContainer;

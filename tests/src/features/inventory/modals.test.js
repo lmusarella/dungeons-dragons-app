@@ -26,7 +26,7 @@ describe('src/features/inventory/modals.js', () => {
   it('groups item editor fields in the requested rows', () => {
     const source = readFileSync('src/features/inventory/modals.js', 'utf8');
 
-    expect(source).toContain("buildRow([categoryField, containerField, maxVolumeField], 'compact')");
+    expect(source).toContain("buildRow([categoryField, containerField, maxVolumeField, ammunitionTypeField], 'compact')");
     expect(source).toContain("buildRow([weaponTypeField, weaponRangeField, weaponAbilityField, weaponMasteryField], 'compact')");
     expect(source).toContain('rangeGrid.append(thrownField, meleeRangeField, rangeNormalField, rangeDisadvantageField)');
     expect(source.indexOf('proficiencySection.appendChild(rangeGrid)'))
@@ -34,8 +34,9 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain("buildRow([armorTypeField, armorClassField, armorBonusField, shieldBonusField], 'compact')");
     expect(source).toContain("ammunitionTypeField.innerHTML = '<span>Tipo munizione</span>'");
     expect(source).toContain("const isConsumable = categorySelect.value === 'consumable'");
-    expect(source).toContain('toggleFieldVisibility(ammunitionTypeRow, isConsumable)');
+    expect(source).toContain('toggleFieldVisibility(ammunitionTypeField, isConsumable)');
     expect(source).toContain('ammunitionTypeSelect.disabled = !isConsumable');
+    expect(source).not.toContain('const ammunitionTypeRow');
     expect(source).toContain('toggleFieldVisibility(armorShieldRow, showArmorFields)');
     expect(source).not.toContain('toggleFieldVisibility(weaponMasteryRow');
     expect(source).not.toContain('toggleFieldVisibility(weaponThrownRow');
