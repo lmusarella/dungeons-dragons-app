@@ -8417,7 +8417,7 @@ button:focus-visible,
   align-content: center;
   column-gap: 7px;
   padding: 8px;
-  border: 1px solid rgba(130, 80, 55, 0.14);
+  border: 3px solid rgba(130, 80, 55, 0.14);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.62);
 }
