@@ -24,9 +24,13 @@ describe('src/features/character/home/sections.js', () => {
   });
   it('renders the death save dice action and the redesigned profile status cards', () => {
     const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
     expect(source).toContain('data-roll-death-save');
     expect(source).toContain('profile-status-card--proficiency');
     expect(source).toContain('profile-status-card--background');
+    expect(source).toContain('character-profile-body');
+    expect(styles).toContain('container-type: inline-size');
+    expect(styles).toContain('@container (max-width: 430px)');
   });
 
 });

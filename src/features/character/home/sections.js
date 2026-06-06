@@ -196,11 +196,10 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   ];
   return `
     <div class="character-overview">
-      <div class="character-summary">
-        <div class="character-hero">
-          ${data.avatar_url ? `<div class="character-avatar-frame"><img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" /></div>` : ''}
+      <div class="character-summary ${data.avatar_url ? '' : 'character-summary--no-avatar'}">
+        ${data.avatar_url ? `<div class="character-avatar-frame"><img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" /></div>` : ''}
+        <div class="character-profile-body">
           <div class="character-identity">
-            <p class="character-identity__eyebrow">Scheda personaggio</p>
             <h3 class="character-name">${character.name}</h3>
             <div class="character-meta">
               <span class="meta-tag meta-tag--level"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
@@ -210,55 +209,55 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
             </div>
           </div>
-        </div>
-        <div class="character-summary-actions" aria-label="Stato del personaggio">
-          <div class="profile-status-card profile-status-card--proficiency">
-            <span class="profile-status-card__icon" aria-hidden="true">✦</span>
-            <span class="profile-status-card__content">
-              <small>Bonus competenza</small>
-              <strong>${formatSigned(proficiencyBonus)}</strong>
-            </span>
-          </div>
-          <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
-            <span class="profile-status-card__content">
-              <small>Ispirazione</small>
-              <strong>${hasInspiration ? 'Disponibile' : 'Non attiva'}</strong>
-            </span>
-            <button
-              class="inspiration-toggle"
-              type="button"
-              data-toggle-inspiration
-              aria-pressed="${hasInspiration}"
-              aria-label="${hasInspiration ? 'Rimuovi' : 'Attiva'} ispirazione"
-              ${canEditCharacter ? '' : 'disabled'}
-            >
-              <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
+          <div class="character-summary-actions" aria-label="Stato del personaggio">
+            <div class="profile-status-card profile-status-card--proficiency">
+              <span class="profile-status-card__icon" aria-hidden="true">✦</span>
+              <span class="profile-status-card__content">
+                <small>Competenza</small>
+                <strong>${formatSigned(proficiencyBonus)}</strong>
+              </span>
+            </div>
+            <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
+              <span class="profile-status-card__content">
+                <small>Ispirazione</small>
+                <strong>${hasInspiration ? 'Disponibile' : 'Non attiva'}</strong>
+              </span>
+              <button
+                class="inspiration-toggle"
+                type="button"
+                data-toggle-inspiration
+                aria-pressed="${hasInspiration}"
+                aria-label="${hasInspiration ? 'Rimuovi' : 'Attiva'} ispirazione"
+                ${canEditCharacter ? '' : 'disabled'}
+              >
+                <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
+              </button>
+            </div>
+            <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
+              <span class="profile-status-card__content">
+                <small>Concentrazione</small>
+                <strong>${hasConcentration ? 'Attiva' : 'Non attiva'}</strong>
+              </span>
+              <button
+                class="inspiration-toggle concentration-toggle"
+                type="button"
+                data-toggle-concentration
+                aria-pressed="${hasConcentration}"
+                aria-label="${hasConcentration ? 'Termina' : 'Attiva'} concentrazione"
+                ${canEditCharacter ? '' : 'disabled'}
+              >
+                <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
+              </button>
+            </div>
+            <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background>
+              <span class="profile-status-card__icon" aria-hidden="true">📜</span>
+              <span class="profile-status-card__content">
+                <small>Background</small>
+                <strong>${data.background ?? 'Apri dettagli'}</strong>
+              </span>
+              <span class="profile-status-card__arrow" aria-hidden="true">›</span>
             </button>
           </div>
-          <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
-            <span class="profile-status-card__content">
-              <small>Concentrazione</small>
-              <strong>${hasConcentration ? 'Attiva' : 'Non attiva'}</strong>
-            </span>
-            <button
-              class="inspiration-toggle concentration-toggle"
-              type="button"
-              data-toggle-concentration
-              aria-pressed="${hasConcentration}"
-              aria-label="${hasConcentration ? 'Termina' : 'Attiva'} concentrazione"
-              ${canEditCharacter ? '' : 'disabled'}
-            >
-              <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
-            </button>
-          </div>
-          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background>
-            <span class="profile-status-card__icon" aria-hidden="true">📜</span>
-            <span class="profile-status-card__content">
-              <small>Background</small>
-              <strong>${data.background ?? 'Apri dettagli'}</strong>
-            </span>
-            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
-          </button>
         </div>
       </div>
       <div class="stat-panel">     

@@ -1330,6 +1330,7 @@ export async function renderHome(container) {
       openDiceOverlay({
         title: 'Tiro salvezza su morte',
         mode: 'death-save',
+        keepOpen: true,
         modifier: 0,
         rollType: 'TS',
         characterId: activeCharacter.id,
@@ -1339,7 +1340,12 @@ export async function renderHome(container) {
             normalizeCharacterId(character.id) === normalizeCharacterId(activeCharacter.id)
           )) || activeCharacter;
           const data = refreshedCharacter.data || {};
-          const result = applyDeathSaveRoll(data.death_saves, value);
+          const deathSaves = data.death_saves || {};
+          if ((Number(deathSaves.successes) || 0) >= 3 || (Number(deathSaves.failures) || 0) >= 3) {
+            createToast('I tiri salvezza su morte sono già conclusi', 'error');
+            return;
+          }
+          const result = applyDeathSaveRoll(deathSaves, value);
           if (!result) return;
           const messages = {
             'critical-success': '20 naturale: 2 successi',
