@@ -168,11 +168,16 @@ export function attachNumberStepper(input, {
     const fallbackStepValue = () => {
       const fallbackStep = 1;
       const currentValue = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.value || 0);
-      const minValue = Number(input.min);
-      const maxValue = Number(input.max);
+      const parseOptionalBound = (value) => {
+        if (value === '') return null;
+        const parsedValue = Number(value);
+        return Number.isFinite(parsedValue) ? parsedValue : null;
+      };
+      const minValue = parseOptionalBound(input.min);
+      const maxValue = parseOptionalBound(input.max);
       let nextValue = currentValue + (fallbackStep * direction);
-      if (Number.isFinite(minValue)) nextValue = Math.max(minValue, nextValue);
-      if (Number.isFinite(maxValue)) nextValue = Math.min(maxValue, nextValue);
+      if (minValue !== null) nextValue = Math.max(minValue, nextValue);
+      if (maxValue !== null) nextValue = Math.min(maxValue, nextValue);
       input.value = String(nextValue);
     };
     const numericStep = Number(input.step);

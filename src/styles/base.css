@@ -5993,6 +5993,16 @@ button:focus-visible,
   grid-template-columns: repeat(2, minmax(220px, 1fr));
 }
 
+.item-editor-form .item-modal-row--classification {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.item-editor-form .item-modal-row--weapon-primary,
+.item-editor-form .item-modal-row--weapon-range,
+.item-editor-form .item-modal-row--armor-primary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .item-modal-section {
   gap: 14px;
   padding: 16px;
@@ -6116,7 +6126,10 @@ button:focus-visible,
   .item-editor-form .modal-form-row--compact,
   .item-editor-form .modal-form-row--balanced,
   .item-editor-form .compact-field-grid,
-  .item-modal-row--armor-bonus {
+  .item-editor-form .item-modal-row--classification,
+  .item-editor-form .item-modal-row--weapon-primary,
+  .item-editor-form .item-modal-row--weapon-range,
+  .item-editor-form .item-modal-row--armor-primary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -6135,7 +6148,10 @@ button:focus-visible,
   .item-editor-form .compact-field-grid,
   .item-modal-kind__list,
   .item-modal-toggle-list,
-  .item-modal-row--armor-bonus {
+  .item-editor-form .item-modal-row--classification,
+  .item-editor-form .item-modal-row--weapon-primary,
+  .item-editor-form .item-modal-row--weapon-range,
+  .item-editor-form .item-modal-row--armor-primary {
     grid-template-columns: 1fr;
   }
 
@@ -6578,11 +6594,19 @@ button:focus-visible,
   margin-bottom: 0;
 }
 
+.ability-modal-row--recovery {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .ability-modal-section--description textarea {
   min-height: 120px;
 }
 
 @media (max-width: 680px) {
+  .ability-modal-row--recovery {
+    grid-template-columns: 1fr;
+  }
+
   .actions-fab-menu {
     grid-template-columns: 1fr;
     width: min(94vw, 420px);
