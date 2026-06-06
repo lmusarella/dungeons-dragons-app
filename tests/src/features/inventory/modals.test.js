@@ -32,5 +32,9 @@ describe('src/features/inventory/modals.js', () => {
     expect(source.indexOf('proficiencySection.appendChild(rangeGrid)'))
       .toBeLessThan(source.indexOf('proficiencySection.appendChild(weaponAmmoRow)'));
     expect(source).toContain("buildRow([armorTypeField, armorClassField, armorBonusField, shieldBonusField], 'compact')");
+    expect(source).toContain('toggleFieldVisibility(armorShieldRow, showArmorFields)');
+    expect(source).not.toContain('toggleFieldVisibility(weaponMasteryRow');
+    expect(source).not.toContain('toggleFieldVisibility(weaponThrownRow');
+    expect(source).not.toContain('toggleFieldVisibility(armorBonusRow');
   });
 });

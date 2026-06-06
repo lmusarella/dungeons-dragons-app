@@ -592,14 +592,12 @@ export async function openItemModal(character, item, items, onSave) {
     const showWeaponFields = itemKind === 'weapon';
     const showArmorFields = itemKind === 'armor';
     toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
-    toggleFieldVisibility(weaponMasteryRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageRow, showWeaponFields);
+    toggleFieldVisibility(rangeGrid, showWeaponFields);
     toggleFieldVisibility(weaponAmmoRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageModesField, showWeaponFields);
-    toggleFieldVisibility(weaponThrownRow, showWeaponFields);
-    toggleFieldVisibility(rangeGrid, showWeaponFields);
     toggleFieldVisibility(armorPrimaryRow, showArmorFields);
-    toggleFieldVisibility(armorBonusRow, showArmorFields);
+    toggleFieldVisibility(armorShieldRow, showArmorFields);
     toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
     toggleFieldVisibility(maxVolumeField, isContainer);
     toggleFieldVisibility(ammunitionTypeField, !isWeapon && !isContainer);
