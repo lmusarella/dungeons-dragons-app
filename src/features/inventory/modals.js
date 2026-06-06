@@ -142,7 +142,7 @@ export async function openItemModal(character, item, items, onSave) {
   const maxVolumeInput = maxVolumeField.querySelector('input');
   const ammunitionTypeField = document.createElement('label');
   ammunitionTypeField.className = 'field';
-  ammunitionTypeField.innerHTML = '<span>Tipo munizione dell\'oggetto</span>';
+  ammunitionTypeField.innerHTML = '<span>Tipo munizione</span>';
   const ammunitionTypeSelect = buildSelect(ammunitionTypes, item?.ammunition_type ?? '');
   ammunitionTypeSelect.name = 'ammunition_type';
   ammunitionTypeField.appendChild(ammunitionTypeSelect);
@@ -170,12 +170,12 @@ export async function openItemModal(character, item, items, onSave) {
     return optionLabel.querySelector('input');
   });
   categoryKindField.appendChild(categoryKindList);
-  const categoryRow = buildRow([categoryField, containerField, ammunitionTypeField], 'compact');
+  const categoryRow = buildRow([categoryField, containerField, maxVolumeField], 'compact');
   categoryRow.classList.add('item-modal-row--classification');
-  const maxVolumeRow = buildRow([maxVolumeField], 'balanced');
+  const ammunitionTypeRow = buildRow([ammunitionTypeField], 'balanced');
   const classificationSection = buildSection(
     'Categoria e collocazione',
-    [categoryKindField, categoryRow, maxVolumeRow],
+    [categoryKindField, categoryRow, ammunitionTypeRow],
     { icon: '🧭', description: 'Definisci tipo, contenitore e dettagli contestuali.' }
   );
 
@@ -544,6 +544,7 @@ export async function openItemModal(character, item, items, onSave) {
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isContainer = categorySelect.value === 'container';
+    const isConsumable = categorySelect.value === 'consumable';
     const itemKind = getKindFromCategory(categorySelect.value);
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
@@ -600,8 +601,8 @@ export async function openItemModal(character, item, items, onSave) {
     toggleFieldVisibility(armorShieldRow, showArmorFields);
     toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
     toggleFieldVisibility(maxVolumeField, isContainer);
-    toggleFieldVisibility(ammunitionTypeField, !isWeapon && !isContainer);
-    ammunitionTypeSelect.disabled = isWeapon || isContainer;
+    toggleFieldVisibility(ammunitionTypeRow, isConsumable);
+    ammunitionTypeSelect.disabled = !isConsumable;
     if (maxVolumeInput) {
       maxVolumeInput.disabled = !isContainer;
       if (!isContainer) {
