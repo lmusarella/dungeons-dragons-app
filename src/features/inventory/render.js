@@ -157,10 +157,14 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
           <div class="inventory-table__cell" data-label="Peso">${formatWeight(container.weight ?? 0, weightUnit)}</div>
           <div class="inventory-table__cell" data-label="Volume">${container.max_volume ?? '-'}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
-            <button class="resource-action-button icon-button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
+            <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${container.id}" aria-label="Inserisci oggetti sfusi in ${container.name}">
+              <span aria-hidden="true">＋</span>
+              <span>Inserisci</span>
+            </button>
+            <button class="resource-action-button icon-button" type="button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
               <span aria-hidden="true">✏️</span>
             </button>
-            <button class="resource-action-button icon-button" data-delete="${container.id}" aria-label="Elimina" title="Elimina">
+            <button class="resource-action-button icon-button" type="button" data-delete="${container.id}" aria-label="Elimina" title="Elimina">
               <span aria-hidden="true">🗑️</span>
             </button>
           </div>

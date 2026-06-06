@@ -13,14 +13,52 @@ import {
   deleteTransaction
 } from '../wallet/walletApi.js';
 import { renderWalletSummary } from '../wallet/wallet.js';
-import { categories, itemCategories } from './constants.js';
+import { categories } from './constants.js';
 import { openItemImageModal, openItemModal } from './modals.js';
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields, walletEditFields } from './render.js';
-import { getWeightUnit, normalizeTransactionAmount } from './utils.js';
+import { getCategoryLabel, getWeightUnit, normalizeTransactionAmount } from './utils.js';
 
 
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
 const COIN_LABELS = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
+
+async function openLooseItemsPicker(containerItem, items) {
+  const looseItems = items.filter((item) => !item.container_item_id && item.category !== 'container');
+  if (!looseItems.length) {
+    createToast('Non ci sono oggetti sfusi da inserire');
+    return [];
+  }
+
+  const content = document.createElement('div');
+  content.className = 'inventory-insert-picker';
+  content.innerHTML = `
+    <p class="muted inventory-insert-picker__intro">Seleziona uno o più oggetti da spostare in <strong>${containerItem.name}</strong>.</p>
+    <div class="inventory-insert-picker__list"></div>
+  `;
+  const list = content.querySelector('.inventory-insert-picker__list');
+  looseItems.forEach((item) => {
+    const option = document.createElement('label');
+    option.className = 'inventory-insert-picker__item';
+    option.innerHTML = `
+      <span class="inventory-insert-picker__details">
+        <strong>${item.name}</strong>
+        <span class="muted">${getCategoryLabel(item.category)} · Quantità ${item.qty}</span>
+      </span>
+      <input type="checkbox" name="item_ids" value="${item.id}" />
+    `;
+    const input = option.querySelector('input');
+    input.addEventListener('change', () => option.classList.toggle('is-selected', input.checked));
+    list.appendChild(option);
+  });
+
+  const formData = await openFormModal({
+    title: `Inserisci in ${containerItem.name}`,
+    submitLabel: 'Inserisci selezionati',
+    content,
+    cardClass: 'modal-card--inventory-insert'
+  });
+  return formData ? formData.getAll('item_ids') : [];
+}
 
 function ensureWallet(wallet, character) {
   if (wallet) return wallet;
@@ -249,6 +287,24 @@ export async function renderInventory(container) {
     if (carryTotalEl) {
       carryTotalEl.textContent = formatWeight(calcTotalWeight(filtered), weightUnit);
     }
+    listEl.querySelectorAll('[data-insert-container]')
+      .forEach((button) => button.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const containerItem = items.find((item) => String(item.id) === button.dataset.insertContainer);
+        if (!containerItem) return;
+        const selectedIds = await openLooseItemsPicker(containerItem, items);
+        if (!selectedIds.length) return;
+        await runWithGlobalLoader(async () => {
+          try {
+            await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id })));
+            createToast(`${selectedIds.length} ${selectedIds.length === 1 ? 'oggetto inserito' : 'oggetti inseriti'} in ${containerItem.name}`);
+            renderInventory(container);
+          } catch (error) {
+            createToast('Errore durante l’inserimento degli oggetti', 'error');
+          }
+        });
+      }));
     listEl.querySelectorAll('[data-edit]')
       .forEach((btn) => btn.addEventListener('click', (event) => {
         event.preventDefault();
