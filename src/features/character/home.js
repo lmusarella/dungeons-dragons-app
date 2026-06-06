@@ -38,6 +38,7 @@ import {
 import { consumeSpellSlot, restoreSpellSlot, saveCharacterData } from './home/data.js';
 import { abilityShortLabel, conditionList, damageTypeList, savingThrowList, skillList } from './home/constants.js';
 import {
+  applyDeathSaveRoll,
   applyRestRecovery,
   buildSpellDamageOverlayConfig,
   buildWeaponDamageOverlayConfig,
@@ -1317,6 +1318,46 @@ export async function renderHome(container) {
         createToast('Errore eliminazione risorsa', 'error');
       }
     }));
+
+  const deathSaveRollButton = container.querySelector('[data-roll-death-save]');
+  if (deathSaveRollButton && activeCharacter && canEditCharacter) {
+    deathSaveRollButton.addEventListener('click', () => {
+      const currentDeathSaves = activeCharacter.data?.death_saves || {};
+      if ((Number(currentDeathSaves.successes) || 0) >= 3 || (Number(currentDeathSaves.failures) || 0) >= 3) {
+        createToast('Azzera i TS morte prima di effettuare un nuovo tiro', 'error');
+        return;
+      }
+      openDiceOverlay({
+        title: 'Tiro salvezza su morte',
+        mode: 'death-save',
+        modifier: 0,
+        rollType: 'TS',
+        characterId: activeCharacter.id,
+        historyLabel: 'TS morte',
+        onRollComplete: async ({ value }) => {
+          const refreshedCharacter = getState().characters.find((character) => (
+            normalizeCharacterId(character.id) === normalizeCharacterId(activeCharacter.id)
+          )) || activeCharacter;
+          const data = refreshedCharacter.data || {};
+          const result = applyDeathSaveRoll(data.death_saves, value);
+          if (!result) return;
+          const messages = {
+            'critical-success': '20 naturale: 2 successi',
+            'critical-failure': '1 naturale: 2 fallimenti',
+            success: 'TS morte superato: 1 successo',
+            failure: 'TS morte fallito: 1 fallimento'
+          };
+          await saveCharacterData(refreshedCharacter, {
+            ...data,
+            death_saves: {
+              successes: result.successes,
+              failures: result.failures
+            }
+          }, messages[result.outcome], () => renderHome(container));
+        }
+      });
+    });
+  }
 
   container.querySelectorAll('[data-death-save]')
     .forEach((button) => button.addEventListener('click', async () => {

@@ -198,52 +198,66 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     <div class="character-overview">
       <div class="character-summary">
         <div class="character-hero">
-          ${data.avatar_url ? `<img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" />` : ''}
-          <div>
+          ${data.avatar_url ? `<div class="character-avatar-frame"><img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" /></div>` : ''}
+          <div class="character-identity">
+            <p class="character-identity__eyebrow">Scheda personaggio</p>
             <h3 class="character-name">${character.name}</h3>
             <div class="character-meta">
-              <span class="meta-tag">Livello ${data.level ?? '-'}</span>
-              <span class="meta-tag">Razza ${data.race ?? '-'}</span>
-              <span class="meta-tag">Classe ${data.class_name ?? data.class_archetype ?? '-'}</span>
-              <span class="meta-tag">Archetipo ${data.archetype ?? '-'}</span>
-              <span class="meta-tag">Allineamento ${data.alignment ?? '-'}</span>
-              <span class="meta-tag">Background ${data.background ?? '-'}</span>
+              <span class="meta-tag meta-tag--level"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              <span class="meta-tag"><small>Razza</small><strong>${data.race ?? '-'}</strong></span>
+              <span class="meta-tag"><small>Classe</small><strong>${data.class_name ?? data.class_archetype ?? '-'}</strong></span>
+              <span class="meta-tag"><small>Archetipo</small><strong>${data.archetype ?? '-'}</strong></span>
+              <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
             </div>
           </div>
         </div>
-        <div class="character-summary-actions">
-          <div class="proficiency-chip">
-            <span>Bonus competenza</span>
-            <strong>${formatSigned(proficiencyBonus)}</strong>
+        <div class="character-summary-actions" aria-label="Stato del personaggio">
+          <div class="profile-status-card profile-status-card--proficiency">
+            <span class="profile-status-card__icon" aria-hidden="true">✦</span>
+            <span class="profile-status-card__content">
+              <small>Bonus competenza</small>
+              <strong>${formatSigned(proficiencyBonus)}</strong>
+            </span>
           </div>
-          <div class="inspiration-chip">
-            <span>Ispirazione</span>
+          <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
+            <span class="profile-status-card__content">
+              <small>Ispirazione</small>
+              <strong>${hasInspiration ? 'Disponibile' : 'Non attiva'}</strong>
+            </span>
             <button
               class="inspiration-toggle"
               type="button"
               data-toggle-inspiration
               aria-pressed="${hasInspiration}"
-              aria-label="Imposta ispirazione"
+              aria-label="${hasInspiration ? 'Rimuovi' : 'Attiva'} ispirazione"
               ${canEditCharacter ? '' : 'disabled'}
             >
               <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
             </button>
           </div>
-          <div class="inspiration-chip concentration-chip">
-            <span>Concentrazione</span>
+          <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
+            <span class="profile-status-card__content">
+              <small>Concentrazione</small>
+              <strong>${hasConcentration ? 'Attiva' : 'Non attiva'}</strong>
+            </span>
             <button
               class="inspiration-toggle concentration-toggle"
               type="button"
               data-toggle-concentration
               aria-pressed="${hasConcentration}"
-              aria-label="Imposta concentrazione"
+              aria-label="${hasConcentration ? 'Termina' : 'Attiva'} concentrazione"
               ${canEditCharacter ? '' : 'disabled'}
             >
-              <span class="inspiration-toggle__icon" aria-hidden="true">🧠</span>
+              <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
             </button>
           </div>
-          <button class="ghost-button background-button" type="button" data-show-background>
-            Background
+          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background>
+            <span class="profile-status-card__icon" aria-hidden="true">📜</span>
+            <span class="profile-status-card__content">
+              <small>Background</small>
+              <strong>${data.background ?? 'Apri dettagli'}</strong>
+            </span>
+            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
           </button>
         </div>
       </div>
@@ -384,7 +398,17 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               </div>
             </div>
             <div class="death-saves">
-              <span class="death-saves__label">TS morte</span>
+              <div class="death-saves__heading">
+                <span class="death-saves__label">TS morte</span>
+                <button
+                  class="icon-button icon-button--dice death-saves__roll"
+                  type="button"
+                  data-roll-death-save
+                  aria-label="Tira il tiro salvezza su morte"
+                  title="Tira TS morte"
+                  ${canEditCharacter ? '' : 'disabled'}
+                ><span aria-hidden="true">🎲</span></button>
+              </div>
               <div class="death-saves__group" aria-label="Successi">
                 <span class="death-saves__tag">✓</span>
                 ${Array.from({ length: 3 }, (_, index) => {

@@ -22,4 +22,11 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
       expect(source).toContain(name);
     });
   });
+  it('uses the damage modal width for generic rolls', () => {
+    const source = readFileSync('src/features/dice-roller/overlay/dice.js', 'utf8');
+    const styles = readFileSync('src/features/dice-roller/styles.css', 'utf8');
+    expect(source).toContain("classList.toggle('diceov-stage--generic-roll', mode === 'generic')");
+    expect(styles).toMatch(/\.diceov-stage--generic-roll,\s*\.diceov-stage--damage-roll\s*\{\s*width:\s*min\(760px,/s);
+  });
+
 });

@@ -665,6 +665,7 @@ export function openDiceOverlay({
 
   const isDamageGenericRoll = rollType === 'DMG' && mode === 'generic';
   stage?.classList.toggle('diceov-stage--compact-roll', ['TC', 'TA', 'TS'].includes(rollType));
+  stage?.classList.toggle('diceov-stage--generic-roll', mode === 'generic');
   stage?.classList.toggle('diceov-stage--damage-roll', isDamageGenericRoll);
 
   if (criticalBanner) {

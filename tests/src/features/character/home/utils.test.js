@@ -7,7 +7,8 @@ import {
   calculateArmorClass,
   rollDie,
   buildSpellDamageOverlayConfig,
-  getCastableSpellSlotLevels
+  getCastableSpellSlotLevels,
+  applyDeathSaveRoll
 } from '../../../../../src/features/character/home/utils.js';
 
 describe('src/features/character/home/utils.js', () => {
@@ -64,6 +65,40 @@ describe('src/features/character/home/utils.js', () => {
       title: 'Danni Cura Ferite (slot 3°)',
       notation: '1d8+2d8',
       modifier: 5
+    });
+  });
+
+  it('applies death saving throw successes and failures from the natural d20', () => {
+    expect(applyDeathSaveRoll({ successes: 0, failures: 0 }, 10)).toMatchObject({
+      successes: 1,
+      failures: 0,
+      outcome: 'success'
+    });
+    expect(applyDeathSaveRoll({ successes: 1, failures: 0 }, 20)).toMatchObject({
+      successes: 3,
+      failures: 0,
+      successDelta: 2,
+      outcome: 'critical-success'
+    });
+    expect(applyDeathSaveRoll({ successes: 0, failures: 1 }, 1)).toMatchObject({
+      successes: 0,
+      failures: 3,
+      failureDelta: 2,
+      outcome: 'critical-failure'
+    });
+    expect(applyDeathSaveRoll({ successes: 0, failures: 0 }, 9)).toMatchObject({
+      successes: 0,
+      failures: 1,
+      outcome: 'failure'
+    });
+  });
+
+  it('rejects invalid death saving throw values and clamps tracks', () => {
+    expect(applyDeathSaveRoll({}, 0)).toBeNull();
+    expect(applyDeathSaveRoll({ successes: 2, failures: 3 }, 20)).toMatchObject({
+      successes: 3,
+      failures: 3,
+      successDelta: 1
     });
   });
 

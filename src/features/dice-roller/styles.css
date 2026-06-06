@@ -748,6 +748,7 @@ header {
   width: min(780px, calc(100vw - 24px));
 }
 
+.diceov-stage--generic-roll,
 .diceov-stage--damage-roll {
   width: min(760px, calc(100vw - 24px));
 }

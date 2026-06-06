@@ -79,6 +79,38 @@ export function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
+export function applyDeathSaveRoll(deathSaves = {}, rollValue) {
+  const roll = Number(rollValue);
+  if (!Number.isInteger(roll) || roll < 1 || roll > 20) return null;
+
+  const current = {
+    successes: Math.max(0, Math.min(3, Number(deathSaves.successes) || 0)),
+    failures: Math.max(0, Math.min(3, Number(deathSaves.failures) || 0))
+  };
+  const isCriticalFailure = roll === 1;
+  const isCriticalSuccess = roll === 20;
+  const successDelta = isCriticalSuccess ? 2 : roll >= 10 ? 1 : 0;
+  const failureDelta = isCriticalFailure ? 2 : roll <= 9 ? 1 : 0;
+  const next = {
+    successes: Math.min(3, current.successes + successDelta),
+    failures: Math.min(3, current.failures + failureDelta)
+  };
+
+  return {
+    ...next,
+    roll,
+    successDelta: next.successes - current.successes,
+    failureDelta: next.failures - current.failures,
+    outcome: isCriticalSuccess
+      ? 'critical-success'
+      : isCriticalFailure
+        ? 'critical-failure'
+        : successDelta
+          ? 'success'
+          : 'failure'
+  };
+}
+
 export function parseDamageDice(damageDie) {
   if (!damageDie || typeof damageDie !== 'string') return null;
   const trimmed = damageDie.trim();
