@@ -21,6 +21,9 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('vital-mini-chip--darkvision familiar-darkvision-chip');
     expect(source).toContain('data-companion-hp-action="heal"');
     expect(source).toContain('data-companion-hp-action="damage"');
+    expect(source).toContain('<span aria-hidden="true">+</span><strong>Cura</strong>');
+    expect(source).toContain('<span aria-hidden="true">−</span><strong>Danno</strong>');
+    expect(source.indexOf('class="familiar-hp-actions"')).toBeLessThan(source.indexOf('class="hp-bar-label__temp-group familiar-temp-hp-label'));
     expect(source).toContain("allowTempHp: action === 'heal'");
     expect(source).toContain("allowMaxOverride: action === 'damage'");
     expect(source).toContain('temp: hpTemp + amount');

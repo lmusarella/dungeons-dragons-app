@@ -220,11 +220,15 @@ function buildCompanionCard(companion, isSelected = false) {
                 <span class="hp-bar-label__title">Punti ferita</span>
                 <strong class="hp-bar-label__value">${hpCurrent}/${hpMax}</strong>
                 <span class="hp-bar-label__percent" aria-label="Percentuale vita ${Math.round(hpPercent)}%">${Math.round(hpPercent)}%</span>
-                ${hpTemp ? `<span class="hp-bar-label__temp-group is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></span>` : ''}
-                <span class="familiar-hp-actions">
-                  <button class="condition-track__add familiar-hp-action familiar-hp-action--heal" type="button" data-companion-hp-action="heal" data-companion-id="${escapeHtml(companion.id)}" aria-label="Cura o assegna punti ferita temporanei a ${escapeHtml(companion.name)}" title="Cura o PF temporanei">+</button>
-                  <button class="condition-track__add familiar-hp-action familiar-hp-action--damage" type="button" data-companion-hp-action="damage" data-companion-id="${escapeHtml(companion.id)}" aria-label="Fai subire danno a ${escapeHtml(companion.name)}" title="Subisci danno">−</button>
+                <span class="familiar-hp-actions" aria-label="Azioni sui punti ferita">
+                  <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-companion-hp-action="heal" data-companion-id="${escapeHtml(companion.id)}" aria-label="Cura o assegna punti ferita temporanei a ${escapeHtml(companion.name)}">
+                    <span aria-hidden="true">+</span><strong>Cura</strong>
+                  </button>
+                  <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-companion-hp-action="damage" data-companion-id="${escapeHtml(companion.id)}" aria-label="Fai subire danno a ${escapeHtml(companion.name)}">
+                    <span aria-hidden="true">−</span><strong>Danno</strong>
+                  </button>
                 </span>
+                ${hpTemp ? `<span class="hp-bar-label__temp-group familiar-temp-hp-label is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></span>` : ''}
               </div>
               <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}">
                 <div class="hp-bar" style="flex: ${hpTrackFlex};"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
