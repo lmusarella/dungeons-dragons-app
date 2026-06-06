@@ -1532,15 +1532,15 @@ button:focus-visible,
 }
 
 .character-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 10px;
 }
 
 .character-meta .meta-tag {
-  display: flex;
-  min-width: 0;
+  display: inline-flex;
+  max-width: 100%;
   min-height: 29px;
   align-items: center;
   gap: 5px;
@@ -1558,6 +1558,7 @@ button:focus-visible,
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .character-meta .meta-tag strong {
@@ -1579,78 +1580,48 @@ button:focus-visible,
   z-index: 1;
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(4, minmax(78px, 1fr));
+  grid-template-columns: minmax(100px, 0.9fr) minmax(106px, 1fr) minmax(126px, 1.1fr) minmax(104px, 1fr);
   gap: 7px;
   min-width: 0;
   overflow-x: auto;
+  padding-bottom: 2px;
   scrollbar-width: thin;
 }
 
 .profile-status-card {
+  display: flex;
   min-width: 0;
-  min-height: 52px;
-  padding: 8px 9px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 7px;
   border: 1px solid #e4d6c0;
-  border-radius: 12px;
+  border-radius: 11px;
   background: rgba(255, 255, 255, 0.78);
   color: #342619;
   box-shadow: 0 3px 8px rgba(67, 42, 20, 0.05);
 }
 
-.profile-status-card:not(button) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 7px;
-}
-
-.profile-status-card__content {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-}
-
-.profile-status-card__content small {
-  overflow: hidden;
-  color: #806b54;
+.profile-status-card__label {
+  flex: 0 0 auto;
+  color: #6f5a43;
   font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.035em;
-  text-overflow: ellipsis;
+  letter-spacing: 0.025em;
+  line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.profile-status-card__content strong {
-  overflow: hidden;
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.profile-status-card__icon {
-  display: inline-flex;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  background: rgba(var(--accent-rgb), 0.1);
+.profile-status-card__value {
   color: var(--accent);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
-.profile-status-card.profile-status-card--proficiency {
-  justify-content: flex-start;
+.profile-status-card--proficiency {
   background: #fff2cf;
-}
-
-.profile-status-card--proficiency .profile-status-card__content strong {
-  color: var(--accent);
-  font-size: 1.05rem;
 }
 
 .profile-status-card--inspiration.is-active {
@@ -1664,12 +1635,7 @@ button:focus-visible,
 }
 
 .background-button.profile-status-card--background {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
   width: 100%;
-  min-height: 50px;
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -1683,8 +1649,9 @@ button:focus-visible,
 }
 
 .profile-status-card__arrow {
+  flex: 0 0 auto;
   color: var(--accent);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   line-height: 1;
 }
 
@@ -1747,34 +1714,16 @@ button:focus-visible,
   }
 
   .character-summary-actions {
-    grid-template-columns: repeat(4, minmax(78px, 1fr));
+    grid-template-columns: 100px 106px 126px 104px;
   }
 
   .profile-status-card {
-    min-height: 46px;
-    padding: 6px;
-  }
-
-  .profile-status-card__content small {
-    font-size: 0.52rem;
-  }
-
-  .profile-status-card__content strong {
-    font-size: 0.7rem;
-  }
-
-  .profile-status-card__icon,
-  .profile-status-card__arrow {
-    display: none;
+    min-height: 38px;
   }
 
   .inspiration-toggle {
     width: 26px;
     height: 26px;
-  }
-
-  .background-button.profile-status-card--background {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

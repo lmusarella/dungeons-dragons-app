@@ -212,17 +212,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
         </div>
         <div class="character-summary-actions" aria-label="Stato del personaggio">
           <div class="profile-status-card profile-status-card--proficiency">
-            <span class="profile-status-card__icon" aria-hidden="true">✦</span>
-            <span class="profile-status-card__content">
-              <small>Competenza</small>
-              <strong>${formatSigned(proficiencyBonus)}</strong>
-            </span>
+            <span class="profile-status-card__label">Competenza</span>
+            <strong class="profile-status-card__value">${formatSigned(proficiencyBonus)}</strong>
           </div>
           <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
-            <span class="profile-status-card__content">
-              <small>Ispirazione</small>
-              <strong>${hasInspiration ? 'Disponibile' : 'Non attiva'}</strong>
-            </span>
+            <span class="profile-status-card__label">Ispirazione</span>
             <button
               class="inspiration-toggle"
               type="button"
@@ -235,10 +229,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </button>
           </div>
           <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
-            <span class="profile-status-card__content">
-              <small>Concentrazione</small>
-              <strong>${hasConcentration ? 'Attiva' : 'Non attiva'}</strong>
-            </span>
+            <span class="profile-status-card__label">Concentrazione</span>
             <button
               class="inspiration-toggle concentration-toggle"
               type="button"
@@ -250,12 +241,13 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
             </button>
           </div>
-          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background>
-            <span class="profile-status-card__icon" aria-hidden="true">📜</span>
-            <span class="profile-status-card__content">
-              <small>Background</small>
-              <strong>${data.background ?? 'Apri dettagli'}</strong>
-            </span>
+          <button
+            class="profile-status-card profile-status-card--background background-button"
+            type="button"
+            data-show-background
+            title="${escapeHtml(data.background ?? 'Apri dettagli background')}"
+          >
+            <span class="profile-status-card__label">Background</span>
             <span class="profile-status-card__arrow" aria-hidden="true">›</span>
           </button>
         </div>
