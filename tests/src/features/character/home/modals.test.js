@@ -22,4 +22,11 @@ describe('src/features/character/home/modals.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('keeps recharge type and rest recovery fields in one row', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+
+    expect(source).toContain("buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'compact')");
+    expect(source).toContain("recoveryRow.classList.add('ability-modal-row--recovery')");
+  });
 });

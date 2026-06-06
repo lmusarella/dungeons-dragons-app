@@ -1019,7 +1019,9 @@ export function openResourceDrawer(character, onSave, resource = null) {
   ], resource?.reset_on ?? 'long_rest');
   resetSelect.name = 'reset_on';
   resetField.appendChild(resetSelect);
-  chargeSectionRows.push(buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'balanced'));
+  const recoveryRow = buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'compact');
+  recoveryRow.classList.add('ability-modal-row--recovery');
+  chargeSectionRows.push(recoveryRow);
 
   const damageDiceNotationField = buildInput({
     label: 'Notazione dado',

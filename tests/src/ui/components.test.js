@@ -23,6 +23,17 @@ describe('src/ui/components.js', () => {
     });
   });
 
+  it('does not clamp number steppers to zero when optional bounds are missing', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    const attachNumberStepperStart = source.indexOf('export function attachNumberStepper');
+    const attachNumberSteppersStart = source.indexOf('export function attachNumberSteppers');
+    const attachNumberStepperSource = source.slice(attachNumberStepperStart, attachNumberSteppersStart);
+
+    expect(attachNumberStepperSource).toContain("if (value === '') return null");
+    expect(attachNumberStepperSource).not.toContain('const maxValue = Number(input.max)');
+    expect(attachNumberStepperSource).not.toContain('const minValue = Number(input.min)');
+  });
+
   it('does not force number steppers to focus the input on pointer use', () => {
     const source = readFileSync('src/ui/components.js', 'utf8');
     const attachNumberStepperStart = source.indexOf('export function attachNumberStepper');
