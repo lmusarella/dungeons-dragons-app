@@ -8976,3 +8976,113 @@ button:focus-visible,
   text-overflow: initial;
   white-space: normal;
 }
+
+/* Wild shape vitals and readable metadata */
+.hp-panel-hit-dice {
+  gap: 7px;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid rgba(139, 93, 56, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.9);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.hp-panel-hit-dice strong {
+  color: #4d3224;
+  font-size: 0.78rem;
+}
+
+.hp-panel-insights {
+  gap: 7px;
+}
+
+.vital-mini-chip {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+}
+
+.vital-mini-chip:first-child {
+  border: 1px solid rgba(82, 105, 158, 0.18);
+  background: #eef2fb;
+  color: #44547d;
+}
+
+.vital-mini-chip--darkvision,
+.hp-panel-insights .vital-mini-chip:last-child {
+  border: 1px solid rgba(100, 76, 145, 0.18);
+  background: #f1edfa;
+  color: #5e4a83;
+}
+
+.vital-mini-chip--speed {
+  border: 1px solid rgba(47, 127, 97, 0.18);
+  background: #eaf6f1;
+  color: #286b53;
+}
+
+.vital-mini-chip span,
+.vital-mini-chip strong {
+  font-size: inherit;
+}
+
+.wild-shape-vitals {
+  display: grid;
+  gap: 6px;
+  padding: 8px 9px 0;
+  border-top-color: rgba(47, 127, 97, 0.2);
+  background: linear-gradient(180deg, transparent, rgba(234, 246, 241, 0.5));
+  border-radius: 0 0 10px 10px;
+}
+
+.hp-vitals-card__icon--wild {
+  color: #2f7f61;
+}
+
+.hp-bar-label--wild-shape {
+  min-height: 28px;
+  gap: 6px;
+  font-size: inherit;
+}
+
+.wild-shape-vitals__name {
+  overflow: hidden;
+  color: #2f6e58;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-bar-track--wild-shape {
+  margin-top: 0;
+}
+
+.hp-bar__fill--wild {
+  background: linear-gradient(90deg, #2f7f61, #62b58f);
+}
+
+.wild-shape-vitals__info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+@container (max-width: 470px) {
+  .hp-panel-insights,
+  .wild-shape-vitals__info {
+    width: 100%;
+  }
+
+  .vital-mini-chip {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+
+  .wild-shape-vitals__name {
+    width: 100%;
+    order: 5;
+  }
+}

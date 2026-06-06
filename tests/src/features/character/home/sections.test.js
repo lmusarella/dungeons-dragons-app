@@ -62,6 +62,13 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('Percezione passiva');
     expect(source).toContain('Scurovisione');
     expect(source).toContain('Dadi vita');
+    expect(source).toContain('Trasformati (${wildShapeForms.length})');
+    expect(source).toContain('Punti ferita forma');
+    expect(source).toContain('hp-bar__fill--wild');
+    expect(source).toContain('wildShapeDarkvisionLabel');
+    expect(source).toContain('effectiveArmorClass');
+    expect(source).toContain('effectiveSpeed');
+    expect(source).not.toContain('Math.max(Number(abilities.str)');
     expect(source).not.toContain('${weaknessEffectsTooltip}');
     expect(source).not.toContain('${conditionsEffectsTooltip}');
     expect(styles).toContain('.combat-vitals-grid');

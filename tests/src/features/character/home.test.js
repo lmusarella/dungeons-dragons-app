@@ -23,6 +23,20 @@ describe('src/features/character/home.js', () => {
     });
   });
 
+  it('uses the selected wild shape physical scores instead of the highest values', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const adjustedCharacter = source.slice(
+      source.indexOf('function buildWildShapeAdjustedCharacter'),
+      source.indexOf('function getWildShapeForms')
+    );
+    expect(adjustedCharacter).toContain('str: Number(activeWildShape.statBlock.abilities.str) || 10');
+    expect(adjustedCharacter).toContain('dex: Number(activeWildShape.statBlock.abilities.dex) || 10');
+    expect(adjustedCharacter).toContain('con: Number(activeWildShape.statBlock.abilities.con) || 10');
+    expect(adjustedCharacter).toContain('initiative: activeWildShape.statBlock.initiative');
+    expect(adjustedCharacter).toContain('speed: activeWildShape.statBlock.speeds.walk');
+    expect(adjustedCharacter).not.toContain('Math.max');
+  });
+
   it('keeps the death save dice modal open after a roll', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const deathSaveHandler = source.slice(

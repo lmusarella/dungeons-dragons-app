@@ -60,7 +60,11 @@ function normalizeWildShapeStatBlock(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(source.abilities || {}) },
+    armor_class: source.armor_class ?? null,
+    initiative: source.initiative ?? null,
+    darkvision_range_m: source.darkvision_range_m ?? null,
     hp: { current: 1, max: 1, ...(source.hp || {}) },
+    speeds: { walk: null, fly: null, climb: null, burrow: null, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
   };
 }
@@ -89,10 +93,12 @@ function buildWildShapeAdjustedCharacter(character, companions = []) {
       ...data,
       abilities: {
         ...abilities,
-        str: Math.max(Number(abilities.str) || 0, Number(activeWildShape.statBlock.abilities.str) || 0),
-        dex: Math.max(Number(abilities.dex) || 0, Number(activeWildShape.statBlock.abilities.dex) || 0),
-        con: Math.max(Number(abilities.con) || 0, Number(activeWildShape.statBlock.abilities.con) || 0)
-      }
+        str: Number(activeWildShape.statBlock.abilities.str) || 10,
+        dex: Number(activeWildShape.statBlock.abilities.dex) || 10,
+        con: Number(activeWildShape.statBlock.abilities.con) || 10
+      },
+      initiative: activeWildShape.statBlock.initiative ?? getAbilityModifier(activeWildShape.statBlock.abilities.dex),
+      speed: activeWildShape.statBlock.speeds.walk ?? data.speed
     }
   };
 }

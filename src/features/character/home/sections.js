@@ -43,6 +43,9 @@ function normalizeCompanionStatBlock(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(source.abilities || {}) },
+    armor_class: source.armor_class ?? null,
+    initiative: source.initiative ?? null,
+    darkvision_range_m: source.darkvision_range_m ?? null,
     hp: { current: 1, max: 1, ...(source.hp || {}) },
     speeds: { walk: null, fly: null, climb: null, burrow: null, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
@@ -101,15 +104,19 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const effectiveAbilities = activeWildShape
     ? {
       ...abilities,
-      str: Math.max(Number(abilities.str) || 0, Number(activeWildShape.statBlock.abilities.str) || 0),
-      dex: Math.max(Number(abilities.dex) || 0, Number(activeWildShape.statBlock.abilities.dex) || 0),
-      con: Math.max(Number(abilities.con) || 0, Number(activeWildShape.statBlock.abilities.con) || 0)
+      str: Number(activeWildShape.statBlock.abilities.str) || 10,
+      dex: Number(activeWildShape.statBlock.abilities.dex) || 10,
+      con: Number(activeWildShape.statBlock.abilities.con) || 10
     }
     : abilities;
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const hasInspiration = Boolean(data.inspiration);
   const hasConcentration = Boolean(data.concentration_active);
-  const initiativeBonus = data.initiative ?? getAbilityModifier(effectiveAbilities.dex);
+  const characterInitiative = data.initiative ?? getAbilityModifier(abilities.dex);
+  const wildShapeInitiative = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.initiative) ?? getAbilityModifier(activeWildShape.statBlock.abilities.dex))
+    : null;
+  const initiativeBonus = activeWildShape ? wildShapeInitiative : characterInitiative;
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
   const passivePerception = calculatePassivePerception(effectiveAbilities, proficiencyBonus, skillStates, skillMasteryStates);
@@ -147,11 +154,22 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   ];
   const activeWeaknesses = weaknessLevels.filter((level) => level.value <= weakPoints);
   const armorClass = calculateArmorClass(data, abilities, items);
+  const wildShapeArmorClass = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.armor_class) ?? (10 + (getAbilityModifier(activeWildShape.statBlock.abilities.dex) || 0)))
+    : null;
+  const effectiveArmorClass = activeWildShape ? wildShapeArmorClass : armorClass;
+  const effectiveSpeed = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.speeds.walk) ?? '-')
+    : (data.speed ?? '-');
   const hasDarkvision = Boolean(data.darkvision_enabled);
   const darkvisionRange = normalizeNumber(data.darkvision_range_m);
   const darkvisionLabel = hasDarkvision
     ? `${darkvisionRange ?? 18} m`
     : 'No';
+  const wildShapeDarkvision = activeWildShape
+    ? normalizeNumber(activeWildShape.statBlock.darkvision_range_m)
+    : null;
+  const wildShapeDarkvisionLabel = wildShapeDarkvision === null ? 'No' : `${wildShapeDarkvision} m`;
   const wildShapeForms = (companions || []).filter((entry) => ['familiar', 'summon', 'transformation'].includes(entry.kind || 'familiar'));
   const wildShapeHpPercent = activeWildShape ? Math.min(Math.max((activeWildShape.hpCurrent / activeWildShape.hpMax) * 100, 0), 100) : 0;
   const wildShapeSpeedLabel = activeWildShape ? formatWildShapeSpeeds(activeWildShape.statBlock.speeds) : '';
@@ -242,12 +260,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
       </div>
       <section class="hp-panel" aria-label="Statistiche di combattimento">
         <div class="combat-vitals-grid">
-          <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${armorClass ?? '-'}">
+          <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${effectiveArmorClass ?? '-'}">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
             </span>
             <span class="combat-stat__label">Classe armatura</span>
-            <strong>${armorClass ?? '-'}</strong>
+            <strong>${effectiveArmorClass ?? '-'}</strong>
           </div>
           <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
             <span class="combat-stat__icon" aria-hidden="true">
@@ -256,12 +274,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <span class="combat-stat__label">Iniziativa</span>
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
           </div>
-          <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${data.speed ?? '-'} metri">
+          <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
             </span>
             <span class="combat-stat__label">Velocità</span>
-            <strong>${data.speed ?? '-'}<small>m</small></strong>
+            <strong>${effectiveSpeed}<small>m</small></strong>
           </div>
           <div class="hp-vitals-card">
             <div class="hp-bar-label">
@@ -306,22 +324,26 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             ${activeWildShape ? `
             <div class="wild-shape-vitals">
               <div class="hp-bar-label hp-bar-label--wild-shape">
-                <span>Forma</span>
-                <strong>${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
+                <span class="hp-vitals-card__icon hp-vitals-card__icon--wild" aria-hidden="true">♥</span>
+                <span class="hp-bar-label__title">Punti ferita forma</span>
+                <strong class="hp-bar-label__value">${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
                 <span class="hp-bar-label__percent">${Math.round(wildShapeHpPercent)}%</span>
-                <span>${escapeHtml(activeWildShape.companion.name)}</span>
-                ${wildShapeSpeedLabel ? `<span class="muted">${escapeHtml(wildShapeSpeedLabel)}</span>` : ''}
+                <span class="wild-shape-vitals__name">${escapeHtml(activeWildShape.companion.name)}</span>
                 <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
               </div>
-              <div class="hp-bar-track hp-bar-track--wild-shape">
-                <div class="hp-bar"><div class="hp-bar__fill" style="width: ${wildShapeHpPercent}%;"></div></div>
+              <div class="hp-bar-track hp-bar-track--wild-shape" role="meter" aria-label="Punti ferita della forma" aria-valuemin="0" aria-valuemax="${activeWildShape.hpMax}" aria-valuenow="${activeWildShape.hpCurrent}">
+                <div class="hp-bar"><div class="hp-bar__fill hp-bar__fill--wild" style="width: ${wildShapeHpPercent}%;"></div></div>
+              </div>
+              <div class="wild-shape-vitals__info">
+                ${wildShapeSpeedLabel ? `<span class="vital-mini-chip vital-mini-chip--speed"><span>Movimento</span><strong>${escapeHtml(wildShapeSpeedLabel)}</strong></span>` : ''}
+                <span class="vital-mini-chip vital-mini-chip--darkvision"><span>Scurovisione</span><strong>${wildShapeDarkvisionLabel}</strong></span>
               </div>
             </div>
             ` : data.wild_shape_enabled ? `
             <div class="wild-shape-empty">
               <span>Forma selvatica pronta</span>
               <button class="ghost-button ghost-button--compact" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
-                Scegli (${wildShapeForms.length})
+                Trasformati (${wildShapeForms.length})
               </button>
             </div>
             ` : ''}
