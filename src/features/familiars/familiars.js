@@ -47,6 +47,7 @@ function getDefaultStatBlock() {
     proficiency_bonus: 2,
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
     saving_throws: {},
+    armor_class: null,
     initiative: null,
     darkvision_range_m: null,
     hp: { current: 1, max: 1 },
@@ -63,6 +64,7 @@ function normalizeStatBlock(raw) {
     proficiency_bonus: Number(source.proficiency_bonus) || base.proficiency_bonus,
     abilities: { ...base.abilities, ...(source.abilities || {}) },
     saving_throws: { ...base.saving_throws, ...(source.saving_throws || {}) },
+    armor_class: source.armor_class ?? base.armor_class,
     initiative: source.initiative ?? base.initiative,
     darkvision_range_m: source.darkvision_range_m ?? base.darkvision_range_m,
     hp: { ...base.hp, ...(source.hp || {}) },
@@ -127,7 +129,9 @@ function buildCompanionCard(companion, isSelected = false) {
   const darkvisionLabel = statBlock.darkvision_range_m === null || statBlock.darkvision_range_m === undefined || statBlock.darkvision_range_m === ''
     ? '-'
     : `${Number(statBlock.darkvision_range_m) || 0} m`;
+  const armorClass = statBlock.armor_class ?? (10 + (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0));
   const vitalStats = `
+    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>CA</span><strong>${armorClass}</strong></div>
     <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Bonus comp.</span><strong>${formatSigned(statBlock.proficiency_bonus)}</strong></div>
     <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Iniziativa</span><strong>${formatSigned(initiative)}</strong></div>
     <div class="familiar-vital-chip familiar-vital-chip--wide"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></div>
@@ -394,6 +398,7 @@ export async function renderFamiliars(container) {
       { label: 'HP attuali', name: 'hp_current', value: current.hp.current ?? 1 },
       { label: 'HP massimi', name: 'hp_max', value: current.hp.max ?? 1 },
       { label: 'Bonus competenza', name: 'proficiency_bonus', value: current.proficiency_bonus ?? 2 },
+      { label: 'Classe armatura', name: 'armor_class', value: current.armor_class ?? (10 + (getAbilityModifier(Number(current.abilities.dex) || 10) ?? 0)) },
       { label: 'Iniziativa', name: 'initiative', value: current.initiative ?? (getAbilityModifier(Number(current.abilities.dex) || 10) ?? 0), allowNegative: true },
       { label: 'Scurovisione (m)', name: 'darkvision_range_m', value: current.darkvision_range_m ?? '' },
       { label: 'Terra (m)', name: 'speed_walk', value: current.speeds.walk ?? 9 },
@@ -640,6 +645,7 @@ export async function renderFamiliars(container) {
       stat_block: {
         image_url: String(formData.get('image_url') || '').trim(),
         proficiency_bonus: Number(formData.get('proficiency_bonus') || 2),
+        armor_class: toNumberOrNull(formData.get('armor_class')),
         initiative: toNumberOrNull(formData.get('initiative')),
         darkvision_range_m: toNumberOrNull(formData.get('darkvision_range_m')),
         abilities,

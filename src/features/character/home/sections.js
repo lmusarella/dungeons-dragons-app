@@ -43,6 +43,9 @@ function normalizeCompanionStatBlock(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(source.abilities || {}) },
+    armor_class: source.armor_class ?? null,
+    initiative: source.initiative ?? null,
+    darkvision_range_m: source.darkvision_range_m ?? null,
     hp: { current: 1, max: 1, ...(source.hp || {}) },
     speeds: { walk: null, fly: null, climb: null, burrow: null, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
@@ -101,15 +104,19 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const effectiveAbilities = activeWildShape
     ? {
       ...abilities,
-      str: Math.max(Number(abilities.str) || 0, Number(activeWildShape.statBlock.abilities.str) || 0),
-      dex: Math.max(Number(abilities.dex) || 0, Number(activeWildShape.statBlock.abilities.dex) || 0),
-      con: Math.max(Number(abilities.con) || 0, Number(activeWildShape.statBlock.abilities.con) || 0)
+      str: Number(activeWildShape.statBlock.abilities.str) || 10,
+      dex: Number(activeWildShape.statBlock.abilities.dex) || 10,
+      con: Number(activeWildShape.statBlock.abilities.con) || 10
     }
     : abilities;
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const hasInspiration = Boolean(data.inspiration);
   const hasConcentration = Boolean(data.concentration_active);
-  const initiativeBonus = data.initiative ?? getAbilityModifier(effectiveAbilities.dex);
+  const characterInitiative = data.initiative ?? getAbilityModifier(abilities.dex);
+  const wildShapeInitiative = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.initiative) ?? getAbilityModifier(activeWildShape.statBlock.abilities.dex))
+    : null;
+  const initiativeBonus = activeWildShape ? wildShapeInitiative : characterInitiative;
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
   const passivePerception = calculatePassivePerception(effectiveAbilities, proficiencyBonus, skillStates, skillMasteryStates);
@@ -137,21 +144,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const conditionsLabel = activeConditions.length
     ? activeConditions.map((condition) => condition.label).join(', ')
     : 'Nessuna condizione';
-  const conditionsEffects = activeConditions.length
-    ? `
-      <ul class="condition-track__list">
-        ${activeConditions.map((condition) => `<li><strong>${condition.label}:</strong> ${condition.effect}</li>`).join('')}
-      </ul>
-    `
-    : '<p class="muted">Nessun effetto attivo.</p>';
-  const conditionsEffectsTooltip = `
-    <details class="info-tooltip">
-      <summary aria-label="Vedi effetti delle condizioni">?</summary>
-      <div class="info-tooltip__panel">
-        ${conditionsEffects}
-      </div>
-    </details>
-  `;
   const weaknessLevels = [
     { value: 1, description: 'Svantaggio sulle prove di caratteristica.' },
     { value: 2, description: 'Velocità dimezzata.' },
@@ -161,28 +153,23 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     { value: 6, description: 'Morte.' }
   ];
   const activeWeaknesses = weaknessLevels.filter((level) => level.value <= weakPoints);
-  const weaknessEffects = activeWeaknesses.length
-    ? `
-      <ul class="weakness-track__list">
-        ${activeWeaknesses.map((level) => `<li>${level.description}</li>`).join('')}
-      </ul>
-    `
-    : '<p class="muted">Nessun indebolimento.</p>';
-  const weaknessEffectsTooltip = `
-    <details class="info-tooltip">
-      <summary aria-label="Vedi effetti dei punti indebolimento">?</summary>
-      <div class="info-tooltip__panel">
-        ${weaknessEffects}
-      </div>
-    </details>
-  `;
-  const weaknessStatus = `Livello attuale: ${weakPoints}`;
   const armorClass = calculateArmorClass(data, abilities, items);
+  const wildShapeArmorClass = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.armor_class) ?? (10 + (getAbilityModifier(activeWildShape.statBlock.abilities.dex) || 0)))
+    : null;
+  const effectiveArmorClass = activeWildShape ? wildShapeArmorClass : armorClass;
+  const effectiveSpeed = activeWildShape
+    ? (normalizeNumber(activeWildShape.statBlock.speeds.walk) ?? '-')
+    : (data.speed ?? '-');
   const hasDarkvision = Boolean(data.darkvision_enabled);
   const darkvisionRange = normalizeNumber(data.darkvision_range_m);
   const darkvisionLabel = hasDarkvision
     ? `${darkvisionRange ?? 18} m`
     : 'No';
+  const wildShapeDarkvision = activeWildShape
+    ? normalizeNumber(activeWildShape.statBlock.darkvision_range_m)
+    : null;
+  const wildShapeDarkvisionLabel = wildShapeDarkvision === null ? 'No' : `${wildShapeDarkvision} m`;
   const wildShapeForms = (companions || []).filter((entry) => ['familiar', 'summon', 'transformation'].includes(entry.kind || 'familiar'));
   const wildShapeHpPercent = activeWildShape ? Math.min(Math.max((activeWildShape.hpCurrent / activeWildShape.hpMax) * 100, 0), 100) : 0;
   const wildShapeSpeedLabel = activeWildShape ? formatWildShapeSpeeds(activeWildShape.statBlock.speeds) : '';
@@ -271,35 +258,42 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   }).join('')}
         </div>
       </div>
-      <div class="hp-panel">
-        <div class="hp-bar-row">
-          <div class="armor-class-card">
-            <span>CA</span>
-            <strong>${armorClass ?? '-'}</strong>
-            <span class="armor-class-card__sigil" aria-hidden="true">🛡️</span>
+      <section class="hp-panel" aria-label="Statistiche di combattimento">
+        <div class="combat-vitals-grid">
+          <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${effectiveArmorClass ?? '-'}">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
+            </span>
+            <span class="combat-stat__label">Classe armatura</span>
+            <strong>${effectiveArmorClass ?? '-'}</strong>
           </div>
-          <div class="armor-class-card armor-class-card--initiative">
-            <span>Iniz</span>
+          <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
+            </span>
+            <span class="combat-stat__label">Iniziativa</span>
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-            <span class="armor-class-card__sigil" aria-hidden="true">⚡</span>
           </div>
-          <div class="armor-class-card armor-class-card--speed">
-            <span>Vel</span>
-            <strong>${data.speed ?? '-'}</strong>
-            <span class="armor-class-card__sigil" aria-hidden="true">🏃</span>
+          <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
+            <span class="combat-stat__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
+            </span>
+            <span class="combat-stat__label">Velocità</span>
+            <strong>${effectiveSpeed}<small>m</small></strong>
           </div>
-          <div class="hp-bar-stack">
+          <div class="hp-vitals-card">
             <div class="hp-bar-label">
-              <span>HP</span>
-              <strong>${hpLabel}</strong>
+              <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
+              <span class="hp-bar-label__title">Punti ferita</span>
+              <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
-              <span class="hp-bar-label__divider" aria-hidden="true">•</span>
-              <span class="hp-bar-label__temp-group ${hasTempHp ? 'is-active' : ''}">
-                <span class="hp-bar-label__temp">HP temporanei</span>
-                <strong>${tempHpLabel}</strong>
+              ${hasTempHp ? `
+              <span class="hp-bar-label__temp-group is-active">
+                <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
               </span>
+              ` : ''}
             </div>
-            <div class="hp-bar-track">
+            <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
               <div class="hp-bar" style="flex: ${hpTrackFlex};">
                 <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
               </div>
@@ -309,129 +303,136 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               </div>
               ` : ''}
             </div>
-            ${activeWildShape ? `
-            <div class="hp-bar-label hp-bar-label--wild-shape">
-              <span>HP forma selvatica</span>
-              <strong>${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
-              <span class="hp-bar-label__percent">${Math.round(wildShapeHpPercent)}%</span>
-              <span class="hp-bar-label__divider" aria-hidden="true">•</span>
-              <span>${escapeHtml(activeWildShape.companion.name)}</span>
-              ${wildShapeSpeedLabel ? `<span class="muted">${escapeHtml(wildShapeSpeedLabel)}</span>` : ''}
-            </div>
-            <div class="hp-bar-track hp-bar-track--wild-shape">
-              <div class="hp-bar">
-                <div class="hp-bar__fill" style="width: ${wildShapeHpPercent}%;"></div>
+            <div class="hp-vitals-card__footer">
+              <div class="hp-panel-hit-dice" title="Dadi vita disponibili">
+                <span>Dadi vita</span>
+                <strong>${formatHitDice(hitDice)}</strong>
+                <button
+                  class="icon-button icon-button--dice hp-panel-hit-dice__roll"
+                  type="button"
+                  data-roll-hit-dice
+                  aria-label="Lancia dado vita per curare PF"
+                  title="Lancia dado vita"
+                  ${canEditCharacter ? '' : 'disabled'}
+                ><span aria-hidden="true">🎲</span></button>
+              </div>
+              <div class="hp-panel-insights" aria-label="Sensi e percezione">
+                <span class="vital-mini-chip"><span>Percezione passiva</span><strong>${passivePerception ?? '-'}</strong></span>
+                <span class="vital-mini-chip"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></span>
               </div>
             </div>
-            <div class="wild-shape-hp-actions">
-              <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
+            ${activeWildShape ? `
+            <div class="wild-shape-vitals">
+              <div class="hp-bar-label hp-bar-label--wild-shape">
+                <span class="hp-vitals-card__icon hp-vitals-card__icon--wild" aria-hidden="true">♥</span>
+                <span class="hp-bar-label__title">Punti ferita forma</span>
+                <strong class="hp-bar-label__value">${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
+                <span class="hp-bar-label__percent">${Math.round(wildShapeHpPercent)}%</span>
+                <span class="wild-shape-vitals__name">${escapeHtml(activeWildShape.companion.name)}</span>
+                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
+              </div>
+              <div class="hp-bar-track hp-bar-track--wild-shape" role="meter" aria-label="Punti ferita della forma" aria-valuemin="0" aria-valuemax="${activeWildShape.hpMax}" aria-valuenow="${activeWildShape.hpCurrent}">
+                <div class="hp-bar"><div class="hp-bar__fill hp-bar__fill--wild" style="width: ${wildShapeHpPercent}%;"></div></div>
+              </div>
+              <div class="wild-shape-vitals__info">
+                ${wildShapeSpeedLabel ? `<span class="vital-mini-chip vital-mini-chip--speed"><span>Movimento</span><strong>${escapeHtml(wildShapeSpeedLabel)}</strong></span>` : ''}
+                <span class="vital-mini-chip vital-mini-chip--darkvision"><span>Scurovisione</span><strong>${wildShapeDarkvisionLabel}</strong></span>
+              </div>
             </div>
             ` : data.wild_shape_enabled ? `
             <div class="wild-shape-empty">
               <span>Forma selvatica pronta</span>
               <button class="ghost-button ghost-button--compact" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
-                Scegli forma (${wildShapeForms.length})
+                Trasformati (${wildShapeForms.length})
               </button>
             </div>
             ` : ''}
-            <div class="hp-panel-hit-dice">
-              <span>Dadi vita</span>
-              <strong>${formatHitDice(hitDice)}</strong>
-              <button
-                class="icon-button icon-button--dice hp-panel-hit-dice__roll"
-                type="button"
-                data-roll-hit-dice
-                aria-label="Lancia dado vita per curare PF"
-                ${canEditCharacter ? '' : 'disabled'}
-              >
-                <span aria-hidden="true">🎲</span>
-              </button>
-            </div>
           </div>
         </div>
-        <div class="hp-panel-subgrid">
-          <div class="stat-chip stat-chip--highlight">
-            <span>Percezione passiva</span>
-            <strong>${passivePerception ?? '-'}</strong>
-          </div>
-          <div class="stat-chip stat-chip--highlight stat-chip--darkvision">
-            <span>Scurovisione</span>
-            <strong>${darkvisionLabel}</strong>
-          </div>
-          <div class="hp-panel-status-row">
-            <div class="weakness-track">
+        <div class="hp-panel-status-row">
+          <div class="combat-status-card combat-status-card--weakness weakness-track">
+            <div class="combat-status-card__header">
               <div class="track-label-row">
                 <span class="weakness-track__label">Punti indebolimento</span>
-                ${weaknessEffectsTooltip}
               </div>
-              <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
-                ${weaknessLevels.map((level) => {
-    const isFilled = level.value === weakPoints;
-    return `
-                  <button
-                    class="death-save-dot ${isFilled ? 'is-filled' : ''}"
-                    type="button"
-                    role="radio"
-                    aria-checked="${isFilled}"
-                    data-weakness-level="${level.value}"
-                    aria-label="Livello ${level.value}: ${level.description}"
-                  >
-                    <span aria-hidden="true"></span>
-                  </button>
-                `;
-  }).join('')}
-              </div>
-              <div class="weakness-track__description">${weaknessStatus}</div>
+              <strong class="combat-status-card__value">${weakPoints}<small>/6</small></strong>
             </div>
-            <div class="condition-track">
+            <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
+              ${weaknessLevels.map((level) => {
+    const isActive = level.value <= weakPoints;
+    const isCurrent = level.value === weakPoints;
+    return `
+                <button
+                  class="death-save-dot ${isActive ? 'is-filled' : ''} ${isCurrent ? 'is-current' : ''}"
+                  type="button"
+                  role="radio"
+                  aria-checked="${isCurrent}"
+                  data-weakness-level="${level.value}"
+                  aria-label="Livello ${level.value}: ${level.description}"
+                  title="Livello ${level.value}: ${level.description}"
+                  ${canEditCharacter ? '' : 'disabled'}
+                ><span aria-hidden="true">${level.value}</span></button>
+              `;
+  }).join('')}
+            </div>
+            <div class="weakness-track__description">
+              ${activeWeaknesses.length
+    ? activeWeaknesses.map((level) => `<span><strong>${level.value}.</strong> ${level.description}</span>`).join('')
+    : '<span>Nessun effetto attivo</span>'}
+            </div>
+          </div>
+          <div class="combat-status-card condition-track">
+            <div class="combat-status-card__header">
               <div class="track-label-row">
                 <span class="condition-track__label">Condizioni</span>
-                ${conditionsEffectsTooltip}
               </div>
-              <div class="condition-track__row">
-                <span class="condition-track__value">${conditionsLabel}</span>
-              </div>
+              <button
+                class="condition-track__add"
+                type="button"
+                data-edit-conditions
+                aria-label="Modifica condizioni"
+                title="Modifica condizioni"
+                ${canEditCharacter ? '' : 'disabled'}
+              >+</button>
             </div>
-            <div class="death-saves">
-              <div class="death-saves__heading">
+            <span class="condition-track__value">${conditionsLabel}</span>
+          </div>
+          <div class="combat-status-card death-saves">
+            <div class="combat-status-card__header death-saves__heading">
+              <div class="track-label-row">
+                <span class="combat-status-card__icon combat-status-card__icon--death" aria-hidden="true">†</span>
                 <span class="death-saves__label">TS morte</span>
-                <button
-                  class="icon-button icon-button--dice death-saves__roll"
-                  type="button"
-                  data-roll-death-save
-                  aria-label="Tira il tiro salvezza su morte"
-                  title="Tira TS morte"
-                  ${canEditCharacter ? '' : 'disabled'}
-                ><span aria-hidden="true">🎲</span></button>
               </div>
+              <button
+                class="icon-button icon-button--dice death-saves__roll"
+                type="button"
+                data-roll-death-save
+                aria-label="Tira il tiro salvezza su morte"
+                title="Tira TS morte"
+                ${canEditCharacter ? '' : 'disabled'}
+              ><span aria-hidden="true">🎲</span></button>
+            </div>
+            <div class="death-saves__tracks">
               <div class="death-saves__group" aria-label="Successi">
-                <span class="death-saves__tag">✓</span>
+                <span class="death-saves__tag death-saves__tag--success">✓</span>
                 ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveSuccesses;
-    return `
-                  <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}">
-                    <span aria-hidden="true"></span>
-                  </button>
-                `;
+    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
   }).join('')}
               </div>
               <div class="death-saves__group" aria-label="Fallimenti">
-                <span class="death-saves__tag">✗</span>
+                <span class="death-saves__tag death-saves__tag--failure">✕</span>
                 ${Array.from({ length: 3 }, (_, index) => {
     const value = index + 1;
     const isFilled = value <= deathSaveFailures;
-    return `
-                  <button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}">
-                    <span aria-hidden="true"></span>
-                  </button>
-                `;
+    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
   }).join('')}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
       <div class="home-section">
         <header class="card-header">
           <div>

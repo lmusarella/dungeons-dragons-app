@@ -8388,3 +8388,701 @@ button:focus-visible,
   color: rgba(28, 27, 26, 0.68);
   line-height: 1.35;
 }
+
+/* Compact character combat vitals */
+.hp-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(125, 87, 51, 0.2);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(199, 82, 60, 0.08), transparent 36%),
+    linear-gradient(145deg, #fffaf1, #f8ecd8);
+  box-shadow: 0 8px 20px rgba(91, 61, 31, 0.07), inset 0 1px rgba(255, 255, 255, 0.8);
+}
+
+.combat-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 0.32fr)) minmax(280px, 1.8fr);
+  gap: 7px;
+}
+
+.combat-stat {
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 7px;
+  padding: 8px;
+  border: 3px solid rgba(130, 80, 55, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.combat-stat__icon {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(158, 59, 48, 0.1);
+  color: #9e3b30;
+}
+
+.combat-stat__icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.combat-stat__label {
+  align-self: end;
+  color: #7b6450;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.combat-stat strong {
+  color: #3e2a20;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.combat-stat strong small {
+  margin-left: 2px;
+  color: #7b6450;
+  font-size: 0.58rem;
+}
+
+.combat-stat--initiative .combat-stat__icon {
+  background: rgba(91, 73, 154, 0.1);
+  color: #5b499a;
+}
+
+.combat-stat--speed .combat-stat__icon {
+  background: rgba(47, 127, 97, 0.1);
+  color: #2f7f61;
+}
+
+.hp-vitals-card {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(158, 59, 48, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.hp-bar-label {
+  gap: 6px;
+  min-width: 0;
+}
+
+.hp-vitals-card__icon {
+  color: #bd4939;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.hp-bar-label__title {
+  color: #6d5140;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.hp-bar-label__value {
+  color: #3d241c;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.hp-bar-label__percent {
+  padding: 2px 5px;
+  font-size: 0.62rem;
+}
+
+.hp-bar-label__temp-group {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid rgba(62, 103, 164, 0.16);
+  border-radius: 999px;
+  background: #edf3ff;
+  color: #3a568c;
+  font-size: 0.68rem;
+}
+
+.hp-bar-track {
+  margin-top: 6px;
+  gap: 5px;
+}
+
+.hp-bar,
+.hp-bar--temp.is-active {
+  height: 7px;
+  box-shadow: inset 0 1px 2px rgba(76, 42, 24, 0.12);
+}
+
+.hp-vitals-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.hp-panel-hit-dice {
+  width: fit-content;
+  margin: 0;
+  gap: 5px;
+  color: #6a5540;
+  font-size: 0.7rem;
+}
+
+.hp-panel-hit-dice__roll,
+.death-saves__roll {
+  width: 24px;
+  height: 24px;
+  font-size: 0.85rem;
+}
+
+.hp-panel-insights {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.vital-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f5ead7;
+  color: #684c38;
+  font-size: 0.65rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wild-shape-vitals,
+.wild-shape-empty {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(139, 93, 56, 0.13);
+}
+
+.hp-bar-label--wild-shape {
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+}
+
+.hp-bar-label--wild-shape .wild-shape-end-button {
+  margin-left: auto;
+}
+
+.hp-panel-status-row {
+  display: grid;
+  grid-template-columns: minmax(250px, 1.35fr) minmax(150px, 0.8fr) minmax(170px, 0.85fr);
+  gap: 7px;
+  align-items: stretch;
+}
+
+.combat-status-card {
+  min-width: 0;
+  max-width: none;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid rgba(125, 87, 51, 0.14);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.5);
+  align-items: stretch;
+  text-align: left;
+}
+
+.combat-status-card--weakness {
+  background: rgba(255, 246, 235, 0.78);
+}
+
+.combat-status-card__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.combat-status-card__icon {
+  width: 17px;
+  height: 17px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(168, 71, 56, 0.12);
+  color: #a84738;
+  font-size: 0.67rem;
+  font-weight: 900;
+}
+
+.combat-status-card__icon--condition {
+  background: rgba(85, 94, 153, 0.11);
+  color: #555e99;
+}
+
+.combat-status-card__icon--death {
+  background: rgba(82, 75, 68, 0.1);
+  color: #524b44;
+}
+
+.combat-status-card__value {
+  color: #8f362c;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.combat-status-card__value small {
+  margin-left: 1px;
+  color: #8b725b;
+  font-size: 0.55rem;
+}
+
+.weakness-track__label,
+.condition-track__label,
+.death-saves__label {
+  color: #604735;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weakness-track__group {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(24px, 1fr));
+  gap: 4px;
+}
+
+.weakness-track .death-save-dot {
+  width: 100%;
+  height: 23px;
+  border-radius: 7px;
+  color: #886c56;
+  font-size: 0.61rem;
+  font-weight: 900;
+}
+
+.weakness-track .death-save-dot span {
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+
+.weakness-track .death-save-dot.is-filled {
+  border-color: #a84738;
+  background: #a84738;
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(168, 71, 56, 0.2);
+}
+
+.weakness-track .death-save-dot.is-filled span {
+  background: transparent;
+}
+
+.weakness-track__description {
+  max-width: none;
+  overflow: hidden;
+  color: #806754;
+  font-size: 0.65rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.condition-track__value {
+  overflow: hidden;
+  color: #6b5542;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.death-saves {
+  gap: 4px;
+}
+
+.death-saves__tracks {
+  display: flex;
+  gap: 10px;
+}
+
+.death-saves__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.death-saves__tag {
+  width: 12px;
+  color: #6c5542;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.death-saves__tag--success {
+  color: #34745b;
+}
+
+.death-saves__tag--failure {
+  color: #a84738;
+}
+
+.death-saves .death-save-dot {
+  width: 18px;
+  height: 18px;
+}
+
+.death-saves__group[aria-label="Successi"] .death-save-dot.is-filled span {
+  background: #3c8a68;
+}
+
+.death-save-dot:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+@container (max-width: 760px) {
+  .combat-vitals-grid {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
+
+  .hp-vitals-card {
+    grid-column: 1 / -1;
+  }
+
+  .hp-panel-status-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combat-status-card--weakness {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 470px) {
+  .combat-stat {
+    min-height: 56px;
+    grid-template-columns: 22px 1fr;
+    column-gap: 5px;
+    padding: 6px;
+  }
+
+  .combat-stat__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+  }
+
+  .combat-stat__icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .combat-stat strong {
+    font-size: 1rem;
+  }
+
+  .hp-vitals-card__footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hp-panel-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-status-card--weakness {
+    grid-column: auto;
+  }
+
+  .death-saves__tracks {
+    justify-content: space-between;
+  }
+}
+
+/* Compact combat vitals refinements */
+.combat-stat {
+  min-height: 50px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 6px;
+  padding: 5px 7px;
+}
+
+.combat-stat__icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.combat-stat__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.combat-stat__label {
+  overflow: hidden;
+  font-size: 0.56rem;
+  letter-spacing: 0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-stat strong {
+  font-size: 1.05rem;
+}
+
+.hp-vitals-card__icon {
+  font-size: 1.25rem;
+}
+
+.hp-bar-label__title {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.hp-bar-label__value {
+  font-size: 1.18rem;
+}
+
+.hp-bar-label__temp-group {
+  gap: 5px;
+  font-size: 0.64rem;
+}
+
+.hp-panel-hit-dice {
+  font-size: 0.66rem;
+}
+
+.vital-mini-chip {
+  gap: 5px;
+}
+
+.vital-mini-chip span {
+  font-weight: 700;
+}
+
+.vital-mini-chip strong {
+  color: #4f3425;
+  font-size: 0.7rem;
+}
+
+.weakness-track__description {
+  display: grid;
+  gap: 2px;
+  overflow: visible;
+  text-overflow: initial;
+  white-space: normal;
+}
+
+.weakness-track__description span {
+  display: block;
+}
+
+.condition-track {
+  position: relative;
+}
+
+.condition-track__add {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 7px;
+  background: rgba(255, 250, 241, 0.88);
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.condition-track__add:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.condition-track__add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.condition-track__add:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@container (max-width: 470px) {
+  .combat-stat {
+    min-height: 48px;
+    grid-template-columns: 20px minmax(0, 1fr);
+    padding: 5px;
+  }
+
+  .combat-stat__icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .combat-stat__label {
+    font-size: 0.5rem;
+  }
+
+  .hp-bar-label__temp-group {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}
+
+.combat-stat__label {
+  overflow: visible;
+  line-height: 1.05;
+  text-overflow: initial;
+  white-space: normal;
+}
+
+/* Wild shape vitals and readable metadata */
+.hp-panel-hit-dice {
+  gap: 7px;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid rgba(139, 93, 56, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.9);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.hp-panel-hit-dice strong {
+  color: #4d3224;
+  font-size: 0.78rem;
+}
+
+.hp-panel-insights {
+  gap: 7px;
+}
+
+.vital-mini-chip {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+}
+
+.vital-mini-chip:first-child {
+  border: 1px solid rgba(82, 105, 158, 0.18);
+  background: #eef2fb;
+  color: #44547d;
+}
+
+.vital-mini-chip--darkvision,
+.hp-panel-insights .vital-mini-chip:last-child {
+  border: 1px solid rgba(100, 76, 145, 0.18);
+  background: #f1edfa;
+  color: #5e4a83;
+}
+
+.vital-mini-chip--speed {
+  border: 1px solid rgba(47, 127, 97, 0.18);
+  background: #eaf6f1;
+  color: #286b53;
+}
+
+.vital-mini-chip span,
+.vital-mini-chip strong {
+  font-size: inherit;
+}
+
+.wild-shape-vitals {
+  display: grid;
+  gap: 6px;
+  padding: 8px 9px 0;
+  border-top-color: rgba(47, 127, 97, 0.2);
+  background: linear-gradient(180deg, transparent, rgba(234, 246, 241, 0.5));
+  border-radius: 0 0 10px 10px;
+}
+
+.hp-vitals-card__icon--wild {
+  color: #2f7f61;
+}
+
+.hp-bar-label--wild-shape {
+  min-height: 28px;
+  gap: 6px;
+  font-size: inherit;
+}
+
+.wild-shape-vitals__name {
+  overflow: hidden;
+  color: #2f6e58;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-bar-track--wild-shape {
+  margin-top: 0;
+}
+
+.hp-bar__fill--wild {
+  background: linear-gradient(90deg, #2f7f61, #62b58f);
+}
+
+.wild-shape-vitals__info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+@container (max-width: 470px) {
+  .hp-panel-insights,
+  .wild-shape-vitals__info {
+    width: 100%;
+  }
+
+  .vital-mini-chip {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+
+  .wild-shape-vitals__name {
+    width: 100%;
+    order: 5;
+  }
+}

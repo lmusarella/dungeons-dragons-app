@@ -45,4 +45,35 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).not.toMatch(/\.profile-status-card__label\s*\{[^}]*text-overflow:\s*ellipsis;/s);
   });
 
+  it('renders the combat vitals panel with readable stats and preserved controls', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).not.toContain('Difesa e vitalità');
+    expect(source).toContain('class="combat-vitals-grid"');
+    expect(source).toContain('class="combat-stat combat-stat--armor"');
+    expect(source).toContain('data-roll-hit-dice');
+    expect(source).toContain('data-weakness-level');
+    expect(source).toContain('data-death-save');
+    expect(source).toContain('role="meter"');
+    expect(source).toContain('data-edit-conditions');
+    expect(source).toContain("const isActive = level.value <= weakPoints");
+    expect(source).toContain("const isCurrent = level.value === weakPoints");
+    expect(source).toContain('Punti ferita temporanei');
+    expect(source).toContain('Percezione passiva');
+    expect(source).toContain('Scurovisione');
+    expect(source).toContain('Dadi vita');
+    expect(source).toContain('Trasformati (${wildShapeForms.length})');
+    expect(source).toContain('Punti ferita forma');
+    expect(source).toContain('hp-bar__fill--wild');
+    expect(source).toContain('wildShapeDarkvisionLabel');
+    expect(source).toContain('effectiveArmorClass');
+    expect(source).toContain('effectiveSpeed');
+    expect(source).not.toContain('Math.max(Number(abilities.str)');
+    expect(source).not.toContain('${weaknessEffectsTooltip}');
+    expect(source).not.toContain('${conditionsEffectsTooltip}');
+    expect(styles).toContain('.combat-vitals-grid');
+    expect(styles).toContain('.combat-status-card--weakness');
+    expect(styles).toContain('@container (max-width: 470px)');
+  });
+
 });
