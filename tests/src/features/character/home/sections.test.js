@@ -31,6 +31,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('character-profile-body');
     expect(styles).toContain('container-type: inline-size');
     expect(styles).toContain('@container (max-width: 430px)');
+    expect(styles).toContain('grid-template-columns: repeat(4, minmax(78px, 1fr))');
   });
 
 });

@@ -1575,10 +1575,15 @@ button:focus-visible,
 }
 
 .character-summary-actions {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(78px, 1fr));
   gap: 7px;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .profile-status-card {
@@ -1660,7 +1665,6 @@ button:focus-visible,
 
 .background-button.profile-status-card--background {
   display: grid;
-  grid-column: 1 / -1;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
@@ -1741,16 +1745,36 @@ button:focus-visible,
   .character-name {
     text-align: center;
   }
-}
 
-@container (max-width: 310px) {
-  .character-meta,
   .character-summary-actions {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(4, minmax(78px, 1fr));
+  }
+
+  .profile-status-card {
+    min-height: 46px;
+    padding: 6px;
+  }
+
+  .profile-status-card__content small {
+    font-size: 0.52rem;
+  }
+
+  .profile-status-card__content strong {
+    font-size: 0.7rem;
+  }
+
+  .profile-status-card__icon,
+  .profile-status-card__arrow {
+    display: none;
+  }
+
+  .inspiration-toggle {
+    width: 26px;
+    height: 26px;
   }
 
   .background-button.profile-status-card--background {
-    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
