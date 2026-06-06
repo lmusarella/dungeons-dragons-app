@@ -29,4 +29,10 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain("buildRow([resetField, inputRiposoCorto, inputRiposoLungo], 'compact')");
     expect(source).toContain("recoveryRow.classList.add('ability-modal-row--recovery')");
   });
+
+  it('supports character and companion images in the avatar preview', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain('subject?.data?.avatar_url || subject?.stat_block?.image_url');
+    expect(source).toContain('alt="Foto di ${subjectName}"');
+  });
 });

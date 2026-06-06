@@ -19,9 +19,20 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('class="hp-bar-track" role="meter"');
     expect(source).toContain('class="familiar-movement-grid"');
     expect(source).toContain('vital-mini-chip--darkvision familiar-darkvision-chip');
-    expect(source).toContain('data-heal-companion=');
-    expect(source).toContain('buildHpShortcutFields(null, { allowHitDice: false, allowTempHp: true })');
+    expect(source).toContain('data-companion-hp-action="heal"');
+    expect(source).toContain('data-companion-hp-action="damage"');
+    expect(source).toContain("allowTempHp: action === 'heal'");
+    expect(source).toContain("allowMaxOverride: action === 'damage'");
     expect(source).toContain('temp: hpTemp + amount');
+    expect(source).toContain('hp-bar hp-bar--temp is-active');
+    expect(source).toContain('const absorbed = Math.min(hpTemp, amount)');
+  });
+
+  it('opens the shared image preview from the familiar portrait', () => {
+    const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
+    expect(source).toContain("import { openAvatarModal } from '../character/home/modals.js'");
+    expect(source).toContain('data-preview-companion=');
+    expect(source).toContain('openAvatarModal(companion)');
   });
 
   it('uses a 40/60 split for attacks and notes', () => {

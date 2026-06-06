@@ -9198,3 +9198,59 @@ button:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+/* Familiar image preview and HP controls */
+.familiar-sheet__header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.familiar-avatar--button {
+  appearance: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.familiar-avatar--button:hover,
+.familiar-avatar--button:focus-visible {
+  border-color: #c7a174;
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.2);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.familiar-sheet__toggle {
+  display: block;
+}
+
+.familiar-hp-actions {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.familiar-hp-action {
+  flex: 0 0 auto;
+}
+
+.familiar-hp-action--damage {
+  border-color: rgba(168, 71, 56, 0.3);
+  color: #a84738;
+}
+
+.familiar-hp-action--damage:hover:not(:disabled) {
+  border-color: #a84738;
+  background: #fff3f0;
+}
+
+@media (max-width: 560px) {
+  .familiar-sheet__header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .familiar-sheet__actions {
+    grid-column: 1 / -1;
+  }
+}
