@@ -33,6 +33,9 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('@container (max-width: 430px)');
     expect(source).toContain('profile-status-card__label">Concentrazione');
     expect(source).toContain('<small>Archetipo</small>');
+    expect(source).toContain('meta-tag meta-tag--background');
+    expect(source).toContain("profile-status-card__state\">${hasInspiration ? 'Attiva' : 'Non attiva'}");
+    expect(source).toContain("profile-status-card__state\">${hasConcentration ? 'Attiva' : 'Non attiva'}");
     expect(styles).toMatch(/\.character-meta\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s);
     expect(styles).toContain('grid-template-columns: minmax(100px, 0.9fr)');
     expect(styles).toMatch(/\.profile-status-card__label\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/s);

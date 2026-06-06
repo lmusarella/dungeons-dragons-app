@@ -1575,6 +1575,11 @@ button:focus-visible,
   background: #fff3d3;
 }
 
+.character-meta .meta-tag--background {
+  border-color: #d8c9ac;
+  background: #f8f1e4;
+}
+
 .character-summary-actions {
   position: relative;
   z-index: 1;
@@ -1591,7 +1596,7 @@ button:focus-visible,
 .profile-status-card {
   display: flex;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
@@ -1603,6 +1608,13 @@ button:focus-visible,
   box-shadow: 0 3px 8px rgba(67, 42, 20, 0.05);
 }
 
+.profile-status-card__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .profile-status-card__label {
   flex: 0 0 auto;
   color: #6f5a43;
@@ -1612,6 +1624,18 @@ button:focus-visible,
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.profile-status-card__state {
+  color: #8a7761;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.profile-status-card.is-active .profile-status-card__state {
+  color: var(--accent);
 }
 
 .profile-status-card__value {
@@ -1718,7 +1742,7 @@ button:focus-visible,
   }
 
   .profile-status-card {
-    min-height: 38px;
+    min-height: 42px;
   }
 
   .inspiration-toggle {

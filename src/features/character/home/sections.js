@@ -206,6 +206,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="meta-tag"><small>Razza</small><strong>${data.race ?? '-'}</strong></span>
               <span class="meta-tag"><small>Classe</small><strong>${data.class_name ?? data.class_archetype ?? '-'}</strong></span>
               <span class="meta-tag"><small>Archetipo</small><strong>${data.archetype ?? '-'}</strong></span>
+              <span class="meta-tag meta-tag--background"><small>Background</small><strong>${data.background ?? '-'}</strong></span>
               <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
             </div>
           </div>
@@ -216,7 +217,10 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <strong class="profile-status-card__value">${formatSigned(proficiencyBonus)}</strong>
           </div>
           <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
-            <span class="profile-status-card__label">Ispirazione</span>
+            <span class="profile-status-card__text">
+              <span class="profile-status-card__label">Ispirazione</span>
+              <span class="profile-status-card__state">${hasInspiration ? 'Attiva' : 'Non attiva'}</span>
+            </span>
             <button
               class="inspiration-toggle"
               type="button"
@@ -229,7 +233,10 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </button>
           </div>
           <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
-            <span class="profile-status-card__label">Concentrazione</span>
+            <span class="profile-status-card__text">
+              <span class="profile-status-card__label">Concentrazione</span>
+              <span class="profile-status-card__state">${hasConcentration ? 'Attiva' : 'Non attiva'}</span>
+            </span>
             <button
               class="inspiration-toggle concentration-toggle"
               type="button"
