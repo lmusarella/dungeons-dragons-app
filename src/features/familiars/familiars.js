@@ -118,10 +118,10 @@ function buildCompanionCard(companion, isSelected = false) {
     `;
   }).join('');
   const speeds = Object.entries(SPEED_LABELS).map(([key, config]) => `
-    <div class="familiar-vital-chip">
-      <span>${config.icon} ${config.label}</span>
+    <span class="vital-mini-chip familiar-movement-chip">
+      <span><span aria-hidden="true">${config.icon}</span> ${config.label}</span>
       <strong>${formatSpeed(statBlock.speeds?.[key])}</strong>
-    </div>
+    </span>
   `).join('');
   const initiative = statBlock.initiative === null || statBlock.initiative === undefined || statBlock.initiative === ''
     ? (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0)
@@ -130,12 +130,6 @@ function buildCompanionCard(companion, isSelected = false) {
     ? '-'
     : `${Number(statBlock.darkvision_range_m) || 0} m`;
   const armorClass = statBlock.armor_class ?? (10 + (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0));
-  const vitalStats = `
-    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>CA</span><strong>${armorClass}</strong></div>
-    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Bonus comp.</span><strong>${formatSigned(statBlock.proficiency_bonus)}</strong></div>
-    <div class="familiar-vital-chip familiar-vital-chip--highlight"><span>Iniziativa</span><strong>${formatSigned(initiative)}</strong></div>
-    <div class="familiar-vital-chip familiar-vital-chip--wide"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></div>
-  `;
   const attacks = statBlock.attacks.length
     ? statBlock.attacks.map((attack, index) => {
       const damageModifier = Number(attack.damage_modifier) || 0;
@@ -174,8 +168,8 @@ function buildCompanionCard(companion, isSelected = false) {
           <span class="familiar-sheet__title">
             <strong>${escapeHtml(companion.name)}</strong>
             <span class="character-meta">
-              <span class="meta-tag">HP ${hpCurrent}/${hpMax}</span>
-              <span class="meta-tag">Bonus comp. ${formatSigned(statBlock.proficiency_bonus)}</span>
+              <span class="meta-tag"><small>Tipo</small><strong>${escapeHtml(formatKind(companion.kind))}</strong></span>
+              <span class="meta-tag meta-tag--level"><small>Bonus competenza</small><strong>${formatSigned(statBlock.proficiency_bonus)}</strong></span>
             </span>
             <span class="familiar-sheet__hp-summary" aria-label="Punti ferita ${hpCurrent} su ${hpMax}, ${Math.round(hpPercent)} percento">
               <span class="familiar-sheet__hp-track"><span style="width: ${hpPercent}%;"></span></span>
@@ -196,13 +190,46 @@ function buildCompanionCard(companion, isSelected = false) {
           </header>
           <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-characteristics-grid familiar-ability-grid">${abilities}</div>
         </section>
-        <section class="home-section familiar-detail-panel familiar-vitals-panel">
-          <header class="familiar-panel-title">
-            <p class="eyebrow">Movimento & sensi</p>
-          </header>
-          <div class="familiar-vitals-grid">
-            ${vitalStats}
-            ${speeds}
+        <section class="hp-panel familiar-vitals-panel" aria-label="Statistiche principali di ${escapeHtml(companion.name)}">
+          <div class="combat-vitals-grid familiar-combat-vitals-grid">
+            <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${armorClass}">
+              <span class="combat-stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
+              </span>
+              <span class="combat-stat__label">Classe armatura</span>
+              <strong>${armorClass}</strong>
+            </div>
+            <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(initiative)}">
+              <span class="combat-stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
+              </span>
+              <span class="combat-stat__label">Iniziativa</span>
+              <strong>${formatSigned(initiative)}</strong>
+            </div>
+            <div class="combat-stat combat-stat--proficiency" title="Bonus competenza" aria-label="Bonus competenza ${formatSigned(statBlock.proficiency_bonus)}">
+              <span class="combat-stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m12 3 2.5 5.1 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3Z"/></svg>
+              </span>
+              <span class="combat-stat__label">Bonus competenza</span>
+              <strong>${formatSigned(statBlock.proficiency_bonus)}</strong>
+            </div>
+            <div class="hp-vitals-card familiar-hp-card">
+              <div class="hp-bar-label">
+                <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
+                <span class="hp-bar-label__title">Punti ferita</span>
+                <strong class="hp-bar-label__value">${hpCurrent}/${hpMax}</strong>
+                <span class="hp-bar-label__percent" aria-label="Percentuale vita ${Math.round(hpPercent)}%">${Math.round(hpPercent)}%</span>
+              </div>
+              <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}">
+                <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
+              </div>
+              <div class="familiar-vitals-info" aria-label="Movimento e sensi">
+                <div class="familiar-movement-grid">${speeds}</div>
+                <span class="vital-mini-chip vital-mini-chip--darkvision familiar-darkvision-chip">
+                  <span>Scurovisione</span><strong>${darkvisionLabel}</strong>
+                </span>
+              </div>
+            </div>
           </div>
         </section>
         <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel">
