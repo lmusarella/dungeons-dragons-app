@@ -8388,3 +8388,379 @@ button:focus-visible,
   color: rgba(28, 27, 26, 0.68);
   line-height: 1.35;
 }
+
+/* Character combat vitals */
+.hp-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-color: rgba(126, 91, 55, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(196, 74, 54, 0.08), transparent 34%),
+    linear-gradient(145deg, #fffaf1 0%, #f8ecd8 100%);
+  box-shadow: 0 12px 28px rgba(92, 63, 32, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.hp-panel__header {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(340px, 1.3fr);
+  gap: 18px;
+  align-items: end;
+}
+
+.hp-panel__header .eyebrow {
+  margin: 0 0 3px;
+}
+
+.hp-panel__header h3 {
+  margin: 0;
+  color: #3d2a1c;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+.hp-panel__quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.armor-class-card {
+  min-width: 0;
+  min-height: 74px;
+  padding: 10px 10px 9px 45px;
+  border: 1px solid rgba(133, 61, 61, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 247, 232, 0.88);
+  box-shadow: none;
+  text-align: left;
+  justify-content: center;
+}
+
+.armor-class-card__label {
+  color: #775f49;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.armor-class-card strong {
+  color: #44291f;
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+.armor-class-card small {
+  color: #8b725b;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.armor-class-card__sigil {
+  top: 50%;
+  left: 10px;
+  right: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+}
+
+.armor-class-card--initiative,
+.armor-class-card--speed {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.hp-bar-row {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid rgba(139, 93, 56, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.hp-bar-label {
+  gap: 8px;
+}
+
+.hp-bar-label__title {
+  color: #5c3a2b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hp-bar-label__value {
+  color: #3d241c;
+  font-size: 1.25rem;
+}
+
+.hp-bar-label__temp-group {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #edf3ff;
+}
+
+.hp-bar-label__divider {
+  display: none;
+}
+
+.hp-bar-track {
+  margin-top: 10px;
+}
+
+.hp-bar,
+.hp-bar--temp.is-active {
+  height: 12px;
+  box-shadow: inset 0 1px 2px rgba(76, 42, 24, 0.13);
+}
+
+.hp-panel-hit-dice {
+  width: fit-content;
+  margin-top: 10px;
+  padding: 4px 5px 4px 10px;
+  border: 1px solid rgba(139, 93, 56, 0.16);
+  border-radius: 999px;
+  background: #fffaf1;
+}
+
+.wild-shape-vitals,
+.wild-shape-empty {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(139, 93, 56, 0.15);
+}
+
+.hp-panel-subgrid {
+  display: grid;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.hp-panel-insights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hp-panel-insights .stat-chip {
+  margin: 0;
+}
+
+.hp-panel-status-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(180px, 0.9fr) minmax(210px, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.combat-status-card {
+  min-width: 0;
+  max-width: none;
+  min-height: 112px;
+  padding: 13px;
+  border: 1px solid rgba(139, 93, 56, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
+  align-items: stretch;
+  text-align: left;
+}
+
+.combat-status-card--weakness {
+  background: linear-gradient(145deg, rgba(255, 248, 236, 0.95), rgba(252, 232, 215, 0.72));
+}
+
+.combat-status-card__header {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.combat-status-card__value {
+  color: #8f362c;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.combat-status-card__value small {
+  margin-left: 2px;
+  color: #8b725b;
+  font-size: 0.65rem;
+}
+
+.weakness-track__label,
+.condition-track__label,
+.death-saves__label {
+  color: #634936;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.weakness-track__group {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(28px, 1fr));
+  gap: 5px;
+}
+
+.weakness-track .death-save-dot {
+  width: 100%;
+  height: 30px;
+  border-radius: 9px;
+  color: #886c56;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.weakness-track .death-save-dot span {
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+
+.weakness-track .death-save-dot.is-filled {
+  border-color: #a84738;
+  background: #a84738;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(168, 71, 56, 0.22);
+}
+
+.weakness-track .death-save-dot.is-filled span {
+  background: transparent;
+}
+
+.weakness-track__description {
+  max-width: none;
+  min-height: 2.4em;
+  line-height: 1.35;
+}
+
+.condition-track__row {
+  flex: 1;
+  align-items: center;
+}
+
+.condition-track__value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.death-saves {
+  gap: 8px;
+  align-items: stretch;
+}
+
+.death-saves__heading {
+  justify-content: space-between;
+}
+
+.death-saves__tracks {
+  display: grid;
+  gap: 8px;
+}
+
+.death-saves__group {
+  display: grid;
+  grid-template-columns: minmax(62px, 1fr) repeat(3, 24px);
+  gap: 5px;
+}
+
+.death-saves__tag {
+  align-self: center;
+  color: #6c5542;
+  font-size: 0.7rem;
+}
+
+.death-saves__tag--success {
+  color: #34745b;
+}
+
+.death-saves__tag--failure {
+  color: #a84738;
+}
+
+.death-saves .death-save-dot {
+  width: 24px;
+  height: 24px;
+}
+
+.death-saves__group[aria-label="Successi"] .death-save-dot.is-filled span {
+  background: #3c8a68;
+}
+
+.death-save-dot:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+@container (max-width: 720px) {
+  .hp-panel__header {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .hp-panel-status-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combat-status-card--weakness {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 480px) {
+  .hp-panel {
+    padding: 14px;
+  }
+
+  .hp-panel__quick-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .armor-class-card {
+    min-height: 86px;
+    padding: 10px 6px 8px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .armor-class-card__sigil {
+    position: static;
+    transform: none;
+    margin-bottom: 3px;
+  }
+
+  .armor-class-card__label {
+    min-height: 2.3em;
+  }
+
+  .hp-bar-label {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hp-bar-label__temp-group {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .hp-panel-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-status-card--weakness {
+    grid-column: auto;
+  }
+}

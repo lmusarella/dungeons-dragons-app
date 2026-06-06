@@ -45,4 +45,19 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).not.toMatch(/\.profile-status-card__label\s*\{[^}]*text-overflow:\s*ellipsis;/s);
   });
 
+  it('renders the combat vitals panel with readable stats and preserved controls', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('id="combat-vitals-title"');
+    expect(source).toContain('Classe armatura');
+    expect(source).toContain('Punti ferita');
+    expect(source).toContain('data-roll-hit-dice');
+    expect(source).toContain('data-weakness-level');
+    expect(source).toContain('data-death-save');
+    expect(source).toContain('role="meter"');
+    expect(styles).toContain('.hp-panel__quick-stats');
+    expect(styles).toContain('.combat-status-card--weakness');
+    expect(styles).toContain('@container (max-width: 480px)');
+  });
+
 });
