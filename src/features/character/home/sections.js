@@ -170,7 +170,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     ? normalizeNumber(activeWildShape.statBlock.darkvision_range_m)
     : null;
   const wildShapeDarkvisionLabel = wildShapeDarkvision === null ? 'No' : `${wildShapeDarkvision} m`;
-  const wildShapeForms = (companions || []).filter((entry) => ['familiar', 'summon', 'transformation'].includes(entry.kind || 'familiar'));
+  const wildShapeForms = (companions || []).filter((entry) => ['familiar', 'summon', 'transformation', 'animal'].includes(entry.kind || 'familiar'));
   const wildShapeHpPercent = activeWildShape ? Math.min(Math.max((activeWildShape.hpCurrent / activeWildShape.hpMax) * 100, 0), 100) : 0;
   const wildShapeSpeedLabel = activeWildShape ? formatWildShapeSpeeds(activeWildShape.statBlock.speeds) : '';
   const abilityCards = [

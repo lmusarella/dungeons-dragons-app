@@ -9086,3 +9086,221 @@ button:focus-visible,
     order: 5;
   }
 }
+
+/* Familiar overview aligned with the character combat summary */
+.familiar-dashboard {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-template-areas:
+    "vitals vitals"
+    "characteristics characteristics"
+    "attacks notes";
+}
+
+.familiar-combat-vitals-grid {
+  grid-template-columns: repeat(3, minmax(110px, 0.42fr)) minmax(360px, 1.8fr);
+}
+
+.familiar-vitals-panel.hp-panel {
+  padding: 9px;
+}
+
+.combat-stat--proficiency .combat-stat__icon {
+  background: rgba(47, 127, 97, 0.1);
+  color: #2f7f61;
+}
+
+.familiar-hp-card {
+  gap: 7px;
+}
+
+.familiar-vitals-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.familiar-movement-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(74px, 1fr));
+  gap: 5px;
+}
+
+.familiar-movement-chip,
+.familiar-darkvision-chip {
+  min-width: 0;
+  justify-content: space-between;
+  padding: 4px 7px;
+}
+
+.familiar-movement-chip > span,
+.familiar-movement-chip strong,
+.familiar-darkvision-chip > span,
+.familiar-darkvision-chip strong {
+  white-space: nowrap;
+}
+
+.familiar-sheet__toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.familiar-heal-button {
+  margin-left: auto;
+}
+
+@media (max-width: 1180px) {
+  .familiar-dashboard {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-areas:
+      "vitals vitals"
+      "characteristics characteristics"
+      "attacks notes";
+  }
+
+  .familiar-combat-vitals-grid {
+    grid-template-columns: repeat(3, minmax(100px, 1fr));
+  }
+
+  .familiar-hp-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 860px) {
+  .familiar-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "vitals"
+      "characteristics"
+      "attacks"
+      "notes";
+  }
+
+  .familiar-combat-vitals-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .familiar-combat-vitals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .familiar-combat-vitals-grid .combat-stat--proficiency {
+    grid-column: 1 / -1;
+  }
+
+  .familiar-movement-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .familiar-vitals-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Familiar image preview and HP controls */
+.familiar-sheet__header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.familiar-avatar--button {
+  appearance: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.familiar-avatar--button:hover,
+.familiar-avatar--button:focus-visible {
+  border-color: #c7a174;
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.2);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.familiar-sheet__toggle {
+  display: block;
+}
+
+.familiar-hp-actions {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: 4px;
+}
+
+.familiar-hp-action {
+  min-height: 26px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(47, 127, 97, 0.28);
+  border-radius: 8px;
+  background: #f2faf6;
+  color: #286b53;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.familiar-hp-action > span {
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.familiar-hp-action > strong {
+  font-size: inherit;
+}
+
+.familiar-hp-action:hover,
+.familiar-hp-action:focus-visible {
+  border-color: #2f7f61;
+  background: #eaf6f1;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.familiar-hp-action--damage {
+  border-color: rgba(168, 71, 56, 0.3);
+  background: #fff7f4;
+  color: #a84738;
+}
+
+.familiar-hp-action--damage:hover,
+.familiar-hp-action--damage:focus-visible {
+  border-color: #a84738;
+  background: #fff0ec;
+}
+
+.familiar-temp-hp-label {
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .familiar-sheet__header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .familiar-sheet__actions {
+    grid-column: 1 / -1;
+  }
+
+  .familiar-hp-card .hp-bar-label {
+    flex-wrap: wrap;
+  }
+
+  .familiar-hp-actions {
+    order: 5;
+    margin-left: 0;
+  }
+
+  .familiar-temp-hp-label {
+    order: 6;
+  }
+}

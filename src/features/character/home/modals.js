@@ -904,16 +904,17 @@ export function openPreparedSpellsModal(character, onSave) {
   });
 }
 
-export function openAvatarModal(character) {
-  const avatarUrl = character?.data?.avatar_url;
+export function openAvatarModal(subject) {
+  const avatarUrl = subject?.data?.avatar_url || subject?.stat_block?.image_url;
   if (!avatarUrl) return;
+  const subjectName = subject?.name || 'soggetto';
   const existing = document.querySelector('.avatar-preview');
   if (existing) existing.remove();
   const overlay = document.createElement('div');
   overlay.className = 'avatar-preview';
   overlay.tabIndex = 0;
   overlay.innerHTML = `
-    <img class="avatar-preview__image" src="${avatarUrl}" alt="Ritratto di ${character.name}" />
+    <img class="avatar-preview__image" src="${avatarUrl}" alt="Foto di ${subjectName}" />
   `;
   const close = () => {
     overlay.remove();
