@@ -3,13 +3,15 @@ import { getState, normalizeCharacterId } from '../../app/state.js';
 import { attachNumberSteppers, buildInput, buildTextarea, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { getAbilityModifier } from '../character/home/utils.js';
+import { buildHpShortcutFields } from '../character/home/hpModal.js';
 
 const ABILITY_KEYS = ['str', 'dex', 'con', 'wis', 'int', 'cha'];
 const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', wis: 'SAG', int: 'INT', cha: 'CAR' };
 const KIND_OPTIONS = [
   { value: 'familiar', label: 'Famiglio' },
   { value: 'summon', label: 'Evocazione' },
-  { value: 'transformation', label: 'Trasformazione' }
+  { value: 'transformation', label: 'Trasformazione' },
+  { value: 'animal', label: 'Animale' }
 ];
 
 const SPEED_LABELS = {
@@ -50,7 +52,7 @@ function getDefaultStatBlock() {
     armor_class: null,
     initiative: null,
     darkvision_range_m: null,
-    hp: { current: 1, max: 1 },
+    hp: { current: 1, max: 1, temp: 0 },
     speeds: { walk: 9, fly: null, climb: null, burrow: null },
     attacks: []
   };
@@ -82,8 +84,6 @@ function getSavingThrowModifier(statBlock, abilityKey) {
 
 function buildCompanionQuickButton(companion, isSelected = false) {
   const statBlock = normalizeStatBlock(companion.stat_block);
-  const hpCurrent = Number(statBlock.hp.current) || 0;
-  const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
   const imageUrl = statBlock.image_url?.trim();
   const avatar = imageUrl
     ? `<img src="${escapeHtml(imageUrl)}" alt="Foto di ${escapeHtml(companion.name)}" />`
@@ -94,7 +94,7 @@ function buildCompanionQuickButton(companion, isSelected = false) {
       <span class="familiar-quick-card__avatar">${avatar}</span>
       <span class="familiar-quick-card__body">
         <strong>${escapeHtml(companion.name)}</strong>
-        <span>${escapeHtml(formatKind(companion.kind))} · HP ${hpCurrent}/${hpMax}</span>
+        <span>${escapeHtml(formatKind(companion.kind))}</span>
       </span>
     </button>
   `;
@@ -152,6 +152,7 @@ function buildCompanionCard(companion, isSelected = false) {
     : '<p class="muted">Nessuna nota aggiunta.</p>';
   const hpCurrent = Number(statBlock.hp.current) || 0;
   const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
+  const hpTemp = Math.max(Number(statBlock.hp.temp) || 0, 0);
   const hpPercent = Math.min(Math.max((hpCurrent / hpMax) * 100, 0), 100);
 
   return `
@@ -169,14 +170,8 @@ function buildCompanionCard(companion, isSelected = false) {
             <strong>${escapeHtml(companion.name)}</strong>
             <span class="character-meta">
               <span class="meta-tag"><small>Tipo</small><strong>${escapeHtml(formatKind(companion.kind))}</strong></span>
-              <span class="meta-tag meta-tag--level"><small>Bonus competenza</small><strong>${formatSigned(statBlock.proficiency_bonus)}</strong></span>
-            </span>
-            <span class="familiar-sheet__hp-summary" aria-label="Punti ferita ${hpCurrent} su ${hpMax}, ${Math.round(hpPercent)} percento">
-              <span class="familiar-sheet__hp-track"><span style="width: ${hpPercent}%;"></span></span>
-              <strong>${Math.round(hpPercent)}%</strong>
             </span>
           </span>
-          <span class="familiar-sheet__chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="button-row familiar-sheet__actions">
           <button class="icon-button" data-edit-companion="${escapeHtml(companion.id)}" type="button" aria-label="Modifica ${escapeHtml(companion.name)}">✏️</button>
@@ -219,6 +214,8 @@ function buildCompanionCard(companion, isSelected = false) {
                 <span class="hp-bar-label__title">Punti ferita</span>
                 <strong class="hp-bar-label__value">${hpCurrent}/${hpMax}</strong>
                 <span class="hp-bar-label__percent" aria-label="Percentuale vita ${Math.round(hpPercent)}%">${Math.round(hpPercent)}%</span>
+                ${hpTemp ? `<span class="hp-bar-label__temp-group is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></span>` : ''}
+                <button class="condition-track__add familiar-heal-button" type="button" data-heal-companion="${escapeHtml(companion.id)}" aria-label="Cura o assegna punti ferita temporanei a ${escapeHtml(companion.name)}" title="Cura o PF temporanei">+</button>
               </div>
               <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}">
                 <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
@@ -680,7 +677,11 @@ export async function renderFamiliars(container) {
           acc[key] = formData.get(`save_${key}`) === 'on';
           return acc;
         }, {}),
-        hp: { current: Number(formData.get('hp_current') || 1), max: Number(formData.get('hp_max') || 1) },
+        hp: {
+          current: Number(formData.get('hp_current') || 1),
+          max: Number(formData.get('hp_max') || 1),
+          temp: Math.max(Number(current.hp.temp) || 0, 0)
+        },
         speeds: {
           walk: Number(formData.get('speed_walk') || 0),
           fly: toNumberOrNull(formData.get('speed_fly')),
@@ -724,6 +725,39 @@ export async function renderFamiliars(container) {
     panel?.classList.toggle('is-collapsed', isExpanded);
     if (content) content.hidden = isExpanded;
   }));
+  container.querySelectorAll('[data-heal-companion]').forEach((btn) => btn.addEventListener('click', async () => {
+    const companion = companions.find((entry) => String(entry.id) === String(btn.dataset.healCompanion));
+    if (!companion) return;
+    const current = normalizeStatBlock(companion.stat_block);
+    const formData = await openFormModal({
+      title: `Cura PF · ${companion.name}`,
+      submitLabel: 'Applica',
+      content: buildHpShortcutFields(null, { allowHitDice: false, allowTempHp: true })
+    });
+    if (!formData) return;
+    const amount = Number(formData.get('amount'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      createToast('Inserisci un valore valido', 'error');
+      return;
+    }
+    const useTempHp = formData.has('temp_hp');
+    const hpCurrent = Math.max(Number(current.hp.current) || 0, 0);
+    const hpMax = Math.max(Number(current.hp.max) || hpCurrent || 1, 1);
+    const hpTemp = Math.max(Number(current.hp.temp) || 0, 0);
+    const nextHp = useTempHp
+      ? { ...current.hp, temp: hpTemp + amount }
+      : { ...current.hp, current: Math.min(hpCurrent + amount, hpMax) };
+    try {
+      await updateCompanion(companion.id, {
+        stat_block: { ...current, hp: nextHp }
+      });
+      createToast(useTempHp ? `PF temporanei +${amount} a ${companion.name}` : `${companion.name} curato di ${amount} PF`);
+      await renderFamiliars(container);
+    } catch {
+      createToast('Errore aggiornamento punti ferita', 'error');
+    }
+  }));
+
   container.querySelectorAll('[data-edit-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companion = companions.find((entry) => entry.id === btn.dataset.editCompanion);
     if (companion) void openCompanionForm(companion);

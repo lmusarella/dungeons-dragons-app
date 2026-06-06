@@ -19,5 +19,22 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('class="hp-bar-track" role="meter"');
     expect(source).toContain('class="familiar-movement-grid"');
     expect(source).toContain('vital-mini-chip--darkvision familiar-darkvision-chip');
+    expect(source).toContain('data-heal-companion=');
+    expect(source).toContain('buildHpShortcutFields(null, { allowHitDice: false, allowTempHp: true })');
+    expect(source).toContain('temp: hpTemp + amount');
+  });
+
+  it('uses a 40/60 split for attacks and notes', () => {
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(styles).toContain('grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);');
+    expect(styles).toContain('"attacks notes";');
+  });
+
+  it('shows only the companion kind in compact selectors and supports animals', () => {
+    const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
+    expect(source).toContain("{ value: 'animal', label: 'Animale' }");
+    expect(source).toContain('<span>${escapeHtml(formatKind(companion.kind))}</span>');
+    expect(source).not.toContain('familiar-sheet__chevron');
+    expect(source).not.toContain('familiar-sheet__hp-summary');
   });
 });

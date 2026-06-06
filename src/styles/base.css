@@ -9089,11 +9089,11 @@ button:focus-visible,
 
 /* Familiar overview aligned with the character combat summary */
 .familiar-dashboard {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 0.72fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   grid-template-areas:
-    "vitals vitals vitals"
-    "characteristics characteristics characteristics"
-    "attacks attacks notes";
+    "vitals vitals"
+    "characteristics characteristics"
+    "attacks notes";
 }
 
 .familiar-combat-vitals-grid {
@@ -9140,9 +9140,17 @@ button:focus-visible,
   white-space: nowrap;
 }
 
+.familiar-sheet__toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.familiar-heal-button {
+  margin-left: auto;
+}
+
 @media (max-width: 1180px) {
   .familiar-dashboard {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.85fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     grid-template-areas:
       "vitals vitals"
       "characteristics characteristics"
