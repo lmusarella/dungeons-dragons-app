@@ -68,4 +68,30 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('La carica verrà consumata dall’abilità principale');
   });
 
+  it('wires child edit and delete icon buttons explicitly', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const detailModal = source.slice(
+      source.indexOf('export function openResourceDetail'),
+      source.indexOf('export function openSpellDrawer')
+    );
+    expect(detailModal).toContain('type="button" data-resource-child-edit=');
+    expect(detailModal).toContain('type="button" data-resource-child-delete=');
+    expect(detailModal).toContain('aria-hidden="true">✏️</span>');
+    expect(detailModal).toContain('aria-hidden="true">🗑️</span>');
+    expect(detailModal).toContain("childActionInput.name = 'resource_child_action'");
+    expect(detailModal).toContain("submitChildAction(`edit:${button.dataset.resourceChildEdit}`)");
+    expect(detailModal).toContain("submitChildAction(`delete:${button.dataset.resourceChildDelete}`)");
+  });
+
+  it('renders a structured parent overview and linked ability cards', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('resource-parent-overview');
+    expect(source).toContain('resource-detail-option__branch');
+    expect(source).toContain('resource-detail-option__badges');
+    expect(source).toContain("cardClass: 'modal-card--resource-detail'");
+    expect(styles).toContain('.resource-parent-overview');
+    expect(styles).toContain('.resource-detail-option__actions .resource-icon-button');
+  });
+
 });

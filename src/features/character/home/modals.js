@@ -319,51 +319,75 @@ export function openResourceDetail(resource, {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
-  const isExhausted = maxUses && resource.used >= maxUses;
+  const used = Math.max(0, Number(resource.used) || 0);
+  const remaining = Math.max(maxUses - used, 0);
+  const isExhausted = Boolean(maxUses && used >= maxUses);
   const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
-  const canRecoverCharge = Boolean(maxUses > 1 && Number(resource.used) > 0 && onRecover);
+  const canRecoverCharge = Boolean(maxUses > 1 && used > 0 && onRecover);
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
   const isPool = resource.resource_type === 'pool';
-  const remaining = Math.max(maxUses - (Number(resource.used) || 0), 0);
   const poolPercent = maxUses ? Math.min(Math.max((remaining / maxUses) * 100, 0), 100) : 0;
   const hasDisplayImage = hasUsableDetailImage(resource.image_url);
   const imageUrl = resource.image_url?.trim() || '';
+  const usageLabel = isPool ? 'Pool disponibile' : 'Cariche disponibili';
 
   detail.innerHTML = `
-    <div class="detail-card detail-card--text resource-detail-card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
+    <section class="resource-parent-overview ${hasDisplayImage ? '' : 'resource-parent-overview--text-only'}">
       ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'risorsa')}" />` : ''}
-      ${isPool ? `
-        <div class="resource-pool resource-pool--detail" aria-label="Pool risorsa ${remaining} su ${maxUses}">
-          <div class="resource-pool__label"><span>Pool disponibile</span><strong>${remaining}/${maxUses}</strong></div>
-          <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
-            <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
-          </div>
+      <div class="resource-parent-overview__content">
+        <div class="resource-parent-overview__meta">
+          ${resource.cast_time ? `<span class="resource-chip">${escapeHtml(resource.cast_time)}</span>` : ''}
+          ${maxUses ? `<span class="resource-parent-overview__uses ${isExhausted ? 'is-exhausted' : ''}">${usageLabel}: <strong>${remaining}/${maxUses}</strong></span>` : ''}
+          ${childResources.length ? `<span class="resource-parent-overview__count">${childResources.length} ${childResources.length === 1 ? 'opzione' : 'opzioni'}</span>` : ''}
         </div>
-      ` : ''}
-      <div class="detail-rich-text">${renderDetailText(description)}</div>
-    </div>
+        ${maxUses ? `
+          <div class="resource-pool resource-pool--detail" aria-label="${usageLabel} ${remaining} su ${maxUses}">
+            <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
+              <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
+            </div>
+          </div>
+        ` : ''}
+        <div class="detail-rich-text">${renderDetailText(description)}</div>
+      </div>
+    </section>
     ${childResources.length || onCreateChild ? `
       <section class="resource-detail-options">
         <div class="resource-detail-options__header">
-          <div><strong>Opzioni collegate</strong><small>Usano le cariche di ${escapeHtml(resource.name || 'questa abilità')}.</small></div>
-          ${onCreateChild ? '<button type="submit" name="resource_child_action" value="create" class="ghost-button">Aggiungi opzione</button>' : ''}
+          <div>
+            <span class="resource-detail-options__eyebrow">Sotto-abilità</span>
+            <strong>Opzioni collegate</strong>
+            <small>Ogni opzione usa le cariche di ${escapeHtml(resource.name || 'questa abilità')}, ma mantiene i propri dadi e dettagli.</small>
+          </div>
+          ${onCreateChild ? '<button type="button" data-resource-child-create class="ghost-button resource-detail-options__add"><span aria-hidden="true">＋</span> Aggiungi</button>' : ''}
         </div>
         ${childResources.length ? `<div class="resource-detail-options__list">
-          ${childResources.map((child) => `
+          ${childResources.map((child, index) => {
+    const childDescription = child.description?.trim();
+    const diceLabel = child.damage_dice_notation
+      ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}`
+      : 'Nessun tiro';
+    return `
             <article class="resource-detail-option">
-              <div>
-                <strong>${escapeHtml(child.name || 'Opzione')}</strong>
-                <small>${[child.cast_time, child.damage_dice_notation || 'Nessun tiro'].filter(Boolean).map(escapeHtml).join(' · ')}</small>
-                ${child.description ? `<p>${escapeHtml(child.description)}</p>` : ''}
+              <span class="resource-detail-option__branch" aria-hidden="true">${index + 1}</span>
+              <div class="resource-detail-option__content">
+                <div class="resource-detail-option__heading">
+                  <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+                  <div class="resource-detail-option__badges">
+                    ${child.cast_time ? `<span>${escapeHtml(child.cast_time)}</span>` : ''}
+                    <span>${escapeHtml(diceLabel)}</span>
+                  </div>
+                </div>
+                ${childDescription ? `<p>${escapeHtml(childDescription)}</p>` : '<p class="muted">Nessuna descrizione.</p>'}
               </div>
               ${onEditChild || onDeleteChild ? `<div class="resource-detail-option__actions">
-                ${onEditChild ? `<button type="submit" name="resource_child_action" value="edit:${escapeHtml(child.id)}" class="ghost-button">Modifica</button>` : ''}
-                ${onDeleteChild ? `<button type="submit" name="resource_child_action" value="delete:${escapeHtml(child.id)}" class="ghost-button danger">Elimina</button>` : ''}
+                ${onEditChild ? `<button type="button" data-resource-child-edit="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button" aria-label="Modifica ${escapeHtml(child.name || 'sotto-abilità')}" title="Modifica"><span aria-hidden="true">✏️</span></button>` : ''}
+                ${onDeleteChild ? `<button type="button" data-resource-child-delete="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button icon-button--danger" aria-label="Elimina ${escapeHtml(child.name || 'sotto-abilità')}" title="Elimina"><span aria-hidden="true">🗑️</span></button>` : ''}
               </div>` : ''}
             </article>
-          `).join('')}
-        </div>` : '<p class="muted">Nessuna opzione configurata.</p>'}
+          `;
+  }).join('')}
+        </div>` : '<div class="resource-detail-options__empty"><span aria-hidden="true">◇</span><p>Nessuna sotto-abilità configurata.</p></div>'}
       </section>
     ` : ''}
   `;
@@ -376,21 +400,56 @@ export function openResourceDetail(resource, {
     cancelLabel: isActive ? (hasAction ? 'Chiudi' : null) : null,
     content: detail,
     showFooter: isActive,
+    cardClass: 'modal-card--resource-detail',
     onOpen: ({ modal, formEl }) => {
       const cleanupManagementActions = attachDetailManagementActions(modal, formEl, { onEdit, onDelete });
-      if (!canRecoverCharge || isPool) return cleanupManagementActions;
-      const submitButton = modal.querySelector('[data-form-submit]');
-      const actionsRight = submitButton?.parentElement;
-      if (!actionsRight) return null;
-      const recoverButton = document.createElement('button');
-      recoverButton.type = 'submit';
-      recoverButton.name = 'resource_action';
-      recoverButton.value = 'recover';
-      recoverButton.className = 'ghost-button';
-      recoverButton.textContent = 'Recupera Carica';
-      actionsRight.insertBefore(recoverButton, submitButton);
+      const childActionInput = document.createElement('input');
+      childActionInput.type = 'hidden';
+      childActionInput.name = 'resource_child_action';
+      formEl?.appendChild(childActionInput);
+
+      const submitChildAction = (action) => {
+        if (!formEl) return;
+        childActionInput.value = action;
+        formEl.requestSubmit();
+      };
+      const createButton = detail.querySelector('[data-resource-child-create]');
+      const editButtons = [...detail.querySelectorAll('[data-resource-child-edit]')];
+      const deleteButtons = [...detail.querySelectorAll('[data-resource-child-delete]')];
+      const createHandler = () => submitChildAction('create');
+      const editHandlers = editButtons.map((button) => {
+        const handler = () => submitChildAction(`edit:${button.dataset.resourceChildEdit}`);
+        button.addEventListener('click', handler);
+        return [button, handler];
+      });
+      const deleteHandlers = deleteButtons.map((button) => {
+        const handler = () => submitChildAction(`delete:${button.dataset.resourceChildDelete}`);
+        button.addEventListener('click', handler);
+        return [button, handler];
+      });
+      createButton?.addEventListener('click', createHandler);
+
+      let recoverButton = null;
+      if (canRecoverCharge && !isPool) {
+        const submitButton = modal.querySelector('[data-form-submit]');
+        const actionsRight = submitButton?.parentElement;
+        if (actionsRight) {
+          recoverButton = document.createElement('button');
+          recoverButton.type = 'submit';
+          recoverButton.name = 'resource_action';
+          recoverButton.value = 'recover';
+          recoverButton.className = 'ghost-button';
+          recoverButton.textContent = 'Recupera Carica';
+          actionsRight.insertBefore(recoverButton, submitButton);
+        }
+      }
+
       return () => {
-        recoverButton.remove();
+        createButton?.removeEventListener('click', createHandler);
+        editHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
+        deleteHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
+        childActionInput.remove();
+        recoverButton?.remove();
         cleanupManagementActions?.();
       };
     }
