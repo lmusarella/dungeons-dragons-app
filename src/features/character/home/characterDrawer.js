@@ -688,9 +688,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       row.dataset.unarmedAttackRow = String(index);
       const grid = document.createElement('div');
       grid.className = 'compact-special-skill-grid familiar-edit-attack-grid character-unarmed-attack-grid';
-      grid.appendChild(buildInput({ label: 'Nome', name: `unarmed_attack_name_${index}`, value: attack.name, placeholder: 'Es. Pugno' }));
+      const nameField = buildInput({ label: 'Nome', name: `unarmed_attack_name_${index}`, value: attack.name, placeholder: 'Es. Pugno' });
+      nameField.classList.add('character-unarmed-attack-field--name');
+      grid.appendChild(nameField);
       const abilityField = document.createElement('label');
-      abilityField.className = 'field';
+      abilityField.className = 'field character-unarmed-attack-field--ability';
       abilityField.innerHTML = '<span>Caratt.</span>';
       const abilitySelect = buildSelect([
         { value: 'str', label: 'FOR' },
@@ -699,11 +701,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       abilitySelect.name = `unarmed_attack_ability_${index}`;
       abilityField.appendChild(abilitySelect);
       grid.appendChild(abilityField);
-      grid.appendChild(buildInput({ label: 'Dado danno', name: `unarmed_attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d4' }));
+      const damageField = buildInput({ label: 'Dado danno', name: `unarmed_attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d4' });
+      damageField.classList.add('character-unarmed-attack-field--damage');
+      grid.appendChild(damageField);
       const attackBonusField = buildInput({ label: 'Bonus TC', name: `unarmed_attack_bonus_${index}`, type: 'number', value: attack.attack_bonus ?? 0 });
+      attackBonusField.classList.add('character-unarmed-attack-field--attack-bonus');
       attackBonusField.querySelector('input').step = '1';
       grid.appendChild(attackBonusField);
       const damageBonusField = buildInput({ label: 'Bonus danni', name: `unarmed_attack_damage_bonus_${index}`, type: 'number', value: attack.damage_bonus ?? 0 });
+      damageBonusField.classList.add('character-unarmed-attack-field--damage-bonus');
       damageBonusField.querySelector('input').step = '1';
       grid.appendChild(damageBonusField);
       const preview = document.createElement('div');
