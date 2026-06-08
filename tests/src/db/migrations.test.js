@@ -23,4 +23,10 @@ describe('database migrations', () => {
     });
   });
 
+  it('adds the variable cost flag for linked resources', () => {
+    const migration = readFileSync('db/add_variable_resource_cost.sql', 'utf8');
+    expect(migration).toContain('add column if not exists resource_cost_variable boolean not null default false');
+    expect(migration).toContain("notify pgrst, 'reload schema'");
+  });
+
 });

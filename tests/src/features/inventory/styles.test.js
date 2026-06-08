@@ -22,4 +22,14 @@ describe('inventory accordion styles', () => {
     expect(source).toContain('.weapon-damage-mode-field--attack-modifier { grid-area: attack; }');
   });
 
+
+  it('keeps unarmed attack editor inputs on roomy responsive rows', () => {
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(styles).toContain('grid-template-areas:');
+    expect(styles).toContain('"name name name ability damage damage"');
+    expect(styles).toContain('"attack-bonus attack-bonus attack-bonus damage-bonus damage-bonus damage-bonus"');
+    expect(styles).toContain('grid-template-columns: 36px minmax(90px, 1fr) 36px');
+    expect(styles).toContain('@media (max-width: 760px)');
+  });
+
 });

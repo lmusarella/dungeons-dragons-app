@@ -17,7 +17,7 @@ import {
   skillList
 } from './constants.js';
 import { weaponMasteries2024 } from '../../rules/weaponMasteries.js';
-import { getAbilityModifier, getEquipSlots, normalizeNumber } from './utils.js';
+import { calculateUnarmedAttackBonuses, formatSigned, getAbilityModifier, getEquipSlots, getUnarmedAttackAbility, normalizeNumber } from './utils.js';
 
 
 function attachDrawerNumberStepper(input, {
@@ -127,6 +127,11 @@ function getDrawerAttackRollEntries(characterData, items = []) {
     key: `weapon:${weapon.id ?? weapon.name}`,
     label: weapon.name || 'Arma'
   }));
+  const unarmedAttacks = Array.isArray(characterData?.unarmed_attacks) ? characterData.unarmed_attacks : [];
+  const unarmedEntries = unarmedAttacks.map((attack, index) => ({
+    key: `unarmed:${index}`,
+    label: attack.name || `Colpo senz’arma ${index + 1}`
+  }));
   const spells = Array.isArray(characterData?.spells) ? characterData.spells : [];
   const spellEntries = spells
     .filter((spell) => {
@@ -140,7 +145,7 @@ function getDrawerAttackRollEntries(characterData, items = []) {
   const spellcasting = characterData?.spellcasting || {};
   const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(characterData?.proficiency_bonus) !== null);
   const genericSpellEntry = hasSpellAttack ? [{ key: 'spell-attack', label: 'Incantesimi' }] : [];
-  return [...weaponEntries, ...spellEntries, ...genericSpellEntry];
+  return [...weaponEntries, ...unarmedEntries, ...spellEntries, ...genericSpellEntry];
 }
 
 function getAutomaticDrawerAttackEffects(characterData) {
@@ -183,6 +188,24 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const skillStates = characterData.skills || {};
   const skillMasteryStates = characterData.skill_mastery || {};
   const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
+  const buildUnarmedAttackDraft = (attack = {}) => {
+    const ability = getUnarmedAttackAbility(attack);
+    const abilityMod = getAbilityModifier(characterData.abilities?.[ability]) ?? 0;
+    const proficiencyBonus = normalizeNumber(characterData.proficiency_bonus) ?? 0;
+    const hasCalculatedFields = attack?.ability || attack?.attack_bonus !== undefined || attack?.damage_bonus !== undefined;
+    return {
+      name: attack?.name || '',
+      ability,
+      attack_bonus: hasCalculatedFields
+        ? (Number(attack?.attack_bonus) || 0)
+        : ((Number(attack?.to_hit) || 0) - abilityMod - proficiencyBonus),
+      damage: attack?.damage || '',
+      damage_bonus: hasCalculatedFields
+        ? (Number(attack?.damage_bonus) || 0)
+        : ((Number(attack?.damage_modifier) || 0) - abilityMod)
+    };
+  };
+  let draftUnarmedAttacks = (Array.isArray(characterData.unarmed_attacks) ? characterData.unarmed_attacks : []).map(buildUnarmedAttackDraft);
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
@@ -620,6 +643,128 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.sneak_attack_dice ?? ''
   }));
   combatSection.appendChild(combatOtherRow);
+
+  const unarmedAttacksSection = document.createElement('div');
+  unarmedAttacksSection.className = 'character-edit-section compact-character-section familiar-edit-attacks-section';
+  unarmedAttacksSection.innerHTML = `
+    <div class="familiar-edit-section-header">
+      <h4>Colpi senz’arma</h4>
+      <p class="muted">Scegli FOR o DES: tiro per colpire e danni vengono calcolati automaticamente con caratteristica, competenza e bonus extra.</p>
+    </div>
+  `;
+  const unarmedAttackCountInput = document.createElement('input');
+  unarmedAttackCountInput.type = 'hidden';
+  unarmedAttackCountInput.name = 'unarmed_attack_count';
+  const unarmedAttackList = document.createElement('div');
+  unarmedAttackList.className = 'familiar-edit-attack-list';
+  const addUnarmedAttackButton = document.createElement('button');
+  addUnarmedAttackButton.type = 'button';
+  addUnarmedAttackButton.className = 'ghost-button ghost-button--compact familiar-edit-add-attack';
+  addUnarmedAttackButton.textContent = '+ Aggiungi colpo senz’arma';
+
+  const readUnarmedAttackRows = () => {
+    draftUnarmedAttacks = Array.from(unarmedAttackList.querySelectorAll('[data-unarmed-attack-row]')).map((row) => ({
+      name: row.querySelector('[name^="unarmed_attack_name_"]')?.value || '',
+      ability: row.querySelector('[name^="unarmed_attack_ability_"]')?.value === 'dex' ? 'dex' : 'str',
+      attack_bonus: Number(row.querySelector('[name^="unarmed_attack_bonus_"]')?.value) || 0,
+      damage: row.querySelector('[name^="unarmed_attack_damage_"]')?.value || '',
+      damage_bonus: Number(row.querySelector('[name^="unarmed_attack_damage_bonus_"]')?.value) || 0
+    }));
+  };
+
+  const renderUnarmedAttackRows = () => {
+    unarmedAttackList.innerHTML = '';
+    unarmedAttackCountInput.value = String(draftUnarmedAttacks.length);
+    if (!draftUnarmedAttacks.length) {
+      const empty = document.createElement('p');
+      empty.className = 'muted familiar-edit-empty-attacks';
+      empty.textContent = 'Nessun colpo senz’arma configurato.';
+      unarmedAttackList.appendChild(empty);
+      return;
+    }
+    draftUnarmedAttacks.forEach((attack, index) => {
+      const row = document.createElement('div');
+      row.className = 'compact-special-skill-row familiar-edit-attack-row';
+      row.dataset.unarmedAttackRow = String(index);
+      const grid = document.createElement('div');
+      grid.className = 'compact-special-skill-grid familiar-edit-attack-grid character-unarmed-attack-grid';
+      const nameField = buildInput({ label: 'Nome', name: `unarmed_attack_name_${index}`, value: attack.name, placeholder: 'Es. Pugno' });
+      nameField.classList.add('character-unarmed-attack-field--name');
+      grid.appendChild(nameField);
+      const abilityField = document.createElement('label');
+      abilityField.className = 'field character-unarmed-attack-field--ability';
+      abilityField.innerHTML = '<span>Caratt.</span>';
+      const abilitySelect = buildSelect([
+        { value: 'str', label: 'FOR' },
+        { value: 'dex', label: 'DES' }
+      ], attack.ability || 'str');
+      abilitySelect.name = `unarmed_attack_ability_${index}`;
+      abilityField.appendChild(abilitySelect);
+      grid.appendChild(abilityField);
+      const damageField = buildInput({ label: 'Dado danno', name: `unarmed_attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d4' });
+      damageField.classList.add('character-unarmed-attack-field--damage');
+      grid.appendChild(damageField);
+      const attackBonusField = buildInput({ label: 'Bonus TC', name: `unarmed_attack_bonus_${index}`, type: 'number', value: attack.attack_bonus ?? 0 });
+      attackBonusField.classList.add('character-unarmed-attack-field--attack-bonus');
+      attackBonusField.querySelector('input').step = '1';
+      grid.appendChild(attackBonusField);
+      const damageBonusField = buildInput({ label: 'Bonus danni', name: `unarmed_attack_damage_bonus_${index}`, type: 'number', value: attack.damage_bonus ?? 0 });
+      damageBonusField.classList.add('character-unarmed-attack-field--damage-bonus');
+      damageBonusField.querySelector('input').step = '1';
+      grid.appendChild(damageBonusField);
+      const preview = document.createElement('div');
+      preview.className = 'unarmed-attack-preview';
+      preview.dataset.unarmedAttackPreview = String(index);
+      const actions = document.createElement('div');
+      actions.className = 'character-toggle-group familiar-edit-attack-actions';
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'ghost-button ghost-button--compact';
+      removeButton.textContent = 'Rimuovi';
+      removeButton.addEventListener('click', () => {
+        readUnarmedAttackRows();
+        draftUnarmedAttacks.splice(index, 1);
+        renderUnarmedAttackRows();
+        enhanceNumericFields(unarmedAttackList);
+        updateUnarmedAttackPreviews();
+      });
+      actions.appendChild(removeButton);
+      row.append(grid, preview, actions);
+      unarmedAttackList.appendChild(row);
+    });
+  };
+
+  addUnarmedAttackButton.addEventListener('click', () => {
+    readUnarmedAttackRows();
+    draftUnarmedAttacks.push({ name: '', ability: 'str', attack_bonus: 0, damage: '', damage_bonus: 0 });
+    renderUnarmedAttackRows();
+    enhanceNumericFields(unarmedAttackList);
+    updateUnarmedAttackPreviews();
+  });
+  const updateUnarmedAttackPreviews = () => {
+    const abilityScores = {
+      str: normalizeNumber(abilitySection.querySelector('input[name="ability_str"]')?.value) ?? normalizeNumber(characterData.abilities?.str) ?? 10,
+      dex: normalizeNumber(abilitySection.querySelector('input[name="ability_dex"]')?.value) ?? normalizeNumber(characterData.abilities?.dex) ?? 10
+    };
+    const proficiencyBonus = normalizeNumber(abilitySection.querySelector('input[name="proficiency_bonus"]')?.value) ?? normalizeNumber(characterData.proficiency_bonus) ?? 0;
+    unarmedAttackList.querySelectorAll('[data-unarmed-attack-row]').forEach((row) => {
+      const index = row.dataset.unarmedAttackRow;
+      const ability = row.querySelector(`[name="unarmed_attack_ability_${index}"]`)?.value === 'dex' ? 'dex' : 'str';
+      const abilityMod = getAbilityModifier(abilityScores[ability]) ?? 0;
+      const attackBonus = Number(row.querySelector(`[name="unarmed_attack_bonus_${index}"]`)?.value) || 0;
+      const damageBonus = Number(row.querySelector(`[name="unarmed_attack_damage_bonus_${index}"]`)?.value) || 0;
+      const attackTotal = abilityMod + proficiencyBonus + attackBonus;
+      const damageTotal = abilityMod + damageBonus;
+      const preview = row.querySelector('[data-unarmed-attack-preview]');
+      if (preview) preview.textContent = `Totale: TC ${formatSigned(attackTotal)} · Danni ${formatSigned(damageTotal)}`;
+    });
+  };
+  renderUnarmedAttackRows();
+  updateUnarmedAttackPreviews();
+  unarmedAttackList.addEventListener('input', updateUnarmedAttackPreviews);
+  unarmedAttackList.addEventListener('change', updateUnarmedAttackPreviews);
+  unarmedAttacksSection.append(unarmedAttackCountInput, unarmedAttackList, addUnarmedAttackButton);
+  combatSection.appendChild(unarmedAttacksSection);
   const weaponMasteryFeatureField = document.createElement('div');
   weaponMasteryFeatureField.className = 'modal-toggle-field';
   weaponMasteryFeatureField.innerHTML = `
@@ -1116,6 +1261,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   nextButton.addEventListener('click', () => setActiveStep(activeStepIndex + 1));
   form.addEventListener('input', updateStepperState);
   form.addEventListener('change', updateStepperState);
+  [abilityInputs.str, abilityInputs.dex, proficiencyInput].forEach((input) => {
+    input?.addEventListener('input', updateUnarmedAttackPreviews);
+    input?.addEventListener('change', updateUnarmedAttackPreviews);
+  });
 
   stepper.append(stepperNav, stepperContent);
   form.appendChild(stepper);
@@ -1304,6 +1453,32 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       }, {})
     }
     : characterData.spellcasting ?? null;
+  const nextAbilities = {
+    str: toNumberOrNull(formData.get('ability_str')),
+    dex: toNumberOrNull(formData.get('ability_dex')),
+    con: toNumberOrNull(formData.get('ability_con')),
+    int: toNumberOrNull(formData.get('ability_int')),
+    wis: toNumberOrNull(formData.get('ability_wis')),
+    cha: toNumberOrNull(formData.get('ability_cha'))
+  };
+  const nextProficiencyBonus = toNumberOrNull(formData.get('proficiency_bonus'));
+  const unarmedAttackCount = Number(formData.get('unarmed_attack_count')) || 0;
+  const nextUnarmedAttacks = Array.from({ length: unarmedAttackCount }, (_, index) => {
+    const ability = formData.get(`unarmed_attack_ability_${index}`) === 'dex' ? 'dex' : 'str';
+    const attack = {
+      name: String(formData.get(`unarmed_attack_name_${index}`) || '').trim(),
+      ability,
+      attack_bonus: Number(formData.get(`unarmed_attack_bonus_${index}`) || 0),
+      damage: String(formData.get(`unarmed_attack_damage_${index}`) || '').trim(),
+      damage_bonus: Number(formData.get(`unarmed_attack_damage_bonus_${index}`) || 0)
+    };
+    const calculated = calculateUnarmedAttackBonuses({ ...characterData, abilities: nextAbilities, proficiency_bonus: nextProficiencyBonus }, attack);
+    return {
+      ...attack,
+      to_hit: calculated.attackTotal,
+      damage_modifier: calculated.damageModifier
+    };
+  }).filter((attack) => attack.name || attack.damage);
   const nextData = {
     ...characterData,
     avatar_url: formData.get('avatar_url')?.trim() || null,
@@ -1328,7 +1503,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     speed: toNumberOrNull(formData.get('speed')),
     darkvision_enabled: formData.has('darkvision_enabled'),
     darkvision_range_m: formData.has('darkvision_enabled') ? (toNumberOrNull(formData.get('darkvision_range_m')) ?? 18) : null,
-    proficiency_bonus: toNumberOrNull(formData.get('proficiency_bonus')),
+    proficiency_bonus: nextProficiencyBonus,
     initiative: toNumberOrNull(formData.get('initiative')),
     attack_bonus_melee: toNumberOrNull(formData.get('attack_bonus_melee')) ?? (Number(characterData.attack_bonus_melee ?? characterData.attack_bonus) || 0),
     attack_bonus_ranged: toNumberOrNull(formData.get('attack_bonus_ranged')) ?? (Number(characterData.attack_bonus_ranged ?? characterData.attack_bonus) || 0),
@@ -1345,17 +1520,11 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     proficiency_notes: formData.get('proficiency_notes')?.trim() || null,
     language_proficiencies: formData.get('language_proficiencies')?.trim() || null,
     talents: formData.get('talents')?.trim() || null,
-    abilities: {
-      str: toNumberOrNull(formData.get('ability_str')),
-      dex: toNumberOrNull(formData.get('ability_dex')),
-      con: toNumberOrNull(formData.get('ability_con')),
-      int: toNumberOrNull(formData.get('ability_int')),
-      wis: toNumberOrNull(formData.get('ability_wis')),
-      cha: toNumberOrNull(formData.get('ability_cha'))
-    },
+    abilities: nextAbilities,
     skills: nextSkills,
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
+    unarmed_attacks: nextUnarmedAttacks,
     saving_throws: nextSaving,
     weapon_mastery_enabled: formData.has('weapon_mastery_enabled'),
     weapon_masteries: formData.has('weapon_mastery_enabled')

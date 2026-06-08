@@ -59,6 +59,40 @@ export function calculateSkillModifier(score, proficiencyBonus, proficiencyMulti
   return base + bonus;
 }
 
+
+export function getUnarmedAttackAbility(attack = {}) {
+  return attack?.ability === 'dex' ? 'dex' : 'str';
+}
+
+export function calculateUnarmedAttackBonuses(characterData = {}, attack = {}) {
+  const hasCalculatedFields = attack?.ability || attack?.attack_bonus !== undefined || attack?.damage_bonus !== undefined;
+  if (!hasCalculatedFields) {
+    return {
+      ability: null,
+      abilityMod: 0,
+      attackTotal: Number(attack?.to_hit) || 0,
+      damageModifier: Number(attack?.damage_modifier) || 0,
+      attackBonus: 0,
+      damageBonus: 0,
+      legacy: true
+    };
+  }
+  const ability = getUnarmedAttackAbility(attack);
+  const abilityMod = getAbilityModifier(characterData?.abilities?.[ability]) ?? 0;
+  const proficiencyBonus = normalizeNumber(characterData?.proficiency_bonus) ?? 0;
+  const attackBonus = Number(attack?.attack_bonus) || 0;
+  const damageBonus = Number(attack?.damage_bonus) || 0;
+  return {
+    ability,
+    abilityMod,
+    attackTotal: abilityMod + proficiencyBonus + attackBonus,
+    damageModifier: abilityMod + damageBonus,
+    attackBonus,
+    damageBonus,
+    legacy: false
+  };
+}
+
 export function calculatePassivePerception(abilities, proficiencyBonus, skillStates, skillMasteryStates) {
   const hasProficiency = Boolean(skillStates.perception);
   const mastery = Boolean(skillMasteryStates.perception);

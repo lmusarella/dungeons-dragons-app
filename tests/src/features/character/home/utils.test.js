@@ -9,7 +9,8 @@ import {
   buildSpellDamageOverlayConfig,
   getCastableSpellSlotLevels,
   applyDeathSaveRoll,
-  getWeaponDamageModes
+  getWeaponDamageModes,
+  calculateUnarmedAttackBonuses
 } from '../../../../../src/features/character/home/utils.js';
 
 describe('src/features/character/home/utils.js', () => {
@@ -130,4 +131,21 @@ describe('src/features/character/home/utils.js', () => {
     );
     expect(ac).toBe(17);
   });
+
+  it('calculates unarmed attack totals from the selected physical ability', () => {
+    expect(calculateUnarmedAttackBonuses({
+      abilities: { str: 10, dex: 16 },
+      proficiency_bonus: 3
+    }, {
+      ability: 'dex',
+      attack_bonus: 1,
+      damage_bonus: 2
+    })).toMatchObject({
+      ability: 'dex',
+      abilityMod: 3,
+      attackTotal: 7,
+      damageModifier: 5
+    });
+  });
+
 });

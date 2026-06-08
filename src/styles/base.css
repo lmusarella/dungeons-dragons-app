@@ -7354,6 +7354,75 @@ button:focus-visible,
   justify-content: flex-end;
 }
 
+
+.familiar-edit-attack-grid.character-unarmed-attack-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-areas:
+    "name name name ability damage damage"
+    "attack-bonus attack-bonus attack-bonus damage-bonus damage-bonus damage-bonus";
+  gap: 10px 12px;
+  align-items: end;
+}
+
+.character-unarmed-attack-field--name {
+  grid-area: name;
+}
+
+.character-unarmed-attack-field--ability {
+  grid-area: ability;
+}
+
+.character-unarmed-attack-field--damage {
+  grid-area: damage;
+}
+
+.character-unarmed-attack-field--attack-bonus {
+  grid-area: attack-bonus;
+}
+
+.character-unarmed-attack-field--damage-bonus {
+  grid-area: damage-bonus;
+}
+
+.familiar-edit-attack-grid.character-unarmed-attack-grid .number-stepper {
+  grid-template-columns: 36px minmax(90px, 1fr) 36px;
+}
+
+.unarmed-attack-preview {
+  align-self: center;
+  margin-top: 2px;
+  padding: 7px 10px;
+  border: 1px solid #eadfc9;
+  border-radius: 10px;
+  background: #fffaf1;
+  color: #6f5c3d;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .familiar-edit-attack-grid.character-unarmed-attack-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "name name"
+      "ability damage"
+      "attack-bonus damage-bonus";
+  }
+}
+
+@media (max-width: 560px) {
+  .familiar-edit-attack-grid.character-unarmed-attack-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "name"
+      "ability"
+      "damage"
+      "attack-bonus"
+      "damage-bonus";
+  }
+}
+
+
 .familiar-edit-empty-attacks {
   margin: 0;
   padding: 10px;

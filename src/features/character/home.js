@@ -31,6 +31,7 @@ import {
   openPreparedSpellsModal,
   openResourceDetail,
   openResourcePoolConsumeModal,
+  openVariableResourceCostModal,
   openResourceOptionModal,
   openResourceDrawer,
   openSpellSourceModal,
@@ -47,6 +48,7 @@ import {
   buildWeaponDamageOverlayConfig,
   getWeaponDamageModes,
   calculateSkillModifier,
+  calculateUnarmedAttackBonuses,
   formatSigned,
   getAbilityModifier,
   getCastableSpellSlotLevels,
@@ -1136,6 +1138,29 @@ export async function renderHome(container) {
         });
         return;
       }
+      if (rollKey.startsWith('unarmed:')) {
+        const attackIndex = Number(rollKey.replace('unarmed:', '')) || 0;
+        const attacks = Array.isArray(activeCharacter.data?.unarmed_attacks) ? activeCharacter.data.unarmed_attacks : [];
+        const attack = attacks[attackIndex];
+        const damageNotation = String(attack?.damage || '').trim();
+        if (!damageNotation || damageNotation === '-') {
+          createToast('Danni non configurati per questo colpo senz’arma', 'error');
+          return;
+        }
+        const attackStats = calculateUnarmedAttackBonuses(activeCharacter.data || {}, attack);
+        openDiceOverlay({
+          keepOpen: true,
+          title: `Danni ${attack.name || 'Colpo senz’arma'}`,
+          mode: 'generic',
+          notation: damageNotation,
+          modifier: attackStats.damageModifier,
+          rollType: 'DMG',
+          characterId: activeCharacter?.id,
+          historyLabel: attack.name || 'Colpo senz’arma',
+          sneakAttackDice: activeCharacter?.data?.sneak_attack_dice || null
+        });
+        return;
+      }
       if (rollKey.startsWith('spell:')) {
         const spellId = rollKey.replace('spell:', '');
         const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
@@ -1250,7 +1275,11 @@ export async function renderHome(container) {
       if (!usageResource) return;
     }
     if (usageResource !== parentResource) {
-      const resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1);
+      let resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1);
+      if (usageResource.resource_cost_variable) {
+        resourceCost = await openVariableResourceCostModal(usageResource, parentResource);
+        if (resourceCost === null) return;
+      }
       await useResource(parentResource, resourceCost, usageResource);
       return;
     }
@@ -2282,6 +2311,25 @@ function buildAttackRollOptions(character, items = [], companions = []) {
       rollMode: rollMode.rollMode,
       rollModeReason: rollMode.rollModeReason
     };
+  });
+
+  const unarmedAttacks = Array.isArray(data.unarmed_attacks) ? data.unarmed_attacks : [];
+  unarmedAttacks.forEach((attack, index) => {
+    const value = `unarmed:${index}`;
+    const name = attack.name || `Colpo senz’arma ${index + 1}`;
+    const attackStats = calculateUnarmedAttackBonuses(data, attack);
+    const rollMode = resolveRollModeEffects([
+      ...automaticAttackEffects,
+      getManualRollAdjustment(character, 'attack_rolls', value, name)
+    ]);
+    options.push({
+      value,
+      label: `${name} (${formatSigned(attackStats.attackTotal)})`,
+      shortLabel: name,
+      modifier: attackStats.attackTotal,
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason
+    });
   });
 
   const activeWildShape = getActiveWildShapeDetails(character, companions);

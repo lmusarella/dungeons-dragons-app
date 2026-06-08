@@ -22,4 +22,20 @@ describe('src/features/character/home/characterDrawer.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('edits and saves structured unarmed attacks on the character', () => {
+    const source = readFileSync('src/features/character/home/characterDrawer.js', 'utf8');
+    expect(source).toContain('Colpi senz’arma');
+    expect(source).toContain("name = 'unarmed_attack_count'");
+    expect(source).toContain('unarmed_attack_ability_');
+    expect(source).toContain('unarmed_attack_bonus_');
+    expect(source).toContain('unarmed_attack_damage_bonus_');
+    expect(source).toContain('Totale: TC');
+    expect(source).toContain('character-unarmed-attack-field--name');
+    expect(source).toContain('character-unarmed-attack-field--ability');
+    expect(source).toContain('character-unarmed-attack-field--attack-bonus');
+    expect(source).toContain('character-unarmed-attack-field--damage-bonus');
+    expect(source).toContain('unarmed_attacks: nextUnarmedAttacks');
+    expect(source).toContain('key: `unarmed:${index}`');
+  });
 });
