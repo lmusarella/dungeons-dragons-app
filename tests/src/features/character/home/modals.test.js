@@ -136,8 +136,36 @@ describe('src/features/character/home/modals.js', () => {
 
   it('renders the parent capability control as a compact toggle', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
-    expect(source).toContain('class="diceov-toggle ability-parent-toggle__control"');
+    expect(source).toContain('class="diceov-toggle condition-modal__toggle ability-parent-toggle__control"');
     expect(source).toContain('class="diceov-toggle-track"');
+  });
+
+  it('keeps child actions separate from parent detail actions', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const detailActions = source.slice(
+      source.indexOf('function attachDetailManagementActions'),
+      source.indexOf('export async function openResourcePoolConsumeModal')
+    );
+    const detailModal = source.slice(
+      source.indexOf('export function openResourceDetail'),
+      source.indexOf('export function openSpellDrawer')
+    );
+    expect(detailActions).toContain("staleActionInputs.forEach((input) => input.remove())");
+    expect(detailActions).toContain('actionInput.remove()');
+    expect(detailModal).toContain("if (detailActionInput) detailActionInput.value = ''");
+    expect(detailModal.indexOf("const childAction = formData.get('resource_child_action')"))
+      .toBeLessThan(detailModal.indexOf("const detailAction = formData.get('detail_action')"));
+  });
+
+  it('uses the same toggle structure as the conditions modal without forced dimensions', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('ability-parent-toggle condition-modal__item');
+    expect(source).toContain('condition-modal__item-label');
+    expect(source).toContain('diceov-toggle condition-modal__toggle ability-parent-toggle__control');
+    expect(styles).toMatch(/\.ability-parent-toggle\s*\{[^}]*flex-direction:\s*row;/s);
+    expect(styles).not.toContain('.ability-parent-toggle__control .diceov-toggle-track');
+    expect(styles).not.toMatch(/\.ability-parent-toggle__control\s*\{[^}]*width:/s);
   });
 
 });

@@ -191,18 +191,20 @@ export async function openConditionsModal(character) {
 function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {}) {
   if (!onEdit && !onDelete) return null;
   const actions = modal.querySelector('[data-form-header-actions]');
-  if (!actions) return null;
+  if (!actions || !formEl) return null;
   actions.classList.add('detail-modal-actions');
+
+  const staleActionInputs = [...formEl.querySelectorAll('input[name="detail_action"]')];
+  staleActionInputs.forEach((input) => input.remove());
+  const actionInput = document.createElement('input');
+  actionInput.type = 'hidden';
+  actionInput.name = 'detail_action';
+  formEl.appendChild(actionInput);
+
   const submitAction = (action) => {
-    if (!formEl) return;
-    let actionInput = formEl.querySelector('input[name="detail_action"]');
-    if (!actionInput) {
-      actionInput = document.createElement('input');
-      actionInput.type = 'hidden';
-      actionInput.name = 'detail_action';
-      formEl.appendChild(actionInput);
-    }
     actionInput.value = action;
+    const childActionInput = formEl.querySelector('input[name="resource_child_action"]');
+    if (childActionInput) childActionInput.value = '';
     formEl.requestSubmit();
   };
   if (onEdit) {
@@ -226,6 +228,7 @@ function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {})
     actions.appendChild(deleteButton);
   }
   return () => {
+    actionInput.remove();
     actions.replaceChildren();
     actions.classList.remove('detail-modal-actions');
   };
@@ -432,6 +435,8 @@ export function openResourceDetail(resource, {
 
       const submitChildAction = (action) => {
         if (!formEl) return;
+        const detailActionInput = formEl.querySelector('input[name="detail_action"]');
+        if (detailActionInput) detailActionInput.value = '';
         childActionInput.value = action;
         formEl.requestSubmit();
       };
@@ -477,15 +482,6 @@ export function openResourceDetail(resource, {
     }
   }).then(async (formData) => {
     if (!formData) return;
-    const detailAction = formData.get('detail_action');
-    if (detailAction === 'edit' && onEdit) {
-      onEdit();
-      return;
-    }
-    if (detailAction === 'delete' && onDelete) {
-      await onDelete();
-      return;
-    }
     const childAction = formData.get('resource_child_action');
     if (childAction === 'create' && onCreateChild) {
       onCreateChild();
@@ -497,6 +493,15 @@ export function openResourceDetail(resource, {
     }
     if (childAction?.startsWith('delete:') && onDeleteChild) {
       await onDeleteChild(childAction.slice(7));
+      return;
+    }
+    const detailAction = formData.get('detail_action');
+    if (detailAction === 'edit' && onEdit) {
+      onEdit();
+      return;
+    }
+    if (detailAction === 'delete' && onDelete) {
+      await onDelete();
       return;
     }
     if (!maxUses) return;
@@ -1276,17 +1281,23 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   parentSelect.name = 'parent_resource_id';
   parentField.appendChild(parentSelect);
 
-  const canHaveChildrenField = document.createElement('label');
-  canHaveChildrenField.className = 'field ability-parent-toggle';
+  const canHaveChildrenField = document.createElement('div');
+  canHaveChildrenField.className = 'field ability-parent-toggle condition-modal__item';
   canHaveChildrenField.innerHTML = `
-    <span>Può avere sotto-abilità</span>
-    <span class="diceov-toggle ability-parent-toggle__control">
+    <span class="condition-modal__item-label">
+      <strong>Può avere sotto-abilità</strong>
+      <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
+    </span>
+    <label class="diceov-toggle condition-modal__toggle ability-parent-toggle__control">
       <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} aria-label="Può avere sotto-abilità" />
       <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </span>
-    <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
+    </label>
   `;
   const canHaveChildrenInput = canHaveChildrenField.querySelector('input[name="can_have_children"]');
+  canHaveChildrenField.classList.toggle('is-selected', Boolean(canHaveChildrenInput?.checked));
+  canHaveChildrenInput?.addEventListener('change', () => {
+    canHaveChildrenField.classList.toggle('is-selected', canHaveChildrenInput.checked);
+  });
 
   const identitySectionRows = [
     buildRow([nameField, castTimeField, imageField], 'balanced'),
