@@ -65,6 +65,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('export async function openResourceOptionModal');
     expect(source).toContain('name="resource_option_id"');
     expect(source).toContain("parentSelect.name = 'parent_resource_id'");
+    expect(source).toContain("entry.can_have_children || String(entry.id) === String(selectedParentId)");
     expect(source).toContain('La carica verrà consumata dall’abilità principale');
   });
 
@@ -92,6 +93,29 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain("cardClass: 'modal-card--resource-detail'");
     expect(styles).toContain('.resource-parent-overview');
     expect(styles).toContain('.resource-detail-option__actions .resource-icon-button');
+  });
+
+  it('adds an explicit parent ability flag and hides child management for non-parents', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const home = readFileSync('src/features/character/home.js', 'utf8');
+    const migration = readFileSync('db/add_resource_parent.sql', 'utf8');
+    expect(source).toContain('name="can_have_children"');
+    expect(source).toContain('Può avere sotto-abilità');
+    expect(source).toContain('canHaveChildren = Boolean(resource?.can_have_children)');
+    expect(source).toContain('const showChildSection = Boolean(canHaveChildren)');
+    expect(source).toContain("can_have_children: canHaveChildren");
+    expect(home).toContain('const canHaveChildren = Boolean(resource.can_have_children);');
+    expect(migration).toContain('add column if not exists can_have_children boolean not null default false');
+  });
+
+  it('only renders the detail progress bar for pool abilities', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const detailModal = source.slice(
+      source.indexOf('export function openResourceDetail'),
+      source.indexOf('export function openSpellDrawer')
+    );
+    expect(detailModal).toContain('${isPool && maxUses ? `');
+    expect(detailModal).toContain('resource-pool resource-pool--detail');
   });
 
 });

@@ -307,6 +307,7 @@ export async function openResourceOptionModal(resource, childResources = []) {
 
 export function openResourceDetail(resource, {
   childResources = [],
+  canHaveChildren = Boolean(resource?.can_have_children),
   onUse,
   onReset,
   onRecover,
@@ -331,6 +332,7 @@ export function openResourceDetail(resource, {
   const hasDisplayImage = hasUsableDetailImage(resource.image_url);
   const imageUrl = resource.image_url?.trim() || '';
   const usageLabel = isPool ? 'Pool disponibile' : 'Cariche disponibili';
+  const showChildSection = Boolean(canHaveChildren);
 
   detail.innerHTML = `
     <section class="resource-parent-overview ${hasDisplayImage ? '' : 'resource-parent-overview--text-only'}">
@@ -341,7 +343,7 @@ export function openResourceDetail(resource, {
           ${maxUses ? `<span class="resource-parent-overview__uses ${isExhausted ? 'is-exhausted' : ''}">${usageLabel}: <strong>${remaining}/${maxUses}</strong></span>` : ''}
           ${childResources.length ? `<span class="resource-parent-overview__count">${childResources.length} ${childResources.length === 1 ? 'opzione' : 'opzioni'}</span>` : ''}
         </div>
-        ${maxUses ? `
+        ${isPool && maxUses ? `
           <div class="resource-pool resource-pool--detail" aria-label="${usageLabel} ${remaining} su ${maxUses}">
             <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
               <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
@@ -351,7 +353,7 @@ export function openResourceDetail(resource, {
         <div class="detail-rich-text">${renderDetailText(description)}</div>
       </div>
     </section>
-    ${childResources.length || onCreateChild ? `
+    ${showChildSection ? `
       <section class="resource-detail-options">
         <div class="resource-detail-options__header">
           <div>
@@ -1236,8 +1238,10 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
 
+  const selectedParentId = resource?.parent_resource_id ?? parentResourceId ?? '';
   const availableParents = (getState().cache?.resources || [])
     .filter((entry) => !entry.parent_resource_id
+      && (entry.can_have_children || String(entry.id) === String(selectedParentId))
       && entry.resource_type !== 'passive'
       && entry.reset_on !== null
       && entry.reset_on !== 'none'
@@ -1248,13 +1252,25 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const parentSelect = buildSelect([
     { value: '', label: 'Nessuna — abilità principale' },
     ...availableParents.map((entry) => ({ value: entry.id, label: entry.name }))
-  ], resource?.parent_resource_id ?? parentResourceId ?? '');
+  ], selectedParentId);
   parentSelect.name = 'parent_resource_id';
   parentField.appendChild(parentSelect);
 
+  const canHaveChildrenField = document.createElement('label');
+  canHaveChildrenField.className = 'field ability-parent-toggle';
+  canHaveChildrenField.innerHTML = `
+    <span>Tipologia padre</span>
+    <label class="chip ability-parent-toggle__control">
+      <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} />
+      Può avere sotto-abilità
+    </label>
+    <small>Attiva questa opzione per usare l’abilità come contenitore di sotto-abilità selezionabili.</small>
+  `;
+  const canHaveChildrenInput = canHaveChildrenField.querySelector('input[name="can_have_children"]');
+
   const identitySectionRows = [
     buildRow([nameField, castTimeField, imageField], 'balanced'),
-    buildRow([parentField], 'balanced')
+    buildRow([parentField, canHaveChildrenField], 'balanced')
   ];
 
   const resourceTypeField = document.createElement('label');
@@ -1356,7 +1372,13 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const syncResourceTypeState = () => {
     const isChild = Boolean(parentSelect.value);
     const isPassive = resourceTypeSelect.value === 'passive' || isChild;
+    const canBeParent = !isChild && resourceTypeSelect.value !== 'passive';
     usageSection.hidden = isChild;
+    canHaveChildrenField.hidden = isChild;
+    if (canHaveChildrenInput) {
+      canHaveChildrenInput.disabled = !canBeParent;
+      if (!canBeParent) canHaveChildrenInput.checked = false;
+    }
     if (isPassive) {
       if (maxUsesInput) maxUsesInput.value = '0';
       if (usedInput) usedInput.value = '0';
@@ -1392,10 +1414,12 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     const parentId = formData.get('parent_resource_id') || null;
     const resourceType = parentId ? 'passive' : (formData.get('resource_type') || 'charges');
     const isPassive = resourceType === 'passive';
+    const canHaveChildren = !parentId && !isPassive && formData.get('can_have_children') === '1';
     const payload = {
       user_id: currentUser?.id ?? character.user_id,
       character_id: character.id,
       parent_resource_id: parentId,
+      can_have_children: canHaveChildren,
       name,
       image_url: formData.get('image_url')?.trim() || null,
       description: formData.get('description')?.trim() || null,

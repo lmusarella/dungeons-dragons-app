@@ -1277,15 +1277,18 @@ export async function renderHome(container) {
   const openResourceDetails = (resource) => {
     if (!resource) return;
     const childResources = getResourceChildren(resource);
+    const canHaveChildren = Boolean(resource.can_have_children);
+    const canManageChildResources = canManageResources && canHaveChildren;
     openResourceDetail(resource, {
       childResources,
+      canHaveChildren,
       onUse: () => requestResourceUse(resource),
-      onCreateChild: canManageResources ? () => openResourceDrawer(activeCharacter, () => renderHome(container), null, { parentResourceId: resource.id }) : null,
-      onEditChild: canManageResources ? (childId) => {
+      onCreateChild: canManageChildResources ? () => openResourceDrawer(activeCharacter, () => renderHome(container), null, { parentResourceId: resource.id }) : null,
+      onEditChild: canManageChildResources ? (childId) => {
         const child = childResources.find((entry) => String(entry.id) === String(childId));
         if (child) openResourceDrawer(activeCharacter, () => renderHome(container), child);
       } : null,
-      onDeleteChild: canManageResources ? async (childId) => {
+      onDeleteChild: canManageChildResources ? async (childId) => {
         const child = childResources.find((entry) => String(entry.id) === String(childId));
         if (child) await deleteResourceWithConfirmation(child);
       } : null,

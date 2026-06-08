@@ -9448,6 +9448,26 @@ button:focus-visible,
   font-weight: 700;
 }
 
+
+.ability-parent-toggle {
+  gap: 6px;
+}
+
+.ability-parent-toggle__control {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.ability-parent-toggle__control input {
+  margin-right: 5px;
+}
+
+.ability-parent-toggle small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .modal-card--resource-detail {
   width: min(780px, 95%);
 }
