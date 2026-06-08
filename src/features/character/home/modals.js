@@ -191,18 +191,20 @@ export async function openConditionsModal(character) {
 function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {}) {
   if (!onEdit && !onDelete) return null;
   const actions = modal.querySelector('[data-form-header-actions]');
-  if (!actions) return null;
+  if (!actions || !formEl) return null;
   actions.classList.add('detail-modal-actions');
+
+  const staleActionInputs = [...formEl.querySelectorAll('input[name="detail_action"]')];
+  staleActionInputs.forEach((input) => input.remove());
+  const actionInput = document.createElement('input');
+  actionInput.type = 'hidden';
+  actionInput.name = 'detail_action';
+  formEl.appendChild(actionInput);
+
   const submitAction = (action) => {
-    if (!formEl) return;
-    let actionInput = formEl.querySelector('input[name="detail_action"]');
-    if (!actionInput) {
-      actionInput = document.createElement('input');
-      actionInput.type = 'hidden';
-      actionInput.name = 'detail_action';
-      formEl.appendChild(actionInput);
-    }
     actionInput.value = action;
+    const childActionInput = formEl.querySelector('input[name="resource_child_action"]');
+    if (childActionInput) childActionInput.value = '';
     formEl.requestSubmit();
   };
   if (onEdit) {
@@ -226,6 +228,7 @@ function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {})
     actions.appendChild(deleteButton);
   }
   return () => {
+    actionInput.remove();
     actions.replaceChildren();
     actions.classList.remove('detail-modal-actions');
   };
@@ -274,34 +277,144 @@ export async function openResourcePoolConsumeModal(resource) {
   return Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining));
 }
 
-export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit, onDelete } = {}) {
+export async function openResourceOptionModal(resource, childResources = []) {
+  if (!childResources.length) return null;
+  const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
+  const used = Math.max(0, Number(resource?.used) || 0);
+  const remaining = Math.max(maxUses - used, 0);
+  const options = childResources.map((child) => {
+    const cost = Math.max(1, Number(child.resource_cost) || 1);
+    return { child, cost, available: remaining >= cost };
+  });
+  const firstAvailableId = options.find((option) => option.available)?.child.id;
+  const content = document.createElement('div');
+  content.className = 'resource-option-picker';
+  content.innerHTML = `
+    <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. Hai <strong>${remaining}</strong> risorse disponibili.</p>
+    <div class="resource-option-picker__list">
+      ${options.map(({ child, cost, available }) => `
+        <label class="resource-option-picker__item ${available ? '' : 'is-disabled'}">
+          <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${String(child.id) === String(firstAvailableId) ? 'checked' : ''} ${available ? '' : 'disabled'} />
+          <span class="resource-option-picker__content">
+            <span class="resource-option-picker__heading">
+              <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+              <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">Costo ${cost}</span>
+            </span>
+            <small>${[
+    child.cast_time,
+    child.damage_dice_notation ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}` : 'Nessun tiro'
+  ].filter(Boolean).map(escapeHtml).join(' · ')}</small>
+            ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
+            ${available ? '' : `<small class="resource-option-picker__warning">Servono ${cost} risorse; disponibili ${remaining}.</small>`}
+          </span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  const formData = await openFormModal({
+    title: `Usa ${resource?.name || 'abilità'}`,
+    submitLabel: 'Usa opzione',
+    cancelLabel: 'Annulla',
+    content,
+    onOpen: ({ modal }) => {
+      const submitButton = modal.querySelector('[data-form-submit]');
+      if (submitButton) submitButton.disabled = !firstAvailableId;
+      return () => {
+        if (submitButton) submitButton.disabled = false;
+      };
+    }
+  });
+  return formData?.get('resource_option_id') || null;
+}
+
+export function openResourceDetail(resource, {
+  childResources = [],
+  canHaveChildren = Boolean(resource?.can_have_children),
+  onUse,
+  onReset,
+  onRecover,
+  onEdit,
+  onDelete,
+  onCreateChild,
+  onEditChild,
+  onDeleteChild
+} = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
-  const isExhausted = maxUses && resource.used >= maxUses;
+  const used = Math.max(0, Number(resource.used) || 0);
+  const remaining = Math.max(maxUses - used, 0);
+  const isExhausted = Boolean(maxUses && used >= maxUses);
   const isActive = resource.reset_on !== null && resource.reset_on !== 'none';
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
-  const canRecoverCharge = Boolean(maxUses > 1 && Number(resource.used) > 0 && onRecover);
+  const canRecoverCharge = Boolean(maxUses > 1 && used > 0 && onRecover);
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
   const isPool = resource.resource_type === 'pool';
-  const remaining = Math.max(maxUses - (Number(resource.used) || 0), 0);
   const poolPercent = maxUses ? Math.min(Math.max((remaining / maxUses) * 100, 0), 100) : 0;
   const hasDisplayImage = hasUsableDetailImage(resource.image_url);
   const imageUrl = resource.image_url?.trim() || '';
+  const usageLabel = isPool ? 'Pool disponibile' : 'Cariche disponibili';
+  const showChildSection = Boolean(canHaveChildren);
 
   detail.innerHTML = `
-    <div class="detail-card detail-card--text resource-detail-card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
+    <section class="resource-parent-overview ${hasDisplayImage ? '' : 'resource-parent-overview--text-only'}">
       ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'risorsa')}" />` : ''}
-      ${isPool ? `
-        <div class="resource-pool resource-pool--detail" aria-label="Pool risorsa ${remaining} su ${maxUses}">
-          <div class="resource-pool__label"><span>Pool disponibile</span><strong>${remaining}/${maxUses}</strong></div>
-          <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
-            <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
-          </div>
+      <div class="resource-parent-overview__content">
+        <div class="resource-parent-overview__meta">
+          ${resource.cast_time ? `<span class="resource-chip">${escapeHtml(resource.cast_time)}</span>` : ''}
+          ${maxUses ? `<span class="resource-parent-overview__uses ${isExhausted ? 'is-exhausted' : ''}">${usageLabel}: <strong>${remaining}/${maxUses}</strong></span>` : ''}
+          ${childResources.length ? `<span class="resource-parent-overview__count">${childResources.length} ${childResources.length === 1 ? 'opzione' : 'opzioni'}</span>` : ''}
         </div>
-      ` : ''}
-      <div class="detail-rich-text">${renderDetailText(description)}</div>
-    </div>
+        ${isPool && maxUses ? `
+          <div class="resource-pool resource-pool--detail" aria-label="${usageLabel} ${remaining} su ${maxUses}">
+            <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
+              <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
+            </div>
+          </div>
+        ` : ''}
+        <div class="detail-rich-text">${renderDetailText(description)}</div>
+      </div>
+    </section>
+    ${showChildSection ? `
+      <section class="resource-detail-options">
+        <div class="resource-detail-options__header">
+          <div>
+            <span class="resource-detail-options__eyebrow">Sotto-abilità</span>
+            <strong>Opzioni collegate</strong>
+            <small>Ogni opzione usa le cariche di ${escapeHtml(resource.name || 'questa abilità')}, ma mantiene i propri dadi e dettagli.</small>
+          </div>
+          ${onCreateChild ? '<button type="button" data-resource-child-create class="ghost-button resource-detail-options__add"><span aria-hidden="true">＋</span> Aggiungi</button>' : ''}
+        </div>
+        ${childResources.length ? `<div class="resource-detail-options__list">
+          ${childResources.map((child, index) => {
+    const childDescription = child.description?.trim();
+    const diceLabel = child.damage_dice_notation
+      ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}`
+      : 'Nessun tiro';
+    return `
+            <article class="resource-detail-option">
+              <span class="resource-detail-option__branch" aria-hidden="true">${index + 1}</span>
+              <div class="resource-detail-option__content">
+                <div class="resource-detail-option__heading">
+                  <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+                  <div class="resource-detail-option__badges">
+                    ${child.cast_time ? `<span>${escapeHtml(child.cast_time)}</span>` : ''}
+                    <span>${escapeHtml(diceLabel)}</span>
+                    <span>Costo ${Math.max(1, Number(child.resource_cost) || 1)}</span>
+                  </div>
+                </div>
+                ${childDescription ? `<p>${escapeHtml(childDescription)}</p>` : '<p class="muted">Nessuna descrizione.</p>'}
+              </div>
+              ${onEditChild || onDeleteChild ? `<div class="resource-detail-option__actions">
+                ${onEditChild ? `<button type="button" data-resource-child-edit="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button" aria-label="Modifica ${escapeHtml(child.name || 'sotto-abilità')}" title="Modifica"><span aria-hidden="true">✏️</span></button>` : ''}
+                ${onDeleteChild ? `<button type="button" data-resource-child-delete="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button icon-button--danger" aria-label="Elimina ${escapeHtml(child.name || 'sotto-abilità')}" title="Elimina"><span aria-hidden="true">🗑️</span></button>` : ''}
+              </div>` : ''}
+            </article>
+          `;
+  }).join('')}
+        </div>` : '<div class="resource-detail-options__empty"><span aria-hidden="true">◇</span><p>Nessuna sotto-abilità configurata.</p></div>'}
+      </section>
+    ` : ''}
   `;
 
   openFormModal({
@@ -312,26 +425,76 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
     cancelLabel: isActive ? (hasAction ? 'Chiudi' : null) : null,
     content: detail,
     showFooter: isActive,
+    cardClass: 'modal-card--resource-detail',
     onOpen: ({ modal, formEl }) => {
       const cleanupManagementActions = attachDetailManagementActions(modal, formEl, { onEdit, onDelete });
-      if (!canRecoverCharge || isPool) return cleanupManagementActions;
-      const submitButton = modal.querySelector('[data-form-submit]');
-      const actionsRight = submitButton?.parentElement;
-      if (!actionsRight) return null;
-      const recoverButton = document.createElement('button');
-      recoverButton.type = 'submit';
-      recoverButton.name = 'resource_action';
-      recoverButton.value = 'recover';
-      recoverButton.className = 'ghost-button';
-      recoverButton.textContent = 'Recupera Carica';
-      actionsRight.insertBefore(recoverButton, submitButton);
+      const childActionInput = document.createElement('input');
+      childActionInput.type = 'hidden';
+      childActionInput.name = 'resource_child_action';
+      formEl?.appendChild(childActionInput);
+
+      const submitChildAction = (action) => {
+        if (!formEl) return;
+        const detailActionInput = formEl.querySelector('input[name="detail_action"]');
+        if (detailActionInput) detailActionInput.value = '';
+        childActionInput.value = action;
+        formEl.requestSubmit();
+      };
+      const createButton = detail.querySelector('[data-resource-child-create]');
+      const editButtons = [...detail.querySelectorAll('[data-resource-child-edit]')];
+      const deleteButtons = [...detail.querySelectorAll('[data-resource-child-delete]')];
+      const createHandler = () => submitChildAction('create');
+      const editHandlers = editButtons.map((button) => {
+        const handler = () => submitChildAction(`edit:${button.dataset.resourceChildEdit}`);
+        button.addEventListener('click', handler);
+        return [button, handler];
+      });
+      const deleteHandlers = deleteButtons.map((button) => {
+        const handler = () => submitChildAction(`delete:${button.dataset.resourceChildDelete}`);
+        button.addEventListener('click', handler);
+        return [button, handler];
+      });
+      createButton?.addEventListener('click', createHandler);
+
+      let recoverButton = null;
+      if (canRecoverCharge && !isPool) {
+        const submitButton = modal.querySelector('[data-form-submit]');
+        const actionsRight = submitButton?.parentElement;
+        if (actionsRight) {
+          recoverButton = document.createElement('button');
+          recoverButton.type = 'submit';
+          recoverButton.name = 'resource_action';
+          recoverButton.value = 'recover';
+          recoverButton.className = 'ghost-button';
+          recoverButton.textContent = 'Recupera Carica';
+          actionsRight.insertBefore(recoverButton, submitButton);
+        }
+      }
+
       return () => {
-        recoverButton.remove();
+        createButton?.removeEventListener('click', createHandler);
+        editHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
+        deleteHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
+        childActionInput.remove();
+        recoverButton?.remove();
         cleanupManagementActions?.();
       };
     }
   }).then(async (formData) => {
     if (!formData) return;
+    const childAction = formData.get('resource_child_action');
+    if (childAction === 'create' && onCreateChild) {
+      onCreateChild();
+      return;
+    }
+    if (childAction?.startsWith('edit:') && onEditChild) {
+      onEditChild(childAction.slice(5));
+      return;
+    }
+    if (childAction?.startsWith('delete:') && onDeleteChild) {
+      await onDeleteChild(childAction.slice(7));
+      return;
+    }
     const detailAction = formData.get('detail_action');
     if (detailAction === 'edit' && onEdit) {
       onEdit();
@@ -1051,7 +1214,7 @@ export function openAvatarModal(subject) {
   overlay.focus();
 }
 
-export function openResourceDrawer(character, onSave, resource = null) {
+export function openResourceDrawer(character, onSave, resource = null, { parentResourceId = null } = {}) {
   if (!character) return;
   const enhanceNumericField = (field, labels = {}) => {
     const input = field?.querySelector('input[type="number"]');
@@ -1100,7 +1263,45 @@ export function openResourceDrawer(character, onSave, resource = null) {
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
 
-  const identitySectionRows = [buildRow([nameField, castTimeField, imageField], 'balanced')];
+  const selectedParentId = resource?.parent_resource_id ?? parentResourceId ?? '';
+  const availableParents = (getState().cache?.resources || [])
+    .filter((entry) => !entry.parent_resource_id
+      && (entry.can_have_children || String(entry.id) === String(selectedParentId))
+      && entry.resource_type !== 'passive'
+      && entry.reset_on !== null
+      && entry.reset_on !== 'none'
+      && String(entry.id) !== String(resource?.id));
+  const parentField = document.createElement('label');
+  parentField.className = 'field';
+  parentField.innerHTML = '<span>Abilità padre (opzionale)</span>';
+  const parentSelect = buildSelect([
+    { value: '', label: 'Nessuna — abilità principale' },
+    ...availableParents.map((entry) => ({ value: entry.id, label: entry.name }))
+  ], selectedParentId);
+  parentSelect.name = 'parent_resource_id';
+  parentField.appendChild(parentSelect);
+
+  const canHaveChildrenField = document.createElement('div');
+  canHaveChildrenField.className = 'field ability-parent-toggle condition-modal__item';
+  canHaveChildrenField.innerHTML = `
+    <span class="condition-modal__item-label">   
+      <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
+    </span>
+    <label class="diceov-toggle condition-modal__toggle ability-parent-toggle__control">
+      <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} aria-label="Può avere sotto-abilità" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const canHaveChildrenInput = canHaveChildrenField.querySelector('input[name="can_have_children"]');
+  canHaveChildrenField.classList.toggle('is-selected', Boolean(canHaveChildrenInput?.checked));
+  canHaveChildrenInput?.addEventListener('change', () => {
+    canHaveChildrenField.classList.toggle('is-selected', canHaveChildrenInput.checked);
+  });
+
+  const identitySectionRows = [
+    buildRow([nameField, castTimeField, imageField], 'balanced'),
+    buildRow([parentField, canHaveChildrenField], 'balanced')
+  ];
 
   const resourceTypeField = document.createElement('label');
   resourceTypeField.className = 'field';
@@ -1165,6 +1366,19 @@ export function openResourceDrawer(character, onSave, resource = null) {
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
 
+  const resourceCostField = buildInput({
+    label: 'Costo risorsa padre',
+    name: 'resource_cost',
+    type: 'number',
+    value: Math.max(1, Number(resource?.resource_cost) || 1)
+  });
+  const resourceCostInput = resourceCostField.querySelector('input');
+  if (resourceCostInput) {
+    resourceCostInput.min = '1';
+    resourceCostInput.step = '1';
+  }
+  enhanceNumericField(resourceCostField, { decrementLabel: 'Riduci costo risorsa', incrementLabel: 'Aumenta costo risorsa' });
+
   const descriptionField = buildTextarea({
     label: 'Descrizione',
     name: 'description',
@@ -1176,11 +1390,18 @@ export function openResourceDrawer(character, onSave, resource = null) {
     description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
     content: identitySectionRows
   }));
-  form.appendChild(buildSection({
+  const usageSection = buildSection({
     title: 'Utilizzi, pool e recupero',
     description: 'Scegli Cariche per utilizzi singoli, Pool per consumare quantità variabili oppure Passiva per abilità sempre attive.',
     content: chargeSectionRows
-  }));
+  });
+  form.appendChild(usageSection);
+  const childUsageSection = buildSection({
+    title: 'Consumo risorsa padre',
+    description: 'Configura quante cariche o punti del padre vengono consumati usando questa sotto-abilità.',
+    content: [buildRow([resourceCostField], 'compact')]
+  });
+  form.appendChild(childUsageSection);
   form.appendChild(buildSection({
     title: 'Tiro automatico',
     description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
@@ -1198,7 +1419,16 @@ export function openResourceDrawer(character, onSave, resource = null) {
   const recoveryShortInput = form.querySelector('input[name="recovery_short"]');
   const recoveryLongInput = form.querySelector('input[name="recovery_long"]');
   const syncResourceTypeState = () => {
-    const isPassive = resourceTypeSelect.value === 'passive';
+    const isChild = Boolean(parentSelect.value);
+    const isPassive = resourceTypeSelect.value === 'passive' || isChild;
+    const canBeParent = !isChild && resourceTypeSelect.value !== 'passive';
+    usageSection.hidden = isChild;
+    childUsageSection.hidden = !isChild;
+    canHaveChildrenField.hidden = isChild;
+    if (canHaveChildrenInput) {
+      canHaveChildrenInput.disabled = !canBeParent;
+      if (!canBeParent) canHaveChildrenInput.checked = false;
+    }
     if (isPassive) {
       if (maxUsesInput) maxUsesInput.value = '0';
       if (usedInput) usedInput.value = '0';
@@ -1212,10 +1442,11 @@ export function openResourceDrawer(character, onSave, resource = null) {
     resetSelect.disabled = isPassive;
   };
   resourceTypeSelect.addEventListener('change', syncResourceTypeState);
+  parentSelect.addEventListener('change', syncResourceTypeState);
   syncResourceTypeState();
 
   openFormModal({
-    title: resource ? 'Modifica abilità' : 'Nuova abilità',
+    title: resource ? 'Modifica abilità' : (parentSelect.value ? 'Nuova opzione abilità' : 'Nuova abilità'),
     submitLabel: resource ? 'Salva' : 'Crea',
     content: form,
     cardClass: 'modal-card--form'
@@ -1230,11 +1461,16 @@ export function openResourceDrawer(character, onSave, resource = null) {
     const toNumberOrNull = (value) => (value === '' || value === null ? null : Number(value));
     const maxUses = Number(formData.get('max_uses')) || 0;
     const used = Math.min(Number(formData.get('used')) || 0, maxUses || 0);
-    const resourceType = formData.get('resource_type') || 'charges';
+    const parentId = formData.get('parent_resource_id') || null;
+    const resourceType = parentId ? 'passive' : (formData.get('resource_type') || 'charges');
     const isPassive = resourceType === 'passive';
+    const canHaveChildren = !parentId && !isPassive && formData.get('can_have_children') === '1';
     const payload = {
       user_id: currentUser?.id ?? character.user_id,
       character_id: character.id,
+      parent_resource_id: parentId,
+      can_have_children: canHaveChildren,
+      resource_cost: parentId ? Math.max(1, Number(formData.get('resource_cost')) || 1) : 1,
       name,
       image_url: formData.get('image_url')?.trim() || null,
       description: formData.get('description')?.trim() || null,
