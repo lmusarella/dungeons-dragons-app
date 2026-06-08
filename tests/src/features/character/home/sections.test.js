@@ -99,6 +99,9 @@ describe('src/features/character/home/sections.js', () => {
     expect(homeSource).toContain('home-feature-panel--skills');
     expect(homeSource).toContain('home-feature-panel--attacks');
     expect(homeSource).toContain('home-feature-panel--spells');
+    expect(homeSource).toContain('home-feature-panel--saves');
+    expect(homeSource).toContain('home-feature-panel--special-skills');
+    expect(homeSource).toContain('home-feature-panel--resources');
     expect(source).toContain('class="modifier-card modifier-card--interactive skill-card');
     expect(source).toContain("mastery ? 'Padronanza' : proficient ? 'Competenza' : 'Prova base'");
     expect(source).toContain('class="attack-card__hit"><small>TC</small>');
@@ -106,9 +109,17 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="spell-stats"');
     expect(source).toContain('class="spell-card__sigil"');
     expect(source).toContain('spell.school?.trim()');
+    expect(source).toContain('class="modifier-card modifier-card--interactive saving-throw-card');
+    expect(source).toContain('class="modifier-card modifier-card--interactive skill-card special-skill-card');
+    expect(source).toContain('class="resource-card__marker"');
+    expect(source).toContain('class="resource-card__kind"');
     expect(styles).toContain('.skill-card__status');
     expect(styles).toContain('.attack-card__icon');
     expect(styles).toContain('.spell-card__level');
+    expect(styles).toContain('.saving-throw-card__status');
+    expect(styles).toContain('.special-skill-card.modifier-card');
+    expect(styles).toContain('.home-feature-panel--resources .resource-card');
+    expect(styles).not.toContain('#6542a6');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {

@@ -527,14 +527,13 @@ export function buildSpecialSkillList(character) {
     const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
     const skillLabel = skill.name?.trim() || `Tiro speciale ${index + 1}`;
     return `
-          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-special-skill-card="${skill.id ?? index}" aria-label="Tira abilità speciale ${skillLabel}">
-            <div>
-              <div class="modifier-title">
-                <strong>${skillLabel}</strong>
-                <span class="modifier-ability modifier-ability--${abilityKey}">${abilityShortLabel[abilityKey]}</span>
-              </div>
-            </div>
-            <div class="modifier-value">${formatSigned(total)}</div>
+          <button class="modifier-card modifier-card--interactive skill-card special-skill-card ${statusClass}" type="button" data-special-skill-card="${skill.id ?? index}" aria-label="Tira abilità speciale ${skillLabel}">
+            <span class="skill-card__ability skill-card__ability--${abilityKey}" aria-hidden="true">${abilityShortLabel[abilityKey]}</span>
+            <span class="skill-card__content">
+              <span class="skill-card__name">${skillLabel}</span>
+              <span class="skill-card__status">${mastery ? 'Padronanza' : proficient ? 'Competenza' : extraBonus ? `Bonus ${formatSigned(extraBonus)}` : 'Tiro speciale'}</span>
+            </span>
+            <span class="modifier-value skill-card__modifier"><small>Totale</small>${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -557,13 +556,13 @@ export function buildSavingThrowSection(character) {
     const total = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
     const statusClass = proficient ? 'modifier-card--proficiency' : '';
     return `
-          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-saving-throw-card="${save.key}" aria-label="Tira salvezza ${save.label}">
-            <div>
-              <div class="modifier-title">
-                <strong>${save.label}</strong>
-              </div>
-            </div>
-            <div class="modifier-value">${formatSigned(total)}</div>
+          <button class="modifier-card modifier-card--interactive saving-throw-card ${statusClass}" type="button" data-saving-throw-card="${save.key}" aria-label="Tira salvezza ${save.label}">
+            <span class="saving-throw-card__ability saving-throw-card__ability--${save.key}" aria-hidden="true">${abilityShortLabel[save.key]}</span>
+            <span class="saving-throw-card__content">
+              <span class="saving-throw-card__name">${save.label}</span>
+              <span class="saving-throw-card__status">${proficient ? 'Competente' : 'Base'}</span>
+            </span>
+            <span class="modifier-value saving-throw-card__modifier"><small>TS</small>${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -1150,13 +1149,15 @@ export function buildResourceList(
   return `
     <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
-        <li class="modifier-card attack-card resource-card" data-resource-card="${res.id}">
+        <li class="modifier-card attack-card resource-card resource-card--${res.resource_type || 'uses'}" data-resource-card="${res.id}">
           ${showCastTime && normalizeCastTimeLabel(res.cast_time) ? `<span class="resource-chip resource-chip--floating ${getResourceCastTimeClass(res.cast_time)}">${normalizeCastTimeLabel(res.cast_time)}</span>` : ''}
+          <span class="resource-card__marker" aria-hidden="true">${res.resource_type === 'passive' ? '◇' : res.resource_type === 'pool' ? '◉' : '◆'}</span>
           <div class="attack-card__body resource-card__body">
             <div class="attack-card__title resource-card__title">
               <strong class="attack-card__name">${res.name}</strong>
               ${Number(res.child_resource_count) ? `<span class="resource-child-count">${res.child_resource_count} opzioni</span>` : ''}
             </div>
+            <span class="resource-card__kind">${res.resource_type === 'passive' ? 'Passiva' : res.resource_type === 'pool' ? 'Riserva' : 'Utilizzi'}</span>
             ${showDescription
     ? `<p class="resource-card__description">${res.description ?? ''}</p>`
     : ''}

@@ -513,8 +513,8 @@ export async function renderHome(container) {
   container.innerHTML = `
     <div class="home-layout">
       <div class="home-column home-column--left">
-        <section class="card home-card home-section">
-          <header class="card-header">
+        <section class="card home-card home-section home-feature-panel home-feature-panel--saves">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Tiri salvezza</p>
               <h3></h3>
@@ -542,8 +542,8 @@ export async function renderHome(container) {
             ${sheetCharacter ? buildSkillList(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--special-skills">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Tiri abilità speciali</p>
             </div>
@@ -621,8 +621,8 @@ export async function renderHome(container) {
           </div>
         </section>
         ` : ''}
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--resources">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Risorse</p>           
             </div>
