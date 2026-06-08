@@ -12,6 +12,7 @@ alter table public.items
   add column if not exists alternate_damage_label text,
   add column if not exists alternate_damage_die text,
   add column if not exists alternate_damage_modifier numeric not null default 0,
+  add column if not exists alternate_attack_modifier numeric not null default 0,
   add column if not exists alternate_damage_type text;
 
 comment on column public.items.ammunition_type is 'Tipo munizione rappresentato dall''oggetto: arrow, bolt, bullet.';
@@ -19,11 +20,12 @@ comment on column public.items.required_ammunition_type is 'Tipo munizione consu
 comment on column public.items.consumes_ammunition is 'Se true, l''arma consuma una munizione compatibile quando viene effettuato un tiro per colpire.';
 comment on column public.items.damage_type is 'Tipo di danno base dell''arma.';
 comment on column public.items.has_alternate_damage_mode is 'Abilita una o più modalità danno alternative, ad esempio impugnature diverse.';
-comment on column public.items.weapon_damage_modes is 'Elenco JSONB di modalità danno aggiuntive dell''arma: label, damage_die, damage_modifier, damage_type.';
+comment on column public.items.weapon_damage_modes is 'Elenco JSONB di modalità aggiuntive dell''arma: label, damage_die, damage_modifier, attack_modifier, damage_type.';
 comment on column public.items.selected_damage_mode is 'Modalità danno/impugnatura attualmente selezionata nella scheda attacchi.';
 comment on column public.items.alternate_damage_label is 'Etichetta legacy della prima modalità alternativa, ad esempio Due mani.';
 comment on column public.items.alternate_damage_die is 'Dado danno della modalità alternativa, ad esempio 1d10.';
 comment on column public.items.alternate_damage_modifier is 'Modificatore danno specifico della modalità alternativa.';
+comment on column public.items.alternate_attack_modifier is 'Modificatore per colpire specifico della modalità alternativa.';
 comment on column public.items.alternate_damage_type is 'Tipo di danno specifico della modalità alternativa.';
 
 -- Opzionale: se usi PostgREST/Supabase e la cache schema non si aggiorna subito,
