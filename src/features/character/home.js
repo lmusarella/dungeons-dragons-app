@@ -48,6 +48,7 @@ import {
   buildWeaponDamageOverlayConfig,
   getWeaponDamageModes,
   calculateSkillModifier,
+  calculateUnarmedAttackBonuses,
   formatSigned,
   getAbilityModifier,
   getCastableSpellSlotLevels,
@@ -1146,12 +1147,13 @@ export async function renderHome(container) {
           createToast('Danni non configurati per questo colpo senz’arma', 'error');
           return;
         }
+        const attackStats = calculateUnarmedAttackBonuses(activeCharacter.data || {}, attack);
         openDiceOverlay({
           keepOpen: true,
           title: `Danni ${attack.name || 'Colpo senz’arma'}`,
           mode: 'generic',
           notation: damageNotation,
-          modifier: Number(attack.damage_modifier) || 0,
+          modifier: attackStats.damageModifier,
           rollType: 'DMG',
           characterId: activeCharacter?.id,
           historyLabel: attack.name || 'Colpo senz’arma',
@@ -2315,15 +2317,16 @@ function buildAttackRollOptions(character, items = [], companions = []) {
   unarmedAttacks.forEach((attack, index) => {
     const value = `unarmed:${index}`;
     const name = attack.name || `Colpo senz’arma ${index + 1}`;
+    const attackStats = calculateUnarmedAttackBonuses(data, attack);
     const rollMode = resolveRollModeEffects([
       ...automaticAttackEffects,
       getManualRollAdjustment(character, 'attack_rolls', value, name)
     ]);
     options.push({
       value,
-      label: `${name} (${formatSigned(attack.to_hit || 0)})`,
+      label: `${name} (${formatSigned(attackStats.attackTotal)})`,
       shortLabel: name,
-      modifier: Number(attack.to_hit) || 0,
+      modifier: attackStats.attackTotal,
       rollMode: rollMode.rollMode,
       rollModeReason: rollMode.rollModeReason
     });

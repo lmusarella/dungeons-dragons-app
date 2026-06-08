@@ -91,6 +91,8 @@ describe('src/features/character/home.js', () => {
     expect(source).toContain("rollKey.startsWith('unarmed:')");
     expect(source).toContain('const unarmedAttacks = Array.isArray(data.unarmed_attacks)');
     expect(source).toContain('value = `unarmed:${index}`');
+    expect(source).toContain('calculateUnarmedAttackBonuses(activeCharacter.data || {}, attack)');
+    expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
   });
 
 });

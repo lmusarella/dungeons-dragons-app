@@ -12,12 +12,14 @@ import {
   calculateArmorClass,
   calculatePassivePerception,
   calculateSkillModifier,
+  calculateUnarmedAttackBonuses,
   buildSpellDamageOverlayConfig,
   formatHitDice,
   formatModifier,
   formatSigned,
   getAbilityModifier,
   getEquipSlots,
+  getUnarmedAttackAbility,
   getWeaponDamageModes,
   normalizeNumber,
   parseProficiencyNotes,
@@ -803,19 +805,21 @@ export function buildAttackSection(character, items = [], companions = []) {
     }).join('') : ''}
         ${unarmedAttacks.map((attack, index) => {
     const attackName = attack.name || `Colpo senz’arma ${index + 1}`;
-    const damageModifier = Number(attack.damage_modifier) || 0;
-    const damageText = `${attack.damage || '-'}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
+    const attackStats = calculateUnarmedAttackBonuses(data, attack);
+    const abilityKey = attackStats.ability || getUnarmedAttackAbility(attack);
+    const abilityLabel = abilityShortLabel[abilityKey] || 'Fisico';
+    const damageText = `${attack.damage || '-'}${attackStats.damageModifier ? ` ${formatSigned(attackStats.damageModifier)}` : ''}`;
     return `
           <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
-                <span class="modifier-ability modifier-ability--str">Fisico</span>
-                <span class="attack-card__hit">${formatSigned(attack.to_hit || 0)}</span>
+                <span class="modifier-ability modifier-ability--${abilityKey}">${escapeHtml(abilityLabel)}</span>
+                <span class="attack-card__hit">${formatSigned(attackStats.attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage">${escapeHtml(damageText)}</span>
-                <span class="muted">Colpo senz’arma</span>
+                <span class="muted">Colpo senz’arma · ${escapeHtml(abilityLabel)}</span>
               </div>
             </div>
             <div class="attack-card__actions">

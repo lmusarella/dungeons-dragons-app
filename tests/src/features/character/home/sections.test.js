@@ -97,5 +97,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('data-roll-attack="unarmed:${index}"');
     expect(source).toContain('data-roll-damage="unarmed:${index}"');
     expect(source).toContain('Colpo senz’arma');
+    expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
+    expect(source).toContain('modifier-ability--${abilityKey}');
   });
 });
