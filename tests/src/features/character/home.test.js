@@ -56,9 +56,9 @@ describe('src/features/character/home.js', () => {
       source.indexOf("container.querySelectorAll('[data-use-resource]')"),
       source.indexOf("container.querySelectorAll('[data-use-spell]')")
     );
-    expect(requestHandler).toContain("resource.resource_type === 'pool'");
-    expect(requestHandler).toContain('openResourcePoolConsumeModal(resource)');
-    expect(requestHandler).toContain('useResource(resource, amount)');
+    expect(requestHandler).toContain("parentResource.resource_type === 'pool'");
+    expect(requestHandler).toContain('openResourcePoolConsumeModal(parentResource)');
+    expect(requestHandler).toContain('useResource(parentResource, amount, usageResource)');
     expect(useHandler).toContain('requestResourceUse(resource)');
     expect(useHandler).not.toContain('openResourceDetails(resource)');
   });

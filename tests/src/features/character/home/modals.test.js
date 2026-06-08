@@ -60,4 +60,12 @@ describe('src/features/character/home/modals.js', () => {
     expect(layout).toContain('data-form-header-actions');
   });
 
+  it('supports linked ability options that consume the parent resource', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain('export async function openResourceOptionModal');
+    expect(source).toContain('name="resource_option_id"');
+    expect(source).toContain("parentSelect.name = 'parent_resource_id'");
+    expect(source).toContain('La carica verrà consumata dall’abilità principale');
+  });
+
 });

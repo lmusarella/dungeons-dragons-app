@@ -31,6 +31,7 @@ import {
   openPreparedSpellsModal,
   openResourceDetail,
   openResourcePoolConsumeModal,
+  openResourceOptionModal,
   openResourceDrawer,
   openSpellSourceModal,
   openSpellDrawer,
@@ -631,7 +632,10 @@ export async function renderHome(container) {
           </header>
           <div class="home-scroll-body home-scroll-body--resources">
             ${activeCharacter
-    ? buildResourceSections(resources, canManageResources)
+    ? buildResourceSections(resources.map((resource) => ({
+      ...resource,
+      child_resource_count: resources.filter((entry) => String(entry.parent_resource_id) === String(resource.id)).length
+    })), canManageResources)
     : '<p>Nessun personaggio selezionato.</p>'}
             ${activeCharacter && !canManageResources ? '<p class="muted">Connettiti per aggiungere nuove risorse.</p>' : ''}
           </div>
@@ -1199,17 +1203,26 @@ export async function renderHome(container) {
     });
   };
 
-  const useResource = async (resource, amount = 1) => {
-    const maxUses = Number(resource.max_uses) || 0;
-    if (!maxUses || resource.used >= maxUses) return;
-    const consumedAmount = resource.resource_type === 'pool'
-      ? Math.max(1, Math.min(Number(amount) || 1, maxUses - (Number(resource.used) || 0)))
+  const getResourceChildren = (resource) => resources.filter(
+    (entry) => String(entry.parent_resource_id) === String(resource?.id)
+  );
+
+  const useResource = async (resource, amount = 1, usageResource = resource) => {
+    const parentResource = resource.parent_resource_id
+      ? resources.find((entry) => String(entry.id) === String(resource.parent_resource_id))
+      : resource;
+    const maxUses = Number(parentResource?.max_uses) || 0;
+    if (!parentResource || !maxUses || Number(parentResource.used) >= maxUses) return;
+    const consumedAmount = parentResource.resource_type === 'pool'
+      ? Math.max(1, Math.min(Number(amount) || 1, maxUses - (Number(parentResource.used) || 0)))
       : 1;
     try {
-      await updateResource(resource.id, { used: Math.min((Number(resource.used) || 0) + consumedAmount, maxUses) });
-      createToast('Risorsa usata');
+      await updateResource(parentResource.id, {
+        used: Math.min((Number(parentResource.used) || 0) + consumedAmount, maxUses)
+      });
+      createToast(usageResource === parentResource ? 'Risorsa usata' : `${usageResource.name} usata`);
       if (shouldAutoUsageDice(activeCharacter)) {
-        openResourceRollOverlay(resource);
+        openResourceRollOverlay(usageResource);
       }
       renderHome(container);
     } catch (error) {
@@ -1219,13 +1232,25 @@ export async function renderHome(container) {
 
   const requestResourceUse = async (resource) => {
     if (!resource) return;
-    if (resource.resource_type === 'pool') {
-      const amount = await openResourcePoolConsumeModal(resource);
+    const parentResource = resource.parent_resource_id
+      ? resources.find((entry) => String(entry.id) === String(resource.parent_resource_id))
+      : resource;
+    if (!parentResource) return;
+    const childResources = getResourceChildren(parentResource);
+    let usageResource = resource.parent_resource_id ? resource : parentResource;
+    if (!resource.parent_resource_id && childResources.length) {
+      const selectedChildId = await openResourceOptionModal(parentResource, childResources);
+      if (!selectedChildId) return;
+      usageResource = childResources.find((entry) => String(entry.id) === String(selectedChildId));
+      if (!usageResource) return;
+    }
+    if (parentResource.resource_type === 'pool') {
+      const amount = await openResourcePoolConsumeModal(parentResource);
       if (amount === null) return;
-      await useResource(resource, amount);
+      await useResource(parentResource, amount, usageResource);
       return;
     }
-    await useResource(resource);
+    await useResource(parentResource, 1, usageResource);
   };
 
   const editResource = (resource) => {
@@ -1251,8 +1276,19 @@ export async function renderHome(container) {
 
   const openResourceDetails = (resource) => {
     if (!resource) return;
+    const childResources = getResourceChildren(resource);
     openResourceDetail(resource, {
+      childResources,
       onUse: () => requestResourceUse(resource),
+      onCreateChild: canManageResources ? () => openResourceDrawer(activeCharacter, () => renderHome(container), null, { parentResourceId: resource.id }) : null,
+      onEditChild: canManageResources ? (childId) => {
+        const child = childResources.find((entry) => String(entry.id) === String(childId));
+        if (child) openResourceDrawer(activeCharacter, () => renderHome(container), child);
+      } : null,
+      onDeleteChild: canManageResources ? async (childId) => {
+        const child = childResources.find((entry) => String(entry.id) === String(childId));
+        if (child) await deleteResourceWithConfirmation(child);
+      } : null,
       onEdit: canManageResources ? () => editResource(resource) : null,
       onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
       onReset: async () => {

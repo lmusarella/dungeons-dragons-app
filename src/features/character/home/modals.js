@@ -274,7 +274,48 @@ export async function openResourcePoolConsumeModal(resource) {
   return Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining));
 }
 
-export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit, onDelete } = {}) {
+export async function openResourceOptionModal(resource, childResources = []) {
+  if (!childResources.length) return null;
+  const content = document.createElement('div');
+  content.className = 'resource-option-picker';
+  content.innerHTML = `
+    <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. La carica verrà consumata dall’abilità principale.</p>
+    <div class="resource-option-picker__list">
+      ${childResources.map((child, index) => `
+        <label class="resource-option-picker__item">
+          <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${index === 0 ? 'checked' : ''} />
+          <span class="resource-option-picker__content">
+            <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+            <small>${[
+    child.cast_time,
+    child.damage_dice_notation ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}` : 'Nessun tiro'
+  ].filter(Boolean).map(escapeHtml).join(' · ')}</small>
+            ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
+          </span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  const formData = await openFormModal({
+    title: `Usa ${resource?.name || 'abilità'}`,
+    submitLabel: 'Usa opzione',
+    cancelLabel: 'Annulla',
+    content
+  });
+  return formData?.get('resource_option_id') || null;
+}
+
+export function openResourceDetail(resource, {
+  childResources = [],
+  onUse,
+  onReset,
+  onRecover,
+  onEdit,
+  onDelete,
+  onCreateChild,
+  onEditChild,
+  onDeleteChild
+} = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
@@ -302,6 +343,29 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
       ` : ''}
       <div class="detail-rich-text">${renderDetailText(description)}</div>
     </div>
+    ${childResources.length || onCreateChild ? `
+      <section class="resource-detail-options">
+        <div class="resource-detail-options__header">
+          <div><strong>Opzioni collegate</strong><small>Usano le cariche di ${escapeHtml(resource.name || 'questa abilità')}.</small></div>
+          ${onCreateChild ? '<button type="submit" name="resource_child_action" value="create" class="ghost-button">Aggiungi opzione</button>' : ''}
+        </div>
+        ${childResources.length ? `<div class="resource-detail-options__list">
+          ${childResources.map((child) => `
+            <article class="resource-detail-option">
+              <div>
+                <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+                <small>${[child.cast_time, child.damage_dice_notation || 'Nessun tiro'].filter(Boolean).map(escapeHtml).join(' · ')}</small>
+                ${child.description ? `<p>${escapeHtml(child.description)}</p>` : ''}
+              </div>
+              ${onEditChild || onDeleteChild ? `<div class="resource-detail-option__actions">
+                ${onEditChild ? `<button type="submit" name="resource_child_action" value="edit:${escapeHtml(child.id)}" class="ghost-button">Modifica</button>` : ''}
+                ${onDeleteChild ? `<button type="submit" name="resource_child_action" value="delete:${escapeHtml(child.id)}" class="ghost-button danger">Elimina</button>` : ''}
+              </div>` : ''}
+            </article>
+          `).join('')}
+        </div>` : '<p class="muted">Nessuna opzione configurata.</p>'}
+      </section>
+    ` : ''}
   `;
 
   openFormModal({
@@ -339,6 +403,19 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
     }
     if (detailAction === 'delete' && onDelete) {
       await onDelete();
+      return;
+    }
+    const childAction = formData.get('resource_child_action');
+    if (childAction === 'create' && onCreateChild) {
+      onCreateChild();
+      return;
+    }
+    if (childAction?.startsWith('edit:') && onEditChild) {
+      onEditChild(childAction.slice(5));
+      return;
+    }
+    if (childAction?.startsWith('delete:') && onDeleteChild) {
+      await onDeleteChild(childAction.slice(7));
       return;
     }
     if (!maxUses) return;
@@ -1051,7 +1128,7 @@ export function openAvatarModal(subject) {
   overlay.focus();
 }
 
-export function openResourceDrawer(character, onSave, resource = null) {
+export function openResourceDrawer(character, onSave, resource = null, { parentResourceId = null } = {}) {
   if (!character) return;
   const enhanceNumericField = (field, labels = {}) => {
     const input = field?.querySelector('input[type="number"]');
@@ -1100,7 +1177,26 @@ export function openResourceDrawer(character, onSave, resource = null) {
   castTimeSelect.name = 'cast_time';
   castTimeField.appendChild(castTimeSelect);
 
-  const identitySectionRows = [buildRow([nameField, castTimeField, imageField], 'balanced')];
+  const availableParents = (getState().cache?.resources || [])
+    .filter((entry) => !entry.parent_resource_id
+      && entry.resource_type !== 'passive'
+      && entry.reset_on !== null
+      && entry.reset_on !== 'none'
+      && String(entry.id) !== String(resource?.id));
+  const parentField = document.createElement('label');
+  parentField.className = 'field';
+  parentField.innerHTML = '<span>Abilità padre (opzionale)</span>';
+  const parentSelect = buildSelect([
+    { value: '', label: 'Nessuna — abilità principale' },
+    ...availableParents.map((entry) => ({ value: entry.id, label: entry.name }))
+  ], resource?.parent_resource_id ?? parentResourceId ?? '');
+  parentSelect.name = 'parent_resource_id';
+  parentField.appendChild(parentSelect);
+
+  const identitySectionRows = [
+    buildRow([nameField, castTimeField, imageField], 'balanced'),
+    buildRow([parentField], 'balanced')
+  ];
 
   const resourceTypeField = document.createElement('label');
   resourceTypeField.className = 'field';
@@ -1176,11 +1272,12 @@ export function openResourceDrawer(character, onSave, resource = null) {
     description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
     content: identitySectionRows
   }));
-  form.appendChild(buildSection({
+  const usageSection = buildSection({
     title: 'Utilizzi, pool e recupero',
     description: 'Scegli Cariche per utilizzi singoli, Pool per consumare quantità variabili oppure Passiva per abilità sempre attive.',
     content: chargeSectionRows
-  }));
+  });
+  form.appendChild(usageSection);
   form.appendChild(buildSection({
     title: 'Tiro automatico',
     description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
@@ -1198,7 +1295,9 @@ export function openResourceDrawer(character, onSave, resource = null) {
   const recoveryShortInput = form.querySelector('input[name="recovery_short"]');
   const recoveryLongInput = form.querySelector('input[name="recovery_long"]');
   const syncResourceTypeState = () => {
-    const isPassive = resourceTypeSelect.value === 'passive';
+    const isChild = Boolean(parentSelect.value);
+    const isPassive = resourceTypeSelect.value === 'passive' || isChild;
+    usageSection.hidden = isChild;
     if (isPassive) {
       if (maxUsesInput) maxUsesInput.value = '0';
       if (usedInput) usedInput.value = '0';
@@ -1212,10 +1311,11 @@ export function openResourceDrawer(character, onSave, resource = null) {
     resetSelect.disabled = isPassive;
   };
   resourceTypeSelect.addEventListener('change', syncResourceTypeState);
+  parentSelect.addEventListener('change', syncResourceTypeState);
   syncResourceTypeState();
 
   openFormModal({
-    title: resource ? 'Modifica abilità' : 'Nuova abilità',
+    title: resource ? 'Modifica abilità' : (parentSelect.value ? 'Nuova opzione abilità' : 'Nuova abilità'),
     submitLabel: resource ? 'Salva' : 'Crea',
     content: form,
     cardClass: 'modal-card--form'
@@ -1230,11 +1330,13 @@ export function openResourceDrawer(character, onSave, resource = null) {
     const toNumberOrNull = (value) => (value === '' || value === null ? null : Number(value));
     const maxUses = Number(formData.get('max_uses')) || 0;
     const used = Math.min(Number(formData.get('used')) || 0, maxUses || 0);
-    const resourceType = formData.get('resource_type') || 'charges';
+    const parentId = formData.get('parent_resource_id') || null;
+    const resourceType = parentId ? 'passive' : (formData.get('resource_type') || 'charges');
     const isPassive = resourceType === 'passive';
     const payload = {
       user_id: currentUser?.id ?? character.user_id,
       character_id: character.id,
+      parent_resource_id: parentId,
       name,
       image_url: formData.get('image_url')?.trim() || null,
       description: formData.get('description')?.trim() || null,

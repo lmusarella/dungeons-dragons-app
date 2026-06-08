@@ -83,4 +83,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('@container (max-width: 470px)');
   });
 
+  it('groups linked ability options under their parent resource', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    expect(source).toContain('resources.filter((resource) => !resource.parent_resource_id)');
+    expect(source).toContain('child_resource_count');
+    expect(source).toContain('opzioni');
+  });
+
 });

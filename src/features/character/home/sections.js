@@ -1115,6 +1115,7 @@ export function buildResourceList(
           <div class="attack-card__body resource-card__body">
             <div class="attack-card__title resource-card__title">
               <strong class="attack-card__name">${res.name}</strong>
+              ${Number(res.child_resource_count) ? `<span class="resource-child-count">${res.child_resource_count} opzioni</span>` : ''}
             </div>
             ${showDescription
     ? `<p class="resource-card__description">${res.description ?? ''}</p>`
@@ -1145,10 +1146,11 @@ export function buildResourceList(
 }
 
 export function buildResourceSections(resources, canManageResources) {
-  if (!resources.length) {
+  const rootResources = resources.filter((resource) => !resource.parent_resource_id);
+  if (!rootResources.length) {
     return '<p>Nessuna risorsa.</p>';
   }
-  const sortedResources = sortResourcesByCastTime(resources);
+  const sortedResources = sortResourcesByCastTime(rootResources);
   const passiveResources = sortedResources.filter((resource) => resource.resource_type === 'passive' || resource.reset_on === null || resource.reset_on === 'none');
   const activeResources = sortedResources.filter((resource) => resource.resource_type !== 'passive' && resource.reset_on !== null && resource.reset_on !== 'none');
   const activeSection = `
