@@ -8,13 +8,30 @@ import {
   rollDie,
   buildSpellDamageOverlayConfig,
   getCastableSpellSlotLevels,
-  applyDeathSaveRoll
+  applyDeathSaveRoll,
+  getWeaponDamageModes
 } from '../../../../../src/features/character/home/utils.js';
 
 describe('src/features/character/home/utils.js', () => {
   it('parses damage dice expressions', () => {
     expect(parseDamageDice('2d6+1d4')?.notation).toBe('2d6+1d4');
     expect(parseDamageDice('bad')).toBeNull();
+  });
+
+  it('keeps separate attack modifiers for weapon grips', () => {
+    const modes = getWeaponDamageModes({
+      damage_die: '1d8',
+      attack_modifier: 1,
+      weapon_damage_modes: [{
+        id: 'two-handed',
+        label: 'Due mani',
+        damage_die: '1d10',
+        damage_modifier: 2,
+        attack_modifier: 4
+      }]
+    });
+    expect(modes[0].attackModifier).toBe(1);
+    expect(modes[1].attackModifier).toBe(4);
   });
 
   it('formats modifiers and abilities', () => {

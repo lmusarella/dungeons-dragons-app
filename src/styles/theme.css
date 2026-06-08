@@ -355,38 +355,7 @@ body {
   }
 }
 
-/* Keep additional weapon grip inputs readable inside the item edit modal. */
-.weapon-damage-mode-row {
-  grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.65fr) minmax(160px, 0.75fr) auto;
-}
 
-.weapon-damage-mode-row .field:nth-child(4) {
-  grid-column: 1 / -2;
-}
-
-.weapon-damage-mode-row__remove {
-  align-self: end;
-}
-
-@media (max-width: 720px) {
-  .weapon-damage-modes-field__header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .weapon-damage-mode-row {
-    grid-template-columns: 1fr;
-  }
-
-  .weapon-damage-mode-row .field:nth-child(4),
-  .weapon-damage-mode-row__remove {
-    grid-column: 1;
-  }
-
-  .weapon-damage-mode-row__remove {
-    justify-self: end;
-  }
-}
 
 /* Inventory and centralized archive UX refresh. */
 .inventory-table {
@@ -1519,5 +1488,48 @@ body {
   .inventory-group--container > .inventory-group__children,
   .inventory-loose-accordion > .inventory-group__children {
     max-height: min(54vh, 460px);
+  }
+}
+
+/* Additional grips use two rows so attack and damage modifiers stay readable. */
+.weapon-damage-mode-row {
+  grid-template-columns: minmax(190px, 1.4fr) minmax(120px, 0.75fr) minmax(150px, 1fr) auto;
+  grid-template-areas:
+    "name die type remove"
+    "damage attack type remove";
+}
+
+.weapon-damage-mode-field--name { grid-area: name; }
+.weapon-damage-mode-field--die { grid-area: die; }
+.weapon-damage-mode-field--damage-modifier { grid-area: damage; }
+.weapon-damage-mode-field--attack-modifier { grid-area: attack; }
+.weapon-damage-mode-field--type { grid-area: type; align-self: stretch; }
+.weapon-damage-mode-row__remove { grid-area: remove; }
+
+@media (max-width: 980px) {
+  .weapon-damage-mode-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "name name"
+      "die type"
+      "damage attack"
+      "remove remove";
+  }
+
+  .weapon-damage-mode-row__remove {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 720px) {
+  .weapon-damage-mode-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "name"
+      "die"
+      "type"
+      "damage"
+      "attack"
+      "remove";
   }
 }

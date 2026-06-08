@@ -9304,3 +9304,134 @@ button:focus-visible,
     order: 6;
   }
 }
+
+
+/* Resource pools, detail actions, and direct character HP controls. */
+.resource-pool {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+}
+
+.resource-pool__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: #5a381f;
+}
+
+.resource-pool__track {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 93, 96, 0.45);
+  border-radius: 999px;
+  background: rgba(59, 93, 96, 0.14);
+}
+
+.resource-pool__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #397f70, #65b89f);
+  transition: width 180ms ease;
+}
+
+.resource-pool--detail {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(59, 93, 96, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.resource-pool--detail .resource-pool__track {
+  height: 16px;
+}
+
+
+.modal-header__top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 82px;
+}
+
+.modal-header__actions {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 74px;
+  justify-content: flex-end;
+  transform: translateY(-50%);
+}
+
+.modal-header__actions:empty {
+  display: none;
+}
+
+.detail-modal-actions .resource-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.character-hp-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.character-hp-actions--inline {
+  flex: 0 0 auto;
+}
+
+.character-hp-actions .familiar-hp-action {
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 0.64rem;
+}
+
+.character-hp-actions .familiar-hp-action > span {
+  font-size: 0.85rem;
+}
+
+@container (max-width: 470px) {
+  .hp-bar-label {
+    flex-wrap: wrap;
+  }
+
+  .character-hp-actions--inline {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .modal-header__top {
+    padding-inline: 72px;
+  }
+}
+
+.resource-pool-consume__availability {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(59, 93, 96, 0.08);
+  color: #5a381f;
+}
+
+.resource-pool-consume__availability strong {
+  color: #3b5d60;
+  font-size: 1rem;
+}

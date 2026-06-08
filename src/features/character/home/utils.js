@@ -238,6 +238,7 @@ export function getWeaponDamageModes(weapon) {
     label: weapon.damage_mode_label || 'Una mano',
     damageDie: weapon.damage_die || null,
     damageModifier: Number(weapon.damage_modifier) || 0,
+    attackModifier: Number(weapon.attack_modifier) || 0,
     damageType: weapon.damage_type || null
   }];
   const rawModes = weapon.weapon_damage_modes;
@@ -258,6 +259,7 @@ export function getWeaponDamageModes(weapon) {
       label: mode.label || mode.name || `Impugnatura ${index + 1}`,
       damageDie: mode.damage_die || mode.damageDie || null,
       damageModifier: Number(mode.damage_modifier ?? mode.damageModifier) || 0,
+      attackModifier: Number(mode.attack_modifier ?? mode.attackModifier ?? weapon.attack_modifier) || 0,
       damageType: mode.damage_type || mode.damageType || weapon.damage_type || null
     }))
     .filter((mode) => mode.damageDie)
@@ -268,6 +270,7 @@ export function getWeaponDamageModes(weapon) {
       label: weapon.alternate_damage_label || 'Due mani',
       damageDie: weapon.alternate_damage_die,
       damageModifier: Number(weapon.alternate_damage_modifier) || 0,
+      attackModifier: Number(weapon.alternate_attack_modifier ?? weapon.attack_modifier) || 0,
       damageType: weapon.alternate_damage_type || weapon.damage_type || null
     });
   }

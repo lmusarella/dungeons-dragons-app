@@ -287,6 +287,14 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="hp-bar-label__title">Punti ferita</span>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
+              <span class="character-hp-actions character-hp-actions--inline" aria-label="Azioni sui punti ferita">
+                <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>
+                  <span aria-hidden="true">+</span><strong>Cura</strong>
+                </button>
+                <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>
+                  <span aria-hidden="true">−</span><strong>Danno</strong>
+                </button>
+              </span>
               ${hasTempHp ? `
               <span class="hp-bar-label__temp-group is-active">
                 <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
@@ -806,7 +814,6 @@ export function buildAttackSection(character, items = [], companions = []) {
     const proficiencyBonus = proficient ? (normalizeNumber(data.proficiency_bonus) ?? 0) : 0;
     const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
     const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
-    const attackTotal = abilityMod + proficiencyBonus + (Number(weapon.attack_modifier) || 0) + attackBonus;
     const damageModes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
     const normalRange = Number(weapon.range_normal) || null;
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
@@ -835,6 +842,7 @@ export function buildAttackSection(character, items = [], companions = []) {
     const weaponKey = weapon.id ?? weapon.name;
     const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
     const selectedMode = renderedModes.find((mode) => mode.id === weapon.selected_damage_mode) || renderedModes[0];
+    const attackTotal = abilityMod + proficiencyBonus + (Number(selectedMode.attackModifier) || 0) + attackBonus;
     const modeDamageTotal = abilityMod + (Number(selectedMode.damageModifier) || 0) + damageBonus;
     const damageText = selectedMode.damageDie
       ? `${selectedMode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
@@ -975,10 +983,6 @@ export function buildSpellSection(character, canManageSpells = false) {
             </button>
           ` : ''}
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
-          ${canManageSpells ? `
-            <button class="resource-action-button resource-icon-button" type="button" data-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}">✏️</button>
-            <button class="resource-action-button resource-icon-button" type="button" data-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}">🗑️</button>
-          ` : ''}
         </div>
       </div>
     `;
@@ -1118,7 +1122,7 @@ export function buildResourceList(
             ${showCharges && Number(res.max_uses)
     ? `
               <div class="resource-card__charges">
-                ${buildResourceCharges(res)}
+                ${res.resource_type === 'pool' ? buildResourcePool(res) : buildResourceCharges(res)}
               </div>
             `
     : ''}
@@ -1130,12 +1134,8 @@ export function buildResourceList(
                 data-use-resource="${res.id}"
                 ${!Number(res.max_uses) || res.used >= Number(res.max_uses) ? 'disabled' : ''}
               >
-                Usa
+                ${res.resource_type === 'pool' ? 'Consuma' : 'Usa'}
               </button>
-            ` : ''}
-            ${canManageResources ? `
-              <button class="resource-action-button resource-icon-button" data-edit-resource="${res.id}" aria-label="Modifica risorsa">✏️</button>
-              <button class="resource-action-button resource-icon-button" data-delete-resource="${res.id}" aria-label="Elimina risorsa">🗑️</button>
             ` : ''}
           </div>
         </li>
@@ -1149,8 +1149,8 @@ export function buildResourceSections(resources, canManageResources) {
     return '<p>Nessuna risorsa.</p>';
   }
   const sortedResources = sortResourcesByCastTime(resources);
-  const passiveResources = sortedResources.filter((resource) => resource.reset_on === null || resource.reset_on === 'none');
-  const activeResources = sortedResources.filter((resource) => resource.reset_on !== null && resource.reset_on !== 'none');
+  const passiveResources = sortedResources.filter((resource) => resource.resource_type === 'passive' || resource.reset_on === null || resource.reset_on === 'none');
+  const activeResources = sortedResources.filter((resource) => resource.resource_type !== 'passive' && resource.reset_on !== null && resource.reset_on !== 'none');
   const activeSection = `
     <details class="resource-accordion resource-section resource-section--active" open>
       <summary class="resource-accordion__summary">
@@ -1185,6 +1185,22 @@ export function buildResourceSections(resources, canManageResources) {
     </details>
   `;
   return `<div class="resource-accordion-stack">${activeSection}${passiveSection}</div>`;
+}
+
+export function buildResourcePool(resource) {
+  const maxUses = Math.max(0, Number(resource.max_uses) || 0);
+  const used = Math.max(0, Math.min(Number(resource.used) || 0, maxUses));
+  if (!maxUses) return '';
+  const remaining = Math.max(maxUses - used, 0);
+  const percent = Math.min(Math.max((remaining / maxUses) * 100, 0), 100);
+  return `
+    <div class="resource-pool" aria-label="Pool risorsa ${remaining} su ${maxUses}">
+      <div class="resource-pool__label"><span>Pool</span><strong>${remaining}/${maxUses}</strong></div>
+      <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
+        <div class="resource-pool__fill" style="width: ${percent}%;"></div>
+      </div>
+    </div>
+  `;
 }
 
 export function buildResourceCharges(resource) {

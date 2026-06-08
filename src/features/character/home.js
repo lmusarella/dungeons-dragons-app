@@ -30,6 +30,7 @@ import {
   openConditionsModal,
   openPreparedSpellsModal,
   openResourceDetail,
+  openResourcePoolConsumeModal,
   openResourceDrawer,
   openSpellSourceModal,
   openSpellDrawer,
@@ -727,6 +728,31 @@ export async function renderHome(container) {
     });
   }
 
+  const deleteSpellWithConfirmation = async (spell) => {
+    if (!spell || !activeCharacter) return;
+    const shouldDelete = await openConfirmModal({
+      title: 'Conferma eliminazione incantesimo',
+      message: `Stai per eliminare l'incantesimo "${spell.name}" dalla scheda del personaggio. Questa azione non può essere annullata.`,
+      confirmLabel: 'Elimina'
+    });
+    if (!shouldDelete) return;
+    if (spell.shared_spell_id) {
+      try {
+        const linkedRows = await fetchCharacterSpells(activeCharacter.id);
+        const linkedRow = linkedRows.find((row) => row.shared_spell_id === spell.shared_spell_id);
+        if (linkedRow?.id) await removeCharacterSpell(linkedRow.id);
+      } catch (error) {
+        createToast('Errore rimozione associazione incantesimo', 'error');
+        return;
+      }
+    }
+    const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+    await saveCharacterData(activeCharacter, {
+      ...(activeCharacter.data || {}),
+      spells: spells.filter((entry) => entry.id !== spell.id)
+    }, 'Incantesimo eliminato', () => renderHome(container));
+  };
+
   container.querySelectorAll('[data-edit-spell]')
     .forEach((button) => button.addEventListener('click', () => {
       const spellId = button.dataset.editSpell;
@@ -740,33 +766,9 @@ export async function renderHome(container) {
   container.querySelectorAll('[data-delete-spell]')
     .forEach((button) => button.addEventListener('click', async () => {
       const spellId = button.dataset.deleteSpell;
-      if (!spellId || !activeCharacter) return;
-      const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
+      const spells = Array.isArray(activeCharacter?.data?.spells) ? activeCharacter.data.spells : [];
       const spell = spells.find((entry) => entry.id === spellId);
-      if (!spell) return;
-      const shouldDelete = await openConfirmModal({
-        title: 'Conferma eliminazione incantesimo',
-        message: `Stai per eliminare l'incantesimo "${spell.name}" dalla scheda del personaggio. Questa azione non può essere annullata.`,
-        confirmLabel: 'Elimina'
-      });
-      if (!shouldDelete) return;
-      if (spell.shared_spell_id) {
-        try {
-          const linkedRows = await fetchCharacterSpells(activeCharacter.id);
-          const linkedRow = linkedRows.find((row) => row.shared_spell_id === spell.shared_spell_id);
-          if (linkedRow?.id) {
-            await removeCharacterSpell(linkedRow.id);
-          }
-        } catch (error) {
-          createToast('Errore rimozione associazione incantesimo', 'error');
-          return;
-        }
-      }
-      const nextData = {
-        ...(activeCharacter.data || {}),
-        spells: spells.filter((entry) => entry.id !== spell.id)
-      };
-      await saveCharacterData(activeCharacter, nextData, 'Incantesimo eliminato', () => renderHome(container));
+      await deleteSpellWithConfirmation(spell);
     }));
 
   const preparedSpellsButton = container.querySelector('[data-open-prepared-spells]');
@@ -783,7 +785,10 @@ export async function renderHome(container) {
       const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
       const spell = spells.find((entry) => entry.id === spellId);
       if (!spell) return;
-      openSpellQuickDetailModal(activeCharacter, spell, () => renderHome(container));
+      openSpellQuickDetailModal(activeCharacter, spell, () => renderHome(container), {
+        onEdit: canEditCharacter ? () => openSpellDrawer(activeCharacter, () => renderHome(container), spell) : null,
+        onDelete: canEditCharacter ? () => deleteSpellWithConfirmation(spell) : null
+      });
     }));
 
   const backgroundButton = container.querySelector('[data-show-background]');
@@ -1059,6 +1064,11 @@ export async function renderHome(container) {
       openResourceDrawer(activeCharacter, () => renderHome(container), resource);
     }));
 
+  container.querySelectorAll('[data-hp-action]')
+    .forEach((button) => button.addEventListener('click', async () => {
+      await handleHpAction(button.dataset.hpAction, container);
+    }));
+
   container.querySelectorAll('[data-roll-hit-dice]')
     .forEach((button) => button.addEventListener('click', async () => {
       await handleHitDiceHeal(activeCharacter, container);
@@ -1189,11 +1199,14 @@ export async function renderHome(container) {
     });
   };
 
-  const useResource = async (resource) => {
+  const useResource = async (resource, amount = 1) => {
     const maxUses = Number(resource.max_uses) || 0;
     if (!maxUses || resource.used >= maxUses) return;
+    const consumedAmount = resource.resource_type === 'pool'
+      ? Math.max(1, Math.min(Number(amount) || 1, maxUses - (Number(resource.used) || 0)))
+      : 1;
     try {
-      await updateResource(resource.id, { used: Math.min(resource.used + 1, maxUses) });
+      await updateResource(resource.id, { used: Math.min((Number(resource.used) || 0) + consumedAmount, maxUses) });
       createToast('Risorsa usata');
       if (shouldAutoUsageDice(activeCharacter)) {
         openResourceRollOverlay(resource);
@@ -1204,42 +1217,79 @@ export async function renderHome(container) {
     }
   };
 
+  const requestResourceUse = async (resource) => {
+    if (!resource) return;
+    if (resource.resource_type === 'pool') {
+      const amount = await openResourcePoolConsumeModal(resource);
+      if (amount === null) return;
+      await useResource(resource, amount);
+      return;
+    }
+    await useResource(resource);
+  };
+
+  const editResource = (resource) => {
+    if (!resource || !canManageResources) return;
+    openResourceDrawer(activeCharacter, () => renderHome(container), resource);
+  };
+  const deleteResourceWithConfirmation = async (resource) => {
+    if (!resource || !canManageResources) return;
+    const shouldDelete = await openConfirmModal({
+      title: 'Conferma eliminazione risorsa',
+      message: `Stai per eliminare la risorsa "${resource.name}". Questa azione non può essere annullata.`,
+      confirmLabel: 'Elimina'
+    });
+    if (!shouldDelete) return;
+    try {
+      await deleteResource(resource.id);
+      createToast('Risorsa eliminata');
+      renderHome(container);
+    } catch (error) {
+      createToast('Errore eliminazione risorsa', 'error');
+    }
+  };
+
+  const openResourceDetails = (resource) => {
+    if (!resource) return;
+    openResourceDetail(resource, {
+      onUse: () => requestResourceUse(resource),
+      onEdit: canManageResources ? () => editResource(resource) : null,
+      onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
+      onReset: async () => {
+        try {
+          await updateResource(resource.id, { used: 0 });
+          createToast('Risorsa ripristinata');
+          renderHome(container);
+        } catch (error) {
+          createToast('Errore ripristino risorsa', 'error');
+        }
+      },
+      onRecover: async () => {
+        try {
+          await updateResource(resource.id, { used: Math.max((Number(resource.used) || 0) - 1, 0) });
+          createToast('Carica recuperata');
+          renderHome(container);
+        } catch (error) {
+          createToast('Errore recupero carica', 'error');
+        }
+      }
+    });
+  };
+
   container.querySelectorAll('[data-resource-card]')
     .forEach((card) => {
-      const handleOpen = async (event) => {
+      card.addEventListener('click', (event) => {
         if (event.target.closest('button')) return;
         const resource = resources.find((entry) => entry.id === card.dataset.resourceCard);
-        if (!resource) return;
-        openResourceDetail(resource, {
-          onUse: () => useResource(resource),
-          onReset: async () => {
-            try {
-              await updateResource(resource.id, { used: 0 });
-              createToast('Risorsa ripristinata');
-              renderHome(container);
-            } catch (error) {
-              createToast('Errore ripristino risorsa', 'error');
-            }
-          },
-          onRecover: async () => {
-            try {
-              await updateResource(resource.id, { used: Math.max((Number(resource.used) || 0) - 1, 0) });
-              createToast('Carica recuperata');
-              renderHome(container);
-            } catch (error) {
-              createToast('Errore recupero carica', 'error');
-            }
-          }
-        });
-      };
-      card.addEventListener('click', handleOpen);
+        openResourceDetails(resource);
+      });
     });
 
   container.querySelectorAll('[data-use-resource]')
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
-      await useResource(resource);
+      await requestResourceUse(resource);
     }));
 
   container.querySelectorAll('[data-use-spell]')
@@ -1310,20 +1360,7 @@ export async function renderHome(container) {
   container.querySelectorAll('[data-delete-resource]')
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.deleteResource);
-      if (!resource) return;
-      const shouldDelete = await openConfirmModal({
-        title: 'Conferma eliminazione risorsa',
-        message: `Stai per eliminare la risorsa "${resource.name}". Questa azione non può essere annullata.`,
-        confirmLabel: 'Elimina'
-      });
-      if (!shouldDelete) return;
-      try {
-        await deleteResource(resource.id);
-        createToast('Risorsa eliminata');
-        renderHome(container);
-      } catch (error) {
-        createToast('Errore eliminazione risorsa', 'error');
-      }
+      await deleteResourceWithConfirmation(resource);
     }));
 
   const deathSaveRollButton = container.querySelector('[data-roll-death-save]');
@@ -2180,7 +2217,9 @@ function buildAttackRollOptions(character, items = [], companions = []) {
         : false;
     const weaponProficiencyBonus = proficient ? proficiencyBonus : 0;
     const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
-    const attackTotal = abilityMod + weaponProficiencyBonus + (Number(weapon.attack_modifier) || 0) + attackBonus;
+    const modes = getWeaponDamageModes(weapon);
+    const selectedMode = modes.find((mode) => mode.id === weapon.selected_damage_mode) || modes[0];
+    const attackTotal = abilityMod + weaponProficiencyBonus + (Number(selectedMode?.attackModifier) || 0) + attackBonus;
     const value = `weapon:${weapon.id ?? weapon.name}`;
     const rollMode = resolveRollModeEffects([
       ...automaticAttackEffects,

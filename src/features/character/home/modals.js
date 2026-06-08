@@ -12,6 +12,7 @@ import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsByLevel } from './utils.js';
 import { conditionList } from './constants.js';
+import { attachModalValueStepper } from './hpModal.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
@@ -186,7 +187,94 @@ export async function openConditionsModal(character) {
   });
 }
 
-export function openResourceDetail(resource, { onUse, onReset, onRecover } = {}) {
+
+function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {}) {
+  if (!onEdit && !onDelete) return null;
+  const actions = modal.querySelector('[data-form-header-actions]');
+  if (!actions) return null;
+  actions.classList.add('detail-modal-actions');
+  const submitAction = (action) => {
+    if (!formEl) return;
+    let actionInput = formEl.querySelector('input[name="detail_action"]');
+    if (!actionInput) {
+      actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = 'detail_action';
+      formEl.appendChild(actionInput);
+    }
+    actionInput.value = action;
+    formEl.requestSubmit();
+  };
+  if (onEdit) {
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'resource-action-button resource-icon-button';
+    editButton.setAttribute('aria-label', 'Modifica');
+    editButton.title = 'Modifica';
+    editButton.textContent = '✏️';
+    editButton.addEventListener('click', () => submitAction('edit'));
+    actions.appendChild(editButton);
+  }
+  if (onDelete) {
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'resource-action-button resource-icon-button';
+    deleteButton.setAttribute('aria-label', 'Elimina');
+    deleteButton.title = 'Elimina';
+    deleteButton.textContent = '🗑️';
+    deleteButton.addEventListener('click', () => submitAction('delete'));
+    actions.appendChild(deleteButton);
+  }
+  return () => {
+    actions.replaceChildren();
+    actions.classList.remove('detail-modal-actions');
+  };
+}
+
+export async function openResourcePoolConsumeModal(resource) {
+  const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
+  const used = Math.max(0, Math.min(Number(resource?.used) || 0, maxUses));
+  const remaining = Math.max(maxUses - used, 0);
+  if (!remaining) return null;
+
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid hp-shortcut-fields resource-pool-consume';
+
+  const availability = document.createElement('p');
+  availability.className = 'resource-pool-consume__availability';
+  availability.innerHTML = `<span>Pool disponibile</span><strong>${remaining}/${maxUses}</strong>`;
+
+  const amountField = buildInput({
+    label: 'Quantità da consumare',
+    name: 'pool_amount',
+    type: 'number',
+    value: '1'
+  });
+  amountField.classList.add('hp-shortcut-fields__amount');
+  const amountInput = amountField.querySelector('input');
+  if (amountInput) {
+    amountInput.min = '1';
+    amountInput.max = String(remaining);
+    amountInput.required = true;
+    attachModalValueStepper(amountInput, { min: 1, max: remaining });
+  }
+
+  const row = document.createElement('div');
+  row.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';
+  row.appendChild(amountField);
+  content.append(availability, row);
+
+  const formData = await openFormModal({
+    title: resource?.name ? `Consuma ${resource.name}` : 'Consuma pool',
+    submitLabel: 'Consuma',
+    cancelLabel: 'Annulla',
+    content
+  });
+  if (!formData) return null;
+  return Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining));
+}
+
+export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit, onDelete } = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
   const maxUses = Number(resource.max_uses) || 0;
@@ -195,12 +283,23 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover } = {})
   const hasAction = Boolean(maxUses && (isExhausted ? onReset : onUse));
   const canRecoverCharge = Boolean(maxUses > 1 && Number(resource.used) > 0 && onRecover);
   const description = resource.description?.trim() || 'Nessuna descrizione disponibile per questa risorsa.';
+  const isPool = resource.resource_type === 'pool';
+  const remaining = Math.max(maxUses - (Number(resource.used) || 0), 0);
+  const poolPercent = maxUses ? Math.min(Math.max((remaining / maxUses) * 100, 0), 100) : 0;
   const hasDisplayImage = hasUsableDetailImage(resource.image_url);
   const imageUrl = resource.image_url?.trim() || '';
 
   detail.innerHTML = `
     <div class="detail-card detail-card--text resource-detail-card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
       ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'risorsa')}" />` : ''}
+      ${isPool ? `
+        <div class="resource-pool resource-pool--detail" aria-label="Pool risorsa ${remaining} su ${maxUses}">
+          <div class="resource-pool__label"><span>Pool disponibile</span><strong>${remaining}/${maxUses}</strong></div>
+          <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
+            <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
+          </div>
+        </div>
+      ` : ''}
       <div class="detail-rich-text">${renderDetailText(description)}</div>
     </div>
   `;
@@ -208,13 +307,14 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover } = {})
   openFormModal({
     title: resource.name || 'Risorsa',
     submitLabel: hasAction
-      ? (isExhausted ? 'Ripristina' : 'Usa')
+      ? (isExhausted ? 'Ripristina' : (isPool ? 'Consuma' : 'Usa'))
       : 'Chiudi',
     cancelLabel: isActive ? (hasAction ? 'Chiudi' : null) : null,
     content: detail,
     showFooter: isActive,
-    onOpen: ({ modal }) => {
-      if (!canRecoverCharge) return null;
+    onOpen: ({ modal, formEl }) => {
+      const cleanupManagementActions = attachDetailManagementActions(modal, formEl, { onEdit, onDelete });
+      if (!canRecoverCharge || isPool) return cleanupManagementActions;
       const submitButton = modal.querySelector('[data-form-submit]');
       const actionsRight = submitButton?.parentElement;
       if (!actionsRight) return null;
@@ -225,10 +325,23 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover } = {})
       recoverButton.className = 'ghost-button';
       recoverButton.textContent = 'Recupera Carica';
       actionsRight.insertBefore(recoverButton, submitButton);
-      return () => recoverButton.remove();
+      return () => {
+        recoverButton.remove();
+        cleanupManagementActions?.();
+      };
     }
   }).then(async (formData) => {
-    if (!formData || !maxUses) return;
+    if (!formData) return;
+    const detailAction = formData.get('detail_action');
+    if (detailAction === 'edit' && onEdit) {
+      onEdit();
+      return;
+    }
+    if (detailAction === 'delete' && onDelete) {
+      await onDelete();
+      return;
+    }
+    if (!maxUses) return;
     if (formData.get('resource_action') === 'recover' && onRecover) {
       await onRecover();
       return;
@@ -607,7 +720,7 @@ export async function openSpellSourceModal() {
 
 
 
-export function openSpellQuickDetailModal(character, spell, onRender) {
+export function openSpellQuickDetailModal(character, spell, onRender, { onEdit, onDelete } = {}) {
   if (!spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
   const detailChips = [
@@ -640,9 +753,20 @@ export function openSpellQuickDetailModal(character, spell, onRender) {
     cancelLabel: isCastable ? 'Chiudi' : null,
     content,
     cardClass: ['spell-quick-detail-modal'],
-    showFooter: isCastable
+    showFooter: isCastable,
+    onOpen: ({ modal, formEl }) => attachDetailManagementActions(modal, formEl, { onEdit, onDelete })
   }).then(async (formData) => {
-    if (!formData || !isCastable) return;
+    if (!formData) return;
+    const detailAction = formData.get('detail_action');
+    if (detailAction === 'edit' && onEdit) {
+      onEdit();
+      return;
+    }
+    if (detailAction === 'delete' && onDelete) {
+      await onDelete();
+      return;
+    }
+    if (!isCastable) return;
     const selectedLevel = await chooseCastSlotLevel(character, spell);
     if (!selectedLevel) return;
     const consumed = await consumeSpellSlot(character, selectedLevel, onRender);
@@ -978,22 +1102,25 @@ export function openResourceDrawer(character, onSave, resource = null) {
 
   const identitySectionRows = [buildRow([nameField, castTimeField, imageField], 'balanced')];
 
-  const passiveField = document.createElement('div');
-  passiveField.className = 'modal-toggle-field';
-  passiveField.innerHTML = `
-    <span class="modal-toggle-field__label">Passiva (senza cariche)</span>
-    <label class="diceov-toggle">
-      <input type="checkbox" name="is_passive" />
-      <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </label>
-  `;
+  const resourceTypeField = document.createElement('label');
+  resourceTypeField.className = 'field';
+  resourceTypeField.innerHTML = '<span>Gestione utilizzi</span>';
+  const inferredResourceType = resource?.resource_type
+    || ((Number(resource?.max_uses) === 0 || resource?.reset_on === null || resource?.reset_on === 'none') ? 'passive' : 'charges');
+  const resourceTypeSelect = buildSelect([
+    { value: 'charges', label: 'Cariche' },
+    { value: 'pool', label: 'Pool consumabile' },
+    { value: 'passive', label: 'Passiva' }
+  ], inferredResourceType);
+  resourceTypeSelect.name = 'resource_type';
+  resourceTypeField.appendChild(resourceTypeSelect);
 
-  const maxUsesField = buildInput({ label: 'Cariche massime', name: 'max_uses', type: 'number', value: resource?.max_uses ?? 1 });
+  const maxUsesField = buildInput({ label: 'Valore massimo', name: 'max_uses', type: 'number', value: resource?.max_uses ?? 1 });
   enhanceNumericField(maxUsesField, { decrementLabel: 'Riduci cariche massime', incrementLabel: 'Aumenta cariche massime' });
-  const usedField = buildInput({ label: 'Cariche consumate', name: 'used', type: 'number', value: resource?.used ?? 0 });
+  const usedField = buildInput({ label: 'Valore consumato', name: 'used', type: 'number', value: resource?.used ?? 0 });
   enhanceNumericField(usedField, { decrementLabel: 'Riduci cariche consumate', incrementLabel: 'Aumenta cariche consumate' });
 
-  const chargeSectionRows = [buildRow([passiveField, maxUsesField, usedField], 'compact')];
+  const chargeSectionRows = [buildRow([resourceTypeField, maxUsesField, usedField], 'compact')];
 
   const inputRiposoCorto = buildInput({
     label: 'Recupero riposo breve',
@@ -1050,8 +1177,8 @@ export function openResourceDrawer(character, onSave, resource = null) {
     content: identitySectionRows
   }));
   form.appendChild(buildSection({
-    title: 'Cariche e recupero',
-    description: 'Usa “Passiva” per abilità sempre attive; le abilità con cariche compaiono tra le risorse attive.',
+    title: 'Utilizzi, pool e recupero',
+    description: 'Scegli Cariche per utilizzi singoli, Pool per consumare quantità variabili oppure Passiva per abilità sempre attive.',
     content: chargeSectionRows
   }));
   form.appendChild(buildSection({
@@ -1070,12 +1197,8 @@ export function openResourceDrawer(character, onSave, resource = null) {
   const usedInput = form.querySelector('input[name="used"]');
   const recoveryShortInput = form.querySelector('input[name="recovery_short"]');
   const recoveryLongInput = form.querySelector('input[name="recovery_long"]');
-  const passiveInput = form.querySelector('input[name="is_passive"]');
-  if (passiveInput) {
-    passiveInput.checked = Number(resource?.max_uses) === 0 || resource?.reset_on === null || resource?.reset_on === 'none';
-  }
-  const syncPassiveState = () => {
-    const isPassive = passiveInput?.checked;
+  const syncResourceTypeState = () => {
+    const isPassive = resourceTypeSelect.value === 'passive';
     if (isPassive) {
       if (maxUsesInput) maxUsesInput.value = '0';
       if (usedInput) usedInput.value = '0';
@@ -1088,8 +1211,8 @@ export function openResourceDrawer(character, onSave, resource = null) {
     if (recoveryLongInput) recoveryLongInput.disabled = isPassive;
     resetSelect.disabled = isPassive;
   };
-  passiveInput?.addEventListener('change', syncPassiveState);
-  syncPassiveState();
+  resourceTypeSelect.addEventListener('change', syncResourceTypeState);
+  syncResourceTypeState();
 
   openFormModal({
     title: resource ? 'Modifica abilità' : 'Nuova abilità',
@@ -1107,7 +1230,8 @@ export function openResourceDrawer(character, onSave, resource = null) {
     const toNumberOrNull = (value) => (value === '' || value === null ? null : Number(value));
     const maxUses = Number(formData.get('max_uses')) || 0;
     const used = Math.min(Number(formData.get('used')) || 0, maxUses || 0);
-    const isPassive = formData.get('is_passive') === 'on';
+    const resourceType = formData.get('resource_type') || 'charges';
+    const isPassive = resourceType === 'passive';
     const payload = {
       user_id: currentUser?.id ?? character.user_id,
       character_id: character.id,
@@ -1117,8 +1241,9 @@ export function openResourceDrawer(character, onSave, resource = null) {
       cast_time: formData.get('cast_time') || null,
       damage_dice_notation: formData.get('damage_dice_notation')?.trim() || null,
       damage_modifier: toNumberOrNull(formData.get('damage_modifier')),
-      max_uses: maxUses,
-      used,
+      resource_type: resourceType,
+      max_uses: isPassive ? 0 : maxUses,
+      used: isPassive ? 0 : used,
       reset_on: isPassive ? null : formData.get('reset_on'),
       recovery_short: toNumberOrNull(formData.get('recovery_short')),
       recovery_long: toNumberOrNull(formData.get('recovery_long'))

@@ -330,6 +330,7 @@ export async function openItemModal(character, item, items, onSave) {
         label: mode.label || mode.name || '',
         damage_die: mode.damage_die || mode.damageDie || '',
         damage_modifier: mode.damage_modifier ?? mode.damageModifier ?? 0,
+        attack_modifier: mode.attack_modifier ?? mode.attackModifier ?? sourceItem?.attack_modifier ?? 0,
         damage_type: mode.damage_type || mode.damageType || sourceItem?.damage_type || ''
       }))
       .filter((mode) => mode.label || mode.damage_die);
@@ -338,6 +339,7 @@ export async function openItemModal(character, item, items, onSave) {
         label: sourceItem.alternate_damage_label || 'Due mani',
         damage_die: sourceItem.alternate_damage_die,
         damage_modifier: sourceItem.alternate_damage_modifier ?? sourceItem.damage_modifier ?? 0,
+        attack_modifier: sourceItem.alternate_attack_modifier ?? sourceItem.attack_modifier ?? 0,
         damage_type: sourceItem.alternate_damage_type || sourceItem.damage_type || ''
       });
     }
@@ -357,7 +359,7 @@ export async function openItemModal(character, item, items, onSave) {
   `;
   const weaponDamageModesList = weaponDamageModesField.querySelector('[data-weapon-damage-modes]');
   const addWeaponDamageModeButton = weaponDamageModesField.querySelector('[data-add-weapon-damage-mode]');
-  const createWeaponDamageModeRow = ({ label = '', damage_die = '', damage_modifier = 0, damage_type = '' } = {}) => {
+  const createWeaponDamageModeRow = ({ label = '', damage_die = '', damage_modifier = 0, attack_modifier = 0, damage_type = '' } = {}) => {
     const row = document.createElement('div');
     row.className = 'weapon-damage-mode-row';
     const labelField = buildInput({
@@ -366,20 +368,30 @@ export async function openItemModal(character, item, items, onSave) {
       placeholder: 'Es. Due mani',
       value: label
     });
+    labelField.classList.add('weapon-damage-mode-field--name');
     const dieField = buildInput({
       label: 'Dado',
       name: 'weapon_damage_mode_die',
       placeholder: 'Es. 1d10',
       value: damage_die
     });
+    dieField.classList.add('weapon-damage-mode-field--die');
     const modifierField = buildInput({
-      label: 'Mod.',
+      label: 'Mod. danno',
       name: 'weapon_damage_mode_modifier',
       type: 'number',
       value: damage_modifier ?? 0
     });
+    modifierField.classList.add('weapon-damage-mode-field--damage-modifier');
+    const attackModifierField = buildInput({
+      label: 'Mod. colpire',
+      name: 'weapon_damage_mode_attack_modifier',
+      type: 'number',
+      value: attack_modifier ?? 0
+    });
+    attackModifierField.classList.add('weapon-damage-mode-field--attack-modifier');
     const typeField = document.createElement('label');
-    typeField.className = 'field';
+    typeField.className = 'field weapon-damage-mode-field--type';
     typeField.innerHTML = '<span>Tipo</span>';
     const typeSelect = buildSelect(damageTypeOptions, damage_type || item?.damage_type || '');
     typeSelect.name = 'weapon_damage_mode_type';
@@ -391,7 +403,7 @@ export async function openItemModal(character, item, items, onSave) {
     removeButton.title = 'Rimuovi';
     removeButton.innerHTML = '<span aria-hidden="true">🗑️</span>';
     removeButton.addEventListener('click', () => row.remove());
-    row.append(labelField, dieField, modifierField, typeField, removeButton);
+    row.append(labelField, dieField, modifierField, attackModifierField, typeField, removeButton);
     enhanceNumericFields(row);
     return row;
   };
@@ -649,12 +661,14 @@ export async function openItemModal(character, item, items, onSave) {
   const modeLabels = formData.getAll('weapon_damage_mode_label');
   const modeDice = formData.getAll('weapon_damage_mode_die');
   const modeModifiers = formData.getAll('weapon_damage_mode_modifier');
+  const modeAttackModifiers = formData.getAll('weapon_damage_mode_attack_modifier');
   const modeTypes = formData.getAll('weapon_damage_mode_type');
   const weaponDamageModes = modeDice.map((die, index) => ({
     id: `mode-${index + 1}`,
     label: String(modeLabels[index] || '').trim() || `Impugnatura ${index + 1}`,
     damage_die: String(die || '').trim(),
     damage_modifier: Number(modeModifiers[index]) || 0,
+    attack_modifier: Number(modeAttackModifiers[index]) || 0,
     damage_type: modeTypes[index] || null
   })).filter((mode) => mode.damage_die);
 
@@ -693,6 +707,7 @@ export async function openItemModal(character, item, items, onSave) {
     alternate_damage_label: weaponDamageModes[0]?.label || null,
     alternate_damage_die: weaponDamageModes[0]?.damage_die || null,
     alternate_damage_modifier: Number(weaponDamageModes[0]?.damage_modifier) || 0,
+    alternate_attack_modifier: Number(weaponDamageModes[0]?.attack_modifier) || 0,
     alternate_damage_type: weaponDamageModes[0]?.damage_type || null,
     is_thrown: formData.get('is_thrown') === 'on',
     melee_range: (() => {
