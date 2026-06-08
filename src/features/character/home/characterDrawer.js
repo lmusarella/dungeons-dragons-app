@@ -127,6 +127,11 @@ function getDrawerAttackRollEntries(characterData, items = []) {
     key: `weapon:${weapon.id ?? weapon.name}`,
     label: weapon.name || 'Arma'
   }));
+  const unarmedAttacks = Array.isArray(characterData?.unarmed_attacks) ? characterData.unarmed_attacks : [];
+  const unarmedEntries = unarmedAttacks.map((attack, index) => ({
+    key: `unarmed:${index}`,
+    label: attack.name || `Colpo senz’arma ${index + 1}`
+  }));
   const spells = Array.isArray(characterData?.spells) ? characterData.spells : [];
   const spellEntries = spells
     .filter((spell) => {
@@ -140,7 +145,7 @@ function getDrawerAttackRollEntries(characterData, items = []) {
   const spellcasting = characterData?.spellcasting || {};
   const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(characterData?.proficiency_bonus) !== null);
   const genericSpellEntry = hasSpellAttack ? [{ key: 'spell-attack', label: 'Incantesimi' }] : [];
-  return [...weaponEntries, ...spellEntries, ...genericSpellEntry];
+  return [...weaponEntries, ...unarmedEntries, ...spellEntries, ...genericSpellEntry];
 }
 
 function getAutomaticDrawerAttackEffects(characterData) {
@@ -183,6 +188,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const skillStates = characterData.skills || {};
   const skillMasteryStates = characterData.skill_mastery || {};
   const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
+  let draftUnarmedAttacks = (Array.isArray(characterData.unarmed_attacks) ? characterData.unarmed_attacks : []).map((attack) => ({
+    name: attack?.name || '',
+    to_hit: Number(attack?.to_hit) || 0,
+    damage: attack?.damage || '',
+    damage_modifier: Number(attack?.damage_modifier) || 0
+  }));
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
@@ -620,6 +631,85 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.sneak_attack_dice ?? ''
   }));
   combatSection.appendChild(combatOtherRow);
+
+  const unarmedAttacksSection = document.createElement('div');
+  unarmedAttacksSection.className = 'character-edit-section compact-character-section familiar-edit-attacks-section';
+  unarmedAttacksSection.innerHTML = `
+    <div class="familiar-edit-section-header">
+      <h4>Colpi senz’arma</h4>
+      <p class="muted">Configura attacchi fisici personali da mostrare nella sezione Attacchi.</p>
+    </div>
+  `;
+  const unarmedAttackCountInput = document.createElement('input');
+  unarmedAttackCountInput.type = 'hidden';
+  unarmedAttackCountInput.name = 'unarmed_attack_count';
+  const unarmedAttackList = document.createElement('div');
+  unarmedAttackList.className = 'familiar-edit-attack-list';
+  const addUnarmedAttackButton = document.createElement('button');
+  addUnarmedAttackButton.type = 'button';
+  addUnarmedAttackButton.className = 'ghost-button ghost-button--compact familiar-edit-add-attack';
+  addUnarmedAttackButton.textContent = '+ Aggiungi colpo senz’arma';
+
+  const readUnarmedAttackRows = () => {
+    draftUnarmedAttacks = Array.from(unarmedAttackList.querySelectorAll('[data-unarmed-attack-row]')).map((row) => ({
+      name: row.querySelector('[name^="unarmed_attack_name_"]')?.value || '',
+      to_hit: Number(row.querySelector('[name^="unarmed_attack_to_hit_"]')?.value) || 0,
+      damage: row.querySelector('[name^="unarmed_attack_damage_"]')?.value || '',
+      damage_modifier: Number(row.querySelector('[name^="unarmed_attack_damage_modifier_"]')?.value) || 0
+    }));
+  };
+
+  const renderUnarmedAttackRows = () => {
+    unarmedAttackList.innerHTML = '';
+    unarmedAttackCountInput.value = String(draftUnarmedAttacks.length);
+    if (!draftUnarmedAttacks.length) {
+      const empty = document.createElement('p');
+      empty.className = 'muted familiar-edit-empty-attacks';
+      empty.textContent = 'Nessun colpo senz’arma configurato.';
+      unarmedAttackList.appendChild(empty);
+      return;
+    }
+    draftUnarmedAttacks.forEach((attack, index) => {
+      const row = document.createElement('div');
+      row.className = 'compact-special-skill-row familiar-edit-attack-row';
+      row.dataset.unarmedAttackRow = String(index);
+      const grid = document.createElement('div');
+      grid.className = 'compact-special-skill-grid familiar-edit-attack-grid';
+      grid.appendChild(buildInput({ label: 'Nome', name: `unarmed_attack_name_${index}`, value: attack.name, placeholder: 'Es. Pugno' }));
+      const hitField = buildInput({ label: 'Tiro per colpire', name: `unarmed_attack_to_hit_${index}`, type: 'number', value: attack.to_hit ?? 0 });
+      hitField.querySelector('input').step = '1';
+      grid.appendChild(hitField);
+      grid.appendChild(buildInput({ label: 'Danni', name: `unarmed_attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d4' }));
+      const damageModifierField = buildInput({ label: 'Mod. danni', name: `unarmed_attack_damage_modifier_${index}`, type: 'number', value: attack.damage_modifier ?? 0 });
+      damageModifierField.querySelector('input').step = '1';
+      grid.appendChild(damageModifierField);
+      const actions = document.createElement('div');
+      actions.className = 'character-toggle-group familiar-edit-attack-actions';
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'ghost-button ghost-button--compact';
+      removeButton.textContent = 'Rimuovi';
+      removeButton.addEventListener('click', () => {
+        readUnarmedAttackRows();
+        draftUnarmedAttacks.splice(index, 1);
+        renderUnarmedAttackRows();
+        enhanceNumericFields(unarmedAttackList);
+      });
+      actions.appendChild(removeButton);
+      row.append(grid, actions);
+      unarmedAttackList.appendChild(row);
+    });
+  };
+
+  addUnarmedAttackButton.addEventListener('click', () => {
+    readUnarmedAttackRows();
+    draftUnarmedAttacks.push({ name: '', to_hit: 0, damage: '', damage_modifier: 0 });
+    renderUnarmedAttackRows();
+    enhanceNumericFields(unarmedAttackList);
+  });
+  renderUnarmedAttackRows();
+  unarmedAttacksSection.append(unarmedAttackCountInput, unarmedAttackList, addUnarmedAttackButton);
+  combatSection.appendChild(unarmedAttacksSection);
   const weaponMasteryFeatureField = document.createElement('div');
   weaponMasteryFeatureField.className = 'modal-toggle-field';
   weaponMasteryFeatureField.innerHTML = `
@@ -1304,6 +1394,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       }, {})
     }
     : characterData.spellcasting ?? null;
+  const unarmedAttackCount = Number(formData.get('unarmed_attack_count')) || 0;
+  const nextUnarmedAttacks = Array.from({ length: unarmedAttackCount }, (_, index) => ({
+    name: String(formData.get(`unarmed_attack_name_${index}`) || '').trim(),
+    to_hit: Number(formData.get(`unarmed_attack_to_hit_${index}`) || 0),
+    damage: String(formData.get(`unarmed_attack_damage_${index}`) || '').trim(),
+    damage_modifier: Number(formData.get(`unarmed_attack_damage_modifier_${index}`) || 0)
+  })).filter((attack) => attack.name || attack.damage);
   const nextData = {
     ...characterData,
     avatar_url: formData.get('avatar_url')?.trim() || null,
@@ -1356,6 +1453,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     skills: nextSkills,
     skill_mastery: nextMastery,
     special_skill_rolls: nextSpecialSkillRolls,
+    unarmed_attacks: nextUnarmedAttacks,
     saving_throws: nextSaving,
     weapon_mastery_enabled: formData.has('weapon_mastery_enabled'),
     weapon_masteries: formData.has('weapon_mastery_enabled')

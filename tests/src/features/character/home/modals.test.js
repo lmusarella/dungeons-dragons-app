@@ -168,4 +168,13 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).not.toMatch(/\.ability-parent-toggle__control\s*\{[^}]*width:/s);
   });
 
+
+  it('configures and requests a variable child-resource cost', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain('export async function openVariableResourceCostModal');
+    expect(source).toContain('name="resource_cost_variable"');
+    expect(source).toContain("resource_cost_variable: Boolean(parentId && formData.get('resource_cost_variable') === '1')");
+    expect(source).toContain("child.resource_cost_variable ? 'Costo variabile'");
+  });
+
 });

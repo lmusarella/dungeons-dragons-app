@@ -743,6 +743,7 @@ export function buildAttackSection(character, items = [], companions = []) {
   const damageBonusRanged = Number(data.damage_bonus_ranged ?? data.damage_bonus) || 0;
   const extraAttacks = Number(data.extra_attacks) || 0;
   const equippedWeapons = items.filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
+  const unarmedAttacks = Array.isArray(data.unarmed_attacks) ? data.unarmed_attacks : [];
   const activeWildShape = getActiveWildShape(character, companions);
   const spellcasting = data.spellcasting || {};
   const spellAbilityKey = spellcasting.ability;
@@ -758,8 +759,8 @@ export function buildAttackSection(character, items = [], companions = []) {
     return isCantrip && spell.attack_roll && spell.damage_die;
   });
   const hasSpellAttacks = cantripAttacks.length && spellAttackBonus !== null && spellAbilityKey;
-  if (!equippedWeapons.length && !hasSpellAttacks && !activeWildShape?.statBlock.attacks.length) {
-    return '<p class="muted">Nessuna arma equipaggiata.</p>';
+  if (!equippedWeapons.length && !unarmedAttacks.length && !hasSpellAttacks && !activeWildShape?.statBlock.attacks.length) {
+    return '<p class="muted">Nessun attacco configurato.</p>';
   }
   const bonusChips = [];
   if (extraAttacks > 0) bonusChips.push(`Attacco Extra (${extraAttacks})`);
@@ -800,6 +801,31 @@ export function buildAttackSection(character, items = [], companions = []) {
           </div>
         `;
     }).join('') : ''}
+        ${unarmedAttacks.map((attack, index) => {
+    const attackName = attack.name || `Colpo senz’arma ${index + 1}`;
+    const damageModifier = Number(attack.damage_modifier) || 0;
+    const damageText = `${attack.damage || '-'}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
+    return `
+          <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
+            <div class="attack-card__body">
+              <div class="attack-card__title">
+                <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
+                <span class="modifier-ability modifier-ability--str">Fisico</span>
+                <span class="attack-card__hit">${formatSigned(attack.to_hit || 0)}</span>
+              </div>
+              <div class="attack-card__meta">
+                <span class="attack-card__damage">${escapeHtml(damageText)}</span>
+                <span class="muted">Colpo senz’arma</span>
+              </div>
+            </div>
+            <div class="attack-card__actions">
+              <button class="icon-button icon-button--fire" data-roll-damage="unarmed:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
+                <span aria-hidden="true">🔥</span>
+              </button>
+            </div>
+          </div>
+        `;
+  }).join('')}
         ${equippedWeapons.map((weapon) => {
     const weaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
     const attackAbility = weapon.attack_ability

@@ -71,8 +71,26 @@ describe('src/features/character/home.js', () => {
     );
     expect(useHandler).toContain('const consumedAmount = Math.max(1, Number(amount) || 1)');
     expect(useHandler).toContain('remaining < consumedAmount');
-    expect(useHandler).toContain('const resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1)');
+    expect(useHandler).toContain('let resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1)');
     expect(useHandler).toContain('useResource(parentResource, resourceCost, usageResource)');
+  });
+
+  it('asks for the cost when a child resource has a variable cost', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const useHandler = source.slice(
+      source.indexOf('const requestResourceUse'),
+      source.indexOf('const editResource')
+    );
+    expect(useHandler).toContain('usageResource.resource_cost_variable');
+    expect(useHandler).toContain('openVariableResourceCostModal(usageResource, parentResource)');
+    expect(useHandler).toContain('if (resourceCost === null) return');
+  });
+
+  it('supports attack and damage rolls for unarmed attacks', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain("rollKey.startsWith('unarmed:')");
+    expect(source).toContain('const unarmedAttacks = Array.isArray(data.unarmed_attacks)');
+    expect(source).toContain('value = `unarmed:${index}`');
   });
 
 });

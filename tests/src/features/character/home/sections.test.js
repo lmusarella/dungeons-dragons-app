@@ -90,4 +90,12 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('opzioni');
   });
 
+
+  it('renders unarmed attacks alongside equipped weapons', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    expect(source).toContain('const unarmedAttacks = Array.isArray(data.unarmed_attacks)');
+    expect(source).toContain('data-roll-attack="unarmed:${index}"');
+    expect(source).toContain('data-roll-damage="unarmed:${index}"');
+    expect(source).toContain('Colpo senz’arma');
+  });
 });

@@ -277,14 +277,56 @@ export async function openResourcePoolConsumeModal(resource) {
   return Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining));
 }
 
+
+export async function openVariableResourceCostModal(resource, parentResource) {
+  const maxUses = Math.max(0, Number(parentResource?.max_uses) || 0);
+  const used = Math.max(0, Math.min(Number(parentResource?.used) || 0, maxUses));
+  const remaining = Math.max(maxUses - used, 0);
+  if (!remaining) return null;
+
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid hp-shortcut-fields resource-pool-consume';
+  const availability = document.createElement('p');
+  availability.className = 'resource-pool-consume__availability';
+  availability.innerHTML = `<span>Risorsa disponibile</span><strong>${remaining}/${maxUses}</strong>`;
+  const amountField = buildInput({
+    label: 'Costo da consumare',
+    name: 'variable_resource_cost',
+    type: 'number',
+    value: '1'
+  });
+  amountField.classList.add('hp-shortcut-fields__amount');
+  const amountInput = amountField.querySelector('input');
+  if (amountInput) {
+    amountInput.min = '1';
+    amountInput.max = String(remaining);
+    amountInput.required = true;
+    attachModalValueStepper(amountInput, { min: 1, max: remaining });
+  }
+  const row = document.createElement('div');
+  row.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';
+  row.appendChild(amountField);
+  content.append(availability, row);
+
+  const formData = await openFormModal({
+    title: resource?.name ? `Costo di ${resource.name}` : 'Costo sotto-abilità',
+    submitLabel: 'Usa',
+    cancelLabel: 'Annulla',
+    content
+  });
+  if (!formData) return null;
+  return Math.max(1, Math.min(Number(formData.get('variable_resource_cost')) || 1, remaining));
+}
+
 export async function openResourceOptionModal(resource, childResources = []) {
   if (!childResources.length) return null;
   const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
   const used = Math.max(0, Number(resource?.used) || 0);
   const remaining = Math.max(maxUses - used, 0);
   const options = childResources.map((child) => {
-    const cost = Math.max(1, Number(child.resource_cost) || 1);
-    return { child, cost, available: remaining >= cost };
+    const variableCost = Boolean(child.resource_cost_variable);
+    const cost = variableCost ? 1 : Math.max(1, Number(child.resource_cost) || 1);
+    return { child, cost, variableCost, available: remaining >= cost };
   });
   const firstAvailableId = options.find((option) => option.available)?.child.id;
   const content = document.createElement('div');
@@ -292,20 +334,20 @@ export async function openResourceOptionModal(resource, childResources = []) {
   content.innerHTML = `
     <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. Hai <strong>${remaining}</strong> risorse disponibili.</p>
     <div class="resource-option-picker__list">
-      ${options.map(({ child, cost, available }) => `
+      ${options.map(({ child, cost, variableCost, available }) => `
         <label class="resource-option-picker__item ${available ? '' : 'is-disabled'}">
           <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${String(child.id) === String(firstAvailableId) ? 'checked' : ''} ${available ? '' : 'disabled'} />
           <span class="resource-option-picker__content">
             <span class="resource-option-picker__heading">
               <strong>${escapeHtml(child.name || 'Opzione')}</strong>
-              <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">Costo ${cost}</span>
+              <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">${variableCost ? 'Costo variabile' : `Costo ${cost}`}</span>
             </span>
             <small>${[
     child.cast_time,
     child.damage_dice_notation ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}` : 'Nessun tiro'
   ].filter(Boolean).map(escapeHtml).join(' · ')}</small>
             ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
-            ${available ? '' : `<small class="resource-option-picker__warning">Servono ${cost} risorse; disponibili ${remaining}.</small>`}
+            ${available ? '' : `<small class="resource-option-picker__warning">${variableCost ? 'Non ci sono risorse disponibili.' : `Servono ${cost} risorse; disponibili ${remaining}.`}</small>`}
           </span>
         </label>
       `).join('')}
@@ -400,7 +442,7 @@ export function openResourceDetail(resource, {
                   <div class="resource-detail-option__badges">
                     ${child.cast_time ? `<span>${escapeHtml(child.cast_time)}</span>` : ''}
                     <span>${escapeHtml(diceLabel)}</span>
-                    <span>Costo ${Math.max(1, Number(child.resource_cost) || 1)}</span>
+                    <span>${child.resource_cost_variable ? 'Costo variabile' : `Costo ${Math.max(1, Number(child.resource_cost) || 1)}`}</span>
                   </div>
                 </div>
                 ${childDescription ? `<p>${escapeHtml(childDescription)}</p>` : '<p class="muted">Nessuna descrizione.</p>'}
@@ -1379,6 +1421,20 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   }
   enhanceNumericField(resourceCostField, { decrementLabel: 'Riduci costo risorsa', incrementLabel: 'Aumenta costo risorsa' });
 
+  const variableResourceCostField = document.createElement('div');
+  variableResourceCostField.className = 'field ability-parent-toggle condition-modal__item';
+  variableResourceCostField.innerHTML = `
+    <span class="condition-modal__item-label">
+      <strong>Costo variabile</strong>
+      <small>Scegli la quantità da consumare ogni volta che usi la sotto-abilità.</small>
+    </span>
+    <label class="diceov-toggle condition-modal__toggle ability-parent-toggle__control">
+      <input type="checkbox" name="resource_cost_variable" value="1" ${resource?.resource_cost_variable ? 'checked' : ''} aria-label="Costo variabile" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </label>
+  `;
+  const variableResourceCostInput = variableResourceCostField.querySelector('input[name="resource_cost_variable"]');
+
   const descriptionField = buildTextarea({
     label: 'Descrizione',
     name: 'description',
@@ -1399,7 +1455,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const childUsageSection = buildSection({
     title: 'Consumo risorsa padre',
     description: 'Configura quante cariche o punti del padre vengono consumati usando questa sotto-abilità.',
-    content: [buildRow([resourceCostField], 'compact')]
+    content: [buildRow([resourceCostField, variableResourceCostField], 'balanced')]
   });
   form.appendChild(childUsageSection);
   form.appendChild(buildSection({
@@ -1425,6 +1481,8 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     usageSection.hidden = isChild;
     childUsageSection.hidden = !isChild;
     canHaveChildrenField.hidden = isChild;
+    if (resourceCostInput) resourceCostInput.disabled = !isChild || Boolean(variableResourceCostInput?.checked);
+    variableResourceCostField.classList.toggle('is-selected', Boolean(variableResourceCostInput?.checked));
     if (canHaveChildrenInput) {
       canHaveChildrenInput.disabled = !canBeParent;
       if (!canBeParent) canHaveChildrenInput.checked = false;
@@ -1443,6 +1501,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   };
   resourceTypeSelect.addEventListener('change', syncResourceTypeState);
   parentSelect.addEventListener('change', syncResourceTypeState);
+  variableResourceCostInput?.addEventListener('change', syncResourceTypeState);
   syncResourceTypeState();
 
   openFormModal({
@@ -1471,6 +1530,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
       parent_resource_id: parentId,
       can_have_children: canHaveChildren,
       resource_cost: parentId ? Math.max(1, Number(formData.get('resource_cost')) || 1) : 1,
+      resource_cost_variable: Boolean(parentId && formData.get('resource_cost_variable') === '1'),
       name,
       image_url: formData.get('image_url')?.trim() || null,
       description: formData.get('description')?.trim() || null,
