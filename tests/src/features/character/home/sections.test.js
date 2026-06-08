@@ -91,6 +91,26 @@ describe('src/features/character/home/sections.js', () => {
   });
 
 
+  it('renders distinct visual hierarchies for skills, attacks, and spells', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const homeSource = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+
+    expect(homeSource).toContain('home-feature-panel--skills');
+    expect(homeSource).toContain('home-feature-panel--attacks');
+    expect(homeSource).toContain('home-feature-panel--spells');
+    expect(source).toContain('class="modifier-card modifier-card--interactive skill-card');
+    expect(source).toContain("mastery ? 'Padronanza' : proficient ? 'Competenza' : 'Prova base'");
+    expect(source).toContain('class="attack-card__hit"><small>TC</small>');
+    expect(source).toContain('class="attack-card__damage"><small>Danni</small>');
+    expect(source).toContain('class="spell-stats"');
+    expect(source).toContain('class="spell-card__sigil"');
+    expect(source).toContain('spell.school?.trim()');
+    expect(styles).toContain('.skill-card__status');
+    expect(styles).toContain('.attack-card__icon');
+    expect(styles).toContain('.spell-card__level');
+  });
+
   it('renders unarmed attacks alongside equipped weapons', () => {
     const source = readFileSync('src/features/character/home/sections.js', 'utf8');
     expect(source).toContain('const unarmedAttacks = Array.isArray(data.unarmed_attacks)');

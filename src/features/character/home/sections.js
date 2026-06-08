@@ -471,14 +471,13 @@ export function buildSkillList(character) {
     const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
     return `
-          <button class="modifier-card modifier-card--interactive ${statusClass}" type="button" data-skill-card="${skill.key}" aria-label="Tira abilità ${skill.label}">
-            <div>
-              <div class="modifier-title">
-                <strong>${skill.label}</strong>
-                <span class="modifier-ability modifier-ability--${skill.ability}">${abilityShortLabel[skill.ability]}</span>
-              </div>
-            </div>
-            <div class="modifier-value">${formatSigned(total)}</div>
+          <button class="modifier-card modifier-card--interactive skill-card ${statusClass}" type="button" data-skill-card="${skill.key}" aria-label="Tira abilità ${skill.label}">
+            <span class="skill-card__ability skill-card__ability--${skill.ability}" aria-hidden="true">${abilityShortLabel[skill.ability]}</span>
+            <span class="skill-card__content">
+              <span class="skill-card__name">${skill.label}</span>
+              <span class="skill-card__status">${mastery ? 'Padronanza' : proficient ? 'Competenza' : 'Prova base'}</span>
+            </span>
+            <span class="modifier-value skill-card__modifier"><small>Bonus</small>${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -783,15 +782,16 @@ export function buildAttackSection(character, items = [], companions = []) {
       const damageModifier = Number(attack.damage_modifier) || 0;
       const damageText = `${attack.damage || '-'}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
       return `
-          <div class="modifier-card attack-card attack-card--wild-shape" data-roll-attack="wildshape:${index}">
+          <div class="modifier-card attack-card attack-card--wild-shape attack-card--creature" data-roll-attack="wildshape:${index}">
+            <span class="attack-card__icon" aria-hidden="true">✦</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
                 <span class="modifier-ability modifier-ability--str">Forma</span>
-                <span class="attack-card__hit">${formatSigned(attack.to_hit || 0)}</span>
+                <span class="attack-card__hit"><small>TC</small>${formatSigned(attack.to_hit || 0)}</span>
               </div>
               <div class="attack-card__meta">
-                <span class="attack-card__damage">${escapeHtml(damageText)}</span>
+                <span class="attack-card__damage"><small>Danni</small>${escapeHtml(damageText)}</span>
                 <span class="muted">${escapeHtml(activeWildShape.companion.name)}</span>
               </div>
             </div>
@@ -811,14 +811,15 @@ export function buildAttackSection(character, items = [], companions = []) {
     const damageText = `${attack.damage || '-'}${attackStats.damageModifier ? ` ${formatSigned(attackStats.damageModifier)}` : ''}`;
     return `
           <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
+            <span class="attack-card__icon" aria-hidden="true">◆</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
                 <span class="modifier-ability modifier-ability--${abilityKey}">${escapeHtml(abilityLabel)}</span>
-                <span class="attack-card__hit">${formatSigned(attackStats.attackTotal)}</span>
+                <span class="attack-card__hit"><small>TC</small>${formatSigned(attackStats.attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
-                <span class="attack-card__damage">${escapeHtml(damageText)}</span>
+                <span class="attack-card__damage"><small>Danni</small>${escapeHtml(damageText)}</span>
                 <span class="muted">Colpo senz’arma · ${escapeHtml(abilityLabel)}</span>
               </div>
             </div>
@@ -887,15 +888,16 @@ export function buildAttackSection(character, items = [], companions = []) {
       ? `<button class="icon-button icon-button--weapon-mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span aria-hidden="true">🔁</span></button>`
       : '';
     return `
-          <div class="modifier-card attack-card" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
+          <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
+            <span class="attack-card__icon" aria-hidden="true">⚔</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${weapon.name}</strong>
                 <span class="modifier-ability modifier-ability--${attackAbility}">${abilityLabel}</span>
-                <span class="attack-card__hit">${formatSigned(attackTotal)}</span>
+                <span class="attack-card__hit"><small>TC</small>${formatSigned(attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
-                <span class="attack-card__damage">${damageText}</span>
+                <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
                 ${modeText ? `<span class="muted">${modeText}</span>` : ''}
                 ${masteryText ? `<span class="muted" title="${getWeaponMasterySummary(weapon.weapon_mastery)}">${masteryText}</span>` : ''}
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
@@ -917,15 +919,16 @@ export function buildAttackSection(character, items = [], companions = []) {
       const abilityLabel = abilityShortLabel[spellAbilityKey] ?? spellAbilityKey?.toUpperCase();
       const rangeText = spell.range ? `Range ${spell.range}` : '';
       return `
-            <div class="modifier-card attack-card" data-roll-attack="spell:${spell.id}">
+            <div class="modifier-card attack-card attack-card--spell" data-roll-attack="spell:${spell.id}">
+              <span class="attack-card__icon" aria-hidden="true">✧</span>
               <div class="attack-card__body">
                 <div class="attack-card__title">
                   <strong class="attack-card__name">${spell.name}</strong>
                   <span class="modifier-ability modifier-ability--${spellAbilityKey}">${abilityLabel}</span>
-                  <span class="attack-card__hit">${formatSigned(spellAttackBonus)}</span>
+                  <span class="attack-card__hit"><small>TC</small>${formatSigned(spellAttackBonus)}</span>
                 </div>
                 <div class="attack-card__meta">
-                  <span class="attack-card__damage">${damageText}</span>
+                  <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
                  
                   ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
                 </div>
@@ -972,13 +975,16 @@ export function buildSpellSection(character, canManageSpells = false) {
     };
   }).filter((entry) => entry.max > 0);
   const summaryChips = [
-    `${spellAbilityLabel ?? '-'}`,
-    `CD ${spellSaveDc === null ? '-' : spellSaveDc}`,
-    `TC ${spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus)}`
+    { label: 'Caratteristica', value: spellAbilityLabel ?? '-', tone: 'ability' },
+    { label: 'CD salvezza', value: spellSaveDc === null ? '-' : spellSaveDc, tone: 'save' },
+    { label: 'Tiro incantesimo', value: spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus), tone: 'attack' }
   ];
-  const summaryChipRow = summaryChips.length
-    ? `<div class="tag-row">${summaryChips.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
-    : '';
+  const summaryChipRow = `<div class="spell-stats" aria-label="Statistiche da incantatore">${summaryChips.map((chip) => `
+    <span class="spell-stat spell-stat--${chip.tone}">
+      <small>${chip.label}</small>
+      <strong>${chip.value}</strong>
+    </span>
+  `).join('')}</div>`;
   const preparedSpells = spells
     .filter((spell) => {
       const level = Number(spell.level) || 0;
@@ -1003,8 +1009,12 @@ export function buildSpellSection(character, canManageSpells = false) {
           ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-          <span class="spell-prepared-list__name">${spell.name}</span>
-          ${level > 0 ? `<span class="chip chip--small">${level}°</span>` : ''}
+          <span class="spell-card__sigil" aria-hidden="true">✦</span>
+          <span class="spell-card__identity">
+            <span class="spell-prepared-list__name">${spell.name}</span>
+            <span class="spell-card__meta">${spell.school?.trim() || (level > 0 ? 'Incantesimo' : 'Trucchetto')}${prepLabel ? ` · ${prepLabel}` : ''}</span>
+          </span>
+          <span class="spell-card__level">${level > 0 ? `${level}°` : '0'}</span>
         </button>
         <div class="resource-card-actions spell-card-actions">
           ${damageOverlay ? `
