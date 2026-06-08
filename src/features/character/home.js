@@ -30,6 +30,7 @@ import {
   openConditionsModal,
   openPreparedSpellsModal,
   openResourceDetail,
+  openResourcePoolConsumeModal,
   openResourceDrawer,
   openSpellSourceModal,
   openSpellDrawer,
@@ -1216,6 +1217,17 @@ export async function renderHome(container) {
     }
   };
 
+  const requestResourceUse = async (resource) => {
+    if (!resource) return;
+    if (resource.resource_type === 'pool') {
+      const amount = await openResourcePoolConsumeModal(resource);
+      if (amount === null) return;
+      await useResource(resource, amount);
+      return;
+    }
+    await useResource(resource);
+  };
+
   const editResource = (resource) => {
     if (!resource || !canManageResources) return;
     openResourceDrawer(activeCharacter, () => renderHome(container), resource);
@@ -1240,7 +1252,7 @@ export async function renderHome(container) {
   const openResourceDetails = (resource) => {
     if (!resource) return;
     openResourceDetail(resource, {
-      onUse: (amount) => useResource(resource, amount),
+      onUse: () => requestResourceUse(resource),
       onEdit: canManageResources ? () => editResource(resource) : null,
       onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
       onReset: async () => {
@@ -1277,11 +1289,7 @@ export async function renderHome(container) {
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
-      if (resource.resource_type === 'pool') {
-        openResourceDetails(resource);
-        return;
-      }
-      await useResource(resource);
+      await requestResourceUse(resource);
     }));
 
   container.querySelectorAll('[data-use-spell]')

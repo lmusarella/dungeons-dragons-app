@@ -12,6 +12,7 @@ import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsByLevel } from './utils.js';
 import { conditionList } from './constants.js';
+import { attachModalValueStepper } from './hpModal.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
@@ -230,6 +231,49 @@ function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {})
   };
 }
 
+export async function openResourcePoolConsumeModal(resource) {
+  const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
+  const used = Math.max(0, Math.min(Number(resource?.used) || 0, maxUses));
+  const remaining = Math.max(maxUses - used, 0);
+  if (!remaining) return null;
+
+  const content = document.createElement('div');
+  content.className = 'modal-form-grid hp-shortcut-fields resource-pool-consume';
+
+  const availability = document.createElement('p');
+  availability.className = 'resource-pool-consume__availability';
+  availability.innerHTML = `<span>Pool disponibile</span><strong>${remaining}/${maxUses}</strong>`;
+
+  const amountField = buildInput({
+    label: 'Quantità da consumare',
+    name: 'pool_amount',
+    type: 'number',
+    value: '1'
+  });
+  amountField.classList.add('hp-shortcut-fields__amount');
+  const amountInput = amountField.querySelector('input');
+  if (amountInput) {
+    amountInput.min = '1';
+    amountInput.max = String(remaining);
+    amountInput.required = true;
+    attachModalValueStepper(amountInput, { min: 1, max: remaining });
+  }
+
+  const row = document.createElement('div');
+  row.className = 'modal-form-row modal-form-row--balanced hp-shortcut-fields__row';
+  row.appendChild(amountField);
+  content.append(availability, row);
+
+  const formData = await openFormModal({
+    title: resource?.name ? `Consuma ${resource.name}` : 'Consuma pool',
+    submitLabel: 'Consuma',
+    cancelLabel: 'Annulla',
+    content
+  });
+  if (!formData) return null;
+  return Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining));
+}
+
 export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit, onDelete } = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
@@ -254,7 +298,6 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
           <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
             <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
           </div>
-          ${remaining > 0 ? `<label class="field resource-pool__amount"><span>Quantità da consumare</span><input type="number" name="pool_amount" min="1" max="${remaining}" value="1" /></label>` : ''}
         </div>
       ` : ''}
       <div class="detail-rich-text">${renderDetailText(description)}</div>
@@ -308,8 +351,7 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
       return;
     }
     if (!isExhausted && onUse) {
-      const amount = isPool ? Math.max(1, Math.min(Number(formData.get('pool_amount')) || 1, remaining)) : 1;
-      await onUse(amount);
+      await onUse();
     }
   });
 }

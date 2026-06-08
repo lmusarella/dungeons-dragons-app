@@ -9349,9 +9349,6 @@ button:focus-visible,
   height: 16px;
 }
 
-.resource-pool__amount {
-  margin-top: 8px;
-}
 
 .modal-header__top {
   position: relative;
@@ -9420,4 +9417,21 @@ button:focus-visible,
   .modal-header__top {
     padding-inline: 72px;
   }
+}
+
+.resource-pool-consume__availability {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(59, 93, 96, 0.08);
+  color: #5a381f;
+}
+
+.resource-pool-consume__availability strong {
+  color: #3b5d60;
+  font-size: 1rem;
 }

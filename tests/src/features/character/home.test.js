@@ -46,15 +46,21 @@ describe('src/features/character/home.js', () => {
     expect(deathSaveHandler).toContain('keepOpen: true');
   });
 
-  it('opens pool resource details before consuming from the card action', () => {
+  it('opens a compact amount picker when consuming a pool resource', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
+    const requestHandler = source.slice(
+      source.indexOf('const requestResourceUse'),
+      source.indexOf('const editResource')
+    );
     const useHandler = source.slice(
       source.indexOf("container.querySelectorAll('[data-use-resource]')"),
       source.indexOf("container.querySelectorAll('[data-use-spell]')")
     );
-    expect(useHandler).toContain("resource.resource_type === 'pool'");
-    expect(useHandler).toContain('openResourceDetails(resource)');
-    expect(useHandler).toContain('await useResource(resource)');
+    expect(requestHandler).toContain("resource.resource_type === 'pool'");
+    expect(requestHandler).toContain('openResourcePoolConsumeModal(resource)');
+    expect(requestHandler).toContain('useResource(resource, amount)');
+    expect(useHandler).toContain('requestResourceUse(resource)');
+    expect(useHandler).not.toContain('openResourceDetails(resource)');
   });
 
 });
