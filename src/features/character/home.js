@@ -1237,43 +1237,50 @@ export async function renderHome(container) {
     }
   };
 
+  const openResourceDetails = (resource) => {
+    if (!resource) return;
+    openResourceDetail(resource, {
+      onUse: (amount) => useResource(resource, amount),
+      onEdit: canManageResources ? () => editResource(resource) : null,
+      onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
+      onReset: async () => {
+        try {
+          await updateResource(resource.id, { used: 0 });
+          createToast('Risorsa ripristinata');
+          renderHome(container);
+        } catch (error) {
+          createToast('Errore ripristino risorsa', 'error');
+        }
+      },
+      onRecover: async () => {
+        try {
+          await updateResource(resource.id, { used: Math.max((Number(resource.used) || 0) - 1, 0) });
+          createToast('Carica recuperata');
+          renderHome(container);
+        } catch (error) {
+          createToast('Errore recupero carica', 'error');
+        }
+      }
+    });
+  };
+
   container.querySelectorAll('[data-resource-card]')
     .forEach((card) => {
-      const handleOpen = async (event) => {
+      card.addEventListener('click', (event) => {
         if (event.target.closest('button')) return;
         const resource = resources.find((entry) => entry.id === card.dataset.resourceCard);
-        if (!resource) return;
-        openResourceDetail(resource, {
-          onUse: (amount) => useResource(resource, amount),
-          onEdit: canManageResources ? () => editResource(resource) : null,
-          onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
-          onReset: async () => {
-            try {
-              await updateResource(resource.id, { used: 0 });
-              createToast('Risorsa ripristinata');
-              renderHome(container);
-            } catch (error) {
-              createToast('Errore ripristino risorsa', 'error');
-            }
-          },
-          onRecover: async () => {
-            try {
-              await updateResource(resource.id, { used: Math.max((Number(resource.used) || 0) - 1, 0) });
-              createToast('Carica recuperata');
-              renderHome(container);
-            } catch (error) {
-              createToast('Errore recupero carica', 'error');
-            }
-          }
-        });
-      };
-      card.addEventListener('click', handleOpen);
+        openResourceDetails(resource);
+      });
     });
 
   container.querySelectorAll('[data-use-resource]')
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
       if (!resource) return;
+      if (resource.resource_type === 'pool') {
+        openResourceDetails(resource);
+        return;
+      }
       await useResource(resource);
     }));
 

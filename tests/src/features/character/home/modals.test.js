@@ -35,4 +35,14 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('subject?.data?.avatar_url || subject?.stat_block?.image_url');
     expect(source).toContain('alt="Foto di ${subjectName}"');
   });
+  it('lets pool resources choose the consumed amount and aligns detail actions in the header row', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const layout = readFileSync('src/ui/layout.js', 'utf8');
+    expect(source).toContain('name="pool_amount"');
+    expect(source).toContain("isPool ? 'Consuma' : 'Usa'");
+    expect(source).toContain("modal.querySelector('[data-form-header-actions]')");
+    expect(layout).toContain('class="modal-header__top"');
+    expect(layout).toContain('data-form-header-actions');
+  });
+
 });

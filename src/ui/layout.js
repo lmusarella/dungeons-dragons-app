@@ -121,7 +121,10 @@ export function renderLayout(container) {
         <div class="modal-overlay" data-form-overlay></div>
         <div class="modal-card" role="dialog" aria-modal="true">
           <div class="modal-header">
-            <p class="modal-title" data-form-title>Inserisci dati</p>
+            <div class="modal-header__top">
+              <p class="modal-title" data-form-title>Inserisci dati</p>
+              <div class="modal-header__actions" data-form-header-actions></div>
+            </div>
             <div class="modal-divider" aria-hidden="true"></div>
           </div>
           <form data-form-body class="modal-form">

@@ -9353,45 +9353,71 @@ button:focus-visible,
   margin-top: 8px;
 }
 
-.detail-modal-actions {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  display: flex;
-  gap: 6px;
-  z-index: 1;
-}
-
-.modal-header {
+.modal-header__top {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 82px;
 }
 
-.modal-header:has(.detail-modal-actions) .modal-title {
-  padding-right: 84px;
-}
-
-.character-hp-actions {
+.modal-header__actions {
+  position: absolute;
+  top: 50%;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 74px;
+  justify-content: flex-end;
+  transform: translateY(-50%);
+}
+
+.modal-header__actions:empty {
+  display: none;
+}
+
+.detail-modal-actions .resource-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.character-hp-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.character-hp-actions--inline {
+  flex: 0 0 auto;
 }
 
 .character-hp-actions .familiar-hp-action {
-  min-height: 32px;
-  padding: 5px 9px;
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 0.64rem;
 }
 
-@media (max-width: 720px) {
-  .hp-vitals-card__footer {
+.character-hp-actions .familiar-hp-action > span {
+  font-size: 0.85rem;
+}
+
+@container (max-width: 470px) {
+  .hp-bar-label {
     flex-wrap: wrap;
   }
 
-  .character-hp-actions {
-    order: 3;
-    width: 100%;
+  .character-hp-actions--inline {
+    margin-left: auto;
   }
+}
 
-  .character-hp-actions .familiar-hp-action {
-    flex: 1 1 0;
+@media (max-width: 520px) {
+  .modal-header__top {
+    padding-inline: 72px;
   }
 }

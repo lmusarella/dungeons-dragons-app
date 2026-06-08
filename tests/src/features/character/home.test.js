@@ -46,4 +46,15 @@ describe('src/features/character/home.js', () => {
     expect(deathSaveHandler).toContain('keepOpen: true');
   });
 
+  it('opens pool resource details before consuming from the card action', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const useHandler = source.slice(
+      source.indexOf("container.querySelectorAll('[data-use-resource]')"),
+      source.indexOf("container.querySelectorAll('[data-use-spell]')")
+    );
+    expect(useHandler).toContain("resource.resource_type === 'pool'");
+    expect(useHandler).toContain('openResourceDetails(resource)');
+    expect(useHandler).toContain('await useResource(resource)');
+  });
+
 });

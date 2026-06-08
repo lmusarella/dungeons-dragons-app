@@ -287,6 +287,14 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="hp-bar-label__title">Punti ferita</span>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
+              <span class="character-hp-actions character-hp-actions--inline" aria-label="Azioni sui punti ferita">
+                <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>
+                  <span aria-hidden="true">+</span><strong>Cura</strong>
+                </button>
+                <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>
+                  <span aria-hidden="true">−</span><strong>Danno</strong>
+                </button>
+              </span>
               ${hasTempHp ? `
               <span class="hp-bar-label__temp-group is-active">
                 <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
@@ -315,14 +323,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                   title="Lancia dado vita"
                   ${canEditCharacter ? '' : 'disabled'}
                 ><span aria-hidden="true">🎲</span></button>
-              </div>
-              <div class="character-hp-actions" aria-label="Azioni sui punti ferita">
-                <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>
-                  <span aria-hidden="true">+</span><strong>Cura</strong>
-                </button>
-                <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>
-                  <span aria-hidden="true">−</span><strong>Danno</strong>
-                </button>
               </div>
               <div class="hp-panel-insights" aria-label="Sensi e percezione">
                 <span class="vital-mini-chip"><span>Percezione passiva</span><strong>${passivePerception ?? '-'}</strong></span>

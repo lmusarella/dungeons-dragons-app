@@ -41,5 +41,7 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).not.toContain('toggleFieldVisibility(weaponMasteryRow');
     expect(source).not.toContain('toggleFieldVisibility(weaponThrownRow');
     expect(source).not.toContain('toggleFieldVisibility(armorBonusRow');
+    expect(source).toContain("labelField.classList.add('weapon-damage-mode-field--name')");
+    expect(source).toContain("attackModifierField.classList.add('weapon-damage-mode-field--attack-modifier')");
   });
 });

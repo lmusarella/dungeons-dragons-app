@@ -189,11 +189,9 @@ export async function openConditionsModal(character) {
 
 function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {}) {
   if (!onEdit && !onDelete) return null;
-  const header = modal.querySelector('.modal-header');
-  const divider = header?.querySelector('.modal-divider');
-  if (!header || !divider) return null;
-  const actions = document.createElement('div');
-  actions.className = 'detail-modal-actions';
+  const actions = modal.querySelector('[data-form-header-actions]');
+  if (!actions) return null;
+  actions.classList.add('detail-modal-actions');
   const submitAction = (action) => {
     if (!formEl) return;
     let actionInput = formEl.querySelector('input[name="detail_action"]');
@@ -226,8 +224,10 @@ function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {})
     deleteButton.addEventListener('click', () => submitAction('delete'));
     actions.appendChild(deleteButton);
   }
-  header.insertBefore(actions, divider);
-  return () => actions.remove();
+  return () => {
+    actions.replaceChildren();
+    actions.classList.remove('detail-modal-actions');
+  };
 }
 
 export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit, onDelete } = {}) {
@@ -264,7 +264,7 @@ export function openResourceDetail(resource, { onUse, onReset, onRecover, onEdit
   openFormModal({
     title: resource.name || 'Risorsa',
     submitLabel: hasAction
-      ? (isExhausted ? 'Ripristina' : 'Usa')
+      ? (isExhausted ? 'Ripristina' : (isPool ? 'Consuma' : 'Usa'))
       : 'Chiudi',
     cancelLabel: isActive ? (hasAction ? 'Chiudi' : null) : null,
     content: detail,

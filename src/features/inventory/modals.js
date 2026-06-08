@@ -368,26 +368,30 @@ export async function openItemModal(character, item, items, onSave) {
       placeholder: 'Es. Due mani',
       value: label
     });
+    labelField.classList.add('weapon-damage-mode-field--name');
     const dieField = buildInput({
       label: 'Dado',
       name: 'weapon_damage_mode_die',
       placeholder: 'Es. 1d10',
       value: damage_die
     });
+    dieField.classList.add('weapon-damage-mode-field--die');
     const modifierField = buildInput({
       label: 'Mod. danno',
       name: 'weapon_damage_mode_modifier',
       type: 'number',
       value: damage_modifier ?? 0
     });
+    modifierField.classList.add('weapon-damage-mode-field--damage-modifier');
     const attackModifierField = buildInput({
       label: 'Mod. colpire',
       name: 'weapon_damage_mode_attack_modifier',
       type: 'number',
       value: attack_modifier ?? 0
     });
+    attackModifierField.classList.add('weapon-damage-mode-field--attack-modifier');
     const typeField = document.createElement('label');
-    typeField.className = 'field';
+    typeField.className = 'field weapon-damage-mode-field--type';
     typeField.innerHTML = '<span>Tipo</span>';
     const typeSelect = buildSelect(damageTypeOptions, damage_type || item?.damage_type || '');
     typeSelect.name = 'weapon_damage_mode_type';

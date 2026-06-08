@@ -15,4 +15,11 @@ describe('inventory accordion styles', () => {
     expect(source).toMatch(/\.inventory-group--container\.inventory-container-accordion,\s*\.inventory-loose-accordion\s*{[^}]*border:\s*2px solid rgba\(148, 123, 90, 0\.68\);/s);
     expect(source).toMatch(/\.inventory-container-accordion__summary,\s*\.inventory-loose-accordion__summary\s*{[^}]*background:\s*linear-gradient\(135deg, #efd9aa, #fff3d9\);/s);
   });
+  it('lays out additional weapon grips across two readable rows', () => {
+    const source = readFileSync('src/styles/theme.css', 'utf8');
+    expect(source).toContain('"name die type remove"');
+    expect(source).toContain('"damage attack type remove"');
+    expect(source).toContain('.weapon-damage-mode-field--attack-modifier { grid-area: attack; }');
+  });
+
 });
