@@ -1284,8 +1284,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const canHaveChildrenField = document.createElement('div');
   canHaveChildrenField.className = 'field ability-parent-toggle condition-modal__item';
   canHaveChildrenField.innerHTML = `
-    <span class="condition-modal__item-label">
-      <strong>Può avere sotto-abilità</strong>
+    <span class="condition-modal__item-label">   
       <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
     </span>
     <label class="diceov-toggle condition-modal__toggle ability-parent-toggle__control">
