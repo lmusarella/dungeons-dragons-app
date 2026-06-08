@@ -1,27 +1,11 @@
-alter table public.resources
-  add column if not exists parent_resource_id uuid null;
+-- Esegui questo script sui database che hanno già applicato add_resource_parent.sql.
+-- Aggiunge il flag padre e il costo configurabile delle sotto-abilità.
 
 alter table public.resources
   add column if not exists can_have_children boolean not null default false;
 
 alter table public.resources
   add column if not exists resource_cost integer not null default 1;
-
-alter table public.resources
-  drop constraint if exists resources_parent_resource_id_fkey;
-
-alter table public.resources
-  add constraint resources_parent_resource_id_fkey
-  foreign key (parent_resource_id)
-  references public.resources(id)
-  on delete cascade;
-
-alter table public.resources
-  drop constraint if exists resources_parent_not_self_check;
-
-alter table public.resources
-  add constraint resources_parent_not_self_check
-  check (parent_resource_id is null or parent_resource_id <> id);
 
 alter table public.resources
   drop constraint if exists resources_resource_cost_check;
@@ -34,10 +18,6 @@ alter table public.resources
   add constraint resources_resource_cost_check
   check (resource_cost >= 1);
 
-create index if not exists resources_parent_resource_id_idx
-  on public.resources(parent_resource_id);
-
-
 update public.resources parent
 set can_have_children = true
 where exists (
@@ -46,6 +26,11 @@ where exists (
   where child.parent_resource_id = parent.id
 );
 
+comment on column public.resources.can_have_children is
+  'Indica se la risorsa può contenere sotto-abilità collegate.';
+
+comment on column public.resources.resource_cost is
+  'Numero di cariche o punti del padre consumati usando questa opzione.';
 
 notify pgrst, 'reload schema';
 select pg_notify('pgrst', 'reload schema');

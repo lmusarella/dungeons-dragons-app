@@ -276,21 +276,33 @@ export async function openResourcePoolConsumeModal(resource) {
 
 export async function openResourceOptionModal(resource, childResources = []) {
   if (!childResources.length) return null;
+  const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
+  const used = Math.max(0, Number(resource?.used) || 0);
+  const remaining = Math.max(maxUses - used, 0);
+  const options = childResources.map((child) => {
+    const cost = Math.max(1, Number(child.resource_cost) || 1);
+    return { child, cost, available: remaining >= cost };
+  });
+  const firstAvailableId = options.find((option) => option.available)?.child.id;
   const content = document.createElement('div');
   content.className = 'resource-option-picker';
   content.innerHTML = `
-    <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. La carica verrà consumata dall’abilità principale.</p>
+    <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. Hai <strong>${remaining}</strong> risorse disponibili.</p>
     <div class="resource-option-picker__list">
-      ${childResources.map((child, index) => `
-        <label class="resource-option-picker__item">
-          <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${index === 0 ? 'checked' : ''} />
+      ${options.map(({ child, cost, available }) => `
+        <label class="resource-option-picker__item ${available ? '' : 'is-disabled'}">
+          <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${String(child.id) === String(firstAvailableId) ? 'checked' : ''} ${available ? '' : 'disabled'} />
           <span class="resource-option-picker__content">
-            <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+            <span class="resource-option-picker__heading">
+              <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+              <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">Costo ${cost}</span>
+            </span>
             <small>${[
     child.cast_time,
     child.damage_dice_notation ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}` : 'Nessun tiro'
   ].filter(Boolean).map(escapeHtml).join(' · ')}</small>
             ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
+            ${available ? '' : `<small class="resource-option-picker__warning">Servono ${cost} risorse; disponibili ${remaining}.</small>`}
           </span>
         </label>
       `).join('')}
@@ -300,7 +312,14 @@ export async function openResourceOptionModal(resource, childResources = []) {
     title: `Usa ${resource?.name || 'abilità'}`,
     submitLabel: 'Usa opzione',
     cancelLabel: 'Annulla',
-    content
+    content,
+    onOpen: ({ modal }) => {
+      const submitButton = modal.querySelector('[data-form-submit]');
+      if (submitButton) submitButton.disabled = !firstAvailableId;
+      return () => {
+        if (submitButton) submitButton.disabled = false;
+      };
+    }
   });
   return formData?.get('resource_option_id') || null;
 }
@@ -378,6 +397,7 @@ export function openResourceDetail(resource, {
                   <div class="resource-detail-option__badges">
                     ${child.cast_time ? `<span>${escapeHtml(child.cast_time)}</span>` : ''}
                     <span>${escapeHtml(diceLabel)}</span>
+                    <span>Costo ${Math.max(1, Number(child.resource_cost) || 1)}</span>
                   </div>
                 </div>
                 ${childDescription ? `<p>${escapeHtml(childDescription)}</p>` : '<p class="muted">Nessuna descrizione.</p>'}
@@ -1259,12 +1279,12 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const canHaveChildrenField = document.createElement('label');
   canHaveChildrenField.className = 'field ability-parent-toggle';
   canHaveChildrenField.innerHTML = `
-    <span>Tipologia padre</span>
-    <label class="chip ability-parent-toggle__control">
-      <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} />
-      Può avere sotto-abilità
-    </label>
-    <small>Attiva questa opzione per usare l’abilità come contenitore di sotto-abilità selezionabili.</small>
+    <span>Può avere sotto-abilità</span>
+    <span class="diceov-toggle ability-parent-toggle__control">
+      <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} aria-label="Può avere sotto-abilità" />
+      <span class="diceov-toggle-track" aria-hidden="true"></span>
+    </span>
+    <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
   `;
   const canHaveChildrenInput = canHaveChildrenField.querySelector('input[name="can_have_children"]');
 
@@ -1336,6 +1356,19 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
 
+  const resourceCostField = buildInput({
+    label: 'Costo risorsa padre',
+    name: 'resource_cost',
+    type: 'number',
+    value: Math.max(1, Number(resource?.resource_cost) || 1)
+  });
+  const resourceCostInput = resourceCostField.querySelector('input');
+  if (resourceCostInput) {
+    resourceCostInput.min = '1';
+    resourceCostInput.step = '1';
+  }
+  enhanceNumericField(resourceCostField, { decrementLabel: 'Riduci costo risorsa', incrementLabel: 'Aumenta costo risorsa' });
+
   const descriptionField = buildTextarea({
     label: 'Descrizione',
     name: 'description',
@@ -1353,6 +1386,12 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     content: chargeSectionRows
   });
   form.appendChild(usageSection);
+  const childUsageSection = buildSection({
+    title: 'Consumo risorsa padre',
+    description: 'Configura quante cariche o punti del padre vengono consumati usando questa sotto-abilità.',
+    content: [buildRow([resourceCostField], 'compact')]
+  });
+  form.appendChild(childUsageSection);
   form.appendChild(buildSection({
     title: 'Tiro automatico',
     description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
@@ -1374,6 +1413,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     const isPassive = resourceTypeSelect.value === 'passive' || isChild;
     const canBeParent = !isChild && resourceTypeSelect.value !== 'passive';
     usageSection.hidden = isChild;
+    childUsageSection.hidden = !isChild;
     canHaveChildrenField.hidden = isChild;
     if (canHaveChildrenInput) {
       canHaveChildrenInput.disabled = !canBeParent;
@@ -1420,6 +1460,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
       character_id: character.id,
       parent_resource_id: parentId,
       can_have_children: canHaveChildren,
+      resource_cost: parentId ? Math.max(1, Number(formData.get('resource_cost')) || 1) : 1,
       name,
       image_url: formData.get('image_url')?.trim() || null,
       description: formData.get('description')?.trim() || null,

@@ -1212,21 +1212,26 @@ export async function renderHome(container) {
       ? resources.find((entry) => String(entry.id) === String(resource.parent_resource_id))
       : resource;
     const maxUses = Number(parentResource?.max_uses) || 0;
-    if (!parentResource || !maxUses || Number(parentResource.used) >= maxUses) return;
-    const consumedAmount = parentResource.resource_type === 'pool'
-      ? Math.max(1, Math.min(Number(amount) || 1, maxUses - (Number(parentResource.used) || 0)))
-      : 1;
+    const used = Math.max(0, Number(parentResource?.used) || 0);
+    const remaining = Math.max(maxUses - used, 0);
+    const consumedAmount = Math.max(1, Number(amount) || 1);
+    if (!parentResource || !maxUses || remaining < consumedAmount) {
+      createToast(`Risorse insufficienti: ne servono ${consumedAmount}, disponibili ${remaining}`, 'error');
+      return false;
+    }
     try {
       await updateResource(parentResource.id, {
-        used: Math.min((Number(parentResource.used) || 0) + consumedAmount, maxUses)
+        used: used + consumedAmount
       });
       createToast(usageResource === parentResource ? 'Risorsa usata' : `${usageResource.name} usata`);
       if (shouldAutoUsageDice(activeCharacter)) {
         openResourceRollOverlay(usageResource);
       }
       renderHome(container);
+      return true;
     } catch (error) {
       createToast('Errore utilizzo risorsa', 'error');
+      return false;
     }
   };
 
@@ -1243,6 +1248,11 @@ export async function renderHome(container) {
       if (!selectedChildId) return;
       usageResource = childResources.find((entry) => String(entry.id) === String(selectedChildId));
       if (!usageResource) return;
+    }
+    if (usageResource !== parentResource) {
+      const resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1);
+      await useResource(parentResource, resourceCost, usageResource);
+      return;
     }
     if (parentResource.resource_type === 'pool') {
       const amount = await openResourcePoolConsumeModal(parentResource);

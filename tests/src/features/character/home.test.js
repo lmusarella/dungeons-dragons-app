@@ -63,4 +63,16 @@ describe('src/features/character/home.js', () => {
     expect(useHandler).not.toContain('openResourceDetails(resource)');
   });
 
+  it('consumes the configured child cost and rejects insufficient parent resources', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const useHandler = source.slice(
+      source.indexOf('const useResource'),
+      source.indexOf('const editResource')
+    );
+    expect(useHandler).toContain('const consumedAmount = Math.max(1, Number(amount) || 1)');
+    expect(useHandler).toContain('remaining < consumedAmount');
+    expect(useHandler).toContain('const resourceCost = Math.max(1, Number(usageResource.resource_cost) || 1)');
+    expect(useHandler).toContain('useResource(parentResource, resourceCost, usageResource)');
+  });
+
 });

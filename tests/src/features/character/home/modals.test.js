@@ -66,7 +66,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('name="resource_option_id"');
     expect(source).toContain("parentSelect.name = 'parent_resource_id'");
     expect(source).toContain("entry.can_have_children || String(entry.id) === String(selectedParentId)");
-    expect(source).toContain('La carica verrà consumata dall’abilità principale');
+    expect(source).toContain('Hai <strong>${remaining}</strong> risorse disponibili');
   });
 
   it('wires child edit and delete icon buttons explicitly', () => {
@@ -116,6 +116,28 @@ describe('src/features/character/home/modals.js', () => {
     );
     expect(detailModal).toContain('${isPool && maxUses ? `');
     expect(detailModal).toContain('resource-pool resource-pool--detail');
+  });
+
+  it('configures child resource costs and disables unaffordable options', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const picker = source.slice(
+      source.indexOf('export async function openResourceOptionModal'),
+      source.indexOf('export function openResourceDetail')
+    );
+    expect(source).toContain("name: 'resource_cost'");
+    expect(source).toContain("resource_cost: parentId ? Math.max(1, Number(formData.get('resource_cost')) || 1) : 1");
+    expect(source).toContain("title: 'Consumo risorsa padre'");
+    expect(picker).toContain('remaining >= cost');
+    expect(picker).toContain("available ? '' : 'disabled'");
+    expect(picker).toContain('submitButton.disabled = !firstAvailableId');
+    expect(styles).toContain('.resource-option-picker__item.is-disabled');
+  });
+
+  it('renders the parent capability control as a compact toggle', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain('class="diceov-toggle ability-parent-toggle__control"');
+    expect(source).toContain('class="diceov-toggle-track"');
   });
 
 });

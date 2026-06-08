@@ -54,12 +54,18 @@ npm install
 npm run dev
 ```
 
+## Aggiornamento risorse collegate
+
+Per un database che ha già applicato la prima versione della migrazione delle sotto-abilità, esegui lo script `db/update_resource_linked_options.sql` nel SQL Editor di Supabase.
+
+Lo script aggiunge il flag padre `can_have_children`, il costo `resource_cost` e aggiorna la cache dello schema Supabase.
+
 ## Tabelle Supabase (assunte)
 
 - `profiles(id, display_name, created_at)`
 - `characters(id, user_id, name, system, data, created_at, updated_at)`
 - `items(id, user_id, character_id, name, qty, weight, value_cp, category, container_item_id, equipped_state, attunement_required, attunement_active, notes, created_at, updated_at)`
-- `resources(id, user_id, character_id, parent_resource_id, can_have_children, name, max_uses, used, reset_on, notes, created_at, updated_at)`
+- `resources(id, user_id, character_id, parent_resource_id, can_have_children, resource_cost, name, max_uses, used, reset_on, notes, created_at, updated_at)`
 - `wallets(character_id, user_id, cp, sp, ep, gp, pp, updated_at)`
 - `money_transactions(id, user_id, character_id, direction, amount, reason, occurred_on, created_at)`
 - `journal_entries(id, user_id, character_id, entry_date, session_no, title, content, mood, is_pinned, created_at, updated_at)`
