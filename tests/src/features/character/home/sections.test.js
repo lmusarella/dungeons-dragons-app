@@ -62,6 +62,13 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('Percezione passiva');
     expect(source).toContain('Scurovisione');
     expect(source).toContain('Dadi vita');
+    expect(source).toContain('data-hp-action="heal"');
+    expect(source).toContain('data-hp-action="damage"');
+    expect(source).toContain('buildResourcePool(res)');
+    expect(source).not.toContain('data-edit-resource="${res.id}"');
+    expect(source).not.toContain('data-delete-resource="${res.id}"');
+    expect(source).not.toContain('data-edit-spell="${spell.id}"');
+    expect(source).not.toContain('data-delete-spell="${spell.id}"');
     expect(source).toContain('Trasformati (${wildShapeForms.length})');
     expect(source).toContain('Punti ferita forma');
     expect(source).toContain('hp-bar__fill--wild');
