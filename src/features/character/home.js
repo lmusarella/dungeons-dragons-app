@@ -513,8 +513,8 @@ export async function renderHome(container) {
   container.innerHTML = `
     <div class="home-layout">
       <div class="home-column home-column--left">
-        <section class="card home-card home-section">
-          <header class="card-header">
+        <section class="card home-card home-section home-feature-panel home-feature-panel--saves">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Tiri salvezza</p>
               <h3></h3>
@@ -527,8 +527,8 @@ export async function renderHome(container) {
           </header>
           ${sheetCharacter ? buildSavingThrowSection(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
         </section>
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--skills">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Abilità</p>            
             </div>
@@ -542,8 +542,8 @@ export async function renderHome(container) {
             ${sheetCharacter ? buildSkillList(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--special-skills">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Tiri abilità speciali</p>
             </div>
@@ -577,8 +577,8 @@ export async function renderHome(container) {
         ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
       </div>
       <div class="home-column home-column--right">
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--attacks">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Attacchi</p>
             </div>
@@ -595,8 +595,8 @@ export async function renderHome(container) {
           </div>
         </section>
         ${activeCharacter?.data?.is_spellcaster ? `
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--spells">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Incantesimi</p>
             </div>
@@ -610,7 +610,7 @@ export async function renderHome(container) {
                 </button>
               ` : ''}
               ${activeCharacter && canEditCharacter ? `
-                <button class="icon-button icon-button--add" data-add-spell aria-label="Aggiungi incantesimo">
+                <button class="icon-button icon-button--add icon-button--section-add" type="button" data-add-spell aria-label="Aggiungi incantesimo">
                   <span aria-hidden="true">+</span>
                 </button>
               ` : ''}
@@ -621,8 +621,8 @@ export async function renderHome(container) {
           </div>
         </section>
         ` : ''}
-        <section class="card home-card home-section home-scroll-panel">
-          <header class="card-header">
+        <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--resources">
+          <header class="card-header home-feature-header">
             <div>
               <p class="eyebrow">Risorse</p>           
             </div>

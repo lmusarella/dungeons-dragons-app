@@ -10,7 +10,9 @@ export function renderLayout(container) {
           <div class="app-logo">
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
           </div>
-          <div>           
+          <div class="app-brand">
+            <strong>Companion</strong>
+            <span>Scheda digitale</span>
           </div>
         </div>
         <div class="app-header-right">
@@ -31,7 +33,7 @@ export function renderLayout(container) {
             </div>
           </div>
           <div class="header-action-wrap">
-            <button class="menu-button" type="button" data-menu-button aria-label="Apri menu">
+            <button class="menu-button" type="button" data-menu-button aria-label="Apri menu" aria-expanded="false">
               <span></span>
               <span></span>
               <span></span>
@@ -48,45 +50,45 @@ export function renderLayout(container) {
           <section class="actions-fab-group" data-fab-group aria-label="Riposo">
             <p class="actions-fab-group__title">Riposo</p>
             <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-rest="short_rest">Breve</button>
-              <button class="actions-fab-item" type="button" data-rest="long_rest">Lungo</button>
+              <button class="actions-fab-item" type="button" data-rest="short_rest"><span class="actions-fab-item__icon" aria-hidden="true">◐</span><span>Breve</span></button>
+              <button class="actions-fab-item" type="button" data-rest="long_rest"><span class="actions-fab-item__icon" aria-hidden="true">☾</span><span>Lungo</span></button>
             </div>
           </section>
           <section class="actions-fab-group" data-fab-group aria-label="Azioni">
             <p class="actions-fab-group__title">Azioni</p>
             <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-hp-action="heal">Cura</button>
-              <button class="actions-fab-item" type="button" data-hp-action="damage">Danno</button>
-              <button class="actions-fab-item" type="button" data-open-dice="roller">Dadi</button>
+              <button class="actions-fab-item" type="button" data-hp-action="heal"><span class="actions-fab-item__icon" aria-hidden="true">＋</span><span>Cura</span></button>
+              <button class="actions-fab-item" type="button" data-hp-action="damage"><span class="actions-fab-item__icon" aria-hidden="true">−</span><span>Danno</span></button>
+              <button class="actions-fab-item" type="button" data-open-dice="roller"><span class="actions-fab-item__icon" aria-hidden="true">◆</span><span>Dadi</span></button>
             </div>
           </section>
           <section class="actions-fab-group" data-fab-group aria-label="Effetti temporanei">
             <p class="actions-fab-group__title">Effetti temporanei</p>
             <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-edit-conditions data-fab-scope="home">Condizioni</button>
-              <button class="actions-fab-item" type="button" data-edit-resistances data-fab-scope="home">Resistenze</button>
-              <button class="actions-fab-item" type="button" data-edit-roll-adjustments data-fab-scope="home">Vant/Svant</button>
+              <button class="actions-fab-item" type="button" data-edit-conditions data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">!</span><span>Condizioni</span></button>
+              <button class="actions-fab-item" type="button" data-edit-resistances data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">◈</span><span>Resistenze</span></button>
+              <button class="actions-fab-item" type="button" data-edit-roll-adjustments data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">±</span><span>Vant/Svant</span></button>
             </div>
           </section>
           <section class="actions-fab-group" data-fab-group aria-label="Inventario">
             <p class="actions-fab-group__title">Inventario</p>
             <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-add-loot>Loot</button>
-              <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory">Paga</button>
-              <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory">Ricevi</button>
+              <button class="actions-fab-item" type="button" data-add-loot><span class="actions-fab-item__icon" aria-hidden="true">◇</span><span>Loot</span></button>
+              <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory"><span class="actions-fab-item__icon" aria-hidden="true">↑</span><span>Paga</span></button>
+              <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory"><span class="actions-fab-item__icon" aria-hidden="true">↓</span><span>Ricevi</span></button>
             </div>
           </section>
         </div>
         <button class="actions-fab-toggle" type="button" data-actions-toggle aria-expanded="false">
-          Azioni
+          <span class="actions-fab-toggle__icon" aria-hidden="true">＋</span><span>Azioni</span>
         </button>
       </div>
       <div class="actions-fab-backdrop" aria-hidden="true"></div>
-      <nav class="bottom-nav" data-bottom-nav>
-        <a href="#/home" data-tab="home"><span class="bottom-nav__pill">Scheda Personaggio</span></a>
-        <a href="#/familiars" data-tab="familiars"><span class="bottom-nav__pill">Famigli</span></a>
-        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill">Inventario</span></a>
-        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill">Diario</span></a>
+      <nav class="bottom-nav" data-bottom-nav aria-label="Navigazione principale">
+        <a href="#/home" data-tab="home"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">⌂</span><span>Scheda</span></span></a>
+        <a href="#/familiars" data-tab="familiars"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">♞</span><span>Famigli</span></span></a>
+        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">◇</span><span>Inventario</span></span></a>
+        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">☷</span><span>Diario</span></span></a>
       </nav>
       <div class="drawer" data-drawer>
         <div class="drawer-overlay" data-drawer-close></div>
@@ -158,6 +160,7 @@ export function renderLayout(container) {
   if (menuButton) {
     menuButton.addEventListener('click', () => {
       openDrawer(buildMenuContent());
+      menuButton.setAttribute('aria-expanded', 'true');
     });
   }
 
@@ -175,6 +178,7 @@ export function renderLayout(container) {
     const target = event.target.closest('[data-drawer-close]');
     if (target) {
       closeDrawer();
+      menuButton?.setAttribute('aria-expanded', 'false');
     }
     if (actionsFab && actionsFab.classList.contains('is-open')) {
       const insideFab = event.target.closest('[data-actions-fab]');
@@ -243,14 +247,57 @@ export function updateHeaderInfo() {
 }
 
 function buildMenuContent() {
+  const { user, characters, activeCharacterId } = getState();
+  const activeCharacter = characters.find((character) => character.id === activeCharacterId);
+  const currentRoute = window.location.hash.replace('#/', '') || 'home';
+  const userName = user?.user_metadata?.display_name || user?.email || 'Utente';
+  const menuEntries = [
+    { route: 'characters', icon: '♙', label: 'Personaggi', description: 'Seleziona o crea un personaggio' },
+    { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci gli incantesimi condivisi' },
+    { route: 'settings', icon: '⚙', label: 'Impostazioni', description: 'Configura il personaggio attivo' }
+  ];
+
   const wrapper = document.createElement('div');
-  wrapper.className = 'menu-list';
+  wrapper.className = 'menu-list menu-navigation';
   wrapper.innerHTML = `
-    <a class="menu-item" href="#/characters" data-drawer-close>Seleziona personaggi</a>
-    <a class="menu-item" href="#/library" data-drawer-close>Archivio centralizzato</a>
-    <a class="menu-item" href="#/settings" data-drawer-close>Impostazioni</a>
-    <button class="menu-item menu-item--danger" type="button" data-logout data-drawer-close>Logout</button>
+    <header class="menu-navigation__header">
+      <div class="menu-navigation__profile">
+        <span class="menu-navigation__avatar" data-menu-avatar></span>
+        <span class="menu-navigation__identity">
+          <small>Profilo</small>
+          <strong data-menu-user></strong>
+          <span data-menu-character></span>
+        </span>
+      </div>
+      <button class="menu-navigation__close" type="button" data-drawer-close aria-label="Chiudi menu">×</button>
+    </header>
+    <nav class="menu-navigation__section" aria-label="Menu account">
+      <span class="menu-navigation__section-title">Gestione</span>
+      ${menuEntries.map((entry) => `
+        <a class="menu-item menu-navigation__item ${currentRoute === entry.route ? 'is-active' : ''}" href="#/${entry.route}" data-drawer-close ${currentRoute === entry.route ? 'aria-current="page"' : ''}>
+          <span class="menu-navigation__item-icon" aria-hidden="true">${entry.icon}</span>
+          <span class="menu-navigation__item-copy"><strong>${entry.label}</strong><small>${entry.description}</small></span>
+          <span class="menu-navigation__chevron" aria-hidden="true">›</span>
+        </a>
+      `).join('')}
+    </nav>
+    <footer class="menu-navigation__footer">
+      <button class="menu-item menu-item--danger menu-navigation__logout" type="button" data-logout data-drawer-close>
+        <span class="menu-navigation__item-icon" aria-hidden="true">↪</span>
+        <span class="menu-navigation__item-copy"><strong>Esci</strong><small>Termina la sessione corrente</small></span>
+      </button>
+    </footer>
   `;
+
+  const avatar = wrapper.querySelector('[data-menu-avatar]');
+  const userNameElement = wrapper.querySelector('[data-menu-user]');
+  const characterNameElement = wrapper.querySelector('[data-menu-character]');
+  if (avatar) renderAvatar(avatar, userName, user?.user_metadata?.avatar_url);
+  if (userNameElement) userNameElement.textContent = userName;
+  if (characterNameElement) characterNameElement.textContent = activeCharacter?.name
+    ? `Personaggio: ${activeCharacter.name}`
+    : 'Nessun personaggio attivo';
+
   return wrapper;
 }
 

@@ -63,9 +63,10 @@ function sortSpells(spells, sortState) {
 export async function renderLibrary(container) {
   container.innerHTML = `
     <section class="auth-screen character-select-view library-view">
-      <div class="card character-select-card library-shell">
-        <header class="character-select-header library-hero">
+      <div class="card character-select-card library-shell library-shell--refined">
+        <header class="character-select-header library-hero library-hero--refined">
           <div class="library-hero__copy">
+            <span class="library-hero__icon" aria-hidden="true">☷</span>
             <span class="library-hero__eyebrow">Compendio condiviso</span>
             <p class="title-car-select">Archivio centralizzato</p>
             <p class="muted">Trova, filtra e mantieni ordinati gli incantesimi condivisi tra i personaggi.</p>
@@ -75,7 +76,7 @@ export async function renderLibrary(container) {
             <span>Nuovo incantesimo</span>
           </button>
         </header>
-        <div class="library-filter-panel" data-library-filters></div>
+        <div class="library-filter-panel library-filter-panel--refined" data-library-filters></div>
         <div class="library-results-heading" data-library-results-heading></div>
         <div class="library-spell-list-header">
           <button class="library-sort-header" type="button" data-library-sort="level" aria-label="Ordina per livello crescente" aria-sort="none">Livello <span aria-hidden="true" data-library-sort-icon="level">↕</span></button>

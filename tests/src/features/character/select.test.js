@@ -22,4 +22,12 @@ describe('src/features/character/select.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('renders character counts and a dedicated empty state', () => {
+    const source = readFileSync('src/features/character/select.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('character-select-header__count');
+    expect(source).toContain('character-select-empty');
+    expect(styles).toContain('.character-select-card--refined .character-card.is-active');
+  });
 });

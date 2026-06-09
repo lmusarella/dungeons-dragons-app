@@ -91,6 +91,72 @@ describe('src/features/character/home/sections.js', () => {
   });
 
 
+  it('renders distinct visual hierarchies for skills, attacks, and spells', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const homeSource = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+
+    expect(homeSource).toContain('home-feature-panel--skills');
+    expect(homeSource).toContain('home-feature-panel--attacks');
+    expect(homeSource).toContain('home-feature-panel--spells');
+    expect(homeSource).toContain('home-feature-panel--saves');
+    expect(homeSource).toContain('home-feature-panel--special-skills');
+    expect(homeSource).toContain('home-feature-panel--resources');
+    expect(source).toContain('class="modifier-card modifier-card--interactive skill-card');
+    expect(source).toContain("mastery ? 'Maestria' : proficient ? 'Competenza' : 'Prova base'");
+    expect(source).toContain('class="attack-card__hit"><small>TC</small>');
+    expect(source).toContain('class="attack-card__damage"><small>Danni</small>');
+    expect(source).toContain('class="spell-stats"');
+    expect(source).toContain('class="spell-card__sigil"');
+    expect(source).toContain('spell.school?.trim()');
+    expect(source).toContain('class="modifier-card modifier-card--interactive saving-throw-card');
+    expect(source).toContain('class="modifier-card modifier-card--interactive skill-card special-skill-card');
+    expect(source).toContain('class="resource-card__marker"');
+    expect(source).toContain('class="resource-card__kind"');
+    expect(styles).toContain('.skill-card__status');
+    expect(source).not.toContain('attack-card__icon');
+    expect(styles).not.toContain('.attack-card__icon');
+    expect(source).not.toContain('spell-card__level');
+    expect(source).toContain('aria-label="Incantesimo di ${level}° livello"');
+    expect(source).not.toContain("`${level}°` : '0'");
+    expect(styles).toContain('.spell-card-actions');
+    expect(styles).toContain('gap: 9px');
+    expect(styles).toContain('.saving-throw-card__status');
+    expect(styles).toContain('.special-skill-card.modifier-card');
+    expect(styles).toContain('.home-feature-panel--resources .resource-card');
+    expect(styles).not.toContain('#6542a6');
+    expect(source).toContain('class="detail-section proficiency-overview"');
+    expect(source).toContain('class="tab-bar proficiency-tab-bar"');
+    expect(source).toContain('class="card home-card home-section home-scroll-panel equipment-management"');
+    expect(source).toContain('class="modifier-card attack-card resource-card inventory-item-card equipped-item-card"');
+    expect(source).toContain('class="equipment-empty-state"');
+    expect(styles).toContain('.proficiency-tab-bar .tab-bar__button.is-active');
+    expect(styles).toContain('.equipped-item-card.resource-card');
+    expect(styles).toContain('.modal-card .field input:focus');
+    expect(styles).toContain('--section-teal: #2f5f63');
+    expect(styles).toContain('.home-feature-panel {');
+    expect(styles).toContain('inset 0 4px 0 var(--feature-color)');
+    expect(styles).toContain('.journal-section-card--entries');
+    expect(styles).toContain('.settings-panel--inventory');
+    expect(source).toContain('attack-action-button--damage');
+    expect(source).toContain('attack-action-button--mode');
+    expect(source).toContain('const WEAPON_MODE_ICON');
+    expect(source).toContain('attack-action-button__svg');
+    expect(styles).toContain('.modifier-card--mastery .skill-card__status::before');
+    expect(styles).toContain('.modifier-card--proficiency .saving-throw-card__status::before');
+    expect(styles).toContain('.spell-prepared-list__card.resource-card');
+    expect(styles).toContain('inset 3px 0 0 rgba(59, 93, 96, 0.68)');
+    expect(styles).toContain('.home-feature-panel--resources .resource-card');
+    expect(styles).toContain('inset 3px 0 0 rgba(97, 116, 59, 0.68)');
+    expect(styles).toContain('.equipment-management .equipped-item-card.resource-card');
+    expect(styles).toContain('background: #f6ead8');
+    expect(source).toContain('icon-button--section-add');
+    expect(styles).toContain('.attack-card.modifier-card:not(.resource-card) .attack-card__title');
+    expect(styles).toContain('grid-template-columns: minmax(0, 1fr) auto auto');
+    expect(styles).toContain('.home-feature-panel--spells .charge-indicator--used');
+    expect(styles).toContain('background: #d9655b');
+  });
+
   it('renders unarmed attacks alongside equipped weapons', () => {
     const source = readFileSync('src/features/character/home/sections.js', 'utf8');
     expect(source).toContain('const unarmedAttacks = Array.isArray(data.unarmed_attacks)');

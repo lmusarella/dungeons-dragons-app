@@ -22,4 +22,12 @@ describe('src/features/auth/login.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('renders the refined login card and profile note', () => {
+    const source = readFileSync('src/features/auth/login.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('login-card--refined');
+    expect(source).toContain('login-security-note');
+    expect(styles).toContain('.login-security-note');
+  });
 });

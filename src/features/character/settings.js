@@ -29,10 +29,11 @@ export async function renderSettings(container) {
           <span class="settings-hero__badge">${active.name || 'Personaggio attivo'}</span>
         </header>
         <form class="settings-form" data-settings-form>
-          <section class="settings-panel">
-            <div class="settings-panel__copy">
-              <h3>Inventario</h3>
-              <p class="muted">Scegli come calcolare e mostrare carico e pesi.</p>
+          <section class="settings-panel settings-panel--inventory">
+            <div class="settings-panel__copy settings-panel__heading">
+              <span class="settings-panel__icon" aria-hidden="true">◇</span>
+              <div><h3>Inventario</h3>
+              <p class="muted">Scegli come calcolare e mostrare carico e pesi.</p></div>
             </div>
             <div class="settings-control-grid">
               <label class="field settings-control-card">
@@ -52,9 +53,10 @@ export async function renderSettings(container) {
             </div>
           </section>
           <section class="settings-panel settings-panel--inline">
-            <div class="settings-panel__copy">
-              <h3>Automazioni</h3>
-              <p class="muted">Lancia automaticamente i dadi quando usi abilità, risorse o incantesimi.</p>
+            <div class="settings-panel__copy settings-panel__heading">
+              <span class="settings-panel__icon" aria-hidden="true">◆</span>
+              <div><h3>Automazioni</h3>
+              <p class="muted">Lancia automaticamente i dadi quando usi abilità, risorse o incantesimi.</p></div>
             </div>
             <label class="settings-toggle-card">
               <span>

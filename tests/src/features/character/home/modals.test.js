@@ -177,4 +177,32 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain("child.resource_cost_variable ? 'Costo variabile'");
   });
 
+  it('renders an accessible preparation workflow with live selection feedback', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const preparedModal = source.slice(
+      source.indexOf('export function openPreparedSpellsModal'),
+      source.indexOf('export function openAvatarModal')
+    );
+
+    expect(preparedModal).toContain('prepared-spells-modal__intro');
+    expect(preparedModal).toContain('data-prepared-count');
+    expect(preparedModal).toContain('data-removed-count');
+    expect(preparedModal).toContain('data-prepared-status');
+    expect(preparedModal).toContain('data-prepared-delete');
+    expect(preparedModal).toContain("title: 'Elimina incantesimo'");
+    expect(preparedModal).toContain('deletedIds.add(spellId)');
+    expect(preparedModal).toContain('.filter((entry) => !deletedIds.has(entry.id))');
+    expect(preparedModal).toContain('await Promise.all(linksToRemove.map((row) => removeCharacterSpell(row.id)))');
+    expect(preparedModal).toContain("item?.classList.toggle('is-prepared', isPrepared)");
+    expect(preparedModal).toContain("cardClass: ['modal-card--form', 'modal-card--prepared-spells']");
+    expect(preparedModal).toContain("submitLabel: 'Salva preparazione'");
+    expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
+    expect(styles).toContain('.prepared-spells-modal__check');
+    expect(styles).toContain('.prepared-spells-modal__delete');
+    expect(styles).toContain('.prepared-spells-modal__school');
+    expect(styles).toContain('.prepared-spells-modal__empty');
+  });
+
+
 });

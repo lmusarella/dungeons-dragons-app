@@ -29,17 +29,19 @@ export async function renderCharacterSelect(container) {
 
     container.innerHTML = `
     <section class="auth-screen character-select-view">
-      <div class="card character-select-card">
+      <div class="card character-select-card character-select-card--refined">
       <header class="character-select-header">
         <div>
-          <p class="title-car-select">Seleziona o crea un personaggio</p>        
+          <span class="character-select-header__eyebrow">Personaggi</span>
+          <p class="title-car-select">Seleziona o crea un personaggio</p>
+          <small class="character-select-header__count">${characters.length} ${characters.length === 1 ? 'personaggio disponibile' : 'personaggi disponibili'}</small>
         </div>
         ${canCreateCharacter ? '<button class="icon-button icon-button--add character-select-add" type="button" data-create-character aria-label="Nuovo personaggio" title="Nuovo personaggio">+</button>' : ''}
       </header>
         <div class="character-card-grid">
         ${characters.length
     ? characters.map((character) => buildCharacterCard(character, character.id === activeCharacter?.id)).join('')
-    : '<p>Non hai ancora creato un personaggio.</p>'}
+    : '<div class="character-select-empty"><span aria-hidden="true">◇</span><div><strong>Nessun personaggio</strong><small>Crea il tuo primo personaggio per iniziare l’avventura.</small></div></div>'}
         </div>
       </div>
     </section>

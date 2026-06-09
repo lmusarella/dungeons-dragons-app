@@ -6,6 +6,13 @@ import { getAbilityModifier } from '../character/home/utils.js';
 import { buildHpShortcutFields } from '../character/home/hpModal.js';
 import { openAvatarModal } from '../character/home/modals.js';
 
+const DAMAGE_ACTION_ICON = `
+  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>
+    <circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="9" r="1"></circle>
+    <circle cx="12" cy="12" r="1"></circle><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle>
+  </svg>`;
+
 const ABILITY_KEYS = ['str', 'dex', 'con', 'wis', 'int', 'cha'];
 const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', wis: 'SAG', int: 'INT', cha: 'CAR' };
 const KIND_OPTIONS = [
@@ -142,7 +149,7 @@ function buildCompanionCard(companion, isSelected = false) {
           <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
         </div>
         <div class="familiar-attack-actions">
-          <button class="icon-button icon-button--damage" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">🔥</button>
+          <button class="attack-action-button attack-action-button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}" title="Tira i danni">${DAMAGE_ACTION_ICON}</button>
         </div>
       </div>
     `;
@@ -160,7 +167,7 @@ function buildCompanionCard(companion, isSelected = false) {
   const tempTrackFlex = hasTempHp ? hpTemp : 0;
 
   return `
-    <article class="card home-card home-section familiar-sheet ${isSelected ? 'is-active' : ''}" data-familiar-panel="${escapeHtml(companion.id)}" ${isSelected ? '' : 'hidden'}>
+    <article class="card home-card home-section familiar-sheet familiar-sheet--refined ${isSelected ? 'is-active' : ''}" data-familiar-panel="${escapeHtml(companion.id)}" ${isSelected ? '' : 'hidden'}>
       <header class="card-header familiar-sheet__header">
         ${imageUrl ? `
         <button class="familiar-avatar familiar-avatar--image familiar-avatar--button" type="button" data-preview-companion="${escapeHtml(companion.id)}" aria-label="Apri foto di ${escapeHtml(companion.name)}">${avatar}</button>
@@ -185,13 +192,13 @@ function buildCompanionCard(companion, isSelected = false) {
         </div>
       </header>
       <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
-        <section class="home-section familiar-detail-panel familiar-characteristics-panel">
+        <section class="home-section familiar-detail-panel familiar-characteristics-panel familiar-detail-panel--abilities">
           <header class="familiar-panel-title">
             <p class="eyebrow">Caratteristiche</p>
           </header>
           <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-characteristics-grid familiar-ability-grid">${abilities}</div>
         </section>
-        <section class="hp-panel familiar-vitals-panel" aria-label="Statistiche principali di ${escapeHtml(companion.name)}">
+        <section class="hp-panel familiar-vitals-panel familiar-detail-panel--vitals" aria-label="Statistiche principali di ${escapeHtml(companion.name)}">
           <div class="combat-vitals-grid familiar-combat-vitals-grid">
             <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${armorClass}">
               <span class="combat-stat__icon" aria-hidden="true">
@@ -243,13 +250,13 @@ function buildCompanionCard(companion, isSelected = false) {
             </div>
           </div>
         </section>
-        <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel">
+        <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel familiar-detail-panel--attacks">
           <header class="familiar-panel-title">
             <p class="eyebrow">Attacchi</p>
           </header>
           <div class="home-scroll-body">${attacks}</div>
         </section>
-        <section class="home-section familiar-detail-panel familiar-notes-panel">
+        <section class="home-section familiar-detail-panel familiar-notes-panel familiar-detail-panel--notes">
           <header class="familiar-panel-title">
             <p class="eyebrow">Note</p>
           </header>
@@ -292,8 +299,8 @@ export async function renderFamiliars(container) {
 
   const selectedCompanionId = companions[0]?.id;
   container.innerHTML = `
-    <div class="home-layout familiars-layout">
-      <aside class="card home-card home-section familiars-quick-panel" aria-label="Seleziona famiglio">
+    <div class="home-layout familiars-layout familiars-layout--refined">
+      <aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
         <div class="familiars-quick-panel__header">
           <div>
             <p class="eyebrow">Famigli & Evocazioni</p>
