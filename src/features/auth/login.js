@@ -8,7 +8,7 @@ export function renderLogin(container) {
 
   container.innerHTML = `
     <section class="login-view auth-screen">
-      <div class="card login-card">
+      <div class="card login-card login-card--refined">
         <div class="login-header">
           <img class="login-logo" src="${baseUrl}icons/logo_dd.png" alt="Dungeon & Dragon" />
           <div>
@@ -17,6 +17,7 @@ export function renderLogin(container) {
           </div>
         </div>
         <p class="login-subtitle">Usa email e password per entrare o creare l'account.</p>
+        <div class="login-security-note"><span aria-hidden="true">◇</span><span>I dati del personaggio restano associati al tuo profilo.</span></div>
         <form class="login-form" data-login-form>
           <label class="field">
             <span >Email</span>

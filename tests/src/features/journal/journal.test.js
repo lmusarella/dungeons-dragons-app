@@ -22,4 +22,16 @@ describe('src/features/journal/journal.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('renders the refined journal hierarchy without replacing its backgrounds', () => {
+    const source = readFileSync('src/features/journal/journal.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const refinement = styles.slice(styles.indexOf('/* FAB, journal and secondary screens refinement'));
+
+    expect(source).toContain('journal-hero-card--refined');
+    expect(source).toContain('journal-section-card--refined');
+    expect(source).toContain('journal-entry-card__marker');
+    expect(styles).toContain('.journal-entry-card--entry:hover');
+    expect(refinement).not.toMatch(/background(?:-image|-color)?\s*:/);
+  });
 });

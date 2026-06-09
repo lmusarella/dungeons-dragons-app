@@ -94,7 +94,7 @@ export async function renderJournal(container) {
   const pinnedCount = entries.filter((entry) => entry.is_pinned).length;
   container.innerHTML = `
     <div class="journal-layout">
-      <section class="card journal-hero-card">
+      <section class="card journal-hero-card journal-hero-card--refined">
         <div class="journal-hero-card__copy">
           <p class="eyebrow">Diario</p>
           <h2>Appunti di avventura</h2>
@@ -107,7 +107,7 @@ export async function renderJournal(container) {
           <span><strong>${sessionFiles.length}</strong> file</span>
         </div>
       </section>
-      <section class="card journal-section-card journal-section-card--entries">
+      <section class="card journal-section-card journal-section-card--entries journal-section-card--refined">
         <header class="card-header journal-card-header">
           <div>
             <p class="eyebrow">Voci diario</p>
@@ -129,7 +129,7 @@ export async function renderJournal(container) {
         <div data-journal-list></div>
       </section>
 
-      <section class="card journal-section-card journal-section-card--files">
+      <section class="card journal-section-card journal-section-card--files journal-section-card--refined">
         <header class="card-header journal-card-header">
           <div>
             <p class="eyebrow">File sessioni</p>
@@ -392,6 +392,7 @@ function buildEntryList(entries, entryTagMap, tagMap) {
     const preview = getContentPreview(entry.content || '');
     return `
           <li class="journal-entry-card journal-entry-card--entry ${entry.is_pinned ? 'is-pinned' : ''}" data-entry-card>
+            <span class="journal-entry-card__marker" aria-hidden="true">${entry.is_pinned ? '◆' : '◇'}</span>
             <div class="journal-entry-card__header">
               <div class="journal-entry-card__summary">
                 <div class="journal-entry-card__title-row">

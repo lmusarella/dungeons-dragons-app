@@ -34,6 +34,9 @@ describe('src/ui/layout.js', () => {
     expect(styles).toContain('.app-shell .app-header');
     expect(styles).toContain('.app-shell .bottom-nav');
     expect(styles).toContain('.bottom-nav a.active .bottom-nav__pill');
+    expect(source).toContain('class="actions-fab-item__icon"');
+    expect(source).toContain('class="actions-fab-toggle__icon"');
+    expect(styles).toContain('.actions-fab-item__icon');
   });
 
 });

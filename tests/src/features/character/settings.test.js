@@ -22,4 +22,12 @@ describe('src/features/character/settings.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('renders structured setting panel headings', () => {
+    const source = readFileSync('src/features/character/settings.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(source).toContain('settings-panel__heading');
+    expect(source).toContain('settings-panel__icon');
+    expect(styles).toContain('.settings-panel__heading');
+  });
 });
