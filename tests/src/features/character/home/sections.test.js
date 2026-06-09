@@ -120,6 +120,14 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.special-skill-card.modifier-card');
     expect(styles).toContain('.home-feature-panel--resources .resource-card');
     expect(styles).not.toContain('#6542a6');
+    expect(source).toContain('class="detail-section proficiency-overview"');
+    expect(source).toContain('class="tab-bar proficiency-tab-bar"');
+    expect(source).toContain('class="card home-card home-section home-scroll-panel equipment-management"');
+    expect(source).toContain('class="modifier-card attack-card resource-card inventory-item-card equipped-item-card"');
+    expect(source).toContain('class="equipment-empty-state"');
+    expect(styles).toContain('.proficiency-tab-bar .tab-bar__button.is-active');
+    expect(styles).toContain('.equipped-item-card.resource-card');
+    expect(styles).toContain('.modal-card .field input:focus');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {

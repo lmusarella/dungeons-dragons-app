@@ -609,54 +609,54 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     : [];
   const weaponMasteryTab = weaponMasteries.length > 0 || Boolean(data.weapon_mastery_enabled);
   return `
-    <div class="detail-section">
+    <div class="detail-section proficiency-overview">
       <div class="proficiency-tabs" data-proficiency-tabs>
-        <div class="tab-bar" role="tablist" aria-label="Competenze extra">
+        <div class="tab-bar proficiency-tab-bar" role="tablist" aria-label="Competenze extra">
           <button class="tab-bar__button is-active" type="button" role="tab" aria-selected="true" data-proficiency-tab="equipment">
-            Equipaggiamento
+            <span>Equipaggiamento</span><small>${equipped.length}</small>
           </button>
           ${weaponMasteryTab ? `<button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="weapon-masteries">
-            Maestrie armi
+            <span>Maestrie armi</span><small>${weaponMasteries.length}</small>
           </button>` : ''}
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="tools">
-            Strumenti
+            <span>Strumenti</span><small>${tools.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="languages">
-            Lingue
+            <span>Lingue</span><small>${languages.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="talents">
-            Talenti
+            <span>Talenti</span><small>${talents.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="defenses">
-            Resistenze & Immunità
+            <span>Difese</span><small>${(damageDefenses.resistances?.length || 0) + (damageDefenses.immunities?.length || 0)}</small>
           </button>
         </div>
-        <div class="detail-card detail-card--text tab-panel is-active" role="tabpanel" data-proficiency-panel="equipment">
+        <div class="detail-card detail-card--text tab-panel proficiency-panel is-active" role="tabpanel" data-proficiency-panel="equipment">
           ${equipped.length
-    ? `<div class="tag-row">${equipped.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    ? `<div class="tag-row proficiency-chip-list">${equipped.map((label) => `<span class="chip proficiency-chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Nessuna competenza equipaggiamento.</p>'}
         </div>
-        ${weaponMasteryTab ? `<div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="weapon-masteries">
+        ${weaponMasteryTab ? `<div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="weapon-masteries">
           ${weaponMasteries.length
     ? `<div class="weapon-mastery-list">${weaponMasteries.map((key) => `<div class="weapon-mastery-card__body"><strong>${getWeaponMasteryLabel(key)}</strong><small>${getWeaponMasterySummary(key)}</small></div>`).join('')}</div>`
     : '<p class="muted">Nessuna maestria arma selezionata.</p>'}
         </div>` : ''}
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="tools">
+        <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="tools">
           ${tools.length
-    ? `<div class="tag-row">${tools.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    ? `<div class="tag-row proficiency-chip-list">${tools.map((label) => `<span class="chip proficiency-chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi strumenti nel profilo.</p>'}
         </div>
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="languages">
+        <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="languages">
           ${languages.length
-    ? `<div class="tag-row">${languages.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    ? `<div class="tag-row proficiency-chip-list">${languages.map((label) => `<span class="chip proficiency-chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi lingue conosciute nel profilo.</p>'}
         </div>
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="talents">
+        <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="talents">
           ${talents.length
-    ? `<div class="tag-row">${talents.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
+    ? `<div class="tag-row proficiency-chip-list">${talents.map((label) => `<span class="chip proficiency-chip proficiency-chip--talent">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
         </div>
-        <div class="detail-card detail-card--text tab-panel" role="tabpanel" data-proficiency-panel="defenses">
+        <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="defenses">
           <div class="defense-summary-grid">
             <div class="defense-summary-card">
               <span>Resistenze</span>
@@ -679,13 +679,13 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
   const totalWeight = calcTotalWeight(items);
   const weightUnit = getWeightUnit(character);
   return `
-    <section class="card home-card home-section home-scroll-panel">
-      <header class="card-header">
+    <section class="card home-card home-section home-scroll-panel equipment-management">
+      <header class="card-header equipment-management__header">
         <div>
           <p class="eyebrow">Gestione Equipaggiamento</p>
-          <div class="pill-row">
-            <span class="pill pill--accent">Oggetti in sintonia: ${attunedCount}</span>
-            <span class="pill">Carico totale: ${formatWeight(totalWeight, weightUnit)}</span>
+          <div class="pill-row equipment-summary">
+            <span class="pill equipment-summary__pill equipment-summary__pill--attunement"><small>Sintonia</small><strong>${attunedCount}</strong></span>
+            <span class="pill equipment-summary__pill equipment-summary__pill--weight"><small>Carico</small><strong>${formatWeight(totalWeight, weightUnit)}</strong></span>
           </div>
         </div>
         <div class="actions">
@@ -702,19 +702,19 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
             ${equippedItems.map((item) => {
     const statusLabels = getItemStatusLabels(item);
     return `
-              <li class="modifier-card attack-card resource-card inventory-item-card">
-                <div class="resource-card__badges">
+              <li class="modifier-card attack-card resource-card inventory-item-card equipped-item-card">
+                <div class="resource-card__badges equipped-item-card__badges">
                   ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${statusLabels.magic}</span>` : ''}
                   ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${statusLabels.attunement}</span>` : ''}
                 </div>
                 <div class="attack-card__body resource-card__body">
-                  <div class="resource-card__title item-info">
-                    ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : ''}
+                  <div class="resource-card__title item-info equipped-item-card__info">
+                    ${item.image_url ? `<img class="item-avatar equipped-item-card__image" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : '<span class="equipped-item-card__placeholder" aria-hidden="true">◇</span>'}
                     <div class="item-info-body">
                       <div class="item-info-line">
                         <button class="item-name-button attack-card__name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
-                        <span class="muted item-meta">
-                          ${getCategoryLabel(item.category)} · ${getBodyPartLabels(getEquipSlots(item))}
+                        <span class="muted item-meta equipped-item-card__meta">
+                          <span>${getCategoryLabel(item.category)}</span><span>${getBodyPartLabels(getEquipSlots(item))}</span>
                         </span>
                       </div>
                     </div>
@@ -722,7 +722,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
                 </div>
                 ${canEditCharacter ? `
                   <div class="resource-card-actions">
-                    <button class="resource-action-button" type="button" data-unequip="${item.id}">Rimuovi</button>
+                    <button class="resource-action-button equipped-item-card__remove" type="button" data-unequip="${item.id}">Rimuovi</button>
                   </div>
                 ` : ''}
               </li>
@@ -730,7 +730,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
   }).join('')}
           </ul>
         `
-    : '<p class="muted">Nessun oggetto equipaggiato.</p>'}
+    : '<div class="equipment-empty-state"><span aria-hidden="true">◇</span><div><strong>Nessun oggetto equipaggiato</strong><small>Gli oggetti assegnati agli slot compariranno qui.</small></div></div>'}
     </section>
   `;
 }
