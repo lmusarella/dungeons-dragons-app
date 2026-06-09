@@ -12435,3 +12435,297 @@ button:focus-visible,
     min-height: 58px;
   }
 }
+
+/* Familiar panels, roll expertise and combat actions */
+.skill-card.modifier-card--proficiency,
+.saving-throw-card.modifier-card--proficiency,
+.special-skill-card.modifier-card--proficiency {
+  border-color: #2f7a57;
+  box-shadow: inset 4px 0 0 #2f7a57, 0 5px 14px rgba(47, 122, 87, 0.16);
+}
+
+.skill-card.modifier-card--mastery,
+.special-skill-card.modifier-card--mastery {
+  border-color: #a56720;
+  box-shadow: inset 4px 0 0 #a56720, 0 5px 14px rgba(165, 103, 32, 0.18);
+}
+
+.modifier-card--proficiency .skill-card__status,
+.modifier-card--proficiency .saving-throw-card__status {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid #2f7a57;
+  border-radius: 999px;
+  background: #2f7a57;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(47, 122, 87, 0.2);
+}
+
+.modifier-card--proficiency .skill-card__status::before,
+.modifier-card--proficiency .saving-throw-card__status::before {
+  content: '✓';
+  font-size: 0.55rem;
+  font-weight: 900;
+}
+
+.modifier-card--mastery .skill-card__status {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid #a56720;
+  border-radius: 999px;
+  background: #a56720;
+  color: #fffdf7;
+  box-shadow: 0 2px 6px rgba(165, 103, 32, 0.22);
+}
+
+.modifier-card--mastery .skill-card__status::before {
+  content: '★';
+  font-size: 0.52rem;
+}
+
+.skill-card.modifier-card--proficiency .skill-card__ability,
+.saving-throw-card.modifier-card--proficiency .saving-throw-card__ability {
+  border-color: #2f7a57;
+  box-shadow: 0 0 0 2px rgba(47, 122, 87, 0.12);
+}
+
+.skill-card.modifier-card--mastery .skill-card__ability,
+.special-skill-card.modifier-card--mastery .skill-card__ability {
+  border-color: #a56720;
+  box-shadow: 0 0 0 2px rgba(165, 103, 32, 0.13);
+}
+
+.attack-action-button {
+  min-height: 31px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 8px 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.attack-action-button__icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.attack-action-button--damage {
+  border-color: #bd593c;
+  background: #a9422e;
+  color: #fffaf5;
+  box-shadow: 0 4px 10px rgba(169, 66, 46, 0.22);
+}
+
+.attack-action-button--damage .attack-action-button__icon {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.attack-action-button--spell {
+  border-color: #3b6d70;
+  background: #315f62;
+  box-shadow: 0 4px 10px rgba(49, 95, 98, 0.24);
+}
+
+.attack-action-button--mode {
+  border-color: #b58a4b;
+  background: #f5e8d2;
+  color: #68461f;
+  box-shadow: 0 3px 8px rgba(113, 75, 32, 0.14);
+}
+
+.attack-action-button--mode .attack-action-button__icon {
+  border: 1px solid #c9a873;
+  background: #fff9ef;
+  color: #805625;
+}
+
+.attack-action-button:hover,
+.attack-action-button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.attack-action-button--damage:hover,
+.attack-action-button--damage:focus-visible {
+  border-color: #8f2f20;
+  box-shadow: 0 7px 15px rgba(169, 66, 46, 0.3);
+}
+
+.attack-action-button--spell:hover,
+.attack-action-button--spell:focus-visible {
+  border-color: #244c4e;
+  box-shadow: 0 7px 15px rgba(49, 95, 98, 0.3);
+}
+
+.attack-action-button--mode:hover,
+.attack-action-button--mode:focus-visible {
+  border-color: #94672e;
+  box-shadow: 0 6px 13px rgba(113, 75, 32, 0.2);
+}
+
+.attack-card__actions {
+  align-self: stretch;
+  justify-content: flex-end;
+}
+
+.spell-card-actions__damage {
+  width: auto;
+  height: 30px;
+  margin-top: 0;
+  font-size: 0.6rem;
+}
+
+.spell-prepared-list__card.resource-card {
+  border-color: #557e80;
+  box-shadow: inset 4px 0 0 #3b5d60, 0 5px 14px rgba(59, 93, 96, 0.14);
+}
+
+.spell-prepared-list__card.resource-card:hover,
+.spell-prepared-list__card.resource-card:focus-within {
+  border-color: #2f5b5e;
+  box-shadow: inset 4px 0 0 #2f5b5e, 0 8px 18px rgba(59, 93, 96, 0.2);
+}
+
+.home-feature-panel--resources .resource-card {
+  border-color: #7b8e52;
+  box-shadow: inset 4px 0 0 #61743b, 0 5px 14px rgba(97, 116, 59, 0.14);
+}
+
+.home-feature-panel--resources .resource-card:hover,
+.home-feature-panel--resources .resource-card:focus-within {
+  border-color: #52642e;
+  box-shadow: inset 4px 0 0 #52642e, 0 8px 18px rgba(97, 116, 59, 0.2);
+}
+
+.familiars-quick-panel--refined {
+  border: 2px solid rgba(154, 101, 37, 0.52);
+  box-shadow: inset 0 4px 0 #9a6525, 0 10px 24px rgba(154, 101, 37, 0.13);
+}
+
+.familiars-quick-panel--refined .familiars-quick-panel__header {
+  padding-top: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(154, 101, 37, 0.3);
+}
+
+.familiars-quick-panel--refined .eyebrow {
+  color: #8a571c;
+  font-weight: 900;
+}
+
+.familiar-quick-card {
+  border-width: 2px;
+  border-color: #d1c0a4;
+}
+
+.familiar-quick-card.is-active {
+  border-color: #2f6c64;
+  box-shadow: inset 4px 0 0 #2f6c64, 0 6px 15px rgba(47, 108, 100, 0.18);
+}
+
+.familiar-sheet--refined {
+  border: 2px solid rgba(47, 95, 99, 0.52);
+  box-shadow: inset 0 4px 0 #2f5f63, 0 12px 28px rgba(47, 95, 99, 0.14);
+}
+
+.familiar-sheet--refined .familiar-sheet__header {
+  padding-top: 4px;
+  border-bottom-color: rgba(47, 95, 99, 0.34);
+}
+
+.familiar-sheet--refined .familiar-sheet__title > strong {
+  color: #294f52;
+}
+
+.familiar-detail-panel--abilities,
+.familiar-detail-panel--vitals,
+.familiar-detail-panel--attacks,
+.familiar-detail-panel--notes {
+  border-width: 2px;
+  box-shadow: 0 5px 14px rgba(62, 48, 31, 0.07);
+}
+
+.familiar-detail-panel--abilities {
+  border-color: rgba(50, 112, 82, 0.48);
+  box-shadow: inset 4px 0 0 #327052, 0 5px 14px rgba(50, 112, 82, 0.1);
+}
+
+.familiar-detail-panel--vitals {
+  border: 2px solid rgba(55, 107, 124, 0.48);
+  border-radius: 16px;
+  box-shadow: inset 4px 0 0 #376b7c, 0 5px 14px rgba(55, 107, 124, 0.1);
+}
+
+.familiar-detail-panel--attacks {
+  border-color: rgba(161, 60, 50, 0.5);
+  box-shadow: inset 4px 0 0 #a13c32, 0 5px 14px rgba(161, 60, 50, 0.11);
+}
+
+.familiar-detail-panel--notes {
+  border-color: rgba(154, 101, 37, 0.46);
+  box-shadow: inset 4px 0 0 #9a6525, 0 5px 14px rgba(154, 101, 37, 0.1);
+}
+
+.familiar-detail-panel--abilities .eyebrow { color: #327052; font-weight: 900; }
+.familiar-detail-panel--attacks .eyebrow { color: #a13c32; font-weight: 900; }
+.familiar-detail-panel--notes .eyebrow { color: #8a571c; font-weight: 900; }
+
+.familiar-ability-card {
+  border-width: 2px;
+}
+
+.familiar-attack-card,
+.weapon-card.familiar-attack-card {
+  border: 2px solid #c56850;
+  box-shadow: inset 4px 0 0 #a13c32, 0 4px 12px rgba(161, 60, 50, 0.1);
+}
+
+.familiar-attack-card:hover,
+.familiar-attack-card:focus-visible {
+  border-color: #983629;
+  box-shadow: inset 4px 0 0 #983629, 0 7px 17px rgba(161, 60, 50, 0.17);
+}
+
+.familiar-damage-button {
+  min-width: 72px;
+}
+
+@media (max-width: 560px) {
+  .attack-card__actions {
+    grid-column: 2;
+    flex-wrap: wrap;
+  }
+
+  .attack-action-button {
+    min-height: 30px;
+  }
+
+  .spell-prepared-list__card.resource-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .spell-card-actions {
+    justify-content: flex-end;
+  }
+}

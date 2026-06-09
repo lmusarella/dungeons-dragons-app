@@ -795,8 +795,8 @@ export function buildAttackSection(character, items = [], companions = []) {
               </div>
             </div>
             <div class="attack-card__actions">
-              <button class="icon-button icon-button--fire" data-roll-damage="wildshape:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
-                <span aria-hidden="true">🔥</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="wildshape:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
+                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
               </button>
             </div>
           </div>
@@ -823,8 +823,8 @@ export function buildAttackSection(character, items = [], companions = []) {
               </div>
             </div>
             <div class="attack-card__actions">
-              <button class="icon-button icon-button--fire" data-roll-damage="unarmed:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
-                <span aria-hidden="true">🔥</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="unarmed:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
+                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
               </button>
             </div>
           </div>
@@ -884,7 +884,7 @@ export function buildAttackSection(character, items = [], companions = []) {
     const masteryText = masteryLabel ? `Maestria: ${masteryLabel}${masteryKnown ? '' : ' (non selezionata)'}` : '';
     const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
     const cycleButton = renderedModes.length > 1
-      ? `<button class="icon-button icon-button--weapon-mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span aria-hidden="true">🔁</span></button>`
+      ? `<button class="attack-action-button attack-action-button--mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span class="attack-action-button__icon" aria-hidden="true">↔</span><span>Presa</span></button>`
       : '';
     return `
           <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
@@ -904,8 +904,8 @@ export function buildAttackSection(character, items = [], companions = []) {
             </div>
             <div class="attack-card__actions">
               ${cycleButton}
-              <button class="icon-button icon-button--fire" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}">
-                <span aria-hidden="true">🔥</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}">
+                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
               </button>
             </div>
           </div>
@@ -932,8 +932,8 @@ export function buildAttackSection(character, items = [], companions = []) {
                   ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
                 </div>
               </div>
-              <button class="icon-button icon-button--fire" data-roll-damage="spell:${spell.id}" aria-label="Calcola danni ${spell.name}">
-                <span aria-hidden="true">🔥</span>
+              <button class="attack-action-button attack-action-button--damage attack-action-button--spell" data-roll-damage="spell:${spell.id}" aria-label="Calcola danni ${spell.name}">
+                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
               </button>
             </div>
           `;
@@ -1017,8 +1017,8 @@ export function buildSpellSection(character, canManageSpells = false) {
         </button>
         <div class="resource-card-actions spell-card-actions">
           ${damageOverlay ? `
-            <button class="icon-button icon-button--fire spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
-              <span aria-hidden="true">🔥</span>
+            <button class="attack-action-button attack-action-button--damage attack-action-button--spell spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
+              <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
             </button>
           ` : ''}
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}

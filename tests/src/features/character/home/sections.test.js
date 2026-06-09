@@ -133,6 +133,15 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('inset 0 4px 0 var(--feature-color)');
     expect(styles).toContain('.journal-section-card--entries');
     expect(styles).toContain('.settings-panel--inventory');
+    expect(source).toContain('attack-action-button--damage');
+    expect(source).toContain('attack-action-button--mode');
+    expect(source).toContain('<span>Presa</span>');
+    expect(styles).toContain('.modifier-card--mastery .skill-card__status::before');
+    expect(styles).toContain('.modifier-card--proficiency .saving-throw-card__status::before');
+    expect(styles).toContain('.spell-prepared-list__card.resource-card');
+    expect(styles).toContain('inset 4px 0 0 #3b5d60');
+    expect(styles).toContain('.home-feature-panel--resources .resource-card');
+    expect(styles).toContain('inset 4px 0 0 #61743b');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {
