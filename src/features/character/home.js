@@ -610,7 +610,7 @@ export async function renderHome(container) {
                 </button>
               ` : ''}
               ${activeCharacter && canEditCharacter ? `
-                <button class="icon-button icon-button--add" data-add-spell aria-label="Aggiungi incantesimo">
+                <button class="icon-button icon-button--add icon-button--section-add" type="button" data-add-spell aria-label="Aggiungi incantesimo">
                   <span aria-hidden="true">+</span>
                 </button>
               ` : ''}

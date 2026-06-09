@@ -145,6 +145,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('inset 3px 0 0 rgba(97, 116, 59, 0.68)');
     expect(styles).toContain('.equipment-management .equipped-item-card.resource-card');
     expect(styles).toContain('background: #f6ead8');
+    expect(source).toContain('icon-button--section-add');
+    expect(styles).toContain('.attack-card.modifier-card:not(.resource-card) .attack-card__title');
+    expect(styles).toContain('grid-template-columns: minmax(0, 1fr) auto auto');
+    expect(styles).toContain('.home-feature-panel--spells .charge-indicator--used');
+    expect(styles).toContain('background: #d9655b');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {

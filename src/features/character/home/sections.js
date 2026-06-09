@@ -701,7 +701,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
         </div>
         <div class="actions">
           ${canEditCharacter ? `
-            <button class="icon-button icon-button--add" type="button" data-add-equip aria-label="Equipaggia oggetto">
+            <button class="icon-button icon-button--add icon-button--section-add" type="button" data-add-equip aria-label="Equipaggia oggetto">
               <span aria-hidden="true">+</span>
             </button>
           ` : ''}

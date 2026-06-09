@@ -1069,7 +1069,14 @@ export function openPreparedSpellsModal(character, onSave) {
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
-    <p class="muted">Seleziona gli incantesimi da preparare per oggi.</p>
+    <div class="prepared-spells-modal__intro">
+      <span class="prepared-spells-modal__intro-icon" aria-hidden="true">✦</span>
+      <div>
+        <strong>Prepara il tuo grimorio</strong>
+        <p>Seleziona gli incantesimi disponibili per oggi. Le modifiche saranno applicate al salvataggio.</p>
+      </div>
+      <span class="prepared-spells-modal__counter" aria-live="polite"><strong data-prepared-count>${preparedIds.size}</strong><small>preparati</small></span>
+    </div>
     <div class="tab-bar prepared-spells-modal__tabs" role="tablist" aria-label="Livelli incantesimo">
       ${levelOrder.map((level) => {
     const isActive = level === initialLevel;
@@ -1084,7 +1091,7 @@ export function openPreparedSpellsModal(character, onSave) {
             id="prepared-spells-tab-${level}"
             tabindex="${isActive ? '0' : '-1'}"
           >
-            ${getLevelLabel(level)}
+            <span>${getLevelLabel(level)}</span><small>${(groupedByLevel.get(level) || []).length}</small>
           </button>
         `;
   }).join('')}
@@ -1110,7 +1117,7 @@ export function openPreparedSpellsModal(character, onSave) {
       const components = escapeHtml(entry.components?.trim() || '-');
       const castTime = escapeHtml(entry.cast_time?.trim() || '-');
       return `
-                  <article class="prepared-spells-modal__spell" data-prepared-item="${entry.id}">
+                  <article class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}" data-prepared-item="${entry.id}">
                     <div class="prepared-spells-modal__spell-actions">
                       <button
                         class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
@@ -1118,7 +1125,11 @@ export function openPreparedSpellsModal(character, onSave) {
                         data-prepared-toggle="${entry.id}"
                         aria-pressed="${isPrepared}"
                       >
-                        <span class="prepared-spells-modal__toggle-name">${entry.name}</span>
+                        <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
+                        <span class="prepared-spells-modal__toggle-copy">
+                          <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
+                          <small data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
+                        </span>
                       </button>
                       <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
                         <div class="prepared-spells-modal__meta-item"><dt>Range</dt><dd>${range}</dd></div>
@@ -1131,9 +1142,10 @@ export function openPreparedSpellsModal(character, onSave) {
                         type="button"
                         data-prepared-description-toggle="${entry.id}"
                         aria-expanded="false"
-                        aria-label="Mostra descrizione ${entry.name}"
+                        aria-label="Mostra descrizione ${escapeHtml(entry.name)}"
+                        title="Mostra descrizione"
                       >
-                        🔍
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
                       </button>
                     </div>
                     <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
@@ -1156,7 +1168,13 @@ export function openPreparedSpellsModal(character, onSave) {
       const isPrepared = preparedIds.has(spellId);
       button.classList.toggle('is-active', isPrepared);
       button.setAttribute('aria-pressed', String(isPrepared));
+      const item = button.closest('[data-prepared-item]');
+      item?.classList.toggle('is-prepared', isPrepared);
+      const status = button.querySelector('[data-prepared-status]');
+      if (status) status.textContent = isPrepared ? 'Preparato' : 'Da preparare';
     });
+    const count = content.querySelector('[data-prepared-count]');
+    if (count) count.textContent = String(preparedIds.size);
   };
 
   content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
@@ -1209,10 +1227,10 @@ export function openPreparedSpellsModal(character, onSave) {
 
   openFormModal({
     title: 'Incantesimi preparati',
-    submitLabel: 'Salva',
+    submitLabel: 'Salva preparazione',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--form'
+    cardClass: 'modal-card--form modal-card--prepared-spells'
   }).then(async (formData) => {
     if (!formData) return;
     const nextSpells = spells.map((entry) => {
