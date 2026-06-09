@@ -54,4 +54,17 @@ describe('src/ui/components.js', () => {
     expect(openFormModalSource).toContain('.filter(Boolean)');
   });
 
+  it('raises confirmation dialogs above an already open form modal', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    const openConfirmModalStart = source.indexOf('export function openConfirmModal');
+    const openFormModalStart = source.indexOf('export function openFormModal');
+    const openConfirmModalSource = source.slice(openConfirmModalStart, openFormModalStart);
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+
+    expect(openConfirmModalSource).toContain("modal.classList.add('open', 'modal--foreground')");
+    expect(openConfirmModalSource).toContain("modal.classList.remove('open', 'modal--foreground')");
+    expect(styles).toContain('.modal.modal--foreground');
+    expect(styles).toContain('z-index: 80');
+  });
+
 });

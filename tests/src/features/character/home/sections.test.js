@@ -116,7 +116,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.skill-card__status');
     expect(source).not.toContain('attack-card__icon');
     expect(styles).not.toContain('.attack-card__icon');
-    expect(styles).toContain('.spell-card__level');
+    expect(source).not.toContain('spell-card__level');
+    expect(source).toContain('aria-label="Incantesimo di ${level}° livello"');
+    expect(source).not.toContain("`${level}°` : '0'");
+    expect(styles).toContain('.spell-card-actions');
+    expect(styles).toContain('gap: 9px');
     expect(styles).toContain('.saving-throw-card__status');
     expect(styles).toContain('.special-skill-card.modifier-card');
     expect(styles).toContain('.home-feature-panel--resources .resource-card');

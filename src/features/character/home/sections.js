@@ -1015,12 +1015,13 @@ export function buildSpellSection(character, canManageSpells = false) {
           ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
         </div>
         <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-          <span class="spell-card__sigil" aria-hidden="true">✦</span>
+          ${level > 0
+    ? `<span class="spell-card__sigil" aria-label="Incantesimo di ${level}° livello">${level}°</span>`
+    : '<span class="spell-card__sigil" aria-hidden="true">✦</span>'}
           <span class="spell-card__identity">
             <span class="spell-prepared-list__name">${spell.name}</span>
             <span class="spell-card__meta">${spell.school?.trim() || (level > 0 ? 'Incantesimo' : 'Trucchetto')}${prepLabel ? ` · ${prepLabel}` : ''}</span>
           </span>
-          <span class="spell-card__level">${level > 0 ? `${level}°` : '0'}</span>
         </button>
         <div class="resource-card-actions spell-card-actions">
           ${damageOverlay ? `

@@ -267,10 +267,10 @@ export function openConfirmModal({
     if (cancelButton) cancelButton.textContent = cancelLabel;
 
     modal.hidden = false;
-    modal.classList.add('open');
+    modal.classList.add('open', 'modal--foreground');
 
     const cleanup = (result) => {
-      modal.classList.remove('open');
+      modal.classList.remove('open', 'modal--foreground');
       modal.hidden = true;
       confirmButton?.removeEventListener('click', onConfirm);
       cancelButton?.removeEventListener('click', onCancel);
