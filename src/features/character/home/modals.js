@@ -5,6 +5,7 @@ import {
   buildSelect,
   buildTextarea,
   createToast,
+  openConfirmModal,
   openFormModal,
   attachNumberStepper
 } from '../../../ui/components.js';
@@ -13,6 +14,7 @@ import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsByLevel } from './utils.js';
 import { conditionList } from './constants.js';
 import { attachModalValueStepper } from './hpModal.js';
+import { fetchCharacterSpells, removeCharacterSpell } from '../spellbookApi.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
@@ -1041,6 +1043,7 @@ export function openPreparedSpellsModal(character, onSave) {
     createToast('Nessun incantesimo preparabile.', 'info');
     return;
   }
+  const deletedIds = new Set();
   const preparedIds = new Set(
     selectable
       .filter((entry) => (entry.prep_state || 'known') === 'prepared')
@@ -1073,9 +1076,12 @@ export function openPreparedSpellsModal(character, onSave) {
       <span class="prepared-spells-modal__intro-icon" aria-hidden="true">✦</span>
       <div>
         <strong>Prepara il tuo grimorio</strong>
-        <p>Seleziona gli incantesimi disponibili per oggi. Le modifiche saranno applicate al salvataggio.</p>
+        <p>Scegli gli incantesimi per oggi oppure rimuovili dalla scheda. Tutte le modifiche saranno applicate al salvataggio.</p>
       </div>
-      <span class="prepared-spells-modal__counter" aria-live="polite"><strong data-prepared-count>${preparedIds.size}</strong><small>preparati</small></span>
+      <div class="prepared-spells-modal__summary" aria-live="polite">
+        <span class="prepared-spells-modal__counter"><strong data-prepared-count>${preparedIds.size}</strong><small>preparati</small></span>
+        <span class="prepared-spells-modal__counter prepared-spells-modal__counter--removed" data-removed-counter hidden><strong data-removed-count>0</strong><small>da eliminare</small></span>
+      </div>
     </div>
     <div class="tab-bar prepared-spells-modal__tabs" role="tablist" aria-label="Livelli incantesimo">
       ${levelOrder.map((level) => {
@@ -1091,7 +1097,7 @@ export function openPreparedSpellsModal(character, onSave) {
             id="prepared-spells-tab-${level}"
             tabindex="${isActive ? '0' : '-1'}"
           >
-            <span>${getLevelLabel(level)}</span><small>${(groupedByLevel.get(level) || []).length}</small>
+            <span>${getLevelLabel(level)}</span><small data-prepared-level-count="${level}">${(groupedByLevel.get(level) || []).length}</small>
           </button>
         `;
   }).join('')}
@@ -1116,44 +1122,65 @@ export function openPreparedSpellsModal(character, onSave) {
       const duration = escapeHtml(entry.duration?.trim() || '-');
       const components = escapeHtml(entry.components?.trim() || '-');
       const castTime = escapeHtml(entry.cast_time?.trim() || '-');
+      const school = escapeHtml(entry.school?.trim() || 'Scuola non indicata');
       return `
-                  <article class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}" data-prepared-item="${entry.id}">
-                    <div class="prepared-spells-modal__spell-actions">
+                  <article class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}" data-prepared-item="${entry.id}" data-prepared-item-level="${level}">
+                    <div class="prepared-spells-modal__spell-main">
                       <button
                         class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
                         type="button"
                         data-prepared-toggle="${entry.id}"
                         aria-pressed="${isPrepared}"
+                        aria-label="${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${escapeHtml(entry.name)}"
                       >
                         <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
                         <span class="prepared-spells-modal__toggle-copy">
-                          <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
-                          <small data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
+                          <span class="prepared-spells-modal__toggle-heading">
+                            <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
+                            <span class="prepared-spells-modal__school">${school}</span>
+                          </span>
+                          <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
                         </span>
                       </button>
-                      <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
-                        <div class="prepared-spells-modal__meta-item"><dt>Range</dt><dd>${range}</dd></div>
-                        <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
-                        <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
-                        <div class="prepared-spells-modal__meta-item"><dt>Lancio</dt><dd>${castTime}</dd></div>
-                      </dl>
-                      <button
-                        class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
-                        type="button"
-                        data-prepared-description-toggle="${entry.id}"
-                        aria-expanded="false"
-                        aria-label="Mostra descrizione ${escapeHtml(entry.name)}"
-                        title="Mostra descrizione"
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
-                      </button>
+                      <div class="prepared-spells-modal__card-actions">
+                        <button
+                          class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
+                          type="button"
+                          data-prepared-description-toggle="${entry.id}"
+                          aria-expanded="false"
+                          aria-label="Mostra descrizione ${escapeHtml(entry.name)}"
+                          title="Mostra descrizione"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
+                        </button>
+                        <button
+                          class="resource-action-button resource-icon-button prepared-spells-modal__delete"
+                          type="button"
+                          data-prepared-delete="${entry.id}"
+                          aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda"
+                          title="Elimina dalla scheda"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
+                        </button>
+                      </div>
                     </div>
+                    <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
+                      <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
+                      <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
+                      <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
+                      <div class="prepared-spells-modal__meta-item"><dt>Lancio</dt><dd>${castTime}</dd></div>
+                    </dl>
                     <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
                       <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
                     </div>
                   </article>
                 `;
     }).join('')}
+              <div class="prepared-spells-modal__empty" data-prepared-level-empty="${level}" hidden>
+                <span aria-hidden="true">✦</span>
+                <strong>Nessun incantesimo in questo livello</strong>
+                <small>Gli incantesimi eliminati verranno rimossi definitivamente dopo il salvataggio.</small>
+              </div>
             </div>
           </section>
         `;
@@ -1170,11 +1197,24 @@ export function openPreparedSpellsModal(character, onSave) {
       button.setAttribute('aria-pressed', String(isPrepared));
       const item = button.closest('[data-prepared-item]');
       item?.classList.toggle('is-prepared', isPrepared);
+      const spellName = item?.querySelector('.prepared-spells-modal__toggle-name')?.textContent || 'incantesimo';
+      button.setAttribute('aria-label', `${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${spellName}`);
       const status = button.querySelector('[data-prepared-status]');
       if (status) status.textContent = isPrepared ? 'Preparato' : 'Da preparare';
     });
     const count = content.querySelector('[data-prepared-count]');
     if (count) count.textContent = String(preparedIds.size);
+    const removedCount = content.querySelector('[data-removed-count]');
+    if (removedCount) removedCount.textContent = String(deletedIds.size);
+    const removedCounter = content.querySelector('[data-removed-counter]');
+    if (removedCounter) removedCounter.hidden = deletedIds.size === 0;
+    levelOrder.forEach((level) => {
+      const remaining = content.querySelectorAll(`[data-prepared-item-level="${level}"]`).length;
+      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
+      if (levelCount) levelCount.textContent = String(remaining);
+      const emptyState = content.querySelector(`[data-prepared-level-empty="${level}"]`);
+      if (emptyState) emptyState.hidden = remaining > 0;
+    });
   };
 
   content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
@@ -1186,6 +1226,24 @@ export function openPreparedSpellsModal(character, onSave) {
       } else {
         preparedIds.add(spellId);
       }
+      syncPreparedState();
+    });
+  });
+
+  content.querySelectorAll('[data-prepared-delete]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const spellId = button.dataset.preparedDelete;
+      const spell = selectable.find((entry) => entry.id === spellId);
+      if (!spell) return;
+      const shouldDelete = await openConfirmModal({
+        title: 'Elimina incantesimo',
+        message: `Vuoi rimuovere "${spell.name}" dalla scheda? L'eliminazione sarà applicata quando salverai la preparazione.`,
+        confirmLabel: 'Elimina dalla scheda'
+      });
+      if (!shouldDelete) return;
+      deletedIds.add(spellId);
+      preparedIds.delete(spellId);
+      button.closest('[data-prepared-item]')?.remove();
       syncPreparedState();
     });
   });
@@ -1233,21 +1291,43 @@ export function openPreparedSpellsModal(character, onSave) {
     cardClass: ['modal-card--form', 'modal-card--prepared-spells']
   }).then(async (formData) => {
     if (!formData) return;
-    const nextSpells = spells.map((entry) => {
-      const prepState = entry.prep_state || 'known';
-      if (prepState === 'always') return entry;
-      if (Number(entry.level) === 0) return entry;
-      const isPrepared = preparedIds.has(entry.id);
-      return {
-        ...entry,
-        prep_state: isPrepared ? 'prepared' : 'known'
-      };
-    });
+    if (deletedIds.size) {
+      const deletedSharedIds = new Set(
+        spells
+          .filter((entry) => deletedIds.has(entry.id) && entry.shared_spell_id)
+          .map((entry) => entry.shared_spell_id)
+      );
+      if (deletedSharedIds.size) {
+        try {
+          const linkedRows = await fetchCharacterSpells(character.id);
+          const linksToRemove = linkedRows.filter((row) => deletedSharedIds.has(row.shared_spell_id));
+          await Promise.all(linksToRemove.map((row) => removeCharacterSpell(row.id)));
+        } catch (error) {
+          createToast('Errore rimozione associazione incantesimo', 'error');
+          return;
+        }
+      }
+    }
+    const nextSpells = spells
+      .filter((entry) => !deletedIds.has(entry.id))
+      .map((entry) => {
+        const prepState = entry.prep_state || 'known';
+        if (prepState === 'always') return entry;
+        if (Number(entry.level) === 0) return entry;
+        const isPrepared = preparedIds.has(entry.id);
+        return {
+          ...entry,
+          prep_state: isPrepared ? 'prepared' : 'known'
+        };
+      });
     const nextData = {
       ...character.data,
       spells: nextSpells
     };
-    await saveCharacterData(character, nextData, 'Incantesimi preparati aggiornati', onSave);
+    const message = deletedIds.size
+      ? `${deletedIds.size === 1 ? 'Incantesimo eliminato' : `${deletedIds.size} incantesimi eliminati`} e preparazione aggiornata`
+      : 'Incantesimi preparati aggiornati';
+    await saveCharacterData(character, nextData, message, onSave);
   });
 }
 

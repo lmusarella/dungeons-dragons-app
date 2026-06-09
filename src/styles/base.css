@@ -12857,15 +12857,29 @@ button:focus-visible,
   line-height: 1.35;
 }
 
+.prepared-spells-modal__summary {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .prepared-spells-modal__counter {
-  min-width: 58px;
+  min-width: 64px;
   display: grid;
+  align-content: center;
   justify-items: center;
-  padding: 6px 8px;
+  padding: 7px 9px;
   border: 1px solid #b9cfca;
-  border-radius: 10px;
+  border-radius: 11px;
   background: #fff;
   color: #3b5d60;
+}
+
+.prepared-spells-modal__counter--removed {
+  border-color: #e2bbb5;
+  background: #fff7f5;
+  color: #9b4038;
 }
 
 .prepared-spells-modal__counter strong {
@@ -12874,16 +12888,18 @@ button:focus-visible,
 }
 
 .prepared-spells-modal__counter small {
-  margin-top: 2px;
-  font-size: 0.52rem;
+  margin-top: 3px;
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .prepared-spells-modal__tabs {
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 5px;
+  padding-bottom: 2px;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -12892,14 +12908,14 @@ button:focus-visible,
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 5px 9px;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 10px;
 }
 
 .prepared-spells-modal__tab small {
-  min-width: 20px;
-  padding: 2px 5px;
+  min-width: 21px;
+  padding: 2px 6px;
   border-radius: 999px;
   background: rgba(59, 93, 96, 0.1);
   font-size: 0.58rem;
@@ -12912,38 +12928,67 @@ button:focus-visible,
 }
 
 .prepared-spells-modal__list {
-  gap: 6px;
+  display: grid;
+  gap: 8px;
 }
 
 .prepared-spells-modal__spell {
+  position: relative;
+  display: grid;
   gap: 0;
   overflow: hidden;
-  border: 1px solid #ded3c3;
-  border-radius: 12px;
+  border: 1px solid #d8cdbc;
+  border-radius: 13px;
   background: #fffdfa;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 3px 9px rgba(72, 49, 30, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.prepared-spells-modal__spell::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #c6b7a2;
+  transition: background 0.15s ease;
+}
+
+.prepared-spells-modal__spell:hover,
+.prepared-spells-modal__spell:focus-within {
+  border-color: #bfae97;
+  box-shadow: 0 7px 17px rgba(72, 49, 30, 0.1);
+  transform: translateY(-1px);
 }
 
 .prepared-spells-modal__spell.is-prepared {
-  border-color: rgba(47, 122, 87, 0.5);
-  box-shadow: inset 3px 0 0 rgba(47, 122, 87, 0.72);
+  border-color: rgba(47, 122, 87, 0.42);
+  background: linear-gradient(135deg, #fffefa, #f1f7f3);
+  box-shadow: 0 4px 12px rgba(47, 122, 87, 0.1);
 }
 
-.prepared-spells-modal__spell-actions {
-  grid-template-columns: minmax(180px, 1fr) minmax(210px, auto) 30px;
+.prepared-spells-modal__spell.is-prepared::before {
+  background: #3f8062;
+}
+
+.prepared-spells-modal__spell-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 8px 9px 6px 11px;
 }
 
 .prepared-spells-modal__toggle {
+  display: flex;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
   padding: 6px 7px;
   border: 0;
   border-radius: 9px;
   background: transparent;
   box-shadow: none;
+  text-align: left;
 }
 
 .prepared-spells-modal__toggle:hover,
@@ -12955,78 +13000,125 @@ button:focus-visible,
 
 .prepared-spells-modal__toggle.is-active {
   border-color: transparent;
-  background: #edf5f0;
+  background: rgba(47, 122, 87, 0.08);
   box-shadow: none;
 }
 
 .prepared-spells-modal__check {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 25px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #cbbda9;
-  border-radius: 7px;
+  border: 1px solid #c6b7a2;
+  border-radius: 8px;
   background: #fff;
   color: transparent;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .prepared-spells-modal__toggle.is-active .prepared-spells-modal__check {
   border-color: #2f7a57;
   background: #2f7a57;
   color: #fff;
+  box-shadow: 0 3px 8px rgba(47, 122, 87, 0.2);
 }
 
 .prepared-spells-modal__toggle-copy {
   display: grid;
   min-width: 0;
-  gap: 1px;
+  gap: 4px;
+}
+
+.prepared-spells-modal__toggle-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .prepared-spells-modal__toggle-name {
+  min-width: 0;
   overflow: hidden;
   color: #3f3023;
-  font-size: 0.76rem;
-  font-weight: 800;
+  font-size: 0.78rem;
+  font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.prepared-spells-modal__toggle-copy small {
-  color: #88745e;
-  font-size: 0.58rem;
-  font-weight: 700;
+.prepared-spells-modal__school {
+  flex: 0 0 auto;
+  max-width: 120px;
+  overflow: hidden;
+  padding: 2px 6px;
+  border: 1px solid #ddd1c0;
+  border-radius: 999px;
+  background: #f7f2ea;
+  color: #78634d;
+  font-size: 0.51rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.prepared-spells-modal__toggle.is-active .prepared-spells-modal__toggle-copy small {
-  color: #2f6b4e;
-}
-
-.prepared-spells-modal__meta {
-  gap: 3px 8px;
-  font-size: 0.62rem;
-}
-
-.prepared-spells-modal__meta-item dt {
-  color: #83705c;
+.prepared-spells-modal__status {
+  width: max-content;
+  padding: 2px 7px;
+  border: 1px solid #ddd0bd;
+  border-radius: 999px;
+  background: #f7f1e8;
+  color: #806b53;
   font-size: 0.55rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.prepared-spells-modal__toggle.is-active .prepared-spells-modal__status {
+  border-color: #b8d5c5;
+  background: #e3f0e8;
+  color: #286448;
+}
+
+.prepared-spells-modal__card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.prepared-spells-modal__description-toggle,
+.prepared-spells-modal__delete {
+  width: 31px;
+  min-width: 31px;
+  height: 31px;
+  min-height: 31px;
+  padding: 0;
 }
 
 .prepared-spells-modal__description-toggle {
-  width: 30px;
-  height: 30px;
-  padding: 0;
   border-color: #d5c7b4;
   background: #f8f3eb;
   color: #6d5943;
 }
 
-.prepared-spells-modal__description-toggle svg {
+.prepared-spells-modal__delete {
+  border-color: #e1c4bf;
+  background: #fff8f6;
+  color: #9b4941;
+}
+
+.prepared-spells-modal__delete:hover,
+.prepared-spells-modal__delete:focus-visible {
+  border-color: #b95a50;
+  background: #b95a50;
+  color: #fff;
+}
+
+.prepared-spells-modal__description-toggle svg,
+.prepared-spells-modal__delete svg {
   width: 16px;
   height: 16px;
   fill: none;
@@ -13034,6 +13126,9 @@ button:focus-visible,
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.prepared-spells-modal__description-toggle svg {
   transition: transform 0.15s ease;
 }
 
@@ -13041,11 +13136,82 @@ button:focus-visible,
   transform: rotate(180deg);
 }
 
+.prepared-spells-modal__meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0 10px 9px 45px;
+  font-size: 0.62rem;
+}
+
+.prepared-spells-modal__meta-item {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #e7ded1;
+  border-radius: 8px;
+  background: rgba(248, 244, 237, 0.72);
+}
+
+.prepared-spells-modal__spell.is-prepared .prepared-spells-modal__meta-item {
+  border-color: #d5e4db;
+  background: rgba(239, 247, 242, 0.78);
+}
+
+.prepared-spells-modal__meta-item dt {
+  color: #83705c;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.prepared-spells-modal__meta-item dd {
+  min-width: 0;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #4b3c2f;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .prepared-spells-modal__description {
-  margin: 0 8px 8px;
-  padding: 9px 10px;
+  margin: 0 9px 9px 11px;
+  padding: 10px 11px;
   border-color: #ddd1bf;
   background: #f9f5ee;
+}
+
+.prepared-spells-modal__empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 24px 16px;
+  border: 1px dashed #d7c9b7;
+  border-radius: 12px;
+  background: #fbf8f3;
+  color: #806c55;
+  text-align: center;
+}
+
+.prepared-spells-modal__empty[hidden] {
+  display: none;
+}
+
+.prepared-spells-modal__empty span {
+  font-size: 1.1rem;
+}
+
+.prepared-spells-modal__empty strong {
+  color: #594737;
+  font-size: 0.75rem;
+}
+
+.prepared-spells-modal__empty small {
+  max-width: 320px;
+  font-size: 0.62rem;
+  line-height: 1.4;
 }
 
 @media (max-width: 720px) {
@@ -13062,13 +13228,9 @@ button:focus-visible,
     display: none;
   }
 
-  .prepared-spells-modal__spell-actions {
-    grid-template-columns: minmax(0, 1fr) 30px;
-  }
-
   .prepared-spells-modal__meta {
-    grid-column: 1 / -1;
-    padding: 0 7px 3px 37px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 45px;
   }
 }
 
@@ -13077,15 +13239,32 @@ button:focus-visible,
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
-  .prepared-spells-modal__counter {
+  .prepared-spells-modal__summary {
     grid-column: 1 / -1;
-    grid-template-columns: auto auto;
-    justify-content: center;
-    gap: 4px;
     width: 100%;
   }
 
+  .prepared-spells-modal__counter {
+    flex: 1;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    gap: 4px;
+  }
+
   .prepared-spells-modal__counter small { margin-top: 0; }
+
+  .prepared-spells-modal__school {
+    display: none;
+  }
+
+  .prepared-spells-modal__spell-main {
+    gap: 5px;
+    padding-right: 7px;
+  }
+
+  .prepared-spells-modal__meta {
+    padding: 0 8px 8px 43px;
+  }
 
   .attack-card.modifier-card:not(.resource-card) .attack-card__meta .muted {
     display: none;
