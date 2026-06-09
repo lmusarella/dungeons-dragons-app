@@ -22,4 +22,18 @@ describe('src/ui/layout.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('renders the refined branded header and icon navigation footer', () => {
+    const source = readFileSync('src/ui/layout.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+
+    expect(source).toContain('class="app-brand"');
+    expect(source).toContain('Scheda digitale');
+    expect(source).toContain('aria-label="Navigazione principale"');
+    expect(source).toContain('class="bottom-nav__icon"');
+    expect(styles).toContain('.app-shell .app-header');
+    expect(styles).toContain('.app-shell .bottom-nav');
+    expect(styles).toContain('.bottom-nav a.active .bottom-nav__pill');
+  });
+
 });

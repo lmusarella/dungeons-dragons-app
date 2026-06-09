@@ -157,18 +157,24 @@ export async function renderInventory(container) {
   const weightStep = weightUnit === 'kg' ? '0.1' : '1';
   container.innerHTML = `
     <div class="inventory-layout">
-      <section class="card inventory-main">
-        <header class="card-header">
-          <p class="eyebrow">Inventario</p>
+      <section class="card inventory-main inventory-panel">
+        <header class="card-header inventory-panel__header">
+          <div>
+            <p class="eyebrow">Inventario</p>
+            <span class="inventory-panel__subtitle">${items.length} ${items.length === 1 ? 'oggetto registrato' : 'oggetti registrati'}</span>
+          </div>
           <div class="button-row">
             <button class="icon-button icon-button--add" type="button" data-add-item aria-label="Nuovo oggetto">
               <span aria-hidden="true">+</span>
             </button>
           </div>
         </header>
-        <div class="filters">
-          <input type="search" placeholder="Cerca" data-search />
-          <select data-category></select>
+        <div class="filters inventory-toolbar">
+          <label class="inventory-search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="Cerca oggetto" aria-label="Cerca oggetto" data-search />
+          </label>
+          <label class="inventory-category-filter"><span>Categoria</span><select data-category></select></label>
           <label class="toggle-pill filter-toggle">
             <input type="checkbox" data-equipable-filter />
             <span>Oggetti equipaggiabili</span>
@@ -177,13 +183,13 @@ export async function renderInventory(container) {
             <input type="checkbox" data-magic-filter />
             <span>Oggetti magici</span>
           </label>
-          <span class="pill">Carico totale: <strong data-carry-total>${formatWeight(totalWeight, weightUnit)}</strong></span>
+          <span class="pill inventory-carry-summary"><small>Carico totale</small><strong data-carry-total>${formatWeight(totalWeight, weightUnit)}</strong></span>
         </div>
         <div class="inventory-list-scroll" data-inventory-list></div>
       </section>
       <div class="inventory-side">
-        <section class="card inventory-wallet">
-          <header class="card-header">
+        <section class="card inventory-wallet inventory-side-card inventory-side-card--wallet">
+          <header class="card-header inventory-side-card__header">
             <p class="eyebrow">Monete</p>
             <div class="button-row">
               <button class="icon-button" type="button" data-edit-wallet aria-label="Modifica monete" title="Modifica monete">
@@ -193,8 +199,8 @@ export async function renderInventory(container) {
           </header>
           ${renderWalletSummary(wallet)}
         </section>
-        <section class="card">
-          <header class="card-header">
+        <section class="card inventory-side-card inventory-side-card--transactions">
+          <header class="card-header inventory-side-card__header">
             <p class="eyebrow">Transazioni</p>
             <div class="button-row">
               <button class="icon-button icon-button--swap" type="button" data-exchange-coins aria-label="Scambia monete" title="Scambia monete">

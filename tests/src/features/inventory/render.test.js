@@ -50,4 +50,26 @@ describe('src/features/inventory/render.js', () => {
     expect(markup).toContain('<span>Inserisci</span>');
     expect(markup).toContain('Oggetti Sfusi');
   });
+
+  it('renders the refined inventory item hierarchy and empty state', () => {
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const itemMarkup = buildInventoryTree([{
+      id: 'sword-1',
+      name: 'Spada lunga',
+      category: 'weapon',
+      qty: 1,
+      weight: 3,
+      volume: 2
+    }]);
+    const emptyMarkup = buildInventoryTree([]);
+
+    expect(itemMarkup).toContain('inventory-item-row');
+    expect(itemMarkup).toContain('inventory-item-row__placeholder');
+    expect(itemMarkup).toContain('inventory-table__metric');
+    expect(emptyMarkup).toContain('inventory-empty-state');
+    expect(styles).toContain('.inventory-toolbar');
+    expect(styles).toContain('.inventory-item-row.inventory-table__row');
+    expect(styles).toContain('.inventory-side-card--wallet');
+  });
+
 });

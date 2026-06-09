@@ -194,7 +194,7 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
 
 export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyLabel = 'Nessun oggetto.' } = {}) {
   if (!items.length) {
-    return `<p class="muted eyebrow">${emptyLabel}</p>`;
+    return `<div class="inventory-empty-state"><span aria-hidden="true">◇</span><div><strong>${emptyLabel}</strong><small>Aggiungi o sposta qui un oggetto per visualizzarlo.</small></div></div>`;
   }
   return `
     <div class="inventory-table ${nested ? 'inventory-table--nested' : ''}">
@@ -211,15 +211,15 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
     const volumeValue = item.volume !== null && item.volume !== undefined ? item.volume : '-';
     const statusLabels = getItemStatusLabels(item);
     return `
-          <div class="inventory-table__row">
-            <div class="inventory-table__badges">
+          <div class="inventory-table__row inventory-item-row">
+            <div class="inventory-table__badges inventory-item-row__badges">
               ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${statusLabels.magic}</span>` : ''}
               ${item.equipable ? `<span class="resource-chip resource-chip--floating resource-chip--equipable">${statusLabels.equipable}</span>` : ''}
               ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${statusLabels.attunement}</span>` : ''}
             </div>
             <div class="inventory-table__cell inventory-table__cell--item">
-              ${item.image_url ? `<img class="item-avatar" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : ''}
-              <div class="item-info-body">
+              ${item.image_url ? `<img class="item-avatar inventory-item-row__image" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : '<span class="inventory-item-row__placeholder" aria-hidden="true">◇</span>'}
+              <div class="item-info-body inventory-item-row__info">
                 <button class="item-name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
                 ${item.ammunition_type ? `<span class="muted">Munizioni: ${ammunitionTypeLabels.get(item.ammunition_type) || item.ammunition_type}</span>` : ''}
                 ${item.consumes_ammunition ? `<span class="muted">Consuma: ${ammunitionTypeLabels.get(item.required_ammunition_type) || item.required_ammunition_type || 'munizioni'}</span>` : ''}
@@ -227,9 +227,9 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
               </div>
             </div>
             <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(item.category)}</span></div>
-            <div class="inventory-table__cell" data-label="Quantità">${item.qty}</div>
-            <div class="inventory-table__cell" data-label="Peso">${formatWeight(item.weight ?? 0, weightUnit)}</div>
-            <div class="inventory-table__cell" data-label="Volume">${volumeValue}</div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Quantità"><small>Qtà</small><strong>${item.qty}</strong></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${formatWeight(item.weight ?? 0, weightUnit)}</strong></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${volumeValue}</strong></div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Consuma</button>` : ''}
               <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">

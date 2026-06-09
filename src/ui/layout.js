@@ -10,7 +10,9 @@ export function renderLayout(container) {
           <div class="app-logo">
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
           </div>
-          <div>           
+          <div class="app-brand">
+            <strong>Companion</strong>
+            <span>Scheda digitale</span>
           </div>
         </div>
         <div class="app-header-right">
@@ -82,11 +84,11 @@ export function renderLayout(container) {
         </button>
       </div>
       <div class="actions-fab-backdrop" aria-hidden="true"></div>
-      <nav class="bottom-nav" data-bottom-nav>
-        <a href="#/home" data-tab="home"><span class="bottom-nav__pill">Scheda Personaggio</span></a>
-        <a href="#/familiars" data-tab="familiars"><span class="bottom-nav__pill">Famigli</span></a>
-        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill">Inventario</span></a>
-        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill">Diario</span></a>
+      <nav class="bottom-nav" data-bottom-nav aria-label="Navigazione principale">
+        <a href="#/home" data-tab="home"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">⌂</span><span>Scheda</span></span></a>
+        <a href="#/familiars" data-tab="familiars"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">♞</span><span>Famigli</span></span></a>
+        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">◇</span><span>Inventario</span></span></a>
+        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">☷</span><span>Diario</span></span></a>
       </nav>
       <div class="drawer" data-drawer>
         <div class="drawer-overlay" data-drawer-close></div>
