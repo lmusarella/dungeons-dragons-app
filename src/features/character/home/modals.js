@@ -1230,7 +1230,7 @@ export function openPreparedSpellsModal(character, onSave) {
     submitLabel: 'Salva preparazione',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--form modal-card--prepared-spells'
+    cardClass: ['modal-card--form', 'modal-card--prepared-spells']
   }).then(async (formData) => {
     if (!formData) return;
     const nextSpells = spells.map((entry) => {

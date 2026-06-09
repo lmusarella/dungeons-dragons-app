@@ -793,7 +793,6 @@ export function buildAttackSection(character, items = [], companions = []) {
       const damageText = `${attack.damage || '-'}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
       return `
           <div class="modifier-card attack-card attack-card--wild-shape attack-card--creature" data-roll-attack="wildshape:${index}">
-            <span class="attack-card__icon" aria-hidden="true">✦</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
@@ -821,7 +820,6 @@ export function buildAttackSection(character, items = [], companions = []) {
     const damageText = `${attack.damage || '-'}${attackStats.damageModifier ? ` ${formatSigned(attackStats.damageModifier)}` : ''}`;
     return `
           <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
-            <span class="attack-card__icon" aria-hidden="true">◆</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
@@ -899,7 +897,6 @@ export function buildAttackSection(character, items = [], companions = []) {
       : '';
     return `
           <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
-            <span class="attack-card__icon" aria-hidden="true">⚔</span>
             <div class="attack-card__body">
               <div class="attack-card__title">
                 <strong class="attack-card__name">${weapon.name}</strong>
@@ -930,7 +927,6 @@ export function buildAttackSection(character, items = [], companions = []) {
       const rangeText = spell.range ? `Range ${spell.range}` : '';
       return `
             <div class="modifier-card attack-card attack-card--spell" data-roll-attack="spell:${spell.id}">
-              <span class="attack-card__icon" aria-hidden="true">✧</span>
               <div class="attack-card__body">
                 <div class="attack-card__title">
                   <strong class="attack-card__name">${spell.name}</strong>

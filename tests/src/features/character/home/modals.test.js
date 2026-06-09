@@ -189,7 +189,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain('data-prepared-count');
     expect(preparedModal).toContain('data-prepared-status');
     expect(preparedModal).toContain("item?.classList.toggle('is-prepared', isPrepared)");
-    expect(preparedModal).toContain("cardClass: 'modal-card--form modal-card--prepared-spells'");
+    expect(preparedModal).toContain("cardClass: ['modal-card--form', 'modal-card--prepared-spells']");
     expect(preparedModal).toContain("submitLabel: 'Salva preparazione'");
     expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
     expect(styles).toContain('.prepared-spells-modal__check');

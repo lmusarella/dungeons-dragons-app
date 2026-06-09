@@ -315,11 +315,9 @@ export function openFormModal({
     if (modalCard && previousClasses.length) {
       previousClasses.forEach((cls) => modalCard.classList.remove(cls));
     }
-    const nextClasses = Array.isArray(cardClass)
-      ? cardClass
-      : cardClass
-        ? [cardClass]
-        : [];
+    const nextClasses = (Array.isArray(cardClass) ? cardClass : [cardClass])
+      .flatMap((value) => String(value || '').split(/\s+/))
+      .filter(Boolean);
     if (modalCard && nextClasses.length) {
       nextClasses.forEach((cls) => modalCard.classList.add(cls));
     }

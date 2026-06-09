@@ -45,4 +45,13 @@ describe('src/ui/components.js', () => {
     expect(attachNumberStepperSource).toContain('keydown');
   });
 
+  it('normalizes multiple modal card classes before adding them to classList', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    const openFormModalStart = source.indexOf('export function openFormModal');
+    const openFormModalSource = source.slice(openFormModalStart);
+
+    expect(openFormModalSource).toContain(".flatMap((value) => String(value || '').split(/\\s+/))");
+    expect(openFormModalSource).toContain('.filter(Boolean)');
+  });
+
 });

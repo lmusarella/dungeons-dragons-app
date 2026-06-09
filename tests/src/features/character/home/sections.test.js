@@ -114,7 +114,8 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="resource-card__marker"');
     expect(source).toContain('class="resource-card__kind"');
     expect(styles).toContain('.skill-card__status');
-    expect(styles).toContain('.attack-card__icon');
+    expect(source).not.toContain('attack-card__icon');
+    expect(styles).not.toContain('.attack-card__icon');
     expect(styles).toContain('.spell-card__level');
     expect(styles).toContain('.saving-throw-card__status');
     expect(styles).toContain('.special-skill-card.modifier-card');
