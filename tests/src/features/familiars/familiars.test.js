@@ -52,7 +52,7 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).not.toContain('familiar-sheet__hp-summary');
   });
 
-  it('renders contrasted familiar panels and a labeled damage action', () => {
+  it('renders softly contrasted familiar panels and a compact damage action', () => {
     const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
 
@@ -62,7 +62,8 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('familiar-detail-panel--abilities');
     expect(source).toContain('familiar-detail-panel--attacks');
     expect(source).toContain('familiar-damage-button');
-    expect(source).toContain('<span>Danni</span>');
+    expect(source).toContain('const DAMAGE_ACTION_ICON');
+    expect(source).toContain('attack-action-button__svg');
     expect(styles).toContain('.familiar-sheet--refined');
     expect(styles).toContain('.familiar-detail-panel--attacks');
     expect(styles).toContain('.familiar-attack-card:hover');

@@ -31,6 +31,17 @@ import { formatWeight } from '../../../lib/format.js';
 import { getBodyPartLabels, getCategoryLabel, getItemStatusLabels, getWeightUnit } from '../../inventory/utils.js';
 import { ammunitionTypeLabels } from '../../inventory/constants.js';
 
+const DAMAGE_ACTION_ICON = `
+  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>
+    <circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="9" r="1"></circle>
+    <circle cx="12" cy="12" r="1"></circle><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle>
+  </svg>`;
+const WEAPON_MODE_ICON = `
+  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"></path>
+  </svg>`;
+
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -475,7 +486,7 @@ export function buildSkillList(character) {
             <span class="skill-card__ability skill-card__ability--${skill.ability}" aria-hidden="true">${abilityShortLabel[skill.ability]}</span>
             <span class="skill-card__content">
               <span class="skill-card__name">${skill.label}</span>
-              <span class="skill-card__status">${mastery ? 'Padronanza' : proficient ? 'Competenza' : 'Prova base'}</span>
+              <span class="skill-card__status">${mastery ? 'Maestria' : proficient ? 'Competenza' : 'Prova base'}</span>
             </span>
             <span class="modifier-value skill-card__modifier"><small>Bonus</small>${formatSigned(total)}</span>
           </button>
@@ -531,7 +542,7 @@ export function buildSpecialSkillList(character) {
             <span class="skill-card__ability skill-card__ability--${abilityKey}" aria-hidden="true">${abilityShortLabel[abilityKey]}</span>
             <span class="skill-card__content">
               <span class="skill-card__name">${skillLabel}</span>
-              <span class="skill-card__status">${mastery ? 'Padronanza' : proficient ? 'Competenza' : extraBonus ? `Bonus ${formatSigned(extraBonus)}` : 'Tiro speciale'}</span>
+              <span class="skill-card__status">${mastery ? 'Maestria' : proficient ? 'Competenza' : extraBonus ? `Bonus ${formatSigned(extraBonus)}` : 'Tiro speciale'}</span>
             </span>
             <span class="modifier-value skill-card__modifier"><small>Totale</small>${formatSigned(total)}</span>
           </button>
@@ -795,8 +806,8 @@ export function buildAttackSection(character, items = [], companions = []) {
               </div>
             </div>
             <div class="attack-card__actions">
-              <button class="attack-action-button attack-action-button--damage" data-roll-damage="wildshape:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
-                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="wildshape:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}" title="Tira i danni">
+                ${DAMAGE_ACTION_ICON}
               </button>
             </div>
           </div>
@@ -823,8 +834,8 @@ export function buildAttackSection(character, items = [], companions = []) {
               </div>
             </div>
             <div class="attack-card__actions">
-              <button class="attack-action-button attack-action-button--damage" data-roll-damage="unarmed:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}">
-                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="unarmed:${index}" aria-label="Calcola danni ${escapeHtml(attackName)}" title="Tira i danni">
+                ${DAMAGE_ACTION_ICON}
               </button>
             </div>
           </div>
@@ -884,7 +895,7 @@ export function buildAttackSection(character, items = [], companions = []) {
     const masteryText = masteryLabel ? `Maestria: ${masteryLabel}${masteryKnown ? '' : ' (non selezionata)'}` : '';
     const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
     const cycleButton = renderedModes.length > 1
-      ? `<button class="attack-action-button attack-action-button--mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}"><span class="attack-action-button__icon" aria-hidden="true">↔</span><span>Presa</span></button>`
+      ? `<button class="attack-action-button attack-action-button--mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}">${WEAPON_MODE_ICON}</button>`
       : '';
     return `
           <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
@@ -904,8 +915,8 @@ export function buildAttackSection(character, items = [], companions = []) {
             </div>
             <div class="attack-card__actions">
               ${cycleButton}
-              <button class="attack-action-button attack-action-button--damage" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}">
-                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
+              <button class="attack-action-button attack-action-button--damage" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}" title="Tira i danni">
+                ${DAMAGE_ACTION_ICON}
               </button>
             </div>
           </div>
@@ -932,8 +943,8 @@ export function buildAttackSection(character, items = [], companions = []) {
                   ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
                 </div>
               </div>
-              <button class="attack-action-button attack-action-button--damage attack-action-button--spell" data-roll-damage="spell:${spell.id}" aria-label="Calcola danni ${spell.name}">
-                <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
+              <button class="attack-action-button attack-action-button--damage attack-action-button--spell" data-roll-damage="spell:${spell.id}" aria-label="Calcola danni ${spell.name}" title="Tira i danni">
+                ${DAMAGE_ACTION_ICON}
               </button>
             </div>
           `;
@@ -1018,7 +1029,7 @@ export function buildSpellSection(character, canManageSpells = false) {
         <div class="resource-card-actions spell-card-actions">
           ${damageOverlay ? `
             <button class="attack-action-button attack-action-button--damage attack-action-button--spell spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
-              <span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span>
+              ${DAMAGE_ACTION_ICON}
             </button>
           ` : ''}
           ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}

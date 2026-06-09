@@ -6,6 +6,13 @@ import { getAbilityModifier } from '../character/home/utils.js';
 import { buildHpShortcutFields } from '../character/home/hpModal.js';
 import { openAvatarModal } from '../character/home/modals.js';
 
+const DAMAGE_ACTION_ICON = `
+  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>
+    <circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="9" r="1"></circle>
+    <circle cx="12" cy="12" r="1"></circle><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle>
+  </svg>`;
+
 const ABILITY_KEYS = ['str', 'dex', 'con', 'wis', 'int', 'cha'];
 const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', wis: 'SAG', int: 'INT', cha: 'CAR' };
 const KIND_OPTIONS = [
@@ -142,7 +149,7 @@ function buildCompanionCard(companion, isSelected = false) {
           <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
         </div>
         <div class="familiar-attack-actions">
-          <button class="attack-action-button attack-action-button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}"><span class="attack-action-button__icon" aria-hidden="true">✦</span><span>Danni</span></button>
+          <button class="attack-action-button attack-action-button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}" title="Tira i danni">${DAMAGE_ACTION_ICON}</button>
         </div>
       </div>
     `;

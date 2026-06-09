@@ -103,7 +103,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(homeSource).toContain('home-feature-panel--special-skills');
     expect(homeSource).toContain('home-feature-panel--resources');
     expect(source).toContain('class="modifier-card modifier-card--interactive skill-card');
-    expect(source).toContain("mastery ? 'Padronanza' : proficient ? 'Competenza' : 'Prova base'");
+    expect(source).toContain("mastery ? 'Maestria' : proficient ? 'Competenza' : 'Prova base'");
     expect(source).toContain('class="attack-card__hit"><small>TC</small>');
     expect(source).toContain('class="attack-card__damage"><small>Danni</small>');
     expect(source).toContain('class="spell-stats"');
@@ -135,13 +135,16 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.settings-panel--inventory');
     expect(source).toContain('attack-action-button--damage');
     expect(source).toContain('attack-action-button--mode');
-    expect(source).toContain('<span>Presa</span>');
+    expect(source).toContain('const WEAPON_MODE_ICON');
+    expect(source).toContain('attack-action-button__svg');
     expect(styles).toContain('.modifier-card--mastery .skill-card__status::before');
     expect(styles).toContain('.modifier-card--proficiency .saving-throw-card__status::before');
     expect(styles).toContain('.spell-prepared-list__card.resource-card');
-    expect(styles).toContain('inset 4px 0 0 #3b5d60');
+    expect(styles).toContain('inset 3px 0 0 rgba(59, 93, 96, 0.68)');
     expect(styles).toContain('.home-feature-panel--resources .resource-card');
-    expect(styles).toContain('inset 4px 0 0 #61743b');
+    expect(styles).toContain('inset 3px 0 0 rgba(97, 116, 59, 0.68)');
+    expect(styles).toContain('.equipment-management .equipped-item-card.resource-card');
+    expect(styles).toContain('background: #f6ead8');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {

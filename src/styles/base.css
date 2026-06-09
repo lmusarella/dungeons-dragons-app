@@ -12440,14 +12440,14 @@ button:focus-visible,
 .skill-card.modifier-card--proficiency,
 .saving-throw-card.modifier-card--proficiency,
 .special-skill-card.modifier-card--proficiency {
-  border-color: #2f7a57;
-  box-shadow: inset 4px 0 0 #2f7a57, 0 5px 14px rgba(47, 122, 87, 0.16);
+  border-color: rgba(47, 122, 87, 0.48);
+  box-shadow: inset 3px 0 0 rgba(47, 122, 87, 0.72), 0 3px 9px rgba(47, 122, 87, 0.08);
 }
 
 .skill-card.modifier-card--mastery,
 .special-skill-card.modifier-card--mastery {
-  border-color: #a56720;
-  box-shadow: inset 4px 0 0 #a56720, 0 5px 14px rgba(165, 103, 32, 0.18);
+  border-color: rgba(165, 103, 32, 0.5);
+  box-shadow: inset 3px 0 0 rgba(165, 103, 32, 0.76), 0 3px 9px rgba(165, 103, 32, 0.09);
 }
 
 .modifier-card--proficiency .skill-card__status,
@@ -12457,11 +12457,11 @@ button:focus-visible,
   align-items: center;
   gap: 4px;
   padding: 2px 7px;
-  border: 1px solid #2f7a57;
+  border: 1px solid rgba(47, 122, 87, 0.45);
   border-radius: 999px;
-  background: #2f7a57;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(47, 122, 87, 0.2);
+  background: #e8f2ec;
+  color: #245f45;
+  font-weight: 800;
 }
 
 .modifier-card--proficiency .skill-card__status::before,
@@ -12477,11 +12477,11 @@ button:focus-visible,
   align-items: center;
   gap: 4px;
   padding: 2px 7px;
-  border: 1px solid #a56720;
+  border: 1px solid rgba(165, 103, 32, 0.5);
   border-radius: 999px;
-  background: #a56720;
-  color: #fffdf7;
-  box-shadow: 0 2px 6px rgba(165, 103, 32, 0.22);
+  background: #f6ead8;
+  color: #684114;
+  font-weight: 900;
 }
 
 .modifier-card--mastery .skill-card__status::before {
@@ -12491,97 +12491,92 @@ button:focus-visible,
 
 .skill-card.modifier-card--proficiency .skill-card__ability,
 .saving-throw-card.modifier-card--proficiency .saving-throw-card__ability {
-  border-color: #2f7a57;
-  box-shadow: 0 0 0 2px rgba(47, 122, 87, 0.12);
+  border-color: rgba(47, 122, 87, 0.58);
+  box-shadow: 0 0 0 1px rgba(47, 122, 87, 0.08);
 }
 
 .skill-card.modifier-card--mastery .skill-card__ability,
 .special-skill-card.modifier-card--mastery .skill-card__ability {
-  border-color: #a56720;
-  box-shadow: 0 0 0 2px rgba(165, 103, 32, 0.13);
+  border-color: rgba(165, 103, 32, 0.62);
+  box-shadow: 0 0 0 1px rgba(165, 103, 32, 0.09);
 }
 
 .attack-action-button {
-  min-height: 31px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 4px 8px 4px 5px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
+  padding: 0;
+  border: 1px solid #d2c4b1;
+  border-radius: 9px;
+  background: #f8f3eb;
+  color: #6a5947;
+  box-shadow: 0 2px 6px rgba(71, 54, 37, 0.08);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.attack-action-button__icon {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  font-size: 0.72rem;
-  line-height: 1;
+.attack-action-button__svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.attack-action-button__svg circle {
+  fill: currentColor;
+  stroke: none;
 }
 
 .attack-action-button--damage {
-  border-color: #bd593c;
-  background: #a9422e;
-  color: #fffaf5;
-  box-shadow: 0 4px 10px rgba(169, 66, 46, 0.22);
-}
-
-.attack-action-button--damage .attack-action-button__icon {
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: #d4a99b;
+  background: #fbefeb;
+  color: #914b3b;
 }
 
 .attack-action-button--spell {
-  border-color: #3b6d70;
-  background: #315f62;
-  box-shadow: 0 4px 10px rgba(49, 95, 98, 0.24);
+  border-color: #9dbbbc;
+  background: #edf5f4;
+  color: #38676a;
 }
 
 .attack-action-button--mode {
-  border-color: #b58a4b;
-  background: #f5e8d2;
-  color: #68461f;
-  box-shadow: 0 3px 8px rgba(113, 75, 32, 0.14);
-}
-
-.attack-action-button--mode .attack-action-button__icon {
-  border: 1px solid #c9a873;
-  background: #fff9ef;
-  color: #805625;
+  border-color: #d2bd9c;
+  background: #f8f1e6;
+  color: #75572f;
 }
 
 .attack-action-button:hover,
 .attack-action-button:focus-visible {
   outline: none;
   transform: translateY(-1px);
+  border-color: #9f8c75;
+  background: #fffaf4;
+  box-shadow: 0 4px 9px rgba(71, 54, 37, 0.13);
 }
 
 .attack-action-button--damage:hover,
 .attack-action-button--damage:focus-visible {
-  border-color: #8f2f20;
-  box-shadow: 0 7px 15px rgba(169, 66, 46, 0.3);
+  border-color: #b97867;
+  background: #f8e2dc;
 }
 
 .attack-action-button--spell:hover,
 .attack-action-button--spell:focus-visible {
-  border-color: #244c4e;
-  box-shadow: 0 7px 15px rgba(49, 95, 98, 0.3);
+  border-color: #6f999b;
+  background: #e2efee;
 }
 
 .attack-action-button--mode:hover,
 .attack-action-button--mode:focus-visible {
-  border-color: #94672e;
-  box-shadow: 0 6px 13px rgba(113, 75, 32, 0.2);
+  border-color: #b49362;
+  background: #f3e7d5;
 }
 
 .attack-card__actions {
@@ -12590,43 +12585,55 @@ button:focus-visible,
 }
 
 .spell-card-actions__damage {
-  width: auto;
+  width: 30px;
+  min-width: 30px;
   height: 30px;
+  min-height: 30px;
   margin-top: 0;
-  font-size: 0.6rem;
 }
 
 .spell-prepared-list__card.resource-card {
-  border-color: #557e80;
-  box-shadow: inset 4px 0 0 #3b5d60, 0 5px 14px rgba(59, 93, 96, 0.14);
+  border-color: rgba(85, 126, 128, 0.56);
+  box-shadow: inset 3px 0 0 rgba(59, 93, 96, 0.68), 0 3px 9px rgba(59, 93, 96, 0.08);
 }
 
 .spell-prepared-list__card.resource-card:hover,
 .spell-prepared-list__card.resource-card:focus-within {
-  border-color: #2f5b5e;
-  box-shadow: inset 4px 0 0 #2f5b5e, 0 8px 18px rgba(59, 93, 96, 0.2);
+  border-color: rgba(47, 91, 94, 0.72);
+  box-shadow: inset 3px 0 0 rgba(47, 91, 94, 0.78), 0 5px 12px rgba(59, 93, 96, 0.12);
 }
 
 .home-feature-panel--resources .resource-card {
-  border-color: #7b8e52;
-  box-shadow: inset 4px 0 0 #61743b, 0 5px 14px rgba(97, 116, 59, 0.14);
+  border-color: rgba(123, 142, 82, 0.58);
+  box-shadow: inset 3px 0 0 rgba(97, 116, 59, 0.68), 0 3px 9px rgba(97, 116, 59, 0.08);
 }
 
 .home-feature-panel--resources .resource-card:hover,
 .home-feature-panel--resources .resource-card:focus-within {
-  border-color: #52642e;
-  box-shadow: inset 4px 0 0 #52642e, 0 8px 18px rgba(97, 116, 59, 0.2);
+  border-color: rgba(82, 100, 46, 0.72);
+  box-shadow: inset 3px 0 0 rgba(82, 100, 46, 0.78), 0 5px 12px rgba(97, 116, 59, 0.12);
+}
+
+.equipment-management .equipped-item-card.resource-card {
+  border-color: rgba(91, 105, 121, 0.5);
+  box-shadow: inset 3px 0 0 rgba(91, 105, 121, 0.68), 0 3px 9px rgba(63, 73, 84, 0.08);
+}
+
+.equipment-management .equipped-item-card.resource-card:hover,
+.equipment-management .equipped-item-card.resource-card:focus-within {
+  border-color: rgba(70, 84, 100, 0.7);
+  box-shadow: inset 3px 0 0 rgba(70, 84, 100, 0.78), 0 5px 12px rgba(63, 73, 84, 0.12);
 }
 
 .familiars-quick-panel--refined {
-  border: 2px solid rgba(154, 101, 37, 0.52);
-  box-shadow: inset 0 4px 0 #9a6525, 0 10px 24px rgba(154, 101, 37, 0.13);
+  border: 1px solid rgba(154, 101, 37, 0.38);
+  box-shadow: inset 0 3px 0 rgba(154, 101, 37, 0.7), 0 6px 16px rgba(154, 101, 37, 0.08);
 }
 
 .familiars-quick-panel--refined .familiars-quick-panel__header {
   padding-top: 3px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(154, 101, 37, 0.3);
+  border-bottom: 1px solid rgba(154, 101, 37, 0.22);
 }
 
 .familiars-quick-panel--refined .eyebrow {
@@ -12635,81 +12642,75 @@ button:focus-visible,
 }
 
 .familiar-quick-card {
-  border-width: 2px;
+  border-width: 1px;
   border-color: #d1c0a4;
 }
 
 .familiar-quick-card.is-active {
-  border-color: #2f6c64;
-  box-shadow: inset 4px 0 0 #2f6c64, 0 6px 15px rgba(47, 108, 100, 0.18);
+  border-color: rgba(47, 108, 100, 0.64);
+  box-shadow: inset 3px 0 0 rgba(47, 108, 100, 0.76), 0 4px 10px rgba(47, 108, 100, 0.1);
 }
 
 .familiar-sheet--refined {
-  border: 2px solid rgba(47, 95, 99, 0.52);
-  box-shadow: inset 0 4px 0 #2f5f63, 0 12px 28px rgba(47, 95, 99, 0.14);
+  border: 1px solid rgba(47, 95, 99, 0.38);
+  box-shadow: inset 0 3px 0 rgba(47, 95, 99, 0.7), 0 7px 18px rgba(47, 95, 99, 0.08);
 }
 
 .familiar-sheet--refined .familiar-sheet__header {
   padding-top: 4px;
-  border-bottom-color: rgba(47, 95, 99, 0.34);
+  border-bottom-color: rgba(47, 95, 99, 0.24);
 }
 
-.familiar-sheet--refined .familiar-sheet__title > strong {
-  color: #294f52;
-}
+.familiar-sheet--refined .familiar-sheet__title > strong { color: #294f52; }
 
 .familiar-detail-panel--abilities,
 .familiar-detail-panel--vitals,
 .familiar-detail-panel--attacks,
 .familiar-detail-panel--notes {
-  border-width: 2px;
-  box-shadow: 0 5px 14px rgba(62, 48, 31, 0.07);
+  border-width: 1px;
+  box-shadow: 0 3px 9px rgba(62, 48, 31, 0.05);
 }
 
 .familiar-detail-panel--abilities {
-  border-color: rgba(50, 112, 82, 0.48);
-  box-shadow: inset 4px 0 0 #327052, 0 5px 14px rgba(50, 112, 82, 0.1);
+  border-color: rgba(50, 112, 82, 0.36);
+  box-shadow: inset 3px 0 0 rgba(50, 112, 82, 0.66), 0 3px 9px rgba(50, 112, 82, 0.06);
 }
 
 .familiar-detail-panel--vitals {
-  border: 2px solid rgba(55, 107, 124, 0.48);
+  border: 1px solid rgba(55, 107, 124, 0.36);
   border-radius: 16px;
-  box-shadow: inset 4px 0 0 #376b7c, 0 5px 14px rgba(55, 107, 124, 0.1);
+  box-shadow: inset 3px 0 0 rgba(55, 107, 124, 0.66), 0 3px 9px rgba(55, 107, 124, 0.06);
 }
 
 .familiar-detail-panel--attacks {
-  border-color: rgba(161, 60, 50, 0.5);
-  box-shadow: inset 4px 0 0 #a13c32, 0 5px 14px rgba(161, 60, 50, 0.11);
+  border-color: rgba(161, 60, 50, 0.38);
+  box-shadow: inset 3px 0 0 rgba(161, 60, 50, 0.68), 0 3px 9px rgba(161, 60, 50, 0.07);
 }
 
 .familiar-detail-panel--notes {
-  border-color: rgba(154, 101, 37, 0.46);
-  box-shadow: inset 4px 0 0 #9a6525, 0 5px 14px rgba(154, 101, 37, 0.1);
+  border-color: rgba(154, 101, 37, 0.34);
+  box-shadow: inset 3px 0 0 rgba(154, 101, 37, 0.66), 0 3px 9px rgba(154, 101, 37, 0.06);
 }
 
 .familiar-detail-panel--abilities .eyebrow { color: #327052; font-weight: 900; }
 .familiar-detail-panel--attacks .eyebrow { color: #a13c32; font-weight: 900; }
 .familiar-detail-panel--notes .eyebrow { color: #8a571c; font-weight: 900; }
 
-.familiar-ability-card {
-  border-width: 2px;
-}
+.familiar-ability-card { border-width: 1px; }
 
 .familiar-attack-card,
 .weapon-card.familiar-attack-card {
-  border: 2px solid #c56850;
-  box-shadow: inset 4px 0 0 #a13c32, 0 4px 12px rgba(161, 60, 50, 0.1);
+  border: 1px solid rgba(197, 104, 80, 0.58);
+  box-shadow: inset 3px 0 0 rgba(161, 60, 50, 0.7), 0 3px 8px rgba(161, 60, 50, 0.06);
 }
 
 .familiar-attack-card:hover,
 .familiar-attack-card:focus-visible {
-  border-color: #983629;
-  box-shadow: inset 4px 0 0 #983629, 0 7px 17px rgba(161, 60, 50, 0.17);
+  border-color: rgba(152, 54, 41, 0.7);
+  box-shadow: inset 3px 0 0 rgba(152, 54, 41, 0.78), 0 5px 11px rgba(161, 60, 50, 0.1);
 }
 
-.familiar-damage-button {
-  min-width: 72px;
-}
+.familiar-damage-button { min-width: 32px; }
 
 @media (max-width: 560px) {
   .attack-card__actions {
@@ -12717,15 +12718,9 @@ button:focus-visible,
     flex-wrap: wrap;
   }
 
-  .attack-action-button {
-    min-height: 30px;
-  }
-
   .spell-prepared-list__card.resource-card {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .spell-card-actions {
-    justify-content: flex-end;
-  }
+  .spell-card-actions { justify-content: flex-end; }
 }
