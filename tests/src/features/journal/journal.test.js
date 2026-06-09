@@ -26,7 +26,9 @@ describe('src/features/journal/journal.js', () => {
   it('renders the refined journal hierarchy without replacing its backgrounds', () => {
     const source = readFileSync('src/features/journal/journal.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
-    const refinement = styles.slice(styles.indexOf('/* FAB, journal and secondary screens refinement'));
+    const refinementStart = styles.indexOf('/* FAB, journal and secondary screens refinement');
+    const refinementEnd = styles.indexOf('/* Stronger section hierarchy and contextual menu */');
+    const refinement = styles.slice(refinementStart, refinementEnd);
 
     expect(source).toContain('journal-hero-card--refined');
     expect(source).toContain('journal-section-card--refined');

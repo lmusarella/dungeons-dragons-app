@@ -33,7 +33,7 @@ export function renderLayout(container) {
             </div>
           </div>
           <div class="header-action-wrap">
-            <button class="menu-button" type="button" data-menu-button aria-label="Apri menu">
+            <button class="menu-button" type="button" data-menu-button aria-label="Apri menu" aria-expanded="false">
               <span></span>
               <span></span>
               <span></span>
@@ -160,6 +160,7 @@ export function renderLayout(container) {
   if (menuButton) {
     menuButton.addEventListener('click', () => {
       openDrawer(buildMenuContent());
+      menuButton.setAttribute('aria-expanded', 'true');
     });
   }
 
@@ -177,6 +178,7 @@ export function renderLayout(container) {
     const target = event.target.closest('[data-drawer-close]');
     if (target) {
       closeDrawer();
+      menuButton?.setAttribute('aria-expanded', 'false');
     }
     if (actionsFab && actionsFab.classList.contains('is-open')) {
       const insideFab = event.target.closest('[data-actions-fab]');
@@ -245,14 +247,57 @@ export function updateHeaderInfo() {
 }
 
 function buildMenuContent() {
+  const { user, characters, activeCharacterId } = getState();
+  const activeCharacter = characters.find((character) => character.id === activeCharacterId);
+  const currentRoute = window.location.hash.replace('#/', '') || 'home';
+  const userName = user?.user_metadata?.display_name || user?.email || 'Utente';
+  const menuEntries = [
+    { route: 'characters', icon: '♙', label: 'Personaggi', description: 'Seleziona o crea un personaggio' },
+    { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci gli incantesimi condivisi' },
+    { route: 'settings', icon: '⚙', label: 'Impostazioni', description: 'Configura il personaggio attivo' }
+  ];
+
   const wrapper = document.createElement('div');
-  wrapper.className = 'menu-list';
+  wrapper.className = 'menu-list menu-navigation';
   wrapper.innerHTML = `
-    <a class="menu-item" href="#/characters" data-drawer-close>Seleziona personaggi</a>
-    <a class="menu-item" href="#/library" data-drawer-close>Archivio centralizzato</a>
-    <a class="menu-item" href="#/settings" data-drawer-close>Impostazioni</a>
-    <button class="menu-item menu-item--danger" type="button" data-logout data-drawer-close>Logout</button>
+    <header class="menu-navigation__header">
+      <div class="menu-navigation__profile">
+        <span class="menu-navigation__avatar" data-menu-avatar></span>
+        <span class="menu-navigation__identity">
+          <small>Profilo</small>
+          <strong data-menu-user></strong>
+          <span data-menu-character></span>
+        </span>
+      </div>
+      <button class="menu-navigation__close" type="button" data-drawer-close aria-label="Chiudi menu">×</button>
+    </header>
+    <nav class="menu-navigation__section" aria-label="Menu account">
+      <span class="menu-navigation__section-title">Gestione</span>
+      ${menuEntries.map((entry) => `
+        <a class="menu-item menu-navigation__item ${currentRoute === entry.route ? 'is-active' : ''}" href="#/${entry.route}" data-drawer-close ${currentRoute === entry.route ? 'aria-current="page"' : ''}>
+          <span class="menu-navigation__item-icon" aria-hidden="true">${entry.icon}</span>
+          <span class="menu-navigation__item-copy"><strong>${entry.label}</strong><small>${entry.description}</small></span>
+          <span class="menu-navigation__chevron" aria-hidden="true">›</span>
+        </a>
+      `).join('')}
+    </nav>
+    <footer class="menu-navigation__footer">
+      <button class="menu-item menu-item--danger menu-navigation__logout" type="button" data-logout data-drawer-close>
+        <span class="menu-navigation__item-icon" aria-hidden="true">↪</span>
+        <span class="menu-navigation__item-copy"><strong>Esci</strong><small>Termina la sessione corrente</small></span>
+      </button>
+    </footer>
   `;
+
+  const avatar = wrapper.querySelector('[data-menu-avatar]');
+  const userNameElement = wrapper.querySelector('[data-menu-user]');
+  const characterNameElement = wrapper.querySelector('[data-menu-character]');
+  if (avatar) renderAvatar(avatar, userName, user?.user_metadata?.avatar_url);
+  if (userNameElement) userNameElement.textContent = userName;
+  if (characterNameElement) characterNameElement.textContent = activeCharacter?.name
+    ? `Personaggio: ${activeCharacter.name}`
+    : 'Nessun personaggio attivo';
+
   return wrapper;
 }
 

@@ -128,6 +128,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.proficiency-tab-bar .tab-bar__button.is-active');
     expect(styles).toContain('.equipped-item-card.resource-card');
     expect(styles).toContain('.modal-card .field input:focus');
+    expect(styles).toContain('--section-teal: #2f5f63');
+    expect(styles).toContain('.home-feature-panel {');
+    expect(styles).toContain('inset 0 4px 0 var(--feature-color)');
+    expect(styles).toContain('.journal-section-card--entries');
+    expect(styles).toContain('.settings-panel--inventory');
   });
 
   it('renders unarmed attacks alongside equipped weapons', () => {

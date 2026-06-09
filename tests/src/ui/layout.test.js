@@ -37,6 +37,11 @@ describe('src/ui/layout.js', () => {
     expect(source).toContain('class="actions-fab-item__icon"');
     expect(source).toContain('class="actions-fab-toggle__icon"');
     expect(styles).toContain('.actions-fab-item__icon');
+    expect(source).toContain("wrapper.className = 'menu-list menu-navigation'");
+    expect(source).toContain('menu-navigation__profile');
+    expect(source).toContain('aria-current="page"');
+    expect(source).toContain("menuButton.setAttribute('aria-expanded', 'true')");
+    expect(styles).toContain('.menu-navigation .menu-item.is-active');
   });
 
 });
