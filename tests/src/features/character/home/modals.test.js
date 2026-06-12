@@ -186,6 +186,15 @@ describe('src/features/character/home/modals.js', () => {
     );
 
     expect(preparedModal).toContain('prepared-spells-modal__intro');
+    expect(preparedModal).toContain('prepared-spells-modal__workspace');
+    expect(preparedModal).toContain('data-prepared-search');
+    expect(preparedModal).toContain('data-prepared-status-filter');
+    expect(preparedModal).toContain('data-prepared-level="all"');
+    expect(preparedModal).toContain('data-prepare-visible');
+    expect(preparedModal).toContain('data-unprepare-visible');
+    expect(preparedModal).toContain('const applyFilters = () =>');
+    expect(preparedModal).toContain("activeLevel === 'all'");
+    expect(preparedModal).toContain('getVisibleItems().forEach');
     expect(preparedModal).toContain('data-prepared-count');
     expect(preparedModal).toContain('data-removed-count');
     expect(preparedModal).toContain('data-prepared-status');
@@ -197,6 +206,11 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain("item?.classList.toggle('is-prepared', isPrepared)");
     expect(preparedModal).toContain("cardClass: ['modal-card--form', 'modal-card--prepared-spells']");
     expect(preparedModal).toContain("submitLabel: 'Salva preparazione'");
+    expect(styles).toContain('.modal-card--prepared-spells');
+    expect(styles).toContain('width: min(1180px, calc(100vw - 32px))');
+    expect(styles).toContain('.prepared-spells-modal__workspace');
+    expect(styles).toContain('.prepared-spells-modal__level-rail');
+    expect(styles).toContain('.prepared-spells-modal__bulk-actions');
     expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
     expect(styles).toContain('.prepared-spells-modal__check');
     expect(styles).toContain('.prepared-spells-modal__delete');
