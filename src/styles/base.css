@@ -14268,3 +14268,106 @@ button:focus-visible,
     min-height: 0;
   }
 }
+
+/* Compact attack sigils and clearer secondary information */
+.attack-card.modifier-card:not(.resource-card) .attack-card__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "sigil title"
+    "sigil meta";
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 3px;
+}
+
+.attack-card__sigil {
+  grid-area: sigil;
+  width: 38px;
+  height: 38px;
+  flex-direction: column;
+  gap: 1px;
+  border-color: rgba(163, 63, 54, 0.28);
+  background: #f6e3dc;
+  color: #873a32;
+  line-height: 1;
+}
+
+.attack-card__sigil small {
+  max-width: 34px;
+  overflow: hidden;
+  font-size: 0.5rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.attack-card__sigil strong {
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.attack-card--spell .attack-card__sigil {
+  border-color: #c9dcda;
+  background: #e8f0ed;
+  color: #3b5d60;
+}
+
+.attack-card--creature .attack-card__sigil {
+  border-color: #bdd9ca;
+  background: #e7f2ec;
+  color: #2f7356;
+}
+
+.attack-card--unarmed .attack-card__sigil {
+  border-color: #dfcba8;
+  background: #f6eddd;
+  color: #805a2c;
+}
+
+.attack-card.modifier-card:not(.resource-card) .attack-card__title {
+  grid-area: title;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.attack-card.modifier-card:not(.resource-card) .attack-card__meta {
+  grid-area: meta;
+}
+
+.attack-card.modifier-card:not(.resource-card) .attack-card__meta .muted {
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.attack-card.modifier-card:not(.resource-card) .attack-card__damage {
+  font-size: 0.72rem;
+}
+
+.attack-action-button__svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.9;
+}
+
+.header-meta-item--character {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-meta-item--character:hover,
+.header-meta-item--character:focus-visible {
+  border-color: rgba(59, 93, 96, 0.52);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 93, 96, 0.1);
+}
+
+.home-feature-panel--resources .resource-charge-label {
+  color: #7a715f;
+  font-size: 0.56rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

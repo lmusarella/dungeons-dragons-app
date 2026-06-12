@@ -794,10 +794,12 @@ export function buildAttackSection(character, items = [], companions = []) {
       return `
           <div class="modifier-card attack-card attack-card--wild-shape attack-card--creature" data-roll-attack="wildshape:${index}">
             <div class="attack-card__body">
+              <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attack.to_hit || 0)}, caratteristica Forma">
+                <small>Forma</small>
+                <strong>${formatSigned(attack.to_hit || 0)}</strong>
+              </span>
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
-                <span class="modifier-ability modifier-ability--str">Forma</span>
-                <span class="attack-card__hit"><small>TC</small>${formatSigned(attack.to_hit || 0)}</span>
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage"><small>Danni</small>${escapeHtml(damageText)}</span>
@@ -821,10 +823,12 @@ export function buildAttackSection(character, items = [], companions = []) {
     return `
           <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
             <div class="attack-card__body">
+              <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attackStats.attackTotal)}, caratteristica ${escapeHtml(abilityLabel)}">
+                <small>${escapeHtml(abilityLabel)}</small>
+                <strong>${formatSigned(attackStats.attackTotal)}</strong>
+              </span>
               <div class="attack-card__title">
                 <strong class="attack-card__name">${escapeHtml(attackName)}</strong>
-                <span class="modifier-ability modifier-ability--${abilityKey}">${escapeHtml(abilityLabel)}</span>
-                <span class="attack-card__hit"><small>TC</small>${formatSigned(attackStats.attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage"><small>Danni</small>${escapeHtml(damageText)}</span>
@@ -898,10 +902,12 @@ export function buildAttackSection(character, items = [], companions = []) {
     return `
           <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
             <div class="attack-card__body">
+              <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attackTotal)}, caratteristica ${abilityLabel}">
+                <small>${abilityLabel}</small>
+                <strong>${formatSigned(attackTotal)}</strong>
+              </span>
               <div class="attack-card__title">
                 <strong class="attack-card__name">${weapon.name}</strong>
-                <span class="modifier-ability modifier-ability--${attackAbility}">${abilityLabel}</span>
-                <span class="attack-card__hit"><small>TC</small>${formatSigned(attackTotal)}</span>
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
@@ -928,10 +934,12 @@ export function buildAttackSection(character, items = [], companions = []) {
       return `
             <div class="modifier-card attack-card attack-card--spell" data-roll-attack="spell:${spell.id}">
               <div class="attack-card__body">
+                <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(spellAttackBonus)}, caratteristica ${abilityLabel}">
+                  <small>${abilityLabel}</small>
+                  <strong>${formatSigned(spellAttackBonus)}</strong>
+                </span>
                 <div class="attack-card__title">
                   <strong class="attack-card__name">${spell.name}</strong>
-                  <span class="modifier-ability modifier-ability--${spellAbilityKey}">${abilityLabel}</span>
-                  <span class="attack-card__hit"><small>TC</small>${formatSigned(spellAttackBonus)}</span>
                 </div>
                 <div class="attack-card__meta">
                   <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
@@ -1165,7 +1173,7 @@ export function buildResourceList(
               <strong class="attack-card__name">${res.name}</strong>
               ${Number(res.child_resource_count) ? `<span class="resource-child-count">${res.child_resource_count} opzioni</span>` : ''}
             </div>
-            <span class="resource-card__kind">${res.resource_type === 'passive' ? 'Passiva' : res.resource_type === 'pool' ? 'Riserva' : 'Utilizzi'}</span>
+            ${res.resource_type === 'pool' ? '<span class="resource-card__kind">Riserva</span>' : ''}
             ${showDescription
     ? `<p class="resource-card__description">${res.description ?? ''}</p>`
     : ''}
@@ -1270,8 +1278,8 @@ export function buildResourceCharges(resource) {
     return `<span class="${classes}" aria-hidden="true"></span>`;
   }).join('');
   return `
-    <div class="resource-charge-row" aria-label="Cariche risorsa">
-      <span class="resource-charge-label">Cariche</span>
+    <div class="resource-charge-row" aria-label="Utilizzi risorsa">
+      <span class="resource-charge-label">Utilizzi</span>
       <span class="resource-charge-count">${remaining}/${maxUses}</span>
       <div class="resource-charges" aria-hidden="true">${charges}</div>
     </div>

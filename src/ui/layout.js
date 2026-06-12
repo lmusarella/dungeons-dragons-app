@@ -11,7 +11,7 @@ export function renderLayout(container) {
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
           </div>
           <div class="app-brand">
-            <strong>Companion</strong>
+            <strong>Gestionale schede personaggi</strong>
             <span>Scheda digitale</span>
           </div>
         </div>
@@ -24,13 +24,13 @@ export function renderLayout(container) {
                 <strong data-user-name></strong>
               </div>
             </div>
-            <div class="header-meta-item" data-character-row>
+            <a class="header-meta-item header-meta-item--character" href="#/home" data-character-row aria-label="Apri la scheda del personaggio">
               <div class="header-avatar" data-character-avatar></div>
               <div class="header-meta-text">
                 <span class="header-meta-label">Personaggio</span>
                 <strong data-character-name></strong>
               </div>
-            </div>
+            </a>
           </div>
           <div class="header-action-wrap">
             <button class="menu-button" type="button" data-menu-button aria-label="Apri menu" aria-expanded="false">
