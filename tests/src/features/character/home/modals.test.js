@@ -177,6 +177,26 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain("child.resource_cost_variable ? 'Costo variabile'");
   });
 
+  it('uses descriptive radio cards to choose how to add a spell', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const sourceModal = source.slice(
+      source.indexOf('export async function openSpellSourceModal'),
+      source.indexOf('export function openSpellQuickDetailModal')
+    );
+
+    expect(sourceModal).toContain('role="radiogroup"');
+    expect(sourceModal).toContain('type="radio" name="spell_source_mode" value="shared" checked');
+    expect(sourceModal).toContain('type="radio" name="spell_source_mode" value="manual"');
+    expect(sourceModal).toContain('Cerca nella raccolta');
+    expect(sourceModal).toContain('Crea un incantesimo');
+    expect(sourceModal).toContain('Consigliato');
+    expect(sourceModal).not.toContain('buildSelect([');
+    expect(sourceModal).toContain("cardClass: ['modal-card--form', 'modal-card--spell-source']");
+    expect(styles).toContain('.spell-source-picker__option > input:checked + .spell-source-picker__option-card');
+    expect(styles).toContain('.spell-source-picker__recommendation');
+  });
+
   it('renders an accessible preparation workflow with live selection feedback', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');

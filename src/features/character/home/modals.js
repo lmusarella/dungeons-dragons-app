@@ -902,24 +902,48 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
 }
 
 export async function openSpellSourceModal() {
-  const field = document.createElement('label');
-  field.className = 'field';
-  field.innerHTML = '<span>Come vuoi aggiungere l\'incantesimo?</span>';
-  const modeSelect = buildSelect([
-    { value: 'shared', label: 'Cerca in lista condivisa' },
-    { value: 'manual', label: 'Inserisci nuovo incantesimo' }
-  ], 'shared');
-  modeSelect.name = 'spell_source_mode';
-  field.appendChild(modeSelect);
   const content = document.createElement('div');
-  content.className = 'modal-form-grid';
-  content.appendChild(field);
+  content.className = 'spell-source-picker';
+  content.innerHTML = `
+    <div class="spell-source-picker__intro">
+      <span class="spell-source-picker__intro-icon" aria-hidden="true">✦</span>
+      <div>
+        <strong>Come vuoi aggiungere l'incantesimo?</strong>
+        <p>Scegli dalla raccolta condivisa per fare prima, oppure crea una scheda personalizzata.</p>
+      </div>
+    </div>
+    <div class="spell-source-picker__options" role="radiogroup" aria-label="Modalità di aggiunta incantesimo">
+      <label class="spell-source-picker__option">
+        <input type="radio" name="spell_source_mode" value="shared" checked />
+        <span class="spell-source-picker__option-card">
+          <span class="spell-source-picker__option-icon" aria-hidden="true">⌕</span>
+          <span class="spell-source-picker__option-copy">
+            <strong>Cerca nella raccolta</strong>
+            <small>Trova un incantesimo già completo di livello, scuola, componenti, descrizione e regole.</small>
+            <span class="spell-source-picker__recommendation">Consigliato</span>
+          </span>
+          <span class="spell-source-picker__radio" aria-hidden="true"></span>
+        </span>
+      </label>
+      <label class="spell-source-picker__option">
+        <input type="radio" name="spell_source_mode" value="manual" />
+        <span class="spell-source-picker__option-card">
+          <span class="spell-source-picker__option-icon" aria-hidden="true">＋</span>
+          <span class="spell-source-picker__option-copy">
+            <strong>Crea un incantesimo</strong>
+            <small>Inserisci manualmente tutti i dettagli per un incantesimo homebrew o non presente nella raccolta.</small>
+          </span>
+          <span class="spell-source-picker__radio" aria-hidden="true"></span>
+        </span>
+      </label>
+    </div>
+  `;
   const formData = await openFormModal({
     title: 'Aggiungi incantesimo',
     submitLabel: 'Continua',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--spell-source']
   });
   if (!formData) return null;
   return formData.get('spell_source_mode') || 'shared';
