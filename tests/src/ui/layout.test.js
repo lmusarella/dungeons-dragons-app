@@ -28,7 +28,8 @@ describe('src/ui/layout.js', () => {
     const styles = readFileSync('src/styles/base.css', 'utf8');
 
     expect(source).toContain('class="app-brand"');
-    expect(source).toContain('Scheda digitale');
+    expect(source).toContain('Gestionale schede personaggi');
+    expect(source).toContain('href="#/home" data-character-row');
     expect(source).toContain('aria-label="Navigazione principale"');
     expect(source).toContain('class="bottom-nav__icon"');
     expect(styles).toContain('.app-shell .app-header');

@@ -104,7 +104,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(homeSource).toContain('home-feature-panel--resources');
     expect(source).toContain('class="modifier-card modifier-card--interactive skill-card');
     expect(source).toContain("mastery ? 'Maestria' : proficient ? 'Competenza' : 'Prova base'");
-    expect(source).toContain('class="attack-card__hit"><small>TC</small>');
+    expect(source).toContain('class="spell-card__sigil attack-card__sigil"');
     expect(source).toContain('class="attack-card__damage"><small>Danni</small>');
     expect(source).toContain('class="spell-stats"');
     expect(source).toContain('class="spell-card__sigil"');
@@ -113,6 +113,9 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="modifier-card modifier-card--interactive skill-card special-skill-card');
     expect(source).toContain('class="resource-card__marker"');
     expect(source).toContain('class="resource-card__kind"');
+    expect(source).toContain('<span class="resource-charge-label">Utilizzi</span>');
+    expect(source).not.toContain('<span class="resource-charge-label">Cariche</span>');
+    expect(source).not.toContain("res.resource_type === 'passive' ? 'Passiva'");
     expect(styles).toContain('.skill-card__status');
     expect(source).not.toContain('attack-card__icon');
     expect(styles).not.toContain('.attack-card__icon');
@@ -152,7 +155,8 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('background: #f6ead8');
     expect(source).toContain('icon-button--section-add');
     expect(styles).toContain('.attack-card.modifier-card:not(.resource-card) .attack-card__title');
-    expect(styles).toContain('grid-template-columns: minmax(0, 1fr) auto auto');
+    expect(styles).toContain('grid-template-areas:');
+    expect(styles).toContain('\"sigil title\"');
     expect(styles).toContain('.home-feature-panel--spells .charge-indicator--used');
     expect(styles).toContain('background: #d9655b');
   });
@@ -164,6 +168,6 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('data-roll-damage="unarmed:${index}"');
     expect(source).toContain('Colpo senz’arma');
     expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
-    expect(source).toContain('modifier-ability--${abilityKey}');
+    expect(source).toContain('caratteristica ${escapeHtml(abilityLabel)}');
   });
 });
