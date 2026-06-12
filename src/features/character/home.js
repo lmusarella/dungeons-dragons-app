@@ -260,124 +260,320 @@ function mapCharacterSpellRowToSpell(row) {
 async function openSharedSpellPicker() {
   const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
   const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
+  const PAGE_SIZE = 30;
   const content = document.createElement('div');
-  content.className = 'modal-form-grid';
-  const queryField = buildInput({
-    label: 'Cerca incantesimo',
-    name: 'spell_query',
-    placeholder: 'Es. Palla di fuoco'
-  });
-  const queryInput = queryField.querySelector('input');
-  const versionField = document.createElement('label');
-  versionField.className = 'field';
-  versionField.innerHTML = '<span>Versione regole</span>';
-  const versionSelect = document.createElement('select');
-  versionSelect.name = 'rules_version';
-  [
-    { value: '2024', label: '2024' },
-    { value: '2014', label: '2014' },
-    { value: 'Custom', label: 'Custom' }
-  ].forEach((entry) => {
-    const option = document.createElement('option');
-    option.value = entry.value;
-    option.textContent = entry.label;
-    versionSelect.appendChild(option);
-  });
-  versionField.appendChild(versionSelect);
-  const schoolField = document.createElement('label');
-  schoolField.className = 'field';
-  schoolField.innerHTML = '<span>Scuola</span>';
-  const schoolSelect = document.createElement('select');
-  schoolSelect.name = 'spell_school_filter';
-  SCHOOLS.forEach((value) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value || 'Tutte';
-    schoolSelect.appendChild(option);
-  });
-  schoolField.appendChild(schoolSelect);
-  const levelField = buildInput({
-    label: 'Livello',
-    name: 'spell_level_filter',
-    type: 'number',
-    value: ''
-  });
-  const classesField = document.createElement('div');
-  classesField.className = 'field';
-  classesField.innerHTML = `<span>Classi</span><div class="tag-row">${CASTER_CLASSES.map((entry) => `<label class="chip"><input type="checkbox" name="spell_caster_filter" value="${entry}" /> ${entry}</label>`).join('')}</div>`;
-  const compactRow = document.createElement('div');
-  compactRow.className = 'modal-form-row modal-form-row--compact';
-  compactRow.append(levelField, schoolField, versionField);
-  content.appendChild(queryField);
-  content.appendChild(compactRow);
-  content.appendChild(classesField);
-  const resultField = document.createElement('label');
-  resultField.className = 'field';
-  resultField.innerHTML = '<span>Risultati</span>';
-  const resultSelect = document.createElement('select');
-  resultSelect.name = 'shared_spell_id';
-  resultField.appendChild(resultSelect);
-  const paging = document.createElement('div');
-  paging.className = 'tab-bar';
-  paging.innerHTML = '<button type="button" class="tab-bar__button" data-prev-page>◀</button><span data-page-label class="muted">Pagina 1</span><button type="button" class="tab-bar__button" data-next-page>▶</button>';
-  content.appendChild(resultField);
-  content.appendChild(paging);
+  content.className = 'shared-spell-picker';
+  content.innerHTML = `
+    <section class="shared-spell-picker__filters" aria-label="Filtri incantesimi">
+      <div class="shared-spell-picker__search-wrap">
+        <span class="shared-spell-picker__search-icon" aria-hidden="true">⌕</span>
+        <label class="field shared-spell-picker__search">
+          <span>Cerca per nome</span>
+          <input type="search" name="spell_query" placeholder="Scrivi il nome di un incantesimo..." autocomplete="off" />
+        </label>
+        <button type="button" class="ghost-button shared-spell-picker__reset" data-reset-spell-filters>Azzera filtri</button>
+      </div>
+      <div class="shared-spell-picker__filter-row">
+        <label class="field">
+          <span>Livello</span>
+          <select name="spell_level_filter">
+            <option value="">Tutti i livelli</option>
+            <option value="0">Trucchetti</option>
+            ${Array.from({ length: 9 }, (_, index) => `<option value="${index + 1}">Livello ${index + 1}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Scuola</span>
+          <select name="spell_school_filter">
+            ${SCHOOLS.map((school) => `<option value="${school}">${school || 'Tutte le scuole'}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Regole</span>
+          <select name="rules_version">
+            <option value="">Tutte le versioni</option>
+            <option value="2024">2024</option>
+            <option value="2014">2014</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Proprietà</span>
+          <select name="spell_property_filter">
+            <option value="">Qualsiasi</option>
+            <option value="concentration">Concentrazione</option>
+            <option value="ritual">Rituale</option>
+          </select>
+        </label>
+      </div>
+      <div class="shared-spell-picker__classes">
+        <span class="shared-spell-picker__filter-label">Classi</span>
+        <div class="shared-spell-picker__class-list">
+          ${CASTER_CLASSES.map((casterClass) => `
+            <label class="shared-spell-picker__class-chip">
+              <input type="checkbox" name="spell_caster_filter" value="${casterClass}" />
+              <span>${casterClass}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+    <div class="shared-spell-picker__workspace">
+      <section class="shared-spell-picker__results" aria-label="Risultati ricerca">
+        <div class="shared-spell-picker__results-header">
+          <div>
+            <strong data-spell-results-title>Incantesimi</strong>
+            <span class="muted" data-spell-results-count>Caricamento...</span>
+          </div>
+          <span class="shared-spell-picker__hint">Seleziona un incantesimo per vedere i dettagli</span>
+        </div>
+        <div class="shared-spell-picker__list" data-spell-results aria-live="polite"></div>
+        <div class="shared-spell-picker__paging" data-spell-paging hidden>
+          <button type="button" class="ghost-button" data-prev-page aria-label="Pagina precedente">← Precedente</button>
+          <span data-page-label>Pagina 1</span>
+          <button type="button" class="ghost-button" data-next-page aria-label="Pagina successiva">Successiva →</button>
+        </div>
+      </section>
+      <aside class="shared-spell-picker__preview" data-spell-preview aria-live="polite">
+        <div class="shared-spell-picker__preview-empty">
+          <span aria-hidden="true">✦</span>
+          <strong>Scegli un incantesimo</strong>
+          <p>Qui troverai livello, scuola, classi, tempo di lancio e descrizione.</p>
+        </div>
+      </aside>
+    </div>
+    <input type="hidden" name="shared_spell_id" value="" />
+  `;
+
+  const queryInput = content.querySelector('input[name="spell_query"]');
+  const levelSelect = content.querySelector('select[name="spell_level_filter"]');
+  const schoolSelect = content.querySelector('select[name="spell_school_filter"]');
+  const versionSelect = content.querySelector('select[name="rules_version"]');
+  const propertySelect = content.querySelector('select[name="spell_property_filter"]');
+  const selectedInput = content.querySelector('input[name="shared_spell_id"]');
+  const resultsEl = content.querySelector('[data-spell-results]');
+  const resultsCountEl = content.querySelector('[data-spell-results-count]');
+  const previewEl = content.querySelector('[data-spell-preview]');
+  const pagingEl = content.querySelector('[data-spell-paging]');
+  const pageLabel = content.querySelector('[data-page-label]');
+  const prevBtn = content.querySelector('[data-prev-page]');
+  const nextBtn = content.querySelector('[data-next-page]');
   let currentPage = 1;
-  let currentItems = [];
-  const pageLabel = paging.querySelector('[data-page-label]');
-  const prevBtn = paging.querySelector('[data-prev-page]');
-  const nextBtn = paging.querySelector('[data-next-page]');
-  const loadResults = async () => {
-    const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked')).map((el) => el.value);
-    const result = await searchSharedSpells({
-      query: queryInput?.value || '',
-      rulesVersion: versionSelect.value || '2024',
-      level: content.querySelector('input[name="spell_level_filter"]')?.value || '',
-      school: schoolSelect.value || '',
-      casterClasses: selectedClasses,
-      page: currentPage,
-      pageSize: 25
-    });
-    currentItems = result.items || [];
-    resultSelect.innerHTML = '';
-    currentItems.forEach((spell) => {
-      const option = document.createElement('option');
-      option.value = spell.id;
-      option.textContent = `${spell.name} (Lv ${spell.level})`;
-      resultSelect.appendChild(option);
-    });
-    if (!currentItems.length) {
-      const empty = document.createElement('option');
-      empty.value = '';
-      empty.textContent = 'Nessun risultato';
-      resultSelect.appendChild(empty);
-    }
-    const totalPages = Math.max(1, Math.ceil((result.total || 0) / (result.pageSize || 25)));
-    pageLabel.textContent = `Pagina ${currentPage} / ${totalPages}`;
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
+  let totalPages = 1;
+  let selectedSpell = null;
+  let loadSequence = 0;
+  let searchTimer = null;
+  let submitButton = null;
+
+  const formatSpellLevel = (level) => Number(level) === 0 ? 'Trucchetto' : `Livello ${level}`;
+  const setSubmitState = () => {
+    if (submitButton) submitButton.disabled = !selectedSpell;
   };
-  queryInput?.addEventListener('input', () => {
+  const renderPreview = (spell) => {
+    previewEl.innerHTML = '';
+    if (!spell) {
+      previewEl.innerHTML = `
+        <div class="shared-spell-picker__preview-empty">
+          <span aria-hidden="true">✦</span>
+          <strong>Scegli un incantesimo</strong>
+          <p>Qui troverai livello, scuola, classi, tempo di lancio e descrizione.</p>
+        </div>
+      `;
+      return;
+    }
+    const heading = document.createElement('div');
+    heading.className = 'shared-spell-picker__preview-heading';
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'shared-spell-picker__preview-eyebrow';
+    eyebrow.textContent = [formatSpellLevel(spell.level), spell.school].filter(Boolean).join(' · ');
+    const title = document.createElement('strong');
+    title.className = 'shared-spell-picker__preview-title';
+    title.textContent = spell.name;
+    heading.append(eyebrow, title);
+
+    const facts = document.createElement('dl');
+    facts.className = 'shared-spell-picker__facts';
+    [
+      ['Lancio', spell.cast_time],
+      ['Gittata', spell.range],
+      ['Durata', spell.duration],
+      ['Componenti', spell.components]
+    ].filter(([, value]) => value).forEach(([label, value]) => {
+      const fact = document.createElement('div');
+      const term = document.createElement('dt');
+      const description = document.createElement('dd');
+      term.textContent = label;
+      description.textContent = value;
+      fact.append(term, description);
+      facts.appendChild(fact);
+    });
+
+    const tags = document.createElement('div');
+    tags.className = 'shared-spell-picker__preview-tags';
+    if (spell.concentration) tags.appendChild(Object.assign(document.createElement('span'), { textContent: 'Concentrazione' }));
+    if (spell.ritual) tags.appendChild(Object.assign(document.createElement('span'), { textContent: 'Rituale' }));
+    if (spell.rules_version) tags.appendChild(Object.assign(document.createElement('span'), { textContent: `Regole ${spell.rules_version}` }));
+
+    const classes = document.createElement('p');
+    classes.className = 'shared-spell-picker__preview-classes';
+    const casterClasses = Array.isArray(spell.caster_classes) ? spell.caster_classes : [];
+    classes.textContent = casterClasses.length ? `Classi: ${casterClasses.join(', ')}` : 'Classi non specificate';
+    const description = document.createElement('p');
+    description.className = 'shared-spell-picker__description';
+    description.textContent = spell.description || 'Nessuna descrizione disponibile.';
+    previewEl.append(heading, facts, tags, classes, description);
+  };
+
+  const selectSpell = (spell, card) => {
+    selectedSpell = spell;
+    selectedInput.value = spell.id;
+    content.querySelectorAll('.shared-spell-picker__spell').forEach((entry) => {
+      const isSelected = entry === card;
+      entry.classList.toggle('is-selected', isSelected);
+      entry.setAttribute('aria-pressed', String(isSelected));
+    });
+    renderPreview(spell);
+    setSubmitState();
+  };
+
+  const renderResults = (items, total) => {
+    resultsEl.innerHTML = '';
+    resultsCountEl.textContent = `${total} ${total === 1 ? 'risultato' : 'risultati'}`;
+    if (!items.length) {
+      resultsEl.innerHTML = `
+        <div class="shared-spell-picker__state">
+          <span aria-hidden="true">⌕</span>
+          <strong>Nessun incantesimo trovato</strong>
+          <p>Prova a cambiare il nome o ad azzerare uno dei filtri.</p>
+        </div>
+      `;
+      return;
+    }
+    items.forEach((spell) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'shared-spell-picker__spell';
+      card.setAttribute('aria-pressed', String(selectedSpell?.id === spell.id));
+      if (selectedSpell?.id === spell.id) card.classList.add('is-selected');
+      const main = document.createElement('span');
+      main.className = 'shared-spell-picker__spell-main';
+      const name = document.createElement('strong');
+      name.textContent = spell.name;
+      const meta = document.createElement('small');
+      meta.textContent = [formatSpellLevel(spell.level), spell.school || 'Scuola non indicata'].join(' · ');
+      main.append(name, meta);
+      const badges = document.createElement('span');
+      badges.className = 'shared-spell-picker__spell-badges';
+      if (spell.concentration) badges.appendChild(Object.assign(document.createElement('small'), { textContent: 'C' }));
+      if (spell.ritual) badges.appendChild(Object.assign(document.createElement('small'), { textContent: 'R' }));
+      const arrow = document.createElement('span');
+      arrow.className = 'shared-spell-picker__spell-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '›';
+      card.append(main, badges, arrow);
+      card.addEventListener('click', () => selectSpell(spell, card));
+      card.addEventListener('dblclick', () => {
+        selectSpell(spell, card);
+        submitButton?.click();
+      });
+      resultsEl.appendChild(card);
+    });
+  };
+
+  const loadResults = async () => {
+    const sequence = ++loadSequence;
+    resultsEl.innerHTML = `
+      <div class="shared-spell-picker__state shared-spell-picker__state--loading">
+        <span class="shared-spell-picker__spinner" aria-hidden="true"></span>
+        <strong>Ricerca in corso...</strong>
+      </div>
+    `;
+    resultsCountEl.textContent = 'Caricamento...';
+    const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked')).map((el) => el.value);
+    const property = propertySelect.value;
+    try {
+      const result = await searchSharedSpells({
+        query: queryInput.value,
+        rulesVersion: versionSelect.value || null,
+        level: levelSelect.value,
+        school: schoolSelect.value,
+        casterClasses: selectedClasses,
+        concentration: property === 'concentration' ? true : '',
+        ritual: property === 'ritual' ? true : '',
+        page: currentPage,
+        pageSize: PAGE_SIZE
+      });
+      if (sequence !== loadSequence) return;
+      totalPages = Math.max(1, Math.ceil((result.total || 0) / (result.pageSize || PAGE_SIZE)));
+      currentPage = Math.min(currentPage, totalPages);
+      renderResults(result.items || [], result.total || 0);
+      pageLabel.textContent = `Pagina ${currentPage} di ${totalPages}`;
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages;
+      pagingEl.hidden = totalPages <= 1;
+    } catch (error) {
+      if (sequence !== loadSequence) return;
+      resultsCountEl.textContent = 'Errore di caricamento';
+      pagingEl.hidden = true;
+      resultsEl.innerHTML = `
+        <div class="shared-spell-picker__state shared-spell-picker__state--error">
+          <span aria-hidden="true">!</span>
+          <strong>Impossibile caricare gli incantesimi</strong>
+          <p>Controlla la connessione e riprova.</p>
+          <button type="button" class="ghost-button" data-retry-spells>Riprova</button>
+        </div>
+      `;
+      resultsEl.querySelector('[data-retry-spells]')?.addEventListener('click', () => void loadResults());
+    }
+  };
+
+  const refreshFromFirstPage = () => {
     currentPage = 1;
     void loadResults();
+  };
+  queryInput.addEventListener('input', () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(refreshFromFirstPage, 250);
   });
-  schoolSelect.addEventListener('change', () => { currentPage = 1; void loadResults(); });
-  versionSelect.addEventListener('change', () => { currentPage = 1; void loadResults(); });
-  content.querySelector('input[name="spell_level_filter"]')?.addEventListener('input', () => { currentPage = 1; void loadResults(); });
-  content.querySelectorAll('input[name="spell_caster_filter"]').forEach((el) => el.addEventListener('change', () => { currentPage = 1; void loadResults(); }));
-  prevBtn?.addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); void loadResults(); });
-  nextBtn?.addEventListener('click', () => { currentPage += 1; void loadResults(); });
-  await loadResults();
+  [levelSelect, schoolSelect, versionSelect, propertySelect].forEach((control) => control.addEventListener('change', refreshFromFirstPage));
+  content.querySelectorAll('input[name="spell_caster_filter"]').forEach((control) => control.addEventListener('change', refreshFromFirstPage));
+  content.querySelector('[data-reset-spell-filters]')?.addEventListener('click', () => {
+    queryInput.value = '';
+    levelSelect.value = '';
+    schoolSelect.value = '';
+    versionSelect.value = '';
+    propertySelect.value = '';
+    content.querySelectorAll('input[name="spell_caster_filter"]').forEach((control) => { control.checked = false; });
+    queryInput.focus();
+    refreshFromFirstPage();
+  });
+  prevBtn.addEventListener('click', () => {
+    if (currentPage <= 1) return;
+    currentPage -= 1;
+    void loadResults();
+  });
+  nextBtn.addEventListener('click', () => {
+    if (currentPage >= totalPages) return;
+    currentPage += 1;
+    void loadResults();
+  });
+
   const formData = await openFormModal({
-    title: 'Seleziona incantesimo condiviso',
-    submitLabel: 'Aggiungi',
+    title: 'Scegli un incantesimo dalla raccolta',
+    submitLabel: 'Aggiungi al personaggio',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--shared-spell-picker'],
+    onOpen: ({ modal }) => {
+      submitButton = modal.querySelector('[data-form-submit]');
+      setSubmitState();
+      queryInput.focus();
+      void loadResults();
+      return () => window.clearTimeout(searchTimer);
+    }
   });
   if (!formData) return null;
-  const selectedId = formData.get('shared_spell_id');
-  return currentItems.find((entry) => entry.id === selectedId) || null;
+  return selectedSpell;
 }
 
 function shouldAutoUsageDice(character) {
