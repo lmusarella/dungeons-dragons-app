@@ -177,6 +177,26 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain("child.resource_cost_variable ? 'Costo variabile'");
   });
 
+  it('uses descriptive radio cards to choose how to add a spell', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const sourceModal = source.slice(
+      source.indexOf('export async function openSpellSourceModal'),
+      source.indexOf('export function openSpellQuickDetailModal')
+    );
+
+    expect(sourceModal).toContain('role="radiogroup"');
+    expect(sourceModal).toContain('type="radio" name="spell_source_mode" value="shared" checked');
+    expect(sourceModal).toContain('type="radio" name="spell_source_mode" value="manual"');
+    expect(sourceModal).toContain('Cerca nella raccolta');
+    expect(sourceModal).toContain('Crea un incantesimo');
+    expect(sourceModal).toContain('Consigliato');
+    expect(sourceModal).not.toContain('buildSelect([');
+    expect(sourceModal).toContain("cardClass: ['modal-card--form', 'modal-card--spell-source']");
+    expect(styles).toContain('.spell-source-picker__option > input:checked + .spell-source-picker__option-card');
+    expect(styles).toContain('.spell-source-picker__recommendation');
+  });
+
   it('renders an accessible preparation workflow with live selection feedback', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
@@ -186,9 +206,25 @@ describe('src/features/character/home/modals.js', () => {
     );
 
     expect(preparedModal).toContain('prepared-spells-modal__intro');
+    expect(preparedModal).toContain('prepared-spells-modal__workspace');
+    expect(preparedModal).toContain('data-prepared-search');
+    expect(preparedModal).toContain('data-prepared-status-filter');
+    expect(preparedModal).toContain('data-prepared-level="all"');
+    expect(preparedModal).toContain('data-prepare-visible');
+    expect(preparedModal).toContain('data-unprepare-visible');
+    expect(preparedModal).toContain('const updateLevelCounts = (query) =>');
+    expect(preparedModal).toContain('const matchesActiveStatus = (spellId) =>');
+    expect(preparedModal).toContain('const applyFilters = () =>');
+    expect(preparedModal).toContain('updateLevelCounts(query)');
+    expect(preparedModal).toContain("activeLevel === 'all'");
+    expect(preparedModal).toContain('getVisibleItems().forEach');
     expect(preparedModal).toContain('data-prepared-count');
     expect(preparedModal).toContain('data-removed-count');
     expect(preparedModal).toContain('data-prepared-status');
+    expect(preparedModal).toContain('prepared-spells-modal__inline-info');
+    expect(preparedModal).toContain('prepared-spells-modal__details');
+    expect(preparedModal).toContain('<dt>Tempo di lancio</dt>');
+    expect(preparedModal.indexOf('prepared-spells-modal__meta')).toBeGreaterThan(preparedModal.indexOf('prepared-spells-modal__details'));
     expect(preparedModal).toContain('data-prepared-delete');
     expect(preparedModal).toContain("title: 'Elimina incantesimo'");
     expect(preparedModal).toContain('deletedIds.add(spellId)');
@@ -197,6 +233,13 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain("item?.classList.toggle('is-prepared', isPrepared)");
     expect(preparedModal).toContain("cardClass: ['modal-card--form', 'modal-card--prepared-spells']");
     expect(preparedModal).toContain("submitLabel: 'Salva preparazione'");
+    expect(styles).toContain('.modal-card--prepared-spells');
+    expect(styles).toContain('width: min(1180px, calc(100vw - 32px))');
+    expect(styles).toContain('.prepared-spells-modal__workspace');
+    expect(styles).toContain('.prepared-spells-modal__level-rail');
+    expect(styles).toContain('.prepared-spells-modal__bulk-actions');
+    expect(styles).toContain('.prepared-spells-modal__details[hidden]');
+    expect(styles).toContain('.prepared-spells-modal__inline-info');
     expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
     expect(styles).toContain('.prepared-spells-modal__check');
     expect(styles).toContain('.prepared-spells-modal__delete');

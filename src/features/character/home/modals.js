@@ -902,24 +902,48 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
 }
 
 export async function openSpellSourceModal() {
-  const field = document.createElement('label');
-  field.className = 'field';
-  field.innerHTML = '<span>Come vuoi aggiungere l\'incantesimo?</span>';
-  const modeSelect = buildSelect([
-    { value: 'shared', label: 'Cerca in lista condivisa' },
-    { value: 'manual', label: 'Inserisci nuovo incantesimo' }
-  ], 'shared');
-  modeSelect.name = 'spell_source_mode';
-  field.appendChild(modeSelect);
   const content = document.createElement('div');
-  content.className = 'modal-form-grid';
-  content.appendChild(field);
+  content.className = 'spell-source-picker';
+  content.innerHTML = `
+    <div class="spell-source-picker__intro">
+      <span class="spell-source-picker__intro-icon" aria-hidden="true">✦</span>
+      <div>
+        <strong>Come vuoi aggiungere l'incantesimo?</strong>
+        <p>Scegli dalla raccolta condivisa per fare prima, oppure crea una scheda personalizzata.</p>
+      </div>
+    </div>
+    <div class="spell-source-picker__options" role="radiogroup" aria-label="Modalità di aggiunta incantesimo">
+      <label class="spell-source-picker__option">
+        <input type="radio" name="spell_source_mode" value="shared" checked />
+        <span class="spell-source-picker__option-card">
+          <span class="spell-source-picker__option-icon" aria-hidden="true">⌕</span>
+          <span class="spell-source-picker__option-copy">
+            <strong>Cerca nella raccolta</strong>
+            <small>Trova un incantesimo già completo di livello, scuola, componenti, descrizione e regole.</small>
+            <span class="spell-source-picker__recommendation">Consigliato</span>
+          </span>
+          <span class="spell-source-picker__radio" aria-hidden="true"></span>
+        </span>
+      </label>
+      <label class="spell-source-picker__option">
+        <input type="radio" name="spell_source_mode" value="manual" />
+        <span class="spell-source-picker__option-card">
+          <span class="spell-source-picker__option-icon" aria-hidden="true">＋</span>
+          <span class="spell-source-picker__option-copy">
+            <strong>Crea un incantesimo</strong>
+            <small>Inserisci manualmente tutti i dettagli per un incantesimo homebrew o non presente nella raccolta.</small>
+          </span>
+          <span class="spell-source-picker__radio" aria-hidden="true"></span>
+        </span>
+      </label>
+    </div>
+  `;
   const formData = await openFormModal({
     title: 'Aggiungi incantesimo',
     submitLabel: 'Continua',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--spell-source']
   });
   if (!formData) return null;
   return formData.get('spell_source_mode') || 'shared';
@@ -1043,150 +1067,181 @@ export function openPreparedSpellsModal(character, onSave) {
     createToast('Nessun incantesimo preparabile.', 'info');
     return;
   }
+
   const deletedIds = new Set();
   const preparedIds = new Set(
     selectable
       .filter((entry) => (entry.prep_state || 'known') === 'prepared')
       .map((entry) => entry.id)
   );
-  const groupedByLevel = selectable.reduce((acc, entry) => {
-    const level = Math.max(1, Number(entry.level) || 1);
-    if (!acc.has(level)) acc.set(level, []);
-    acc.get(level).push(entry);
-    return acc;
-  }, new Map());
-  const levelOrder = Array.from(groupedByLevel.keys()).sort((a, b) => a - b);
+  const levelOrder = Array.from(new Set(selectable.map((entry) => Math.max(1, Number(entry.level) || 1))))
+    .sort((a, b) => a - b);
+  let activeLevel = 'all';
+  let activeStatus = 'all';
 
-  const getLevelLabel = (level) => {
-    if (level === 1) return '1° livello';
-    return `${level}° livello`;
-  };
-
-  const getSpellDescription = (entry) => {
-    const description = String(entry.description || '').trim();
-    return description || 'Nessuna descrizione disponibile.';
-  };
-
-  const initialLevel = levelOrder[0] || 1;
+  const getLevelLabel = (level) => level === 1 ? '1° livello' : `${level}° livello`;
+  const getSpellDescription = (entry) => String(entry.description || '').trim() || 'Nessuna descrizione disponibile.';
+  const normalizeSearchValue = (value) => String(value || '').trim().toLocaleLowerCase('it');
 
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
-    <div class="prepared-spells-modal__intro">
+    <section class="prepared-spells-modal__intro">
       <span class="prepared-spells-modal__intro-icon" aria-hidden="true">✦</span>
-      <div>
+      <div class="prepared-spells-modal__intro-copy">
         <strong>Prepara il tuo grimorio</strong>
-        <p>Scegli gli incantesimi per oggi oppure rimuovili dalla scheda. Tutte le modifiche saranno applicate al salvataggio.</p>
+        <p>Cerca, filtra e scegli gli incantesimi disponibili per la giornata. Le modifiche saranno applicate solo al salvataggio.</p>
       </div>
       <div class="prepared-spells-modal__summary" aria-live="polite">
         <span class="prepared-spells-modal__counter"><strong data-prepared-count>${preparedIds.size}</strong><small>preparati</small></span>
+        <span class="prepared-spells-modal__counter prepared-spells-modal__counter--available"><strong data-available-count>${selectable.length}</strong><small>nel grimorio</small></span>
         <span class="prepared-spells-modal__counter prepared-spells-modal__counter--removed" data-removed-counter hidden><strong data-removed-count>0</strong><small>da eliminare</small></span>
       </div>
-    </div>
-    <div class="tab-bar prepared-spells-modal__tabs" role="tablist" aria-label="Livelli incantesimo">
-      ${levelOrder.map((level) => {
-    const isActive = level === initialLevel;
-    return `
-          <button
-            class="tab-bar__button prepared-spells-modal__tab ${isActive ? 'is-active' : ''}"
-            type="button"
-            role="tab"
-            data-prepared-level-tab="${level}"
-            aria-selected="${isActive}"
-            aria-controls="prepared-spells-level-${level}"
-            id="prepared-spells-tab-${level}"
-            tabindex="${isActive ? '0' : '-1'}"
-          >
-            <span>${getLevelLabel(level)}</span><small data-prepared-level-count="${level}">${(groupedByLevel.get(level) || []).length}</small>
+    </section>
+    <section class="prepared-spells-modal__toolbar" aria-label="Cerca e filtra incantesimi">
+      <label class="field prepared-spells-modal__search">
+        <span>Cerca nel grimorio</span>
+        <span class="prepared-spells-modal__search-control">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" data-prepared-search placeholder="Nome, scuola o descrizione..." autocomplete="off" />
+        </span>
+      </label>
+      <label class="field prepared-spells-modal__status-filter">
+        <span>Stato</span>
+        <select data-prepared-status-filter>
+          <option value="all">Tutti gli incantesimi</option>
+          <option value="prepared">Solo preparati</option>
+          <option value="known">Da preparare</option>
+        </select>
+      </label>
+      <button type="button" class="ghost-button prepared-spells-modal__clear-filters" data-prepared-clear-filters>Azzera filtri</button>
+    </section>
+    <div class="prepared-spells-modal__workspace">
+      <aside class="prepared-spells-modal__level-rail" aria-label="Filtra per livello">
+        <div class="prepared-spells-modal__rail-heading">
+          <strong>Livelli</strong>
+          <small>Scegli una sezione</small>
+        </div>
+        <div class="prepared-spells-modal__levels" role="tablist" aria-label="Livelli incantesimo">
+          <button class="prepared-spells-modal__level is-active" type="button" data-prepared-level="all" aria-pressed="true">
+            <span><strong>Tutti</strong><small data-prepared-level-summary="all">Intero grimorio</small></span>
+            <span class="prepared-spells-modal__level-count" data-prepared-level-count="all">${selectable.length}</span>
           </button>
-        `;
-  }).join('')}
-    </div>
-    <div class="prepared-spells-modal__group-stack">
-      ${levelOrder.map((level) => {
-    const entries = groupedByLevel.get(level) || [];
-    const isActive = level === initialLevel;
+          ${levelOrder.map((level) => {
+    const entries = selectable.filter((entry) => Math.max(1, Number(entry.level) || 1) === level);
+    const preparedCount = entries.filter((entry) => preparedIds.has(entry.id)).length;
     return `
-          <section
-            class="prepared-spells-modal__group tab-panel ${isActive ? 'is-active' : ''}"
-            data-level-group="${level}"
-            data-prepared-level-panel="${level}"
-            role="tabpanel"
-            id="prepared-spells-level-${level}"
-            aria-labelledby="prepared-spells-tab-${level}"
-          >
-            <div class="prepared-spells-modal__list">
-              ${entries.map((entry) => {
-      const isPrepared = preparedIds.has(entry.id);
-      const range = escapeHtml(entry.range?.trim() || '-');
-      const duration = escapeHtml(entry.duration?.trim() || '-');
-      const components = escapeHtml(entry.components?.trim() || '-');
-      const castTime = escapeHtml(entry.cast_time?.trim() || '-');
-      const school = escapeHtml(entry.school?.trim() || 'Scuola non indicata');
-      return `
-                  <article class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}" data-prepared-item="${entry.id}" data-prepared-item-level="${level}">
-                    <div class="prepared-spells-modal__spell-main">
-                      <button
-                        class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
-                        type="button"
-                        data-prepared-toggle="${entry.id}"
-                        aria-pressed="${isPrepared}"
-                        aria-label="${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${escapeHtml(entry.name)}"
-                      >
-                        <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
-                        <span class="prepared-spells-modal__toggle-copy">
-                          <span class="prepared-spells-modal__toggle-heading">
-                            <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
-                            <span class="prepared-spells-modal__school">${school}</span>
-                          </span>
-                          <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
-                        </span>
-                      </button>
-                      <div class="prepared-spells-modal__card-actions">
-                        <button
-                          class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
-                          type="button"
-                          data-prepared-description-toggle="${entry.id}"
-                          aria-expanded="false"
-                          aria-label="Mostra descrizione ${escapeHtml(entry.name)}"
-                          title="Mostra descrizione"
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
-                        </button>
-                        <button
-                          class="resource-action-button resource-icon-button prepared-spells-modal__delete"
-                          type="button"
-                          data-prepared-delete="${entry.id}"
-                          aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda"
-                          title="Elimina dalla scheda"
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
-                        </button>
-                      </div>
-                    </div>
-                    <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
-                      <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
-                      <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
-                      <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
-                      <div class="prepared-spells-modal__meta-item"><dt>Lancio</dt><dd>${castTime}</dd></div>
-                    </dl>
-                    <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
-                      <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
-                    </div>
-                  </article>
-                `;
-    }).join('')}
-              <div class="prepared-spells-modal__empty" data-prepared-level-empty="${level}" hidden>
-                <span aria-hidden="true">✦</span>
-                <strong>Nessun incantesimo in questo livello</strong>
-                <small>Gli incantesimi eliminati verranno rimossi definitivamente dopo il salvataggio.</small>
-              </div>
-            </div>
-          </section>
-        `;
+              <button class="prepared-spells-modal__level" type="button" data-prepared-level="${level}" aria-pressed="false">
+                <span><strong>${getLevelLabel(level)}</strong><small data-prepared-level-summary="${level}">${preparedCount} preparati</small></span>
+                <span class="prepared-spells-modal__level-count" data-prepared-level-count="${level}">${entries.length}</span>
+              </button>
+            `;
   }).join('')}
+        </div>
+      </aside>
+      <section class="prepared-spells-modal__catalog" aria-label="Incantesimi preparabili">
+        <div class="prepared-spells-modal__catalog-header">
+          <div>
+            <strong data-prepared-results-title>Tutto il grimorio</strong>
+            <small data-prepared-visible-count>${selectable.length} incantesimi visibili</small>
+          </div>
+          <div class="prepared-spells-modal__bulk-actions">
+            <button type="button" class="ghost-button" data-prepare-visible>Prepara visibili</button>
+            <button type="button" class="ghost-button" data-unprepare-visible>Deseleziona visibili</button>
+          </div>
+        </div>
+        <div class="prepared-spells-modal__list" data-prepared-list>
+          ${selectable.map((entry) => {
+    const level = Math.max(1, Number(entry.level) || 1);
+    const isPrepared = preparedIds.has(entry.id);
+    const range = escapeHtml(entry.range?.trim() || '-');
+    const duration = escapeHtml(entry.duration?.trim() || '-');
+    const components = escapeHtml(entry.components?.trim() || '-');
+    const castTime = escapeHtml(entry.cast_time?.trim() || '-');
+    const school = escapeHtml(entry.school?.trim() || 'Scuola non indicata');
+    const searchText = escapeHtml(normalizeSearchValue(`${entry.name} ${entry.school || ''} ${entry.description || ''}`));
+    return `
+              <article
+                class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}"
+                data-prepared-item="${entry.id}"
+                data-prepared-item-level="${level}"
+                data-prepared-search-text="${searchText}"
+              >
+                <div class="prepared-spells-modal__spell-main">
+                  <button
+                    class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
+                    type="button"
+                    data-prepared-toggle="${entry.id}"
+                    aria-pressed="${isPrepared}"
+                    aria-label="${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${escapeHtml(entry.name)}"
+                  >
+                    <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
+                    <span class="prepared-spells-modal__toggle-copy">
+                      <span class="prepared-spells-modal__toggle-heading">
+                        <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
+                        <span class="prepared-spells-modal__level-badge">${getLevelLabel(level)}</span>
+                        <span class="prepared-spells-modal__school">${school}</span>
+                      </span>
+                      <span class="prepared-spells-modal__inline-info">
+                        <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
+                        ${entry.concentration ? '<small class="prepared-spells-modal__trait" title="Richiede concentrazione">Concentrazione</small>' : ''}
+                        ${entry.is_ritual || entry.ritual ? '<small class="prepared-spells-modal__trait" title="Può essere lanciato come rituale">Rituale</small>' : ''}
+                      </span>
+                    </span>
+                  </button>
+                  <div class="prepared-spells-modal__card-actions">
+                    <button
+                      class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
+                      type="button"
+                      data-prepared-description-toggle="${entry.id}"
+                      aria-expanded="false"
+                      aria-label="Mostra dettagli ${escapeHtml(entry.name)}"
+                      title="Mostra dettagli"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
+                    </button>
+                    <button
+                      class="resource-action-button resource-icon-button prepared-spells-modal__delete"
+                      type="button"
+                      data-prepared-delete="${entry.id}"
+                      aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda"
+                      title="Elimina dalla scheda"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="prepared-spells-modal__details" data-prepared-description="${entry.id}" hidden>
+                  <dl class="prepared-spells-modal__meta" aria-label="Dettagli ${escapeHtml(entry.name)}">
+                    <div class="prepared-spells-modal__meta-item"><dt>Tempo di lancio</dt><dd>${castTime}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
+                  </dl>
+                  <div class="prepared-spells-modal__description">
+                    <strong class="prepared-spells-modal__description-title">Descrizione</strong>
+                    <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
+                  </div>
+                </div>
+              </article>
+            `;
+  }).join('')}
+          <div class="prepared-spells-modal__empty" data-prepared-empty hidden>
+            <span aria-hidden="true">⌕</span>
+            <strong>Nessun incantesimo corrisponde ai filtri</strong>
+            <small>Prova a cambiare livello, stato oppure testo di ricerca.</small>
+            <button type="button" class="ghost-button" data-prepared-empty-reset>Azzera filtri</button>
+          </div>
+        </div>
+      </section>
     </div>
   `;
+
+  const searchInput = content.querySelector('[data-prepared-search]');
+  const statusFilter = content.querySelector('[data-prepared-status-filter]');
+
+  const getVisibleItems = () => Array.from(content.querySelectorAll('[data-prepared-item]'))
+    .filter((item) => !item.hidden);
 
   const syncPreparedState = () => {
     content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
@@ -1202,31 +1257,98 @@ export function openPreparedSpellsModal(character, onSave) {
       const status = button.querySelector('[data-prepared-status]');
       if (status) status.textContent = isPrepared ? 'Preparato' : 'Da preparare';
     });
-    const count = content.querySelector('[data-prepared-count]');
-    if (count) count.textContent = String(preparedIds.size);
+    const preparedCount = content.querySelector('[data-prepared-count]');
+    if (preparedCount) preparedCount.textContent = String(preparedIds.size);
+    const availableCount = content.querySelector('[data-available-count]');
+    if (availableCount) availableCount.textContent = String(selectable.length - deletedIds.size);
     const removedCount = content.querySelector('[data-removed-count]');
     if (removedCount) removedCount.textContent = String(deletedIds.size);
     const removedCounter = content.querySelector('[data-removed-counter]');
     if (removedCounter) removedCounter.hidden = deletedIds.size === 0;
     levelOrder.forEach((level) => {
-      const remaining = content.querySelectorAll(`[data-prepared-item-level="${level}"]`).length;
-      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
-      if (levelCount) levelCount.textContent = String(remaining);
-      const emptyState = content.querySelector(`[data-prepared-level-empty="${level}"]`);
-      if (emptyState) emptyState.hidden = remaining > 0;
+      const preparedAtLevel = selectable.filter((entry) => (
+        !deletedIds.has(entry.id)
+        && Math.max(1, Number(entry.level) || 1) === level
+        && preparedIds.has(entry.id)
+      )).length;
+      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
+      if (levelSummary) levelSummary.textContent = `${preparedAtLevel} preparati`;
     });
+  };
+
+  const matchesActiveStatus = (spellId) => activeStatus === 'all'
+    || (activeStatus === 'prepared' && preparedIds.has(spellId))
+    || (activeStatus === 'known' && !preparedIds.has(spellId));
+
+  const updateLevelCounts = (query) => {
+    const matchingEntries = selectable.filter((entry) => {
+      if (deletedIds.has(entry.id) || !matchesActiveStatus(entry.id)) return false;
+      const searchText = normalizeSearchValue(`${entry.name} ${entry.school || ''} ${entry.description || ''}`);
+      return !query || searchText.includes(query);
+    });
+    const statusLabel = activeStatus === 'prepared'
+      ? 'preparati'
+      : activeStatus === 'known' ? 'da preparare' : 'nel grimorio';
+    const allCount = content.querySelector('[data-prepared-level-count="all"]');
+    if (allCount) allCount.textContent = String(matchingEntries.length);
+    const allSummary = content.querySelector('[data-prepared-level-summary="all"]');
+    if (allSummary) allSummary.textContent = statusLabel === 'nel grimorio' ? 'Intero grimorio' : statusLabel;
+    levelOrder.forEach((level) => {
+      const count = matchingEntries.filter((entry) => Math.max(1, Number(entry.level) || 1) === level).length;
+      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
+      if (levelCount) levelCount.textContent = String(count);
+      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
+      if (levelSummary) levelSummary.textContent = statusLabel;
+    });
+  };
+
+  const applyFilters = () => {
+    const query = normalizeSearchValue(searchInput?.value);
+    updateLevelCounts(query);
+    let visibleCount = 0;
+    content.querySelectorAll('[data-prepared-item]').forEach((item) => {
+      const spellId = item.dataset.preparedItem;
+      const matchesLevel = activeLevel === 'all' || item.dataset.preparedItemLevel === activeLevel;
+      const matchesStatus = matchesActiveStatus(spellId);
+      const matchesQuery = !query || item.dataset.preparedSearchText?.includes(query);
+      const isVisible = !deletedIds.has(spellId) && matchesLevel && matchesStatus && matchesQuery;
+      item.hidden = !isVisible;
+      if (isVisible) visibleCount += 1;
+    });
+    const visibleCountEl = content.querySelector('[data-prepared-visible-count]');
+    if (visibleCountEl) visibleCountEl.textContent = `${visibleCount} ${visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'}`;
+    const emptyState = content.querySelector('[data-prepared-empty]');
+    if (emptyState) emptyState.hidden = visibleCount > 0;
+    const title = content.querySelector('[data-prepared-results-title]');
+    if (title) title.textContent = activeLevel === 'all' ? 'Tutto il grimorio' : getLevelLabel(Number(activeLevel));
+    const prepareVisible = content.querySelector('[data-prepare-visible]');
+    const unprepareVisible = content.querySelector('[data-unprepare-visible]');
+    if (prepareVisible) prepareVisible.disabled = visibleCount === 0 || getVisibleItems().every((item) => preparedIds.has(item.dataset.preparedItem));
+    if (unprepareVisible) unprepareVisible.disabled = visibleCount === 0 || getVisibleItems().every((item) => !preparedIds.has(item.dataset.preparedItem));
+  };
+
+  const resetFilters = () => {
+    activeLevel = 'all';
+    activeStatus = 'all';
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = 'all';
+    content.querySelectorAll('[data-prepared-level]').forEach((button) => {
+      const isActive = button.dataset.preparedLevel === 'all';
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+    applyFilters();
+    searchInput?.focus();
   };
 
   content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
     button.addEventListener('click', () => {
       const spellId = button.dataset.preparedToggle;
       if (!spellId) return;
-      if (preparedIds.has(spellId)) {
-        preparedIds.delete(spellId);
-      } else {
-        preparedIds.add(spellId);
-      }
+      if (preparedIds.has(spellId)) preparedIds.delete(spellId);
+      else preparedIds.add(spellId);
       syncPreparedState();
+      applyFilters();
     });
   });
 
@@ -1243,8 +1365,8 @@ export function openPreparedSpellsModal(character, onSave) {
       if (!shouldDelete) return;
       deletedIds.add(spellId);
       preparedIds.delete(spellId);
-      button.closest('[data-prepared-item]')?.remove();
       syncPreparedState();
+      applyFilters();
     });
   });
 
@@ -1257,38 +1379,51 @@ export function openPreparedSpellsModal(character, onSave) {
       const isExpanded = !detail.hidden;
       detail.hidden = isExpanded;
       button.setAttribute('aria-expanded', String(!isExpanded));
+      button.setAttribute('title', isExpanded ? 'Mostra dettagli' : 'Nascondi dettagli');
+      button.setAttribute('aria-label', `${isExpanded ? 'Mostra' : 'Nascondi'} dettagli ${button.closest('[data-prepared-item]')?.querySelector('.prepared-spells-modal__toggle-name')?.textContent || 'incantesimo'}`);
     });
   });
 
-  const setActiveLevel = (nextLevel) => {
-    content.querySelectorAll('[data-prepared-level-tab]').forEach((tabButton) => {
-      const isActive = tabButton.dataset.preparedLevelTab === String(nextLevel);
-      tabButton.classList.toggle('is-active', isActive);
-      tabButton.setAttribute('aria-selected', String(isActive));
-      tabButton.setAttribute('tabindex', isActive ? '0' : '-1');
+  content.querySelectorAll('[data-prepared-level]').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeLevel = button.dataset.preparedLevel || 'all';
+      content.querySelectorAll('[data-prepared-level]').forEach((entry) => {
+        const isActive = entry === button;
+        entry.classList.toggle('is-active', isActive);
+        entry.setAttribute('aria-pressed', String(isActive));
+      });
+      applyFilters();
     });
-    content.querySelectorAll('[data-prepared-level-panel]').forEach((panel) => {
-      const isActive = panel.dataset.preparedLevelPanel === String(nextLevel);
-      panel.classList.toggle('is-active', isActive);
-    });
-  };
+  });
 
-  content.querySelectorAll('[data-prepared-level-tab]').forEach((tabButton) => {
-    tabButton.addEventListener('click', () => {
-      const level = tabButton.dataset.preparedLevelTab;
-      if (!level) return;
-      setActiveLevel(level);
-    });
+  searchInput?.addEventListener('input', applyFilters);
+  statusFilter?.addEventListener('change', () => {
+    activeStatus = statusFilter.value || 'all';
+    applyFilters();
+  });
+  content.querySelector('[data-prepared-clear-filters]')?.addEventListener('click', resetFilters);
+  content.querySelector('[data-prepared-empty-reset]')?.addEventListener('click', resetFilters);
+  content.querySelector('[data-prepare-visible]')?.addEventListener('click', () => {
+    getVisibleItems().forEach((item) => preparedIds.add(item.dataset.preparedItem));
+    syncPreparedState();
+    applyFilters();
+  });
+  content.querySelector('[data-unprepare-visible]')?.addEventListener('click', () => {
+    getVisibleItems().forEach((item) => preparedIds.delete(item.dataset.preparedItem));
+    syncPreparedState();
+    applyFilters();
   });
 
   syncPreparedState();
+  applyFilters();
 
   openFormModal({
-    title: 'Incantesimi preparati',
+    title: 'Prepara gli incantesimi',
     submitLabel: 'Salva preparazione',
     cancelLabel: 'Annulla',
     content,
-    cardClass: ['modal-card--form', 'modal-card--prepared-spells']
+    cardClass: ['modal-card--form', 'modal-card--prepared-spells'],
+    onOpen: () => searchInput?.focus()
   }).then(async (formData) => {
     if (!formData) return;
     if (deletedIds.size) {
@@ -1314,10 +1449,9 @@ export function openPreparedSpellsModal(character, onSave) {
         const prepState = entry.prep_state || 'known';
         if (prepState === 'always') return entry;
         if (Number(entry.level) === 0) return entry;
-        const isPrepared = preparedIds.has(entry.id);
         return {
           ...entry,
-          prep_state: isPrepared ? 'prepared' : 'known'
+          prep_state: preparedIds.has(entry.id) ? 'prepared' : 'known'
         };
       });
     const nextData = {

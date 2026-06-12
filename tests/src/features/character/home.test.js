@@ -37,6 +37,28 @@ describe('src/features/character/home.js', () => {
     expect(adjustedCharacter).not.toContain('Math.max');
   });
 
+  it('offers a large, searchable shared spell picker with filters and previews', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const picker = source.slice(
+      source.indexOf('async function openSharedSpellPicker()'),
+      source.indexOf('function shouldAutoUsageDice')
+    );
+
+    expect(picker).toContain("content.className = 'shared-spell-picker'");
+    expect(picker).toContain('Scrivi il nome di un incantesimo...');
+    expect(picker).toContain('Tutte le versioni');
+    expect(picker).toContain('data-reset-spell-filters');
+    expect(picker).toContain('data-spell-preview');
+    expect(picker).toContain("pageSize: PAGE_SIZE");
+    expect(picker).toContain("cardClass: ['modal-card--form', 'modal-card--shared-spell-picker']");
+    expect(picker).toContain('submitButton.disabled = !selectedSpell');
+    expect(styles).toContain('.modal-card--shared-spell-picker');
+    expect(styles).toContain('width: min(1180px, calc(100vw - 32px))');
+    expect(styles).toContain('.shared-spell-picker__workspace');
+    expect(styles).toContain('@media (max-width: 820px)');
+  });
+
   it('keeps the death save dice modal open after a roll', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const deathSaveHandler = source.slice(
