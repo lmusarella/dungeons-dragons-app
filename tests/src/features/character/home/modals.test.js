@@ -192,12 +192,19 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain('data-prepared-level="all"');
     expect(preparedModal).toContain('data-prepare-visible');
     expect(preparedModal).toContain('data-unprepare-visible');
+    expect(preparedModal).toContain('const updateLevelCounts = (query) =>');
+    expect(preparedModal).toContain('const matchesActiveStatus = (spellId) =>');
     expect(preparedModal).toContain('const applyFilters = () =>');
+    expect(preparedModal).toContain('updateLevelCounts(query)');
     expect(preparedModal).toContain("activeLevel === 'all'");
     expect(preparedModal).toContain('getVisibleItems().forEach');
     expect(preparedModal).toContain('data-prepared-count');
     expect(preparedModal).toContain('data-removed-count');
     expect(preparedModal).toContain('data-prepared-status');
+    expect(preparedModal).toContain('prepared-spells-modal__inline-info');
+    expect(preparedModal).toContain('prepared-spells-modal__details');
+    expect(preparedModal).toContain('<dt>Tempo di lancio</dt>');
+    expect(preparedModal.indexOf('prepared-spells-modal__meta')).toBeGreaterThan(preparedModal.indexOf('prepared-spells-modal__details'));
     expect(preparedModal).toContain('data-prepared-delete');
     expect(preparedModal).toContain("title: 'Elimina incantesimo'");
     expect(preparedModal).toContain('deletedIds.add(spellId)');
@@ -211,6 +218,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.prepared-spells-modal__workspace');
     expect(styles).toContain('.prepared-spells-modal__level-rail');
     expect(styles).toContain('.prepared-spells-modal__bulk-actions');
+    expect(styles).toContain('.prepared-spells-modal__details[hidden]');
+    expect(styles).toContain('.prepared-spells-modal__inline-info');
     expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
     expect(styles).toContain('.prepared-spells-modal__check');
     expect(styles).toContain('.prepared-spells-modal__delete');

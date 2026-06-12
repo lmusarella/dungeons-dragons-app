@@ -13228,6 +13228,14 @@ button:focus-visible,
   gap: 7px;
 }
 
+.prepared-spells-modal__inline-info {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
 .prepared-spells-modal__toggle-name {
   min-width: 0;
   overflow: hidden;
@@ -13240,7 +13248,8 @@ button:focus-visible,
 
 .prepared-spells-modal__level-badge,
 .prepared-spells-modal__school,
-.prepared-spells-modal__status {
+.prepared-spells-modal__status,
+.prepared-spells-modal__trait {
   flex: 0 0 auto;
   padding: 2px 7px;
   border: 1px solid #d8cdbc;
@@ -13272,6 +13281,12 @@ button:focus-visible,
   border-color: #b8d5c5;
   background: #e3f0e8;
   color: #286448;
+}
+
+.prepared-spells-modal__trait {
+  border-color: #c8d5d1;
+  background: #edf4f2;
+  color: #4b6d69;
 }
 
 .prepared-spells-modal__card-actions {
@@ -13327,30 +13342,39 @@ button:focus-visible,
   transform: rotate(180deg);
 }
 
+.prepared-spells-modal__details {
+  display: grid;
+  gap: 10px;
+  margin: 0 10px 10px 13px;
+  padding: 11px 12px;
+  border: 1px solid #d3dfdb;
+  border-radius: 11px;
+  background: #f4f8f6;
+}
+
+.prepared-spells-modal__details[hidden] {
+  display: none;
+}
+
 .prepared-spells-modal__meta {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  gap: 7px;
   margin: 0;
-  padding: 0 11px 10px 59px;
+  padding: 0;
   font-size: 0.64rem;
 }
 
 .prepared-spells-modal__meta-item {
   min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid #e7ded1;
+  padding: 7px 8px;
+  border: 1px solid #d8e2de;
   border-radius: 8px;
-  background: rgba(248, 244, 237, 0.72);
-}
-
-.prepared-spells-modal__spell.is-prepared .prepared-spells-modal__meta-item {
-  border-color: #d5e4db;
-  background: rgba(239, 247, 242, 0.78);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .prepared-spells-modal__meta-item dt {
-  color: #7a6d5e;
+  color: #6f807b;
   font-size: 0.51rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -13359,7 +13383,7 @@ button:focus-visible,
 
 .prepared-spells-modal__meta-item dd {
   min-width: 0;
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   overflow: hidden;
   color: #405352;
   font-weight: 750;
@@ -13368,11 +13392,18 @@ button:focus-visible,
 }
 
 .prepared-spells-modal__description {
-  margin: 0 10px 10px 13px;
-  padding: 11px 12px;
-  border: 1px solid #d3dfdb;
-  border-radius: 10px;
-  background: #f4f8f6;
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #d5e0dc;
+}
+
+.prepared-spells-modal__description-title {
+  color: #405f61;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .prepared-spells-modal__empty {
@@ -13523,8 +13554,8 @@ button:focus-visible,
     padding-right: 7px;
   }
 
-  .prepared-spells-modal__meta {
-    padding: 0 8px 8px 51px;
+  .prepared-spells-modal__details {
+    margin-inline: 9px;
   }
 }
 

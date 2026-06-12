@@ -1100,7 +1100,7 @@ export function openPreparedSpellsModal(character, onSave) {
         </div>
         <div class="prepared-spells-modal__levels" role="tablist" aria-label="Livelli incantesimo">
           <button class="prepared-spells-modal__level is-active" type="button" data-prepared-level="all" aria-pressed="true">
-            <span><strong>Tutti</strong><small>Intero grimorio</small></span>
+            <span><strong>Tutti</strong><small data-prepared-level-summary="all">Intero grimorio</small></span>
             <span class="prepared-spells-modal__level-count" data-prepared-level-count="all">${selectable.length}</span>
           </button>
           ${levelOrder.map((level) => {
@@ -1108,7 +1108,7 @@ export function openPreparedSpellsModal(character, onSave) {
     const preparedCount = entries.filter((entry) => preparedIds.has(entry.id)).length;
     return `
               <button class="prepared-spells-modal__level" type="button" data-prepared-level="${level}" aria-pressed="false">
-                <span><strong>${getLevelLabel(level)}</strong><small><span data-prepared-level-ready="${level}">${preparedCount}</span> preparati</small></span>
+                <span><strong>${getLevelLabel(level)}</strong><small data-prepared-level-summary="${level}">${preparedCount} preparati</small></span>
                 <span class="prepared-spells-modal__level-count" data-prepared-level-count="${level}">${entries.length}</span>
               </button>
             `;
@@ -1158,7 +1158,11 @@ export function openPreparedSpellsModal(character, onSave) {
                         <span class="prepared-spells-modal__level-badge">${getLevelLabel(level)}</span>
                         <span class="prepared-spells-modal__school">${school}</span>
                       </span>
-                      <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
+                      <span class="prepared-spells-modal__inline-info">
+                        <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
+                        ${entry.concentration ? '<small class="prepared-spells-modal__trait" title="Richiede concentrazione">Concentrazione</small>' : ''}
+                        ${entry.is_ritual || entry.ritual ? '<small class="prepared-spells-modal__trait" title="Può essere lanciato come rituale">Rituale</small>' : ''}
+                      </span>
                     </span>
                   </button>
                   <div class="prepared-spells-modal__card-actions">
@@ -1167,8 +1171,8 @@ export function openPreparedSpellsModal(character, onSave) {
                       type="button"
                       data-prepared-description-toggle="${entry.id}"
                       aria-expanded="false"
-                      aria-label="Mostra descrizione ${escapeHtml(entry.name)}"
-                      title="Mostra descrizione"
+                      aria-label="Mostra dettagli ${escapeHtml(entry.name)}"
+                      title="Mostra dettagli"
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
                     </button>
@@ -1183,14 +1187,17 @@ export function openPreparedSpellsModal(character, onSave) {
                     </button>
                   </div>
                 </div>
-                <dl class="prepared-spells-modal__meta" aria-label="Dettagli rapidi ${escapeHtml(entry.name)}">
-                  <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
-                  <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
-                  <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
-                  <div class="prepared-spells-modal__meta-item"><dt>Lancio</dt><dd>${castTime}</dd></div>
-                </dl>
-                <div class="prepared-spells-modal__description" data-prepared-description="${entry.id}" hidden>
-                  <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
+                <div class="prepared-spells-modal__details" data-prepared-description="${entry.id}" hidden>
+                  <dl class="prepared-spells-modal__meta" aria-label="Dettagli ${escapeHtml(entry.name)}">
+                    <div class="prepared-spells-modal__meta-item"><dt>Tempo di lancio</dt><dd>${castTime}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
+                    <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
+                  </dl>
+                  <div class="prepared-spells-modal__description">
+                    <strong class="prepared-spells-modal__description-title">Descrizione</strong>
+                    <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
+                  </div>
                 </div>
               </article>
             `;
@@ -1240,27 +1247,45 @@ export function openPreparedSpellsModal(character, onSave) {
         && Math.max(1, Number(entry.level) || 1) === level
         && preparedIds.has(entry.id)
       )).length;
-      const readyCount = content.querySelector(`[data-prepared-level-ready="${level}"]`);
-      if (readyCount) readyCount.textContent = String(preparedAtLevel);
-      const remainingAtLevel = selectable.filter((entry) => (
-        !deletedIds.has(entry.id) && Math.max(1, Number(entry.level) || 1) === level
-      )).length;
-      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
-      if (levelCount) levelCount.textContent = String(remainingAtLevel);
+      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
+      if (levelSummary) levelSummary.textContent = `${preparedAtLevel} preparati`;
     });
+  };
+
+  const matchesActiveStatus = (spellId) => activeStatus === 'all'
+    || (activeStatus === 'prepared' && preparedIds.has(spellId))
+    || (activeStatus === 'known' && !preparedIds.has(spellId));
+
+  const updateLevelCounts = (query) => {
+    const matchingEntries = selectable.filter((entry) => {
+      if (deletedIds.has(entry.id) || !matchesActiveStatus(entry.id)) return false;
+      const searchText = normalizeSearchValue(`${entry.name} ${entry.school || ''} ${entry.description || ''}`);
+      return !query || searchText.includes(query);
+    });
+    const statusLabel = activeStatus === 'prepared'
+      ? 'preparati'
+      : activeStatus === 'known' ? 'da preparare' : 'nel grimorio';
     const allCount = content.querySelector('[data-prepared-level-count="all"]');
-    if (allCount) allCount.textContent = String(selectable.length - deletedIds.size);
+    if (allCount) allCount.textContent = String(matchingEntries.length);
+    const allSummary = content.querySelector('[data-prepared-level-summary="all"]');
+    if (allSummary) allSummary.textContent = statusLabel === 'nel grimorio' ? 'Intero grimorio' : statusLabel;
+    levelOrder.forEach((level) => {
+      const count = matchingEntries.filter((entry) => Math.max(1, Number(entry.level) || 1) === level).length;
+      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
+      if (levelCount) levelCount.textContent = String(count);
+      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
+      if (levelSummary) levelSummary.textContent = statusLabel;
+    });
   };
 
   const applyFilters = () => {
     const query = normalizeSearchValue(searchInput?.value);
+    updateLevelCounts(query);
     let visibleCount = 0;
     content.querySelectorAll('[data-prepared-item]').forEach((item) => {
       const spellId = item.dataset.preparedItem;
       const matchesLevel = activeLevel === 'all' || item.dataset.preparedItemLevel === activeLevel;
-      const matchesStatus = activeStatus === 'all'
-        || (activeStatus === 'prepared' && preparedIds.has(spellId))
-        || (activeStatus === 'known' && !preparedIds.has(spellId));
+      const matchesStatus = matchesActiveStatus(spellId);
       const matchesQuery = !query || item.dataset.preparedSearchText?.includes(query);
       const isVisible = !deletedIds.has(spellId) && matchesLevel && matchesStatus && matchesQuery;
       item.hidden = !isVisible;
@@ -1330,7 +1355,8 @@ export function openPreparedSpellsModal(character, onSave) {
       const isExpanded = !detail.hidden;
       detail.hidden = isExpanded;
       button.setAttribute('aria-expanded', String(!isExpanded));
-      button.setAttribute('title', isExpanded ? 'Mostra descrizione' : 'Nascondi descrizione');
+      button.setAttribute('title', isExpanded ? 'Mostra dettagli' : 'Nascondi dettagli');
+      button.setAttribute('aria-label', `${isExpanded ? 'Mostra' : 'Nascondi'} dettagli ${button.closest('[data-prepared-item]')?.querySelector('.prepared-spells-modal__toggle-name')?.textContent || 'incantesimo'}`);
     });
   });
 
