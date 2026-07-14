@@ -330,8 +330,6 @@ function preloadCriticalAudio() {
 
 export function warmupDiceEffectAudio() {
   preloadCriticalAudio();
-  overlaySessionToken += 1;
-  const sessionToken = overlaySessionToken;
 }
 
 function stopCriticalAudioPlayback() {
@@ -1587,7 +1585,7 @@ export function openDiceOverlay({
 }
 
 function escClose(e) {
-  if (e.key === 'Escape') closeDiceOverlay();
+  if (e.key === 'Escape' && overlayEl && !overlayEl.hasAttribute('hidden')) closeDiceOverlay();
 }
 
 
@@ -1606,7 +1604,6 @@ export function closeDiceOverlay() {
     activeOverlaySessionCleanup = null;
   }
   if (!overlayEl) return;
-  document.removeEventListener('keydown', escClose, true);
   overlayEl.setAttribute('hidden', '');
   resetLegacyDiceScene();
 }

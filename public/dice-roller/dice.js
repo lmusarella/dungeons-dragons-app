@@ -88,6 +88,9 @@ const DICE = (function() {
             ? new THREE.WebGLRenderer({ antialias: true, alpha: true })
             : new THREE.CanvasRenderer({ antialias: true, alpha: true });
         container.appendChild(this.renderer.domElement);
+        if (this.renderer.setPixelRatio) {
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        }
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFShadowMap;
         this.renderer.setClearColor(0xffffff, 0); //color, alpha
@@ -95,7 +98,11 @@ const DICE = (function() {
         this.reinit(container);
         if (window.ResizeObserver) {
             this.resizeObserver = new ResizeObserver(() => {
-                this.reinit(container);
+                if (this.resizeFrame) cancelAnimationFrame(this.resizeFrame);
+                this.resizeFrame = requestAnimationFrame(() => {
+                    this.resizeFrame = null;
+                    this.reinit(container);
+                });
             });
             this.resizeObserver.observe(container);
         } else {
@@ -156,18 +163,29 @@ const DICE = (function() {
         this.w = this.cw;
         this.h = this.ch;
         this.aspect = Math.min(this.cw / this.w, this.ch / this.h);
-        vars.scale = Math.sqrt(this.w * this.w + this.h * this.h) / 8;
+        var nextScale = Math.sqrt(this.w * this.w + this.h * this.h) / 8;
+        if (this.diceScale && Math.abs(this.diceScale - nextScale) > 0.5) {
+            this.pendingDiceScale = nextScale;
+            if (!this.dices.length) this.apply_pending_dice_scale();
+        } else {
+            vars.scale = nextScale;
+            this.diceScale = nextScale;
+        }
       
         this.renderer.setSize(this.cw * 2, this.ch * 2);
 
         this.wh = this.ch / this.aspect / Math.tan(10 * Math.PI / 180);
-        if (this.camera) this.scene.remove(this.camera);
-        this.camera = new THREE.PerspectiveCamera(20, this.cw / this.ch, 1, this.wh * 1.3);
+        if (!this.camera) this.camera = new THREE.PerspectiveCamera(20, this.cw / this.ch, 1, this.wh * 1.3);
+        this.camera.aspect = this.cw / this.ch;
+        this.camera.far = this.wh * 1.3;
         this.camera.position.z = this.wh;
+        if (this.camera.updateProjectionMatrix) this.camera.updateProjectionMatrix();
 
         var mw = Math.max(this.w, this.h);
-        if (this.light) this.scene.remove(this.light);
-        this.light = new THREE.SpotLight(vars.spot_light_color, 2.0);
+        if (!this.light) {
+            this.light = new THREE.SpotLight(vars.spot_light_color, 2.0);
+            this.scene.add(this.light);
+        }
         this.light.position.set(-mw / 2, mw / 2, mw * 2);
         this.light.target.position.set(0, 0, 0);
         this.light.distance = mw * 5;
@@ -179,15 +197,26 @@ const DICE = (function() {
         this.light.shadowDarkness = 1.1;
         this.light.shadowMapWidth = 1024;
         this.light.shadowMapHeight = 1024;
-        this.scene.add(this.light);
 
-        if (this.desk) this.scene.remove(this.desk);
+        if (this.desk) {
+            this.scene.remove(this.desk);
+            if (this.desk.geometry && this.desk.geometry.dispose) this.desk.geometry.dispose();
+            if (this.desk.material && this.desk.material.dispose) this.desk.material.dispose();
+        }
         this.desk = new THREE.Mesh(new THREE.PlaneGeometry(this.w * 2, this.h * 2, 1, 1), 
                 new THREE.MeshPhongMaterial({ color: vars.desk_color, opacity: vars.desk_opacity, transparent: true }));
         this.desk.receiveShadow = vars.use_shadows;
         this.scene.add(this.desk); 
 
         this.renderer.render(this.scene, this.camera);
+    }
+
+    that.dice_box.prototype.apply_pending_dice_scale = function() {
+        if (!this.pendingDiceScale) return;
+        threeD_dice.dispose_cached_assets();
+        vars.scale = this.pendingDiceScale;
+        this.diceScale = this.pendingDiceScale;
+        this.pendingDiceScale = null;
     }
 
     // @param diceToRoll (string), ex: "1d100+1d10+1d4+1d6+1d8+1d12+1d20"
@@ -405,6 +434,8 @@ const DICE = (function() {
         while (dice = this.dices.pop()) {
             this.scene.remove(dice); 
             if (dice.body) this.world.remove(dice.body);
+            if (dice.geometry_is_clone && dice.geometry && dice.geometry.dispose) dice.geometry.dispose();
+            if (dice.material_is_clone) dispose_material(dice.material);
         }
         if (this.pane) this.scene.remove(this.pane);
         this.renderer.render(this.scene, this.camera);
@@ -414,6 +445,7 @@ const DICE = (function() {
 
     that.dice_box.prototype.prepare_dices_for_roll = function(vectors) {
         this.clear();
+        this.apply_pending_dice_scale();
         this.iteration = 0;
         for (var i in vectors) {
             this.create_dice(vectors[i].set, vectors[i].pos, vectors[i].velocity,
@@ -502,6 +534,32 @@ const DICE = (function() {
 
     // dice geometries
     let threeD_dice = {};
+
+    function dispose_material(material) {
+        if (!material) return;
+        var materials = material.materials || [material];
+        for (var i = 0; i < materials.length; ++i) {
+            var entry = materials[i];
+            if (!entry) continue;
+            if (entry.map && entry.map.dispose) entry.map.dispose();
+            if (entry.dispose) entry.dispose();
+        }
+        if (material.dispose) material.dispose();
+    }
+
+    threeD_dice.dispose_cached_assets = function() {
+        var geometryKeys = ['d4_geometry', 'd6_geometry', 'd8_geometry', 'd10_geometry', 'd12_geometry', 'd20_geometry', 'd100_geometry'];
+        var materialKeys = ['d4_material', 'dice_material', 'd100_material'];
+        for (var i = 0; i < geometryKeys.length; ++i) {
+            var geometry = this[geometryKeys[i]];
+            if (geometry && geometry.dispose) geometry.dispose();
+            this[geometryKeys[i]] = null;
+        }
+        for (var j = 0; j < materialKeys.length; ++j) {
+            dispose_material(this[materialKeys[j]]);
+            this[materialKeys[j]] = null;
+        }
+    }
 
     threeD_dice.create_d4 = function() {
         if (!this.d4_geometry) this.d4_geometry = create_d4_geometry(vars.scale * 1.2);
@@ -1028,6 +1086,7 @@ const DICE = (function() {
             }
             geom.uvsNeedUpdate = true;
             dice.geometry = geom;
+            dice.geometry_is_clone = true;
             return;
         }
         for (var i = 0, l = geom.faces.length; i < l; ++i) {
@@ -1042,8 +1101,10 @@ const DICE = (function() {
             if (num < 0) num += 4;
             dice.material = new THREE.MeshFaceMaterial(
                     create_d4_materials(vars.scale / 2, vars.scale * 2, CONSTS.d4_labels[num]));
+            dice.material_is_clone = true;
         }
         dice.geometry = geom;
+        dice.geometry_is_clone = true;
     }
     
     // keep a preloaded audio pool to avoid latency while creating/decoding audio on each roll

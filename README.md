@@ -60,6 +60,10 @@ Per un database che ha già applicato la prima versione della migrazione delle s
 
 Lo script aggiunge il flag padre `can_have_children`, il costo `resource_cost` e aggiorna la cache dello schema Supabase.
 
+## Transazioni atomiche del portafoglio
+
+Esegui `db/wallet_transactions_atomic.sql` nel SQL Editor di Supabase prima di distribuire questa versione. Lo script installa le RPC che aggiornano saldo e registro del denaro nella stessa transazione PostgreSQL.
+
 ## Tabelle Supabase (assunte)
 
 - `profiles(id, display_name, created_at)`

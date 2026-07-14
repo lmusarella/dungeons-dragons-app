@@ -6,20 +6,14 @@
  *  @version 0.1
  */
 
-window.onkeydown = function(e) {
-  
-    if(e.code === "Enter" || e.code === "Escape") {
-        main.setInput(); //closes numPad
-    }
-}
-
  var main = (function() {
     var that = {}; 
     var elem = {}; 
     var vars = {
         numpadShowing: false,
         lastVal: '',
-        userTyping: false
+        userTyping: false,
+        keydownBound: false
     }
     var box = null;
 
@@ -32,6 +26,16 @@ window.onkeydown = function(e) {
         elem.instructions = $t.id('instructions');
         elem.center_div = $t.id('center_div');
         elem.diceLimit = $t.id('diceLimit');
+
+        if (!vars.keydownBound) {
+            var keyScope = document.getElementById('dice-overlay') || elem.container;
+            keyScope.addEventListener('keydown', function(e) {
+                if (e.code === "Enter" || e.code === "Escape") {
+                    that.setInput();
+                }
+            });
+            vars.keydownBound = true;
+        }
 
         box = new DICE.dice_box(elem.container);
         box.bind_swipe(elem.container, before_roll, after_roll);

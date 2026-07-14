@@ -22,4 +22,13 @@ describe('src/app/router.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('commits only the latest asynchronous navigation', () => {
+    const source = readFileSync('src/app/router.js', 'utf8');
+    expect(source).toContain('const navigationId = ++navigationSequence');
+    expect(source).toContain('if (navigationId !== navigationSequence) return');
+    expect(source).toContain('outlet.replaceWith(routeBuffer)');
+    expect(source.indexOf('await view?.(routeBuffer)'))
+      .toBeLessThan(source.indexOf('applyRouteShellState();'));
+  });
 });

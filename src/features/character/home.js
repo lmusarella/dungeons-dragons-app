@@ -21,7 +21,7 @@ import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { ammunitionTypeLabels, bodyParts } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
-import { fetchWallet, upsertWallet, createTransaction } from '../wallet/walletApi.js';
+import { fetchWallet, createTransaction } from '../wallet/walletApi.js';
 import { fetchCompanions } from './companionsApi.js';
 import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
 import {
@@ -58,7 +58,6 @@ import {
   parseDamageDice,
   rollDie
 } from './home/utils.js';
-import { applyMoneyDelta } from '../../lib/calc.js';
 
 
 function normalizeWildShapeStatBlock(raw) {
@@ -2141,11 +2140,8 @@ async function handleMoneyAction(direction, container) {
   const signedDelta = Object.fromEntries(
     Object.entries(delta).map(([key, value]) => [key, value * sign])
   );
-  const nextWallet = applyMoneyDelta(wallet, signedDelta);
-
   try {
-    const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-    await createTransaction({
+    const saved = await createTransaction({
       user_id: wallet.user_id,
       character_id: wallet.character_id,
       direction,

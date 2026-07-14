@@ -3,6 +3,7 @@ import { attachNumberStepper, buildInput, createToast, openConfirmModal } from '
 import { getState } from '../../app/state.js';
 import { saveCharacterData } from '../character/home/data.js';
 import { openSpellDrawer, openSpellQuickDetailModal } from '../character/home/modals.js';
+import { escapeHtml } from '../../lib/html.js';
 
 const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
@@ -264,27 +265,31 @@ export async function renderLibrary(container) {
     }
     list.innerHTML = pagedSpells.length
       ? pagedSpells.map((spell) => {
-        const classes = (spell.caster_classes || []).join(', ') || 'Nessuna classe';
-        const rulesVersionLabel = spell.rules_version || '—';
+        const safeId = escapeHtml(spell.id);
+        const safeName = escapeHtml(spell.name);
+        const casterClasses = Array.isArray(spell.caster_classes) ? spell.caster_classes : [];
+        const classes = escapeHtml(casterClasses.join(', ') || 'Nessuna classe');
+        const rulesVersionLabel = escapeHtml(spell.rules_version || '—');
         const concentrationLabel = spell.concentration ? 'Sì' : 'No';
         const ritualLabel = spell.ritual ? 'Sì' : 'No';
+        const level = Number.isFinite(Number(spell.level)) ? Number(spell.level) : 0;
         return `
-        <article class="character-card library-spell-card" data-library-view-spell="${spell.id}" role="button" tabindex="0" aria-label="Apri dettaglio incantesimo ${spell.name}">
-          <div class="library-spell-card__level" aria-label="Livello ${spell.level ?? 0}">
+        <article class="character-card library-spell-card" data-library-view-spell="${safeId}" role="button" tabindex="0" aria-label="Apri dettaglio incantesimo ${safeName}">
+          <div class="library-spell-card__level" aria-label="Livello ${level}">
             <span>Lv</span>
-            <strong>${spell.level ?? 0}</strong>
+            <strong>${level}</strong>
           </div>
           <div class="character-card-info library-spell-card__info">
-            <h3>${spell.name}</h3>
+            <h3>${safeName}</h3>
             <p class="muted library-spell-card__classes">${classes}</p>
           </div>
-          <span class="library-spell-card__school">${spell.school || 'Scuola n/d'}</span>
+          <span class="library-spell-card__school">${escapeHtml(spell.school || 'Scuola n/d')}</span>
           <span class="library-spell-card__rules">${rulesVersionLabel}</span>
           <span class="library-spell-card__flag ${spell.concentration ? 'is-active' : ''}">${concentrationLabel}</span>
           <span class="library-spell-card__flag ${spell.ritual ? 'is-active' : ''}">${ritualLabel}</span>
           <div class="button-row library-spell-card__actions">
-            <button class="icon-button" type="button" data-library-edit-spell="${spell.id}" aria-label="Modifica incantesimo ${spell.name}" title="Modifica">✏️</button>
-            <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${spell.id}" aria-label="Elimina incantesimo ${spell.name}" title="Elimina">🗑️</button>
+            <button class="icon-button" type="button" data-library-edit-spell="${safeId}" aria-label="Modifica incantesimo ${safeName}" title="Modifica">✏️</button>
+            <button class="icon-button icon-button--danger" type="button" data-library-delete-spell="${safeId}" aria-label="Elimina incantesimo ${safeName}" title="Elimina">🗑️</button>
           </div>
         </article>`;
       }).join('')

@@ -5,6 +5,7 @@ import {
   normalizeTransactionAmount
 } from './utils.js';
 import { ammunitionTypeLabels, damageTypeLabels } from './constants.js';
+import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 
 function buildTransactionAmount(amount) {
   const baseUrl = import.meta.env.BASE_URL;
@@ -66,16 +67,16 @@ function buildTransactionItem(transaction) {
   item.className = `transaction-item ${directionClass}`;
   item.innerHTML = `
       <div class="transaction-info">
-        <p class="muted">${transaction.reason || 'Nessuna nota'}</p>
+        <p class="muted">${escapeHtml(transaction.reason || 'Nessuna nota')}</p>
       </div>
-      <span class="transaction-amount" aria-label="${amountLabelText}">${amountLabel}</span>
+      <span class="transaction-amount" aria-label="${escapeHtml(amountLabelText)}">${amountLabel}</span>
       <div class="transaction-meta">
         <span class="resource-chip transaction-direction-chip ${transaction.direction === 'pay' ? 'transaction-direction-chip--outgoing' : 'transaction-direction-chip--incoming'}">${directionLabel}</span>
         <div class="transaction-actions">
-          <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${transaction.id}" aria-label="Modifica transazione" title="Modifica">
+          <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${escapeHtml(transaction.id)}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
           </button>
-          <button class="icon-button icon-button--danger transaction-action-button transaction-action-button--danger" type="button" data-delete-transaction="${transaction.id}" aria-label="Elimina transazione" title="Elimina">
+          <button class="icon-button icon-button--danger transaction-action-button transaction-action-button--danger" type="button" data-delete-transaction="${escapeHtml(transaction.id)}" aria-label="Elimina transazione" title="Elimina">
             <span aria-hidden="true">🗑️</span>
           </button>
         </div>
@@ -148,23 +149,23 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
           <div class="inventory-table__cell inventory-table__cell--item">
             <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
             <div class="item-info-body">
-              <strong>${container.name}</strong>
-              ${volumeLabel ? `<span class="muted">${volumeLabel}</span>` : ''}
+              <strong>${escapeHtml(container.name)}</strong>
+              ${volumeLabel ? `<span class="muted">${escapeHtml(volumeLabel)}</span>` : ''}
             </div>
           </div>
-          <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(container.category)}</span></div>
-          <div class="inventory-table__cell" data-label="Quantità">${container.qty}</div>
-          <div class="inventory-table__cell" data-label="Peso">${formatWeight(container.weight ?? 0, weightUnit)}</div>
-          <div class="inventory-table__cell" data-label="Volume">${container.max_volume ?? '-'}</div>
+          <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${escapeHtml(getCategoryLabel(container.category))}</span></div>
+          <div class="inventory-table__cell" data-label="Quantità">${escapeHtml(container.qty)}</div>
+          <div class="inventory-table__cell" data-label="Peso">${escapeHtml(formatWeight(container.weight ?? 0, weightUnit))}</div>
+          <div class="inventory-table__cell" data-label="Volume">${escapeHtml(container.max_volume ?? '-')}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
-            <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${container.id}" aria-label="Inserisci oggetti sfusi in ${container.name}">
+            <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${escapeHtml(container.id)}" aria-label="Inserisci oggetti sfusi in ${escapeHtml(container.name)}">
               <span aria-hidden="true">＋</span>
               <span>Inserisci</span>
             </button>
-            <button class="resource-action-button icon-button" type="button" data-edit="${container.id}" aria-label="Modifica" title="Modifica">
+            <button class="resource-action-button icon-button" type="button" data-edit="${escapeHtml(container.id)}" aria-label="Modifica" title="Modifica">
               <span aria-hidden="true">✏️</span>
             </button>
-            <button class="resource-action-button icon-button" type="button" data-delete="${container.id}" aria-label="Elimina" title="Elimina">
+            <button class="resource-action-button icon-button" type="button" data-delete="${escapeHtml(container.id)}" aria-label="Elimina" title="Elimina">
               <span aria-hidden="true">🗑️</span>
             </button>
           </div>
@@ -194,7 +195,7 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
 
 export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyLabel = 'Nessun oggetto.' } = {}) {
   if (!items.length) {
-    return `<div class="inventory-empty-state"><span aria-hidden="true">◇</span><div><strong>${emptyLabel}</strong><small>Aggiungi o sposta qui un oggetto per visualizzarlo.</small></div></div>`;
+    return `<div class="inventory-empty-state"><span aria-hidden="true">◇</span><div><strong>${escapeHtml(emptyLabel)}</strong><small>Aggiungi o sposta qui un oggetto per visualizzarlo.</small></div></div>`;
   }
   return `
     <div class="inventory-table ${nested ? 'inventory-table--nested' : ''}">
@@ -210,32 +211,35 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
         ${items.map((item) => {
     const volumeValue = item.volume !== null && item.volume !== undefined ? item.volume : '-';
     const statusLabels = getItemStatusLabels(item);
+    const safeId = escapeHtml(item.id);
+    const safeName = escapeHtml(item.name);
+    const safeImageUrl = sanitizeImageUrl(item.image_url);
     return `
           <div class="inventory-table__row inventory-item-row">
             <div class="inventory-table__badges inventory-item-row__badges">
-              ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${statusLabels.magic}</span>` : ''}
-              ${item.equipable ? `<span class="resource-chip resource-chip--floating resource-chip--equipable">${statusLabels.equipable}</span>` : ''}
-              ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${statusLabels.attunement}</span>` : ''}
+              ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${escapeHtml(statusLabels.magic)}</span>` : ''}
+              ${item.equipable ? `<span class="resource-chip resource-chip--floating resource-chip--equipable">${escapeHtml(statusLabels.equipable)}</span>` : ''}
+              ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${escapeHtml(statusLabels.attunement)}</span>` : ''}
             </div>
             <div class="inventory-table__cell inventory-table__cell--item">
-              ${item.image_url ? `<img class="item-avatar inventory-item-row__image" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : '<span class="inventory-item-row__placeholder" aria-hidden="true">◇</span>'}
+              ${safeImageUrl ? `<img class="item-avatar inventory-item-row__image" src="${safeImageUrl}" alt="Foto di ${safeName}" data-item-image="${safeId}" />` : '<span class="inventory-item-row__placeholder" aria-hidden="true">◇</span>'}
               <div class="item-info-body inventory-item-row__info">
-                <button class="item-name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
-                ${item.ammunition_type ? `<span class="muted">Munizioni: ${ammunitionTypeLabels.get(item.ammunition_type) || item.ammunition_type}</span>` : ''}
-                ${item.consumes_ammunition ? `<span class="muted">Consuma: ${ammunitionTypeLabels.get(item.required_ammunition_type) || item.required_ammunition_type || 'munizioni'}</span>` : ''}
-                ${item.damage_type ? `<span class="muted">Danno: ${damageTypeLabels.get(item.damage_type) || item.damage_type}</span>` : ''}
+                <button class="item-name-button" type="button" data-item-preview="${safeId}" aria-label="Apri anteprima ${safeName}">${safeName}</button>
+                ${item.ammunition_type ? `<span class="muted">Munizioni: ${escapeHtml(ammunitionTypeLabels.get(item.ammunition_type) || item.ammunition_type)}</span>` : ''}
+                ${item.consumes_ammunition ? `<span class="muted">Consuma: ${escapeHtml(ammunitionTypeLabels.get(item.required_ammunition_type) || item.required_ammunition_type || 'munizioni')}</span>` : ''}
+                ${item.damage_type ? `<span class="muted">Danno: ${escapeHtml(damageTypeLabels.get(item.damage_type) || item.damage_type)}</span>` : ''}
               </div>
             </div>
-            <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${getCategoryLabel(item.category)}</span></div>
-            <div class="inventory-table__cell inventory-table__metric" data-label="Quantità"><small>Qtà</small><strong>${item.qty}</strong></div>
-            <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${formatWeight(item.weight ?? 0, weightUnit)}</strong></div>
-            <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${volumeValue}</strong></div>
+            <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${escapeHtml(getCategoryLabel(item.category))}</span></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Quantità"><small>Qtà</small><strong>${escapeHtml(item.qty)}</strong></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${escapeHtml(formatWeight(item.weight ?? 0, weightUnit))}</strong></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${escapeHtml(volumeValue)}</strong></div>
             <div class="inventory-table__cell inventory-table__cell--actions">
-              ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${item.id}">Consuma</button>` : ''}
-              <button class="resource-action-button icon-button" data-edit="${item.id}" aria-label="Modifica" title="Modifica">
+              ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${safeId}">Consuma</button>` : ''}
+              <button class="resource-action-button icon-button" data-edit="${safeId}" aria-label="Modifica" title="Modifica">
                 <span aria-hidden="true">✏️</span>
               </button>
-              <button class="resource-action-button icon-button" data-delete="${item.id}" aria-label="Elimina" title="Elimina">
+              <button class="resource-action-button icon-button" data-delete="${safeId}" aria-label="Elimina" title="Elimina">
                 <span aria-hidden="true">🗑️</span>
               </button>
             </div>
@@ -249,6 +253,7 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
 
 export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, direction = 'receive', includeDirection = false } = {}) {
   const resolvedDate = occurredOn || new Date().toISOString().split('T')[0];
+  const safeReason = escapeHtml(reason);
   return `
     <div class="money-grid compact-grid-fields">
       <label class="field">
@@ -266,7 +271,7 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
       </label>
        <label class="field">
       <span>Data</span>
-      <input name="occurred_on" type="date" value="${resolvedDate}" />
+      <input name="occurred_on" type="date" value="${escapeHtml(resolvedDate)}" />
     </label>
     </div>
     ${includeDirection ? `
@@ -280,13 +285,13 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
         </label>
         <label class="field">
           <span>Motivo</span>
-          <input name="reason" placeholder="Motivo" value="${reason}" />
+          <input name="reason" placeholder="Motivo" value="${safeReason}" />
         </label>
       </div>
     ` : `
       <label class="field">
         <span>Motivo</span>
-        <input name="reason" placeholder="Motivo" value="${reason}" />
+        <input name="reason" placeholder="Motivo" value="${safeReason}" />
       </label>
     `}
    

@@ -29,4 +29,13 @@ describe('database migrations', () => {
     expect(migration).toContain("notify pgrst, 'reload schema'");
   });
 
+  it('updates wallets and their ledger atomically', () => {
+    const migration = readFileSync('db/wallet_transactions_atomic.sql', 'utf8');
+    expect(migration).toContain('function public.apply_money_transaction');
+    expect(migration).toContain('function public.update_money_transaction_atomic');
+    expect(migration).toContain('function public.delete_money_transaction_atomic');
+    expect(migration).toContain('security invoker');
+    expect(migration).toContain("grant execute on function public.apply_money_transaction");
+  });
+
 });

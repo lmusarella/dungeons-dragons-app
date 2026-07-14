@@ -22,9 +22,13 @@ export async function upsertWallet(payload) {
 
 export async function createTransaction(payload) {
   const { data, error } = await supabase
-    .from('money_transactions')
-    .insert(payload)
-    .select('*')
+    .rpc('apply_money_transaction', {
+      p_character_id: String(payload.character_id),
+      p_direction: payload.direction,
+      p_amount: payload.amount,
+      p_reason: payload.reason || null,
+      p_occurred_on: payload.occurred_on || null
+    })
     .single();
   if (error) throw error;
   return data;
@@ -42,19 +46,22 @@ export async function fetchTransactions(characterId) {
 
 export async function updateTransaction(id, payload) {
   const { data, error } = await supabase
-    .from('money_transactions')
-    .update(payload)
-    .eq('id', id)
-    .select('*')
+    .rpc('update_money_transaction_atomic', {
+      p_transaction_id: String(id),
+      p_direction: payload.direction,
+      p_amount: payload.amount,
+      p_reason: payload.reason || null,
+      p_occurred_on: payload.occurred_on || null
+    })
     .single();
   if (error) throw error;
   return data;
 }
 
 export async function deleteTransaction(id) {
-  const { error } = await supabase
-    .from('money_transactions')
-    .delete()
-    .eq('id', id);
+  const { data, error } = await supabase
+    .rpc('delete_money_transaction_atomic', { p_transaction_id: String(id) })
+    .single();
   if (error) throw error;
+  return data;
 }

@@ -22,4 +22,11 @@ describe('src/features/wallet/walletApi.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('uses database RPCs for atomic ledger mutations', () => {
+    const source = readFileSync('src/features/wallet/walletApi.js', 'utf8');
+    expect(source).toContain(".rpc('apply_money_transaction'");
+    expect(source).toContain(".rpc('update_money_transaction_atomic'");
+    expect(source).toContain(".rpc('delete_money_transaction_atomic'");
+  });
 });

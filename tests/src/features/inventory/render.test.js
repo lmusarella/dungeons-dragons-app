@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildInventoryTree } from '../../../../src/features/inventory/render.js';
+import { buildInventoryTree, moneyFields } from '../../../../src/features/inventory/render.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -70,6 +70,23 @@ describe('src/features/inventory/render.js', () => {
     expect(styles).toContain('.inventory-toolbar');
     expect(styles).toContain('.inventory-item-row.inventory-table__row');
     expect(styles).toContain('.inventory-side-card--wallet');
+  });
+
+  it('escapes stored values and rejects executable image URLs', () => {
+    const markup = buildInventoryTree([{
+      id: 'item-1" onmouseover="alert(1)',
+      name: '<img src=x onerror=alert(1)>',
+      image_url: 'javascript:alert(1)',
+      category: 'gear',
+      qty: 1,
+      weight: 1
+    }]);
+    const fields = moneyFields({ reason: '" autofocus onfocus="alert(1)' });
+
+    expect(markup).not.toContain('<img src=x onerror=alert(1)>');
+    expect(markup).not.toContain('javascript:alert(1)');
+    expect(markup).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(fields).toContain('&quot; autofocus onfocus=&quot;alert(1)');
   });
 
 });

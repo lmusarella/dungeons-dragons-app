@@ -22,4 +22,11 @@ describe('src/lib/offline/cache.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('replaces scoped snapshots instead of retaining deleted rows', () => {
+    const source = readFileSync('src/lib/offline/cache.js', 'utf8');
+    expect(source).toContain("await db.transaction(");
+    expect(source).toContain("table.where('character_id').equals(characterId).delete()");
+    expect(source).toContain("db.characters.where('user_id').equals(userId).delete()");
+  });
 });

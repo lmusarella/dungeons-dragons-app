@@ -17,6 +17,7 @@ import { categories } from './constants.js';
 import { openItemImageModal, openItemModal } from './modals.js';
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields, walletEditFields } from './render.js';
 import { getCategoryLabel, getWeightUnit, normalizeTransactionAmount } from './utils.js';
+import { escapeHtml } from '../../lib/html.js';
 
 
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
@@ -32,7 +33,7 @@ async function openLooseItemsPicker(containerItem, items) {
   const content = document.createElement('div');
   content.className = 'inventory-insert-picker';
   content.innerHTML = `
-    <p class="muted inventory-insert-picker__intro">Seleziona uno o più oggetti da spostare in <strong>${containerItem.name}</strong>.</p>
+    <p class="muted inventory-insert-picker__intro">Seleziona uno o più oggetti da spostare in <strong>${escapeHtml(containerItem.name)}</strong>.</p>
     <div class="inventory-insert-picker__list"></div>
   `;
   const list = content.querySelector('.inventory-insert-picker__list');
@@ -41,10 +42,10 @@ async function openLooseItemsPicker(containerItem, items) {
     option.className = 'inventory-insert-picker__item';
     option.innerHTML = `
       <span class="inventory-insert-picker__details">
-        <strong>${item.name}</strong>
-        <span class="muted">${getCategoryLabel(item.category)} · Quantità ${item.qty}</span>
+        <strong>${escapeHtml(item.name)}</strong>
+        <span class="muted">${escapeHtml(getCategoryLabel(item.category))} · Quantità ${escapeHtml(item.qty)}</span>
       </span>
-      <input type="checkbox" name="item_ids" value="${item.id}" />
+      <input type="checkbox" name="item_ids" value="${escapeHtml(item.id)}" />
     `;
     const input = option.querySelector('input');
     input.addEventListener('change', () => option.classList.toggle('is-selected', input.checked));
@@ -444,12 +445,9 @@ export async function renderInventory(container) {
         const signedDelta = Object.fromEntries(
           Object.entries(delta).map(([key, value]) => [key, value * sign])
         );
-        const nextWallet = applyMoneyDelta(wallet, signedDelta);
-
         await runWithGlobalLoader(async () => {
           try {
-            const saved = await upsertWallet({ ...nextWallet, user_id: activeUserId, character_id: activeCharacterId });
-            await createTransaction({
+            const saved = await createTransaction({
               user_id: activeUserId,
               character_id: activeCharacterId,
               direction,
@@ -711,24 +709,17 @@ export async function renderInventory(container) {
       const amountValue = Number(formData.get('amount') || 0);
       const sign = nextDirection === 'pay' ? -1 : 1;
       const nextSigned = { cp: 0, sp: 0, gp: 0, pp: 0, [nextCoin]: amountValue * sign };
-      const delta = Object.fromEntries(
-        Object.keys(nextSigned).map((key) => [key, (nextSigned[key] || 0) - (currentAmounts[key] || 0)])
-      );
-      const nextWallet = wallet ? applyMoneyDelta(wallet, delta) : null;
-
       await runWithGlobalLoader(async () => {
         try {
-          if (nextWallet) {
-            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-            updateCache('wallet', saved);
-            await cacheSnapshot({ wallet: saved });
-          }
-          await updateTransaction(transaction.id, {
+          const saved = await updateTransaction(transaction.id, {
             direction: nextDirection,
             amount: nextSigned,
             reason: formData.get('reason'),
             occurred_on: formData.get('occurred_on')
           });
+          wallet = saved;
+          updateCache('wallet', saved);
+          await cacheSnapshot({ wallet: saved });
           createToast('Transazione aggiornata');
           renderInventory(container);
         } catch (error) {
@@ -747,20 +738,12 @@ export async function renderInventory(container) {
         confirmLabel: 'Elimina'
       });
       if (!shouldDelete) return;
-      const currentAmounts = transactionAmount(transaction);
-      const delta = Object.fromEntries(
-        Object.keys(currentAmounts).map((key) => [key, -currentAmounts[key]])
-      );
-      const nextWallet = wallet ? applyMoneyDelta(wallet, delta) : null;
-
       await runWithGlobalLoader(async () => {
         try {
-          if (nextWallet) {
-            const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-            updateCache('wallet', saved);
-            await cacheSnapshot({ wallet: saved });
-          }
-          await deleteTransaction(transaction.id);
+          const saved = await deleteTransaction(transaction.id);
+          wallet = saved;
+          updateCache('wallet', saved);
+          await cacheSnapshot({ wallet: saved });
           createToast('Transazione eliminata');
           renderInventory(container);
         } catch (error) {

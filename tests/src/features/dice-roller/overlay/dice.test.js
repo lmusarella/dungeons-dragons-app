@@ -29,4 +29,14 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     expect(styles).toMatch(/\.diceov-stage--generic-roll,\s*\.diceov-stage--damage-roll\s*\{\s*width:\s*min\(760px,/s);
   });
 
+  it('does not invalidate an active overlay session during audio warmup', () => {
+    const source = readFileSync('src/features/dice-roller/overlay/dice.js', 'utf8');
+    const warmup = source.slice(
+      source.indexOf('export function warmupDiceEffectAudio'),
+      source.indexOf('function stopCriticalAudioPlayback')
+    );
+    expect(warmup).toContain('preloadCriticalAudio()');
+    expect(warmup).not.toContain('overlaySessionToken += 1');
+  });
+
 });

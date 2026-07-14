@@ -4,6 +4,7 @@ import { getState, normalizeCharacterId, setActiveCharacter, setState } from '..
 import { createToast, setGlobalLoading } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
+import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 
 export async function renderCharacterSelect(container) {
   const state = getState();
@@ -68,23 +69,25 @@ export async function renderCharacterSelect(container) {
 
 function buildCharacterCard(character, isActive) {
   const data = character.data || {};
-  const avatar = data.avatar_url
-    ? `<img src="${data.avatar_url}" alt="Ritratto di ${character.name}" />`
-    : `<span>${getInitials(character.name)}</span>`;
+  const safeName = escapeHtml(character.name);
+  const safeAvatarUrl = sanitizeImageUrl(data.avatar_url);
+  const avatar = safeAvatarUrl
+    ? `<img src="${safeAvatarUrl}" alt="Ritratto di ${safeName}" />`
+    : `<span>${escapeHtml(getInitials(character.name))}</span>`;
   const levelLabel = data.level ? `Livello ${data.level}` : null;
   const classLabel = data.class_name || data.class_archetype || data.archetype;
   const primaryMeta = [levelLabel, classLabel].filter(Boolean);
   const tagMeta = [...primaryMeta, data.race].filter(Boolean);
   return `
-    <button class="character-card ${isActive ? 'is-active' : ''}" type="button" data-character-card="${character.id}">
+    <button class="character-card ${isActive ? 'is-active' : ''}" type="button" data-character-card="${escapeHtml(character.id)}">
       <div class="character-card-avatar">
         ${avatar}
       </div>
       <div class="character-card-info">
-        <h3>${character.name}</h3>
+        <h3>${safeName}</h3>
         ${tagMeta.length
     ? `<div class="character-card-tags">
-            ${tagMeta.map((item) => `<span class="character-tag">${item}</span>`).join('')}
+            ${tagMeta.map((item) => `<span class="character-tag">${escapeHtml(item)}</span>`).join('')}
           </div>`
     : '<p class="character-card-meta muted">Dettagli base non specificati</p>'}
       </div>
@@ -93,7 +96,7 @@ function buildCharacterCard(character, isActive) {
 }
 
 function getInitials(name = '') {
-  const parts = name.split(' ').filter(Boolean);
+  const parts = String(name ?? '').split(' ').filter(Boolean);
   if (!parts.length) return '??';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();

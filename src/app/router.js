@@ -3,6 +3,7 @@ import { updateActiveTab } from '../ui/layout.js';
 import { getState } from './state.js';
 
 const routes = new Map();
+let navigationSequence = 0;
 export function registerRoute(path, renderFn) {
   routes.set(path, renderFn);
 }
@@ -19,9 +20,11 @@ export function initRouter() {
 }
 
 async function renderRoute() {
+  const navigationId = ++navigationSequence;
   const outlet = document.querySelector('[data-route-outlet]');
   if (!outlet) return;
-  const route = window.location.hash.replace('#/', '') || 'home';
+  const requestedRoute = window.location.hash.replace('#/', '') || 'home';
+  const route = routes.has(requestedRoute) ? requestedRoute : 'home';
   const { user } = getState();
   const bottomNav = document.querySelector('[data-bottom-nav]');
   const actionsFab = document.querySelector('[data-actions-fab]');
@@ -34,11 +37,13 @@ async function renderRoute() {
   const fabAlwaysVisibleRoutes = ['home', 'inventory', 'journal'];
   const showFab = fabAlwaysVisibleRoutes.includes(route);
   const isAuthRoute = route === 'login' || route === 'characters';
-  if (appShell) {
-    appShell.classList.toggle('app-shell--auth', isAuthRoute);
-    appShell.dataset.route = route;
-  }
-  document.body.classList.toggle('no-route-scroll', isAuthRoute);
+  const applyRouteShellState = () => {
+    if (appShell) {
+      appShell.classList.toggle('app-shell--auth', isAuthRoute);
+      appShell.dataset.route = route;
+    }
+    document.body.classList.toggle('no-route-scroll', isAuthRoute);
+  };
   const applyShellVisibility = (shouldHide, shouldShowFab) => {
     const { offline } = getState();
     if (bottomNav) bottomNav.hidden = shouldHide;
@@ -77,13 +82,16 @@ async function renderRoute() {
     }
 
     const view = routes.get(route) || routes.get('home');
+    const routeBuffer = outlet.cloneNode(false);
+    await view?.(routeBuffer);
+    if (navigationId !== navigationSequence) return;
+    applyRouteShellState();
     updateActiveTab(route);
     applyShellVisibility(hideShell, showFab);
-    if (!isAuthRoute) {
-      outlet.innerHTML = '';
-    }
-    await view?.(outlet);
+    outlet.replaceWith(routeBuffer);
   } finally {
-    setGlobalLoading(false);
+    if (navigationId === navigationSequence) {
+      setGlobalLoading(false);
+    }
   }
 }

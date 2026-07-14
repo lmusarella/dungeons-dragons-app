@@ -19,10 +19,11 @@ export async function ensureProfile(user) {
   if (!user) return;
   setGlobalLoading(true);
   try {
-    await supabase.from('profiles').upsert({
+    const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       display_name: user.user_metadata?.display_name ?? ''
     });
+    if (error) throw error;
   } finally {
     setGlobalLoading(false);
   }
