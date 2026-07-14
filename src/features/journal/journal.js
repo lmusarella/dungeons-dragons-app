@@ -19,6 +19,10 @@ import {
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import {
+  appendSpeechTranscript,
+  createSpeechRecognitionController
+} from '../../lib/speechRecognition.js';
+import {
   buildInput,
   buildTextarea,
   createToast,
@@ -639,12 +643,13 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
   editorField.classList.add('journal-entry-modal__content-field');
   const textarea = editorField.querySelector('textarea');
   textarea?.classList.add('journal-entry-modal__textarea');
+  const voiceInput = buildJournalVoiceInput(textarea);
 
   const editorHeader = document.createElement('div');
   editorHeader.className = 'journal-entry-modal__editor-header';
   editorHeader.appendChild(buildEditorToolbar(textarea));
   editorHeader.appendChild(pinnedToggle);
-  content.appendChild(buildJournalModalSection('Contenuto', 'Usa la toolbar per formattare appunti, indizi, PNG e promemoria.', [editorHeader, editorField]));
+  content.appendChild(buildJournalModalSection('Contenuto', 'Usa la toolbar per formattare appunti, indizi, PNG e promemoria.', [editorHeader, voiceInput.element, editorField]));
 
   const tagWrap = document.createElement('div');
   tagWrap.className = 'tag-selector journal-entry-modal__tag-selector';
@@ -672,7 +677,8 @@ async function openEntryModal(character, entry, tags, selectedTags, onSave) {
     title: entry ? 'Modifica voce' : 'Nuova voce',
     submitLabel: entry ? 'Salva' : 'Crea',
     content,
-    cardClass: 'modal-card--wide'
+    cardClass: 'modal-card--wide',
+    onOpen: () => voiceInput.connect()
   });
 
   if (!formData) return;
@@ -755,6 +761,63 @@ function buildEditorToolbar(textarea) {
   return toolbar;
 }
 
+function buildJournalVoiceInput(textarea) {
+  const element = document.createElement('div');
+  element.className = 'journal-voice-input';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'icon-button journal-voice-input__button';
+  button.setAttribute('aria-label', 'Avvia dettatura');
+  button.setAttribute('aria-pressed', 'false');
+  button.title = 'Avvia dettatura';
+  button.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm-7-3a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.08A7 7 0 0 1 5 12Z" />
+    </svg>
+    <span data-voice-button-label>Detta</span>
+  `;
+  const buttonLabel = button.querySelector('[data-voice-button-label]');
+
+  const status = document.createElement('p');
+  status.className = 'journal-voice-input__status';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+
+  element.appendChild(button);
+  element.appendChild(status);
+
+  return {
+    element,
+    connect() {
+      let controller = null;
+      const onClick = () => controller?.toggle();
+      button.addEventListener('click', onClick);
+
+      controller = createSpeechRecognitionController({
+        lang: 'it-IT',
+        onTranscript: (transcript) => appendSpeechTranscript(textarea, transcript),
+        onStatusChange: ({ state, message, supported }) => {
+          const isActive = state === 'starting' || state === 'listening';
+          button.disabled = !supported || state === 'stopping';
+          button.classList.toggle('is-listening', isActive);
+          button.setAttribute('aria-pressed', String(isActive));
+          button.setAttribute('aria-label', isActive ? 'Ferma dettatura' : 'Avvia dettatura');
+          button.title = isActive ? 'Ferma dettatura' : 'Avvia dettatura';
+          if (buttonLabel) buttonLabel.textContent = isActive ? 'Ferma' : 'Detta';
+          status.textContent = message;
+          element.classList.toggle('has-error', state === 'error' || state === 'unavailable');
+        }
+      });
+
+      return () => {
+        button.removeEventListener('click', onClick);
+        controller?.destroy();
+      };
+    }
+  };
+}
+
 function wrapSelection(textarea, prefix, suffix) {
   if (!textarea) return;
   textarea.focus();
@@ -800,18 +863,23 @@ function unprefixLine(textarea, prefix) {
 async function openQuickAppendModal(entry, onSave) {
   const content = document.createElement('div');
   content.className = 'drawer-form modal-form-grid journal-quick-modal';
+  const quickTextareaField = buildTextarea({
+    label: `Aggiungi testo a "${entry.title || 'Senza titolo'}"`,
+    name: 'append_content',
+    placeholder: 'Scrivi qui appunti veloci da aggiungere alla voce...'
+  });
+  const quickTextarea = quickTextareaField.querySelector('textarea');
+  const voiceInput = buildJournalVoiceInput(quickTextarea);
   content.appendChild(buildJournalModalSection('Nota rapida', 'Il testo verrà aggiunto in fondo alla voce selezionata.', [
-    buildTextarea({
-      label: `Aggiungi testo a "${entry.title || 'Senza titolo'}"`,
-      name: 'append_content',
-      placeholder: 'Scrivi qui appunti veloci da aggiungere alla voce...'
-    })
+    voiceInput.element,
+    quickTextareaField
   ]));
 
   const formData = await openFormModal({
     title: 'Aggiunta rapida al diario',
     submitLabel: 'Aggiungi',
-    content
+    content,
+    onOpen: () => voiceInput.connect()
   });
 
   if (!formData) return;
