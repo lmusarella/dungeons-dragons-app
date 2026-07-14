@@ -74,24 +74,6 @@ window.onkeydown = function(e) {
             return;
         }
         let inputVal = elem.textInput.value;
-        //check for d100 and add tens place die
-        if(inputVal.includes('d100')) {
-            let dIdx = inputVal.indexOf('d100');
-            let numD100 = '';
-            for(let i = dIdx - 1; i >= 0; i--) {
-                let digit = inputVal[i];
-                if(!isNaN(digit)) {
-                    numD100 = digit + numD100;
-                } else {
-                    break;
-                }                
-            }
-            if(numD100 === '') numD100 = '1';
-            //console.log('num d100s: ' + numD100);
-            for(let i = 0; i < numD100; i++) {
-                inputVal += '+d9';
-            }
-        }
         //check for too many dice
         let d = DICE.parse_notation(inputVal);
         let numDice = d.set.length;

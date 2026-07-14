@@ -140,7 +140,7 @@ function buildOverlayMarkup() {
             <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
               <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
               <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
-                ${[4, 6, 8, 10, 12, 20].map((die) => `
+                ${[4, 6, 8, 10, 12, 20, 100].map((die) => `
                   <div class="diceov-quick-die">
                     <button class="diceov-quick-die-btn" type="button" data-quick-die="${die}" data-quick-die-action="decrement" aria-label="Rimuovi un d${die} dalla notazione">−</button>
                     <span class="diceov-quick-die-label">D${die}</span>
@@ -493,7 +493,7 @@ function scaleDiceNotation(value, multiplier = 2) {
 }
 
 
-const QUICK_DICE_SIDES = [4, 6, 8, 10, 12, 20];
+const QUICK_DICE_SIDES = [4, 6, 8, 10, 12, 20, 100];
 
 function parseEditableDiceNotation(value) {
   const counts = new Map();

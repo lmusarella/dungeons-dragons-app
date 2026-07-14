@@ -32,6 +32,8 @@ const DICE = (function() {
         stop_velocity_threshold: 7.5,
         stop_frames_to_confirm: 2,
         max_iterations_before_force_stop: 10,
+        max_physics_substeps: 3,
+        shadow_dice_limit: 8,
         
         material_options: {
             specular: 0x172022,
@@ -53,14 +55,15 @@ const DICE = (function() {
     const CONSTS = {
         known_types: ['d4', 'd6', 'd8', 'd9', 'd10', 'd12', 'd20', 'd100'],
         dice_face_range: { 'd4': [1, 4], 'd6': [1, 6], 'd8': [1, 8], 'd9': [0, 9], 'd10': [0, 9], 
-            'd12': [1, 12], 'd20': [1, 20], 'd100': [0, 9] },
-        dice_mass: { 'd4': 300, 'd6': 300, 'd8': 340, 'd9': 350, 'd10': 350, 'd12': 350, 'd20': 400, 'd100': 350 },
-        dice_inertia: { 'd4': 5, 'd6': 13, 'd8': 10, 'd9': 9, 'd10': 9, 'd12': 8, 'd20': 6, 'd100': 9 },
+            'd12': [1, 12], 'd20': [1, 20], 'd100': [1, 100] },
+        dice_mass: { 'd4': 300, 'd6': 300, 'd8': 340, 'd9': 350, 'd10': 350, 'd12': 350, 'd20': 400, 'd100': 500 },
+        dice_inertia: { 'd4': 5, 'd6': 13, 'd8': 10, 'd9': 9, 'd10': 9, 'd12': 8, 'd20': 6, 'd100': 4 },
         
         standart_d20_dice_face_labels: [' ', '0', '1', '2', '3', '4', '5', '6', '7', '8',
                 '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'],
-        standart_d100_dice_face_labels: [' ', '00', '10', '20', '30', '40', '50',
-                '60', '70', '80', '90'],
+        standart_d100_dice_face_labels: [' ', '0'].concat(Array.from({ length: 100 }, function(_, i) {
+            return String(i + 1);
+        })),
                 
         d4_labels: [
             [[], [0, 0, 0], [2, 4, 3], [1, 3, 4], [2, 1, 4], [1, 2, 3]],
@@ -103,7 +106,7 @@ const DICE = (function() {
 
         this.world.gravity.set(0, 0, -9.8 * 800);
         this.world.broadphase = new CANNON.NaiveBroadphase();
-        this.world.solver.iterations = 16;
+        this.world.solver.iterations = 12;
 
         var ambientLight = new THREE.AmbientLight(vars.ambient_light_color);
         this.scene.add(ambientLight);
@@ -305,7 +308,7 @@ const DICE = (function() {
 
     that.dice_box.prototype.create_dice = function(type, pos, velocity, angle, axis) {
         var dice = threeD_dice['create_' + type]();
-        dice.castShadow = true;
+        dice.castShadow = vars.use_shadows && this.dices.length < vars.shadow_dice_limit;
         dice.dice_type = type;
         dice.body = new CANNON.RigidBody(CONSTS.dice_mass[type],
                 dice.geometry.cannon_shape, this.dice_body_material);
@@ -360,6 +363,7 @@ const DICE = (function() {
         var time = (new Date()).getTime();
         var time_diff = (time - this.last_time) / 1000;
         if (time_diff > 3) time_diff = vars.frame_rate;
+        time_diff = Math.min(time_diff, vars.frame_rate * vars.max_physics_substeps);
         ++this.iteration;
         if (vars.use_adapvite_timestep) {
             while (time_diff > vars.frame_rate * 1.1) {
@@ -549,10 +553,43 @@ const DICE = (function() {
     }
 
     threeD_dice.create_d100 = function() {
-        if (!this.d10_geometry) this.d10_geometry = create_d10_geometry(vars.scale * 0.9);
+        if (!this.d100_geometry) this.d100_geometry = create_d100_geometry(vars.scale * 1.2);
         if (!this.d100_material) this.d100_material = new THREE.MeshFaceMaterial(
-                create_dice_materials(CONSTS.standart_d100_dice_face_labels, vars.scale / 2, 1.5));
-        return new THREE.Mesh(this.d10_geometry, this.d100_material);
+                create_d100_atlas_materials());
+        return new THREE.Mesh(this.d100_geometry, this.d100_material);
+    }
+
+    // A d100 previously used one texture/material per value. MeshFaceMaterial then
+    // rendered the die in roughly 100 draw calls. The atlas reduces that to two:
+    // one for the numbered faces and one for the bevels.
+    function create_d100_atlas_materials() {
+        var atlas_size = 1024, grid_size = 10, cell_size = atlas_size / grid_size;
+        var canvas = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+        canvas.width = canvas.height = atlas_size;
+        context.fillStyle = vars.dice_color;
+        context.fillRect(0, 0, atlas_size, atlas_size);
+        context.fillStyle = vars.label_color;
+        context.font = Math.floor(cell_size * 0.42) + 'px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+
+        for (var value = 1; value <= 100; ++value) {
+            var index = value - 1, column = index % grid_size, row = Math.floor(index / grid_size);
+            var x = (column + 0.5) * cell_size, y = (row + 0.5) * cell_size;
+            context.fillText(String(value), x, y);
+            if (value == 6 || value == 9) context.fillText('  .', x, y);
+        }
+
+        var atlas = new THREE.Texture(canvas);
+        atlas.needsUpdate = true;
+        atlas.minFilter = THREE.LinearMipMapLinearFilter;
+        atlas.magFilter = THREE.LinearFilter;
+
+        return [
+            new THREE.MeshPhongMaterial($t.copyto(vars.material_options, { color: vars.dice_color })),
+            new THREE.MeshPhongMaterial($t.copyto(vars.material_options, { map: atlas }))
+        ];
     }
     
     function create_dice_materials(face_labels, size, margin) {
@@ -671,6 +708,140 @@ const DICE = (function() {
         return create_geom(vertices, faces, radius, -0.2, -Math.PI / 4 / 2, 0.955);
     }
 
+    // Builds the polar dual of a convex hull generated from 100 evenly distributed
+    // points. The dual has exactly one planar face for every source point: 100 faces.
+    function create_d100_geometry(radius) {
+        var point_count = 100, golden_angle = Math.PI * (3 - Math.sqrt(5));
+        var points = [];
+        for (var i = 0; i < point_count; ++i) {
+            var z = 1 - (2 * i + 1) / point_count;
+            var r = Math.sqrt(1 - z * z), angle = i * golden_angle;
+            points.push(new THREE.Vector3(Math.cos(angle) * r, Math.sin(angle) * r, z));
+        }
+
+        var hull_faces = create_convex_hull_faces(points);
+        var dual_vertices = [], adjacent_faces = new Array(point_count);
+        for (var i = 0; i < point_count; ++i) adjacent_faces[i] = [];
+
+        for (var i = 0; i < hull_faces.length; ++i) {
+            var face = hull_faces[i];
+            var a = points[face[0]], b = points[face[1]], c = points[face[2]];
+            var normal = new THREE.Vector3().crossVectors(
+                    b.clone().sub(a), c.clone().sub(a)).normalize();
+            var distance = normal.dot(a);
+            var dual = normal.multiplyScalar(1 / distance);
+            dual_vertices.push(dual);
+            adjacent_faces[face[0]].push(i);
+            adjacent_faces[face[1]].push(i);
+            adjacent_faces[face[2]].push(i);
+        }
+
+        var max_radius = 0;
+        for (var i = 0; i < dual_vertices.length; ++i) {
+            max_radius = Math.max(max_radius, dual_vertices[i].length());
+        }
+        for (var i = 0; i < dual_vertices.length; ++i) dual_vertices[i].divideScalar(max_radius);
+
+        var faces = [];
+        for (var i = 0; i < point_count; ++i) {
+            var outward = points[i];
+            var reference = Math.abs(outward.z) < 0.9
+                    ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+            var tangent = new THREE.Vector3().crossVectors(reference, outward).normalize();
+            var bitangent = new THREE.Vector3().crossVectors(outward, tangent).normalize();
+            var ordered = adjacent_faces[i].slice().sort(function(left, right) {
+                var lv = dual_vertices[left], rv = dual_vertices[right];
+                return Math.atan2(lv.dot(bitangent), lv.dot(tangent))
+                        - Math.atan2(rv.dot(bitangent), rv.dot(tangent));
+            });
+
+            if (ordered.length >= 3) {
+                var va = dual_vertices[ordered[0]], vb = dual_vertices[ordered[1]], vc = dual_vertices[ordered[2]];
+                var winding = new THREE.Vector3().crossVectors(
+                        vb.clone().sub(va), vc.clone().sub(va));
+                if (winding.dot(outward) < 0) ordered.reverse();
+            }
+            ordered.push(i + 1);
+            faces.push(ordered);
+        }
+
+        var geometry = create_geom(dual_vertices.map(function(vertex) { return vertex.toArray(); }),
+                faces, radius, 0.15, -Math.PI / 2, 0.92, false, new CANNON.Sphere(radius * 0.98));
+        apply_d100_atlas_uvs(geometry);
+        return geometry;
+    }
+
+    function apply_d100_atlas_uvs(geometry) {
+        for (var i = 0; i < geometry.faces.length; ++i) {
+            var face = geometry.faces[i];
+            if (face.materialIndex == 0) continue;
+            face.dice_value = face.materialIndex - 1;
+            face.materialIndex = 1;
+            geometry.faceVertexUvs[0][i] = geometry.faceVertexUvs[0][i].map(function(uv) {
+                return d100_atlas_uv(uv, face.dice_value);
+            });
+        }
+        geometry.uvsNeedUpdate = true;
+    }
+
+    function d100_atlas_uv(uv, value) {
+        var index = value - 1, column = index % 10, row = Math.floor(index / 10);
+        return new THREE.Vector2((column + uv.x) / 10, (9 - row + uv.y) / 10);
+    }
+
+    function create_convex_hull_faces(points) {
+        var interior = new THREE.Vector3();
+        for (var i = 0; i < 4; ++i) interior.add(points[i]);
+        interior.divideScalar(4);
+
+        var faces = [
+            [0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]
+        ];
+        for (var i = 0; i < faces.length; ++i) orient_hull_face(faces[i], points, interior);
+
+        for (var point_index = 4; point_index < points.length; ++point_index) {
+            var visible = [], horizon = {};
+            for (var face_index = 0; face_index < faces.length; ++face_index) {
+                var face = faces[face_index];
+                if (hull_face_distance(face, points[point_index], points) > 1e-7) visible.push(face_index);
+            }
+            if (!visible.length) continue;
+
+            for (var i = 0; i < visible.length; ++i) {
+                var face = faces[visible[i]];
+                for (var edge_index = 0; edge_index < 3; ++edge_index) {
+                    var a = face[edge_index], b = face[(edge_index + 1) % 3];
+                    var key = Math.min(a, b) + ':' + Math.max(a, b);
+                    if (horizon[key]) delete horizon[key];
+                    else horizon[key] = [a, b];
+                }
+            }
+
+            var visible_lookup = {};
+            for (var i = 0; i < visible.length; ++i) visible_lookup[visible[i]] = true;
+            faces = faces.filter(function(_, index) { return !visible_lookup[index]; });
+
+            Object.keys(horizon).forEach(function(key) {
+                var edge = horizon[key];
+                var new_face = [edge[0], edge[1], point_index];
+                orient_hull_face(new_face, points, interior);
+                faces.push(new_face);
+            });
+        }
+        return faces;
+    }
+
+    function orient_hull_face(face, points, interior) {
+        if (hull_face_distance(face, interior, points) > 0) {
+            var swap = face[1]; face[1] = face[2]; face[2] = swap;
+        }
+    }
+
+    function hull_face_distance(face, point, points) {
+        var a = points[face[0]], b = points[face[1]], c = points[face[2]];
+        return new THREE.Vector3().crossVectors(b.clone().sub(a), c.clone().sub(a)).dot(point.clone().sub(a));
+    }
+
     // HELPERS
 
     function rnd() {
@@ -775,15 +946,16 @@ const DICE = (function() {
         return { vectors: chamfer_vectors, faces: chamfer_faces };
     }
 
-    function create_geom(vertices, faces, radius, tab, af, chamfer) {
+    function create_geom(vertices, faces, radius, tab, af, chamfer, normalize, cannon_shape) {
         var vectors = new Array(vertices.length);
         for (var i = 0; i < vertices.length; ++i) {
-            vectors[i] = (new THREE.Vector3).fromArray(vertices[i]).normalize();
+            vectors[i] = (new THREE.Vector3).fromArray(vertices[i]);
+            if (normalize !== false) vectors[i].normalize();
         }
         var cg = chamfer_geom(vectors, faces, chamfer);
         var geom = make_geom(cg.vectors, cg.faces, radius, tab, af);
         //var geom = make_geom(vectors, faces, radius, tab, af); // Without chamfer
-        geom.cannon_shape = create_shape(vectors, faces, radius);
+        geom.cannon_shape = cannon_shape || create_shape(vectors, faces, radius);
         return geom;
     }
 
@@ -815,8 +987,9 @@ const DICE = (function() {
                 closest_face = face;
             }
         }
-        var matindex = closest_face ? closest_face.materialIndex - 1 : -1; //todo: bug thrown here, sometimes closest_face = undefined
-        if (dice.dice_type == 'd100') matindex *= 10;
+        var matindex = closest_face
+                ? (dice.dice_type == 'd100' ? closest_face.dice_value : closest_face.materialIndex - 1)
+                : -1; //todo: bug thrown here, sometimes closest_face = undefined
         if (dice.dice_type == 'd10' && matindex == 0) matindex = 10;
         return matindex;
     }
@@ -835,6 +1008,28 @@ const DICE = (function() {
         if (!(value >= r[0] && value <= r[1])) return;
         var num = value - res;
         var geom = dice.geometry.clone();
+        if (dice.dice_type == 'd100') {
+            for (var i = 0, l = geom.faces.length; i < l; ++i) {
+                var source_face = dice.geometry.faces[i];
+                if (!source_face.dice_value) continue;
+                var shifted_value = source_face.dice_value + num;
+                while (shifted_value > 100) shifted_value -= 100;
+                while (shifted_value < 1) shifted_value += 100;
+                geom.faces[i].dice_value = shifted_value;
+                geom.faces[i].materialIndex = 1;
+
+                var source_index = source_face.dice_value - 1;
+                var source_column = source_index % 10, source_row = Math.floor(source_index / 10);
+                geom.faceVertexUvs[0][i] = dice.geometry.faceVertexUvs[0][i].map(function(uv) {
+                    var local_uv = new THREE.Vector2(
+                            uv.x * 10 - source_column, uv.y * 10 - (9 - source_row));
+                    return d100_atlas_uv(local_uv, shifted_value);
+                });
+            }
+            geom.uvsNeedUpdate = true;
+            dice.geometry = geom;
+            return;
+        }
         for (var i = 0, l = geom.faces.length; i < l; ++i) {
             var matindex = geom.faces[i].materialIndex;
             if (matindex == 0) continue;
