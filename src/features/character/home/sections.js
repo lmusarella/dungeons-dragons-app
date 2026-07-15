@@ -700,11 +700,12 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
           </div>
         </div>
         <div class="actions">
-          ${canEditCharacter ? `
-            <button class="icon-button icon-button--add icon-button--section-add" type="button" data-add-equip aria-label="Equipaggia oggetto">
-              <span aria-hidden="true">+</span>
-            </button>
-          ` : ''}
+          <button class="icon-button equipment-mannequin-trigger" type="button" data-open-equipment-mannequin aria-label="${canEditCharacter ? 'Gestisci equipaggiamento sul manichino 3D' : 'Visualizza manichino 3D'}" title="${canEditCharacter ? 'Gestisci equipaggiamento' : 'Visualizza manichino 3D'}">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
+              <circle cx="12" cy="12" r="2.6"></circle>
+            </svg>
+          </button>
         </div>
       </header>
       ${equippedItems.length

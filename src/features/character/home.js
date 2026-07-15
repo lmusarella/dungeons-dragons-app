@@ -5,6 +5,7 @@ import { buildInput, buildSelect, createToast, openConfirmModal, openFormModal, 
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
+import { openEquipmentMannequin } from './home/equipmentMannequin.js';
 import {
   buildAttackSection,
   buildCharacterOverview,
@@ -19,7 +20,7 @@ import {
 import { buildLootFields, moneyFields } from '../inventory/render.js';
 import { openItemImageModal } from '../inventory/modals.js';
 import { getWeightUnit } from '../inventory/utils.js';
-import { ammunitionTypeLabels, bodyParts } from '../inventory/constants.js';
+import { ammunitionTypeLabels } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
 import { fetchWallet, createTransaction } from '../wallet/walletApi.js';
 import { fetchCompanions } from './companionsApi.js';
@@ -1031,108 +1032,81 @@ export async function renderHome(container) {
       if (defaultTab) setActiveTab(defaultTab);
     });
 
-  const addEquipButton = container.querySelector('[data-add-equip]');
-  if (addEquipButton && activeCharacter && canEditCharacter) {
-    addEquipButton.addEventListener('click', async () => {
-      const equipableItems = (items || []).filter((item) => item.equipable && !getEquipSlots(item).length);
-      if (!equipableItems.length) {
-        createToast('Nessun oggetto equipaggiabile disponibile', 'error');
-        return;
-      }
-      const content = document.createElement('div');
-      content.className = 'drawer-form';
-      const itemField = document.createElement('label');
-      itemField.className = 'field';
-      itemField.innerHTML = '<span>Oggetto</span>';
-      const itemSelect = document.createElement('select');
-      itemSelect.name = 'item_id';
-      equipableItems.forEach((item) => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = item.name;
-        itemSelect.appendChild(option);
-      });
-      itemField.appendChild(itemSelect);
-      content.appendChild(itemField);
-
-      const equipSlotsField = document.createElement('fieldset');
-      equipSlotsField.className = 'equip-slot-field';
-      equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
-      const equipSlotList = document.createElement('div');
-      equipSlotList.className = 'equip-slot-list';
-      bodyParts.forEach((part) => {
-        const label = document.createElement('label');
-        label.className = 'checkbox';
-        label.innerHTML = `<input type="checkbox" name="equip_slots" value="${part.value}" /> <span>${part.label}</span>`;
-        equipSlotList.appendChild(label);
-      });
-      equipSlotsField.appendChild(equipSlotList);
-      content.appendChild(equipSlotsField);
-
-      const formData = await openFormModal({
-        title: 'Equipaggia oggetto',
-        submitLabel: 'Equipaggia',
-        content
-      });
-      if (!formData) return;
-      const equipSlots = formData.getAll('equip_slots');
-      if (!equipSlots.length) {
-        createToast('Seleziona almeno uno slot', 'error');
-        return;
-      }
-      const item = equipableItems.find((entry) => String(entry.id) === formData.get('item_id'));
-      if (!item) return;
-      const proficiencies = activeCharacter.data?.proficiencies || {};
-      if (item.category === 'weapon') {
-        if (!item.weapon_type) {
-          createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
-          return;
-        }
-        const proficient = item.weapon_type === 'simple'
-          ? Boolean(proficiencies.weapon_simple)
-          : Boolean(proficiencies.weapon_martial);
-        if (!proficient) {
-          createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-          return;
-        }
-      }
-      if (item.category === 'armor') {
-        if (item.is_shield) {
-          if (!proficiencies.shield) {
-            createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-            return;
+  const equipmentMannequinButton = container.querySelector('[data-open-equipment-mannequin]');
+  if (equipmentMannequinButton && activeCharacter) {
+    equipmentMannequinButton.addEventListener('click', async () => {
+      const equipFromMannequin = async (item, equipSlots, currentItems = items || []) => {
+        const proficiencies = activeCharacter.data?.proficiencies || {};
+        if (item.category === 'weapon') {
+          if (!item.weapon_type) {
+            createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
+            return false;
           }
-        } else if (!item.armor_type) {
-          createToast('Definisci il tipo di armatura prima di equipaggiarla', 'error');
-          return;
-        } else {
-          const proficient = item.armor_type === 'light'
-            ? Boolean(proficiencies.armor_light)
-            : item.armor_type === 'medium'
-              ? Boolean(proficiencies.armor_medium)
-              : Boolean(proficiencies.armor_heavy);
+          const proficient = item.weapon_type === 'simple'
+            ? Boolean(proficiencies.weapon_simple)
+            : Boolean(proficiencies.weapon_martial);
           if (!proficient) {
             createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-            return;
+            return false;
           }
         }
-      }
-      if (!item.sovrapponibile) {
-        const conflicting = (items || [])
-          .filter((entry) => entry.id !== item.id)
-          .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
-        if (conflicting.length) {
-          createToast('Uno o più slot selezionati sono già occupati', 'error');
-          return;
+        if (item.category === 'armor') {
+          if (item.is_shield) {
+            if (!proficiencies.shield) {
+              createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+              return false;
+            }
+          } else if (!item.armor_type) {
+            createToast('Definisci il tipo di armatura prima di equipaggiarla', 'error');
+            return false;
+          } else {
+            const proficient = item.armor_type === 'light'
+              ? Boolean(proficiencies.armor_light)
+              : item.armor_type === 'medium'
+                ? Boolean(proficiencies.armor_medium)
+                : Boolean(proficiencies.armor_heavy);
+            if (!proficient) {
+              createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+              return false;
+            }
+          }
         }
-      }
-      try {
-        await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
-        createToast('Equipaggiamento aggiornato');
-        renderHome(container);
-      } catch (error) {
-        createToast('Errore aggiornamento equip', 'error');
-      }
+        if (!item.sovrapponibile) {
+          const conflicting = currentItems
+            .filter((entry) => entry.id !== item.id)
+            .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+          if (conflicting.length) {
+            createToast('Lo slot selezionato è già occupato', 'error');
+            return false;
+          }
+        }
+        try {
+          const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
+          createToast('Equipaggiamento aggiornato');
+          return updated;
+        } catch (error) {
+          createToast('Errore aggiornamento equip', 'error');
+          return false;
+        }
+      };
+
+      const result = await openEquipmentMannequin({
+        items: items || [],
+        weightUnit: getWeightUnit(activeCharacter),
+        canEdit: canEditCharacter,
+        onEquip: canEditCharacter ? equipFromMannequin : null,
+        onUnequip: canEditCharacter ? async (item) => {
+          try {
+            const updated = await updateItem(item.id, { equip_slot: null, equip_slots: [] });
+            createToast('Equipaggiamento rimosso');
+            return updated;
+          } catch (error) {
+            createToast('Errore rimozione equipaggiamento', 'error');
+            return false;
+          }
+        } : null
+      });
+      if (result?.changed) renderHome(container);
     });
   }
 

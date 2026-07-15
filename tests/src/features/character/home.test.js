@@ -117,4 +117,14 @@ describe('src/features/character/home.js', () => {
     expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
   });
 
+  it('keeps equipment assignment inside the mannequin workflow without quick creation', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain('openEquipmentMannequin({');
+    expect(source).toContain('onEquip: canEditCharacter ? equipFromMannequin : null');
+    expect(source).toContain('onUnequip: canEditCharacter ? async (item) =>');
+    expect(source).toContain('weightUnit: getWeightUnit(activeCharacter)');
+    expect(source).not.toContain('onCreateItem: canEditCharacter');
+    expect(source).not.toContain("container.querySelector('[data-add-equip]')");
+  });
+
 });
