@@ -116,6 +116,7 @@ export function createSpeechRecognitionController({
   let expectedAbort = false;
   let expectedAbortMessage = messages.ended;
   let lastErrorCode = null;
+  const processedFinalResultIndexes = new Set();
 
   const emitStatus = (nextState, message, errorCode = null) => {
     state = nextState;
@@ -144,6 +145,7 @@ export function createSpeechRecognitionController({
     expectedAbort = false;
     expectedAbortMessage = messages.ended;
     lastErrorCode = null;
+    processedFinalResultIndexes.clear();
     sessionActive = true;
     emitStatus('starting', messages.starting);
 
@@ -272,7 +274,12 @@ export function createSpeechRecognitionController({
     const results = event.results ?? [];
     for (let index = event.resultIndex ?? 0; index < results.length; index += 1) {
       const result = results[index];
-      if (result?.isFinal && result[0]?.transcript) {
+      if (
+        result?.isFinal
+        && result[0]?.transcript
+        && !processedFinalResultIndexes.has(index)
+      ) {
+        processedFinalResultIndexes.add(index);
         finalTranscript += result[0].transcript;
       }
     }

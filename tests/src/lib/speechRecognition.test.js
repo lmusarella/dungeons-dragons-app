@@ -97,6 +97,40 @@ describe('speechRecognition', () => {
     expect(controller.getState()).toBe('idle');
   });
 
+  it('does not append final results already emitted during the same session', () => {
+    const { MockRecognition, windowRef, documentRef } = createRecognitionEnvironment();
+    const onTranscript = vi.fn();
+    const controller = createSpeechRecognitionController({
+      windowRef,
+      documentRef,
+      onTranscript
+    });
+    const recognition = MockRecognition.latest;
+    const firstFinalResult = [{ transcript: 'apri la porta' }];
+    const repeatedFirstResult = [{ transcript: 'apri la porta' }];
+    const secondFinalResult = [{ transcript: 'trovi una trappola' }];
+    firstFinalResult.isFinal = true;
+    repeatedFirstResult.isFinal = true;
+    secondFinalResult.isFinal = true;
+
+    controller.start();
+    recognition.onstart();
+    recognition.onresult({ resultIndex: 0, results: [firstFinalResult] });
+    recognition.onresult({
+      resultIndex: 0,
+      results: [repeatedFirstResult, secondFinalResult]
+    });
+
+    expect(onTranscript).toHaveBeenCalledTimes(2);
+    expect(onTranscript).toHaveBeenNthCalledWith(1, 'apri la porta');
+    expect(onTranscript).toHaveBeenNthCalledWith(2, 'trovi una trappola');
+
+    recognition.onend();
+    controller.start();
+    recognition.onresult({ resultIndex: 0, results: [repeatedFirstResult] });
+    expect(onTranscript).toHaveBeenCalledTimes(3);
+  });
+
   it('uses a non-continuous session and a clear warning on iOS', () => {
     const { MockRecognition, windowRef, documentRef } = createRecognitionEnvironment({ ios: true });
     const statuses = [];
