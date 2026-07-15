@@ -97,6 +97,57 @@ export function appendSpeechTranscript(input, transcript) {
   return nextValue;
 }
 
+function getTranscriptTokens(transcript) {
+  return String(transcript ?? '')
+    .trim()
+    .split(/\s+/u)
+    .map((text) => ({
+      text,
+      comparable: text
+        .normalize('NFKC')
+        .toLocaleLowerCase('it-IT')
+        .replace(/[^\p{L}\p{N}]+/gu, '')
+    }))
+    .filter(({ comparable }) => comparable);
+}
+
+function getTranscriptKey(transcript) {
+  return getTranscriptTokens(transcript)
+    .map(({ comparable }) => comparable)
+    .join(' ');
+}
+
+function appendNovelTranscript(committedTranscript, incomingTranscript) {
+  const committedTokens = getTranscriptTokens(committedTranscript);
+  const incomingTokens = getTranscriptTokens(incomingTranscript);
+  if (!incomingTokens.length) {
+    return { committedTranscript, novelTranscript: '' };
+  }
+
+  let overlapLength = Math.min(committedTokens.length, incomingTokens.length);
+  while (overlapLength > 0) {
+    const committedStart = committedTokens.length - overlapLength;
+    const overlaps = incomingTokens
+      .slice(0, overlapLength)
+      .every(({ comparable }, index) => (
+        comparable === committedTokens[committedStart + index].comparable
+      ));
+    if (overlaps) break;
+    overlapLength -= 1;
+  }
+
+  const novelTranscript = incomingTokens
+    .slice(overlapLength)
+    .map(({ text }) => text)
+    .join(' ');
+  if (!novelTranscript) return { committedTranscript, novelTranscript: '' };
+
+  return {
+    committedTranscript: [committedTranscript, novelTranscript].filter(Boolean).join(' '),
+    novelTranscript
+  };
+}
+
 export function createSpeechRecognitionController({
   lang = 'it-IT',
   messages: customMessages = {},
@@ -116,7 +167,9 @@ export function createSpeechRecognitionController({
   let expectedAbort = false;
   let expectedAbortMessage = messages.ended;
   let lastErrorCode = null;
-  const processedFinalResultIndexes = new Set();
+  let committedFinalTranscript = '';
+  const processedFinalResults = new Map();
+  const processedFinalTranscriptKeys = new Set();
 
   const emitStatus = (nextState, message, errorCode = null) => {
     state = nextState;
@@ -145,7 +198,9 @@ export function createSpeechRecognitionController({
     expectedAbort = false;
     expectedAbortMessage = messages.ended;
     lastErrorCode = null;
-    processedFinalResultIndexes.clear();
+    committedFinalTranscript = '';
+    processedFinalResults.clear();
+    processedFinalTranscriptKeys.clear();
     sessionActive = true;
     emitStatus('starting', messages.starting);
 
@@ -270,20 +325,25 @@ export function createSpeechRecognitionController({
 
   recognition.onresult = (event) => {
     if (destroyed) return;
-    let finalTranscript = '';
+    const novelTranscripts = [];
     const results = event.results ?? [];
     for (let index = event.resultIndex ?? 0; index < results.length; index += 1) {
       const result = results[index];
-      if (
-        result?.isFinal
-        && result[0]?.transcript
-        && !processedFinalResultIndexes.has(index)
-      ) {
-        processedFinalResultIndexes.add(index);
-        finalTranscript += result[0].transcript;
-      }
+      if (!result?.isFinal || !result[0]?.transcript) continue;
+
+      const transcript = String(result[0].transcript).trim();
+      const transcriptKey = getTranscriptKey(transcript);
+      if (!transcriptKey || processedFinalResults.get(index) === transcriptKey) continue;
+
+      processedFinalResults.set(index, transcriptKey);
+      if (processedFinalTranscriptKeys.has(transcriptKey)) continue;
+      processedFinalTranscriptKeys.add(transcriptKey);
+
+      const merged = appendNovelTranscript(committedFinalTranscript, transcript);
+      committedFinalTranscript = merged.committedTranscript;
+      if (merged.novelTranscript) novelTranscripts.push(merged.novelTranscript);
     }
-    if (finalTranscript.trim()) onTranscript(finalTranscript.trim());
+    if (novelTranscripts.length) onTranscript(novelTranscripts.join(' '));
   };
 
   recognition.onerror = (event) => {

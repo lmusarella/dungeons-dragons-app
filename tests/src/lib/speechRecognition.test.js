@@ -131,6 +131,66 @@ describe('speechRecognition', () => {
     expect(onTranscript).toHaveBeenCalledTimes(3);
   });
 
+  it('does not duplicate a final result that a tablet emits again at a new index', () => {
+    const { MockRecognition, windowRef, documentRef } = createRecognitionEnvironment();
+    const onTranscript = vi.fn();
+    const controller = createSpeechRecognitionController({
+      windowRef,
+      documentRef,
+      onTranscript
+    });
+    const recognition = MockRecognition.latest;
+    const firstResult = [{ transcript: 'La porta si apre' }];
+    const duplicatedResult = [{ transcript: 'la porta si apre.' }];
+    firstResult.isFinal = true;
+    duplicatedResult.isFinal = true;
+
+    controller.start();
+    recognition.onstart();
+    recognition.onresult({ resultIndex: 0, results: [firstResult] });
+    recognition.onresult({
+      resultIndex: 1,
+      results: [firstResult, duplicatedResult]
+    });
+
+    expect(onTranscript).toHaveBeenCalledOnce();
+    expect(onTranscript).toHaveBeenCalledWith('La porta si apre');
+  });
+
+  it('appends only new words when a tablet emits cumulative final transcripts', () => {
+    const { MockRecognition, windowRef, documentRef } = createRecognitionEnvironment();
+    const onTranscript = vi.fn();
+    const controller = createSpeechRecognitionController({
+      windowRef,
+      documentRef,
+      onTranscript
+    });
+    const recognition = MockRecognition.latest;
+    const firstResult = [{ transcript: 'Trovi una trappola' }];
+    const cumulativeResult = [{ transcript: 'trovi una trappola sotto il tappeto' }];
+    const overlappingResult = [{ transcript: 'sotto il tappeto rosso' }];
+    firstResult.isFinal = true;
+    cumulativeResult.isFinal = true;
+    overlappingResult.isFinal = true;
+
+    controller.start();
+    recognition.onstart();
+    recognition.onresult({ resultIndex: 0, results: [firstResult] });
+    recognition.onresult({
+      resultIndex: 1,
+      results: [firstResult, cumulativeResult]
+    });
+    recognition.onresult({
+      resultIndex: 2,
+      results: [firstResult, cumulativeResult, overlappingResult]
+    });
+
+    expect(onTranscript).toHaveBeenCalledTimes(3);
+    expect(onTranscript).toHaveBeenNthCalledWith(1, 'Trovi una trappola');
+    expect(onTranscript).toHaveBeenNthCalledWith(2, 'sotto il tappeto');
+    expect(onTranscript).toHaveBeenNthCalledWith(3, 'rosso');
+  });
+
   it('uses a non-continuous session and a clear warning on iOS', () => {
     const { MockRecognition, windowRef, documentRef } = createRecognitionEnvironment({ ios: true });
     const statuses = [];
