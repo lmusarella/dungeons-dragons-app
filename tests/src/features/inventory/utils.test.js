@@ -4,6 +4,7 @@ import {
   normalizeTransactionAmount,
   formatTransactionDate,
   getCategoryLabel,
+  getCompatibleEquipSlots,
   getEquipSlots,
   getWeightUnit,
   getBodyPartLabels,
@@ -29,6 +30,15 @@ describe('src/features/inventory/utils.js', () => {
     expect(getEquipSlots({ equip_slot: 'ring' })).toEqual(['ring']);
     expect(getBodyPartLabels(null)).toBe('');
     expect(getWeightUnit(undefined)).toBe('lb');
+  });
+
+  it('keeps compatible destinations separate from equipped slots', () => {
+    expect(getCompatibleEquipSlots({
+      compatible_equip_slots: ['head', 'neck'],
+      equip_slots: []
+    })).toEqual(['head', 'neck']);
+    expect(getCompatibleEquipSlots({ allowed_equip_slots: '["hands"]' })).toEqual(['hands']);
+    expect(getCompatibleEquipSlots({ equip_slots: ['head'] })).toEqual([]);
   });
 
   it('evaluates weapon proficiency from form data', () => {

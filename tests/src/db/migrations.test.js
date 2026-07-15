@@ -29,6 +29,12 @@ describe('database migrations', () => {
     expect(migration).toContain("notify pgrst, 'reload schema'");
   });
 
+  it('keeps compatible equipment destinations separate from occupied slots', () => {
+    const migration = readFileSync('db/add_compatible_equip_slots.sql', 'utf8');
+    expect(migration).toContain("add column if not exists compatible_equip_slots jsonb not null default '[]'::jsonb");
+    expect(migration).toContain("notify pgrst, 'reload schema'");
+  });
+
   it('updates wallets and their ledger atomically', () => {
     const migration = readFileSync('db/wallet_transactions_atomic.sql', 'utf8');
     expect(migration).toContain('function public.apply_money_transaction');

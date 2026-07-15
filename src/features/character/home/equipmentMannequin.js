@@ -1,6 +1,6 @@
 import { openFormModal } from '../../../ui/components.js';
 import { bodyPartLabels } from '../../inventory/constants.js';
-import { getCategoryLabel } from '../../inventory/utils.js';
+import { getCategoryLabel, getCompatibleEquipSlots } from '../../inventory/utils.js';
 import { ensureLegacyThree } from '../../../lib/legacyThree.js';
 import { calcTotalWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
@@ -137,11 +137,7 @@ export function getMannequinEquipSlot(item, partId) {
 }
 
 export function getCompatibleMannequinPartIds(item) {
-  const explicitSlots = Array.isArray(item?.compatible_equip_slots)
-    ? item.compatible_equip_slots.filter(Boolean)
-    : Array.isArray(item?.allowed_equip_slots)
-      ? item.allowed_equip_slots.filter(Boolean)
-      : [];
+  const explicitSlots = getCompatibleEquipSlots(item);
   if (explicitSlots.length) {
     return PART_DEFINITIONS
       .filter((part) => part.slots.some((slot) => explicitSlots.includes(slot)))
@@ -199,6 +195,306 @@ function setPartMaterialState(mesh, state) {
         : state === 'hover' ? 0x0b1117 : 0x000000;
   mesh.material.color.setHex(color);
   mesh.material.emissive.setHex(emissive);
+}
+
+export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
+  const field = document.createElement('fieldset');
+  field.className = 'equip-slot-field item-equip-3d';
+  field.innerHTML = `
+    <legend>Parti del corpo consentite</legend>
+    <div class="item-equip-3d__intro">
+      <div><strong>Definisci la vestibilità sul manichino 3D</strong><span>Seleziona uno o più punti specifici. L’oggetto non viene ancora equipaggiato.</span></div>
+      <span class="item-equip-3d__count" data-equip-3d-count>0 selezionate</span>
+    </div>
+  `;
+
+  const layout = document.createElement('div');
+  layout.className = 'item-equip-3d__layout';
+  const viewer = document.createElement('div');
+  viewer.className = 'item-equip-3d__viewer';
+  viewer.dataset.equip3dCanvas = '';
+  const loading = document.createElement('div');
+  loading.className = 'item-equip-3d__loading';
+  loading.textContent = 'Preparazione del manichino 3D…';
+  const guidance = document.createElement('div');
+  guidance.className = 'item-equip-3d__guidance';
+  guidance.textContent = 'Tocca direttamente una parte del corpo per selezionarla';
+  const viewControls = document.createElement('div');
+  viewControls.className = 'item-equip-3d__views';
+  viewControls.setAttribute('aria-label', 'Viste rapide del manichino');
+  [
+    ['front', 'Fronte'],
+    ['back', 'Schiena'],
+    ['head', 'Volto']
+  ].forEach(([view, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.equip3dView = view;
+    button.textContent = label;
+    button.setAttribute('aria-pressed', String(view === 'front'));
+    viewControls.appendChild(button);
+  });
+  viewer.append(loading, guidance, viewControls);
+
+  const summary = document.createElement('aside');
+  summary.className = 'item-equip-3d__summary';
+  summary.innerHTML = `
+    <div class="item-equip-3d__summary-header"><span aria-hidden="true">✦</span><div><strong>Zone consentite</strong><small>Solo parti anatomiche specifiche</small></div></div>
+    <div class="item-equip-3d__selected" data-equip-3d-selected></div>
+  `;
+  layout.append(viewer, summary);
+  field.appendChild(layout);
+
+  const initiallySelectedPartIds = new Set(
+    PART_DEFINITIONS
+      .filter((part) => part.slots.some((slot) => selectedSlots.includes(slot)))
+      .map((part) => part.id)
+  );
+  const inputByPartId = new Map();
+  PART_DEFINITIONS.forEach((part) => {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'compatible_equip_slots';
+    input.value = part.id;
+    input.checked = initiallySelectedPartIds.has(part.id);
+    input.className = 'item-equip-3d__native-input';
+    field.appendChild(input);
+    inputByPartId.set(part.id, input);
+  });
+
+  const count = field.querySelector('[data-equip-3d-count]');
+  const selectedList = field.querySelector('[data-equip-3d-selected]');
+  let renderScene = () => {};
+  const sync = () => {
+    const selectedParts = PART_DEFINITIONS.filter((part) => inputByPartId.get(part.id)?.checked);
+    if (count) count.textContent = `${selectedParts.length} ${selectedParts.length === 1 ? 'selezionata' : 'selezionate'}`;
+    if (selectedList) {
+      selectedList.innerHTML = '';
+      if (!selectedParts.length) {
+        const empty = document.createElement('p');
+        empty.className = 'item-equip-3d__empty';
+        empty.textContent = 'Nessuna zona scelta. Ruota il modello o usa le viste rapide.';
+        selectedList.appendChild(empty);
+      } else {
+        selectedParts.forEach((part) => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'item-equip-3d__selected-chip';
+          chip.innerHTML = `<span>${part.label}</span><b aria-hidden="true">×</b>`;
+          chip.setAttribute('aria-label', `Rimuovi ${part.label}`);
+          chip.addEventListener('click', () => {
+            const input = inputByPartId.get(part.id);
+            if (input) input.checked = false;
+            sync();
+          });
+          selectedList.appendChild(chip);
+        });
+      }
+    }
+    renderScene();
+  };
+
+  const togglePart = (partId) => {
+    const input = inputByPartId.get(partId);
+    if (!input || input.disabled) return;
+    input.checked = !input.checked;
+    sync();
+  };
+  inputByPartId.forEach((input) => input.addEventListener('change', sync));
+  sync();
+
+  const mount = () => {
+    let cancelled = false;
+    let dispose = () => {};
+    ensureLegacyThree()
+      .then((THREE) => {
+        if (cancelled) return;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+        camera.position.set(0, 0.24, 8.35);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setClearColor(0x000000, 0);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.domElement.setAttribute('aria-label', 'Manichino 3D per definire le parti del corpo consentite');
+        viewer.insertBefore(renderer.domElement, loading);
+
+        scene.add(new THREE.HemisphereLight(0xfff1dc, 0x34484b, 1.08));
+        const keyLight = new THREE.DirectionalLight(0xfff8ed, 0.76);
+        keyLight.position.set(3.5, 5.5, 5);
+        scene.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xb9d7d8, 0.43);
+        fillLight.position.set(-4, 2.5, 3);
+        scene.add(fillLight);
+        const rimLight = new THREE.DirectionalLight(0xe7c995, 0.34);
+        rimLight.position.set(2, 3, -4);
+        scene.add(rimLight);
+
+        const mannequin = new THREE.Object3D();
+        mannequin.position.y = -0.72;
+        scene.add(mannequin);
+        const partMeshes = [];
+        const meshesById = new Map();
+        PART_DEFINITIONS.forEach((part) => {
+          const meshes = [];
+          part.nodes.forEach((partNode) => {
+            const mesh = new THREE.Mesh(
+              createGeometry(THREE, partNode),
+              new THREE.MeshPhongMaterial({ color: BASE_COLOR, emissive: 0x000000, shininess: part.detail ? 72 : 34 })
+            );
+            applyTransform(mesh, partNode);
+            mesh.userData.partId = part.id;
+            mesh.userData.itemCount = 0;
+            mesh.userData.baseColor = BASE_COLOR;
+            mannequin.add(mesh);
+            partMeshes.push(mesh);
+            meshes.push(mesh);
+          });
+          meshesById.set(part.id, meshes);
+        });
+        const ground = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.18, 1.32, 0.1, 40),
+          new THREE.MeshPhongMaterial({ color: 0x5a4a38, shininess: 26 })
+        );
+        ground.position.y = -1.59;
+        scene.add(ground);
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let hoveredId = null;
+        let rotating = false;
+        let dragDistance = 0;
+        let lastPointer = null;
+        let cameraDistance = camera.position.z;
+        let viewMode = 'front';
+        let frame = null;
+        let disposed = false;
+
+        const updateMeshStates = () => {
+          PART_DEFINITIONS.forEach((part) => {
+            const state = inputByPartId.get(part.id)?.checked
+              ? 'selected-on'
+              : part.id === hoveredId ? 'hover' : 'default';
+            (meshesById.get(part.id) || []).forEach((mesh) => setPartMaterialState(mesh, state));
+          });
+        };
+        renderScene = () => {
+          if (disposed || frame) return;
+          updateMeshStates();
+          frame = window.requestAnimationFrame(() => {
+            frame = null;
+            renderer.render(scene, camera);
+          });
+        };
+
+        const hitTest = (event) => {
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          return raycaster.intersectObjects(partMeshes, false)[0]?.object || null;
+        };
+        const onPointerMove = (event) => {
+          if (rotating && lastPointer) {
+            const dx = event.clientX - lastPointer.x;
+            const dy = event.clientY - lastPointer.y;
+            dragDistance += Math.abs(dx) + Math.abs(dy);
+            mannequin.rotation.y += dx * 0.012;
+            mannequin.rotation.x = Math.max(-0.2, Math.min(0.2, mannequin.rotation.x + dy * 0.004));
+            lastPointer = { x: event.clientX, y: event.clientY };
+            viewMode = 'free';
+            viewControls.querySelectorAll('button').forEach((button) => button.setAttribute('aria-pressed', 'false'));
+            renderScene();
+            return;
+          }
+          const nextHoveredId = hitTest(event)?.userData.partId || null;
+          if (nextHoveredId === hoveredId) return;
+          hoveredId = nextHoveredId;
+          renderScene();
+        };
+        const onPointerDown = (event) => {
+          rotating = true;
+          dragDistance = 0;
+          lastPointer = { x: event.clientX, y: event.clientY };
+          renderer.domElement.setPointerCapture?.(event.pointerId);
+        };
+        const onPointerUp = (event) => {
+          if (dragDistance < 8) {
+            const hit = hitTest(event);
+            if (hit?.userData.partId) togglePart(hit.userData.partId);
+          }
+          rotating = false;
+          lastPointer = null;
+          renderer.domElement.releasePointerCapture?.(event.pointerId);
+        };
+        const onWheel = (event) => {
+          event.preventDefault();
+          const limits = viewMode === 'head' ? [2.35, 4.7] : [6.5, 10.2];
+          cameraDistance = Math.max(limits[0], Math.min(limits[1], cameraDistance + event.deltaY * 0.006));
+          camera.position.z = cameraDistance;
+          renderScene();
+        };
+        const setView = (mode) => {
+          viewMode = mode;
+          mannequin.rotation.set(0, mode === 'back' ? Math.PI : 0, 0);
+          cameraDistance = mode === 'head' ? 3.1 : 8.35;
+          camera.position.set(0, mode === 'head' ? 1.9 : 0.24, cameraDistance);
+          viewControls.querySelectorAll('button').forEach((button) => {
+            button.setAttribute('aria-pressed', String(button.dataset.equip3dView === mode));
+          });
+          renderScene();
+        };
+        const resize = () => {
+          const width = Math.max(280, viewer.clientWidth);
+          const height = Math.max(400, viewer.clientHeight);
+          renderer.setSize(width, height, false);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderScene();
+        };
+        const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+        resizeObserver?.observe(viewer);
+        renderer.domElement.addEventListener('pointermove', onPointerMove);
+        renderer.domElement.addEventListener('pointerdown', onPointerDown);
+        renderer.domElement.addEventListener('pointerup', onPointerUp);
+        renderer.domElement.addEventListener('pointercancel', onPointerUp);
+        renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+        viewControls.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => setView(button.dataset.equip3dView));
+        });
+        field.classList.add('is-ready');
+        loading.hidden = true;
+        sync();
+        resize();
+
+        dispose = () => {
+          disposed = true;
+          renderScene = () => {};
+          if (frame) window.cancelAnimationFrame(frame);
+          resizeObserver?.disconnect();
+          renderer.domElement.removeEventListener('pointermove', onPointerMove);
+          renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+          renderer.domElement.removeEventListener('pointerup', onPointerUp);
+          renderer.domElement.removeEventListener('pointercancel', onPointerUp);
+          renderer.domElement.removeEventListener('wheel', onWheel);
+          scene.traverse((object) => {
+            object.geometry?.dispose?.();
+            if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
+            else object.material?.dispose?.();
+          });
+          renderer.dispose?.();
+          renderer.domElement.remove();
+        };
+      })
+      .catch(() => {
+        loading.textContent = 'Impossibile avviare il manichino 3D su questo dispositivo.';
+      });
+    return () => {
+      cancelled = true;
+      dispose();
+    };
+  };
+
+  return { field, inputs: [...inputByPartId.values()], sync, mount };
 }
 
 function buildMannequinContent({ canEdit, items = [], weightUnit = 'lb' }) {
@@ -306,6 +602,38 @@ function buildMannequinContent({ canEdit, items = [], weightUnit = 'lb' }) {
   const hint = document.createElement('span');
   hint.textContent = 'Trascina il manichino per ruotarlo · rotella per zoom';
   controls.append(hint);
+  if (canEdit) {
+    const equipAction = document.createElement('div');
+    equipAction.className = 'equipment-mannequin__equip-action';
+    equipAction.dataset.mannequinEquipAction = '';
+    equipAction.hidden = true;
+    const actionIcon = document.createElement('span');
+    actionIcon.className = 'equipment-mannequin__equip-action-icon';
+    actionIcon.setAttribute('aria-hidden', 'true');
+    actionIcon.innerHTML = '<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>';
+    const actionCopy = document.createElement('div');
+    actionCopy.className = 'equipment-mannequin__equip-action-copy';
+    const actionEyebrow = document.createElement('small');
+    actionEyebrow.textContent = 'Assegnazione';
+    const actionTitle = document.createElement('strong');
+    actionTitle.dataset.mannequinEquipTitle = '';
+    actionTitle.textContent = 'Scegli le parti del corpo';
+    const actionDetail = document.createElement('span');
+    actionDetail.dataset.mannequinEquipDetail = '';
+    actionDetail.textContent = 'Puoi selezionare più zone compatibili';
+    actionCopy.append(actionEyebrow, actionTitle, actionDetail);
+    const equipButton = document.createElement('button');
+    equipButton.type = 'button';
+    equipButton.className = 'equipment-mannequin__equip-button';
+    equipButton.dataset.mannequinEquip = '';
+    equipButton.innerHTML = `
+      <span class="equipment-mannequin__equip-button-copy"><small>Conferma</small><strong data-mannequin-equip-button-label>Equipaggia</strong></span>
+      <span class="equipment-mannequin__equip-button-arrow" aria-hidden="true">→</span>
+    `;
+    equipButton.disabled = true;
+    equipAction.append(actionIcon, actionCopy, equipButton);
+    controls.appendChild(equipAction);
+  }
   panel.appendChild(controls);
 
   const liveStatus = document.createElement('p');
@@ -331,6 +659,11 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   const wardrobeCount = root.querySelector('[data-mannequin-wardrobe-count]');
   const guidance = root.querySelector('[data-mannequin-guidance]');
   const status = root.querySelector('[data-mannequin-status]');
+  const equipButton = root.querySelector('[data-mannequin-equip]');
+  const equipAction = root.querySelector('[data-mannequin-equip-action]');
+  const equipActionTitle = root.querySelector('[data-mannequin-equip-title]');
+  const equipActionDetail = root.querySelector('[data-mannequin-equip-detail]');
+  const equipButtonLabel = root.querySelector('[data-mannequin-equip-button-label]');
   const focusButtons = [...root.querySelectorAll('[data-mannequin-focus]')];
   if (!canvasHost || !detailLabel || !detailItems || !guidance || !status) return () => {};
 
@@ -394,6 +727,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   let selectedId = null;
   let hoveredId = null;
   let pendingItemId = null;
+  const pendingPartIds = new Set();
   let rotating = false;
   let dragDistance = 0;
   let lastPointer = null;
@@ -446,8 +780,11 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     const compatibleIds = new Set(pendingItem ? getAvailableCompatibleMannequinPartIds(pendingItem, workingItems) : []);
     partMeshes.forEach((mesh) => {
       const isCompatible = compatibleIds.has(mesh.userData.partId);
+      const isPendingSelection = pendingItem && pendingPartIds.has(mesh.userData.partId);
       const state = pendingItem
-        ? isCompatible
+        ? isPendingSelection
+          ? compatibilityPulseOn ? 'selected-on' : 'selected-off'
+          : isCompatible
           ? compatibilityPulseOn ? 'compatible-on' : 'compatible-off'
           : 'inactive'
         : mesh.userData.partId === selectedId
@@ -457,7 +794,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     });
     root.querySelectorAll('[data-mannequin-part]').forEach((button) => {
       const partId = button.dataset.mannequinPart;
-      const isSelected = partId === selectedId;
+      const isSelected = pendingItem ? pendingPartIds.has(partId) : partId === selectedId;
       const isCompatible = compatibleIds.has(partId);
       const isEquipped = Boolean(itemMap.get(partId)?.length);
       button.classList.toggle('is-selected', isSelected);
@@ -469,8 +806,29 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       button.setAttribute('aria-pressed', String(isSelected));
     });
     root.classList.toggle('has-pending-item', Boolean(pendingItem));
+    if (equipAction) equipAction.hidden = !pendingItem;
+    if (equipButton) {
+      equipButton.disabled = busy || !pendingPartIds.size;
+    }
+    if (equipActionTitle) {
+      equipActionTitle.textContent = pendingPartIds.size
+        ? `${pendingPartIds.size} ${pendingPartIds.size === 1 ? 'parte pronta' : 'parti pronte'}`
+        : 'Scegli le parti del corpo';
+    }
+    if (equipActionDetail) {
+      equipActionDetail.textContent = pendingItem
+        ? pendingPartIds.size
+          ? `${pendingItem.name} verrà assegnato solo alle zone selezionate`
+          : `Tocca una o più zone compatibili per ${pendingItem.name}`
+        : '';
+    }
+    if (equipButtonLabel) {
+      equipButtonLabel.textContent = pendingPartIds.size
+        ? `Equipaggia ${pendingPartIds.size === 1 ? 'qui' : `in ${pendingPartIds.size} zone`}`
+        : 'Seleziona una zona';
+    }
     guidance.textContent = pendingItem
-      ? `${pendingItem.name}: scegli una parte lampeggiante · tocca di nuovo l’oggetto per deselezionare`
+      ? `${pendingItem.name}: seleziona una o più parti lampeggianti, poi conferma`
       : canEdit
         ? 'Scegli un oggetto, poi tocca una parte del corpo'
         : 'Tocca una parte del corpo per vedere cosa indossa';
@@ -502,6 +860,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       if (updated === false || updated === null) return;
       Object.assign(item, updated || {}, { equip_slot: null, equip_slots: [] });
       pendingItemId = String(item.id);
+      pendingPartIds.clear();
       onChanged?.();
       refreshEquipment();
       syncCompatibilityPulse();
@@ -572,11 +931,12 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     if (!canEdit || busy) return;
     const nextItemId = itemId ? String(itemId) : null;
     pendingItemId = nextItemId && nextItemId !== String(pendingItemId) ? nextItemId : null;
+    pendingPartIds.clear();
     renderWardrobe();
     syncCompatibilityPulse();
     const item = getItem(pendingItemId);
     status.textContent = item
-      ? `${item.name} selezionato. Scegli una delle parti compatibili lampeggianti.`
+      ? `${item.name} selezionato. Puoi scegliere una o più parti compatibili.`
       : 'Oggetto deselezionato.';
   };
 
@@ -624,6 +984,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       card.append(visual, info, handle);
       card.addEventListener('click', () => setPendingItem(item.id));
       card.addEventListener('dragstart', (event) => {
+        if (String(pendingItemId) !== String(item.id)) pendingPartIds.clear();
         pendingItemId = String(item.id);
         event.dataTransfer?.setData('text/plain', String(item.id));
         if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
@@ -639,11 +1000,13 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     });
   };
 
-  const equipPendingToPart = async (partId, itemId = pendingItemId) => {
+  const togglePendingPart = (partId, itemId = pendingItemId) => {
     const item = getItem(itemId);
-    if (!canEdit || !onEquip || !item || busy) {
-      if (!item) selectPart(partId, false);
-      return;
+    if (!canEdit || !item || busy) return;
+    if (String(item.id) !== String(pendingItemId)) {
+      pendingItemId = String(item.id);
+      pendingPartIds.clear();
+      renderWardrobe();
     }
     if (!getAvailableCompatibleMannequinPartIds(item, workingItems).includes(partId)) {
       selectedId = partId;
@@ -652,32 +1015,53 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       status.textContent = `${getPart(partId)?.label || partId} non è compatibile con ${item.name}.`;
       return;
     }
-    const equipSlot = getMannequinEquipSlot(item, partId);
+    selectedId = partId;
+    if (pendingPartIds.has(partId)) pendingPartIds.delete(partId);
+    else pendingPartIds.add(partId);
+    renderDetail();
+    updatePartStates();
+    status.textContent = pendingPartIds.size
+      ? `${pendingPartIds.size} ${pendingPartIds.size === 1 ? 'parte selezionata' : 'parti selezionate'} per ${item.name}.`
+      : `Nessuna parte selezionata per ${item.name}.`;
+  };
+
+  const equipPendingItem = async () => {
+    const item = getItem(pendingItemId);
+    if (!canEdit || !onEquip || !item || busy || !pendingPartIds.size) return;
+    const availableIds = new Set(getAvailableCompatibleMannequinPartIds(item, workingItems));
+    const partIds = [...pendingPartIds].filter((partId) => availableIds.has(partId));
+    if (!partIds.length || partIds.length !== pendingPartIds.size) {
+      status.textContent = 'Una delle parti selezionate non è più disponibile.';
+      return;
+    }
+    const equipSlots = [...new Set(partIds.map((partId) => getMannequinEquipSlot(item, partId)))];
     setBusy(true);
-    status.textContent = `Equipaggiamento di ${item.name}…`;
+    status.textContent = `Equipaggiamento di ${item.name}...`;
     try {
-      const updated = await onEquip(item, [equipSlot], workingItems);
+      const updated = await onEquip(item, equipSlots, workingItems);
       if (updated === false || updated === null) return;
-      Object.assign(item, updated || {}, { equip_slot: equipSlot, equip_slots: [equipSlot] });
+      Object.assign(item, updated || {}, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
       pendingItemId = null;
-      selectedId = partId;
+      pendingPartIds.clear();
+      selectedId = partIds[partIds.length - 1] || null;
       hoveredId = null;
       syncCompatibilityPulse();
       onChanged?.();
       refreshEquipment();
-      status.textContent = `${item.name} equipaggiato su ${getPart(partId)?.label || partId}.`;
+      const labels = partIds.map((partId) => getPart(partId)?.label || partId).join(', ');
+      status.textContent = `${item.name} equipaggiato su: ${labels}.`;
     } finally {
       setBusy(false);
     }
   };
 
-  const selectPart = (partId, equipIfPending = true) => {
+  const selectPart = (partId) => {
     if (!meshesById.has(partId) || busy) return;
-    selectedId = !pendingItemId && selectedId === partId ? null : partId;
-    if (pendingItemId && equipIfPending && canEdit) {
-      void equipPendingToPart(partId);
+    if (pendingItemId && canEdit) {
+      togglePendingPart(partId);
       return;
     }
+    selectedId = selectedId === partId ? null : partId;
     renderDetail();
     updatePartStates();
   };
@@ -779,7 +1163,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     event.preventDefault();
     const itemId = event.dataTransfer?.getData('text/plain') || pendingItemId;
     const hit = hitTest(event);
-    if (hit?.userData.partId && itemId) void equipPendingToPart(hit.userData.partId, itemId);
+    if (hit?.userData.partId && itemId) togglePendingPart(hit.userData.partId, itemId);
   };
 
   const resize = () => {
@@ -823,13 +1207,15 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     button.addEventListener('drop', (event) => {
       event.preventDefault();
       const itemId = event.dataTransfer?.getData('text/plain') || pendingItemId;
-      if (itemId) void equipPendingToPart(partId, itemId);
+      if (itemId) togglePendingPart(partId, itemId);
     });
   });
 
   focusButtons.forEach((button) => {
     button.addEventListener('click', () => setViewMode(button.dataset.mannequinFocus));
   });
+
+  equipButton?.addEventListener('click', () => void equipPendingItem());
 
   resetButton?.addEventListener('click', () => {
     setViewMode('body');

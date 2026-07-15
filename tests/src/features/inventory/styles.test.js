@@ -32,4 +32,13 @@ describe('inventory accordion styles', () => {
     expect(styles).toContain('@media (max-width: 760px)');
   });
 
+  it('styles the anatomical equipment picker and contextual equip action', () => {
+    const styles = readFileSync('src/styles/base.css', 'utf8');
+    expect(styles).toContain('.item-equip-3d__viewer canvas');
+    expect(styles).not.toContain('.item-equip-3d__marker');
+    expect(styles).toContain('.item-equip-3d__selected-chip');
+    expect(styles).toContain('.equipment-mannequin__equip-action');
+    expect(styles).toContain('.equipment-mannequin__equip-button-copy');
+  });
+
 });

@@ -44,4 +44,15 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain("labelField.classList.add('weapon-damage-mode-field--name')");
     expect(source).toContain("attackModifierField.classList.add('weapon-damage-mode-field--attack-modifier')");
   });
+
+  it('stores allowed body parts without equipping a newly saved item', () => {
+    const source = readFileSync('src/features/inventory/modals.js', 'utf8');
+    const mannequinSource = readFileSync('src/features/character/home/equipmentMannequin.js', 'utf8');
+    expect(mannequinSource).toContain("input.name = 'compatible_equip_slots'");
+    expect(source).toContain('buildEquipmentCompatibilityPicker3D(selectedSlots)');
+    expect(source).toContain('onOpen: () => mountEquipPicker()');
+    expect(source).toContain("formData.getAll('compatible_equip_slots')");
+    expect(source).toContain('const equippedSlots = equipableEnabled && item ? getEquipSlots(item) : []');
+    expect(source).toContain('compatible_equip_slots: compatibleEquipSlots');
+  });
 });

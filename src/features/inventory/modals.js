@@ -1,8 +1,9 @@
 import { createItem, updateItem } from './inventoryApi.js';
 import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
-import { ammunitionTypes, armorTypes, bodyParts, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
+import { ammunitionTypes, armorTypes, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
 import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMasteries.js';
-import { getEquipSlots, getWeightUnit, hasProficiencyForItem } from './utils.js';
+import { getCompatibleEquipSlots, getEquipSlots, getWeightUnit } from './utils.js';
+import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
 
 export async function openItemModal(character, item, items, onSave) {
   const enhanceNumericFields = (root) => {
@@ -212,28 +213,17 @@ export async function openItemModal(character, item, items, onSave) {
   });
   equipToggleList.appendChild(equipableField);
   equipToggleList.appendChild(overlayableField);
-  const equipSlotsField = document.createElement('fieldset');
-  equipSlotsField.className = 'equip-slot-field';
-  equipSlotsField.innerHTML = '<legend>Punti del corpo</legend>';
-  const equipSlotList = document.createElement('div');
-  equipSlotList.className = 'equip-slot-list';
-  const selectedSlots = getEquipSlots(item);
-  const equipSlotInputs = bodyParts.map((part) => {
-    const label = document.createElement('label');
-    label.className = 'checkbox';
-    label.innerHTML = `<input type="checkbox" name="equip_slots" value="${part.value}" /> <span>${part.label}</span>`;
-    const input = label.querySelector('input');
-    if (input && selectedSlots.includes(part.value)) {
-      input.checked = true;
-    }
-    equipSlotList.appendChild(label);
-    return input;
-  });
-  equipSlotsField.appendChild(equipSlotList);
+  const selectedSlots = getCompatibleEquipSlots(item);
+  const {
+    field: equipSlotsField,
+    inputs: equipSlotInputs,
+    sync: syncEquipPickerState,
+    mount: mountEquipPicker
+  } = buildEquipmentCompatibilityPicker3D(selectedSlots);
   const equipmentSection = buildSection(
     'Equipaggiamento',
     [equipToggleList, equipSlotsField],
-    { icon: '🛡️', description: 'Attiva l’equipaggiamento solo se l’oggetto occupa slot del corpo.' }
+    { icon: '🛡️', description: 'Indica dove l’oggetto potrà essere equipaggiato. L’assegnazione avviene dal manichino.' }
   );
 
   const notesSection = buildSection(
@@ -552,6 +542,7 @@ export async function openItemModal(character, item, items, onSave) {
       overlayableInput.closest('.condition-modal__item')?.classList.toggle('is-selected', overlayableInput.checked);
     }
     toggleFieldVisibility(equipSlotsField, equipableEnabled);
+    syncEquipPickerState();
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isContainer = categorySelect.value === 'container';
@@ -638,26 +629,20 @@ export async function openItemModal(character, item, items, onSave) {
     title: item ? 'Modifica oggetto' : 'Nuovo oggetto',
     submitLabel: item ? 'Salva' : 'Crea',
     content: fields,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--item-editor']
+    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--item-editor'],
+    onOpen: () => mountEquipPicker()
   });
   if (!formData) return;
   const equipableEnabled = formData.get('equipable') === 'on';
-  const equipSlots = equipableEnabled ? formData.getAll('equip_slots') : [];
-  const equipSlot = equipSlots[0] || null;
+  const compatibleEquipSlots = equipableEnabled ? formData.getAll('compatible_equip_slots') : [];
+  const equippedSlots = equipableEnabled && item ? getEquipSlots(item) : [];
+  const equipSlot = equippedSlots[0] || null;
   const category = formData.get('category');
-  if (equipSlots.length && !hasProficiencyForItem(character, formData)) {
-    createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+  if (equipableEnabled && !compatibleEquipSlots.length) {
+    createToast('Seleziona almeno una parte del corpo consentita', 'error');
     return;
   }
   const isOverlayable = formData.get('sovrapponibile') === 'on';
-  if (equipSlots.length && !isOverlayable) {
-    const conflicting = items.filter((entry) => entry.id !== item?.id)
-      .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
-    if (conflicting.length) {
-      createToast('Uno o più slot selezionati sono già occupati', 'error');
-      return;
-    }
-  }
   const modeLabels = formData.getAll('weapon_damage_mode_label');
   const modeDice = formData.getAll('weapon_damage_mode_die');
   const modeModifiers = formData.getAll('weapon_damage_mode_modifier');
@@ -686,7 +671,8 @@ export async function openItemModal(character, item, items, onSave) {
     max_volume: formData.get('max_volume') === '' ? null : Number(formData.get('max_volume')),
     equipable: equipableEnabled,
     equip_slot: equipSlot,
-    equip_slots: equipSlots,
+    equip_slots: equippedSlots,
+    compatible_equip_slots: compatibleEquipSlots,
     sovrapponibile: isOverlayable,
     attunement_active: formData.get('attunement_active') === 'on',
     is_magic: formData.get('is_magic') === 'on',

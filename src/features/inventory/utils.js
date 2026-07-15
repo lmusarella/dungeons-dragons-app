@@ -64,6 +64,24 @@ export function getEquipSlots(item) {
   return [];
 }
 
+function normalizeSlotList(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch (error) {
+    return [value];
+  }
+}
+
+export function getCompatibleEquipSlots(item) {
+  if (!item) return [];
+  const compatibleSlots = normalizeSlotList(item.compatible_equip_slots);
+  if (compatibleSlots.length) return compatibleSlots;
+  return normalizeSlotList(item.allowed_equip_slots);
+}
+
 export function getWeightUnit(character) {
   return character?.data?.settings?.weight_unit ?? 'lb';
 }

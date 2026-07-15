@@ -71,5 +71,17 @@ describe('equipment mannequin slot mapping', () => {
     expect(source).toContain("headFocusButton.dataset.mannequinFocus = 'head'");
     expect(source).toContain("camera.position.set(0, viewMode === 'head' ? 1.9 : 0.24, cameraDistance)");
     expect(source).toContain("id: 'hand-right', label: 'Mano destra', slots: ['hand-right', 'hands', 'main-hand'");
+    expect(source).toContain('const pendingPartIds = new Set()');
+    expect(source).toContain('const equipSlots = [...new Set(partIds.map');
+    expect(source).toContain("equipButtonLabel.textContent = pendingPartIds.size");
+    expect(source).toContain("equipAction.className = 'equipment-mannequin__equip-action'");
+    expect(source).toContain("equipButton?.addEventListener('click', () => void equipPendingItem())");
+    expect(source).toContain('export function buildEquipmentCompatibilityPicker3D(selectedSlots = [])');
+    expect(source).toContain("['front', 'Fronte']");
+    expect(source).toContain("['back', 'Schiena']");
+    expect(source).toContain("['head', 'Volto']");
+    expect(source).toContain("input.value = part.id");
+    expect(source).toContain("guidance.textContent = 'Tocca direttamente una parte del corpo per selezionarla'");
+    expect(source).not.toContain('item-equip-3d__marker');
   });
 });
