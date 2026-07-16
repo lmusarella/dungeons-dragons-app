@@ -47,6 +47,14 @@ describe('src/features/familiars/familiars.js', () => {
   it('shows only the companion kind in compact selectors and supports animals', () => {
     const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
     expect(source).toContain("{ value: 'animal', label: 'Animale' }");
+
+    const schema = readFileSync('docs/supabase-spells-companions-schema.sql', 'utf8');
+    const migration = readFileSync('db/add_animal_companion_kind.sql', 'utf8');
+    const allowedKinds = "('familiar', 'summon', 'transformation', 'animal')";
+    expect(schema).toContain(`kind in ${allowedKinds}`);
+    expect(migration).toContain(`check (kind in ${allowedKinds})`);
+    expect(migration).toContain('drop constraint if exists character_companions_kind_check');
+
     expect(source).toContain('<span>${escapeHtml(formatKind(companion.kind))}</span>');
     expect(source).not.toContain('familiar-sheet__chevron');
     expect(source).not.toContain('familiar-sheet__hp-summary');
