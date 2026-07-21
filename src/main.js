@@ -6,9 +6,17 @@ import { initRouter, registerRoute } from './app/router.js';
 import { initSession, ensureProfile, signOut } from './app/session.js';
 import { getState, setState, subscribe } from './app/state.js';
 import { loadCachedData } from './lib/offline/cache.js';
-import { registerSW } from 'virtual:pwa-register';
 
 const app = document.querySelector('#app');
+const launchScreen = document.querySelector('[data-launch-screen]');
+
+const hideLaunchScreen = () => {
+  if (!launchScreen) return;
+
+  launchScreen.classList.add('launch-screen--closing');
+  window.setTimeout(() => launchScreen.remove(), 420);
+};
+
 renderLayout(app);
 
 const ensureFabHandlers = async () => {
@@ -105,6 +113,19 @@ const bootstrapApp = async () => {
   }
 };
 
-registerSW({ immediate: true });
+const registerServiceWorker = () => {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
 
-bootstrapApp();
+  navigator.serviceWorker
+    .register(`${import.meta.env.BASE_URL}sw.js`)
+    .catch(() => { });
+};
+
+registerServiceWorker();
+
+bootstrapApp()
+  .then(hideLaunchScreen)
+  .catch((error) => {
+    hideLaunchScreen();
+    throw error;
+  });

@@ -25,9 +25,9 @@ export default defineConfig(({ command }) => {
           start_url: './#/',
           icons: [
             {
-              src: './icons/logo_dd.png',
-              sizes: '500x500',
-              type: 'image/png',
+              src: './icons/icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
               purpose: 'any maskable'
             }
           ]

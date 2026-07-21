@@ -3,12 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="%BASE_URL%icons/logo_dd.png" />
-    <link rel="apple-touch-icon" href="%BASE_URL%icons/logo_dd.png" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%icons/icon.svg" />
+    <meta name="theme-color" content="#6f4e37" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <title>D&D - Gestionale Personaggi</title>
   </head>
   <body>
+    <div class="launch-screen" data-launch-screen aria-label="Caricamento app">
+      <div class="launch-screen__glow" aria-hidden="true"></div>
+      <div class="launch-screen__card">
+        <img class="launch-screen__icon" src="%BASE_URL%icons/icon.svg" alt="" />
+        <p class="launch-screen__eyebrow">Dungeons &amp; Dragons</p>
+        <h1 class="launch-screen__title">Gestionale Personaggi</h1>
+        <div class="launch-screen__dice" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
 
