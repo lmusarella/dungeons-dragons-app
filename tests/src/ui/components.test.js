@@ -54,6 +54,17 @@ describe('src/ui/components.js', () => {
     expect(openFormModalSource).toContain('.filter(Boolean)');
   });
 
+  it('resets the shared form submit button before opening a new modal', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    const openFormModalStart = source.indexOf('export function openFormModal');
+    const openFormModalSource = source.slice(openFormModalStart);
+    const resetIndex = openFormModalSource.indexOf('submitButton.disabled = false');
+    const onOpenIndex = openFormModalSource.indexOf("if (typeof onOpen === 'function')");
+
+    expect(resetIndex).toBeGreaterThan(-1);
+    expect(onOpenIndex).toBeGreaterThan(resetIndex);
+  });
+
   it('raises confirmation dialogs above an already open form modal', () => {
     const source = readFileSync('src/ui/components.js', 'utf8');
     const openConfirmModalStart = source.indexOf('export function openConfirmModal');
