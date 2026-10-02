@@ -324,7 +324,13 @@ export function openFormModal({
     modal.dataset.formCardClasses = nextClasses.join(' ');
 
     if (titleEl) titleEl.textContent = title;
-    if (submitButton) submitButton.textContent = submitLabel;
+    if (submitButton) {
+      submitButton.textContent = submitLabel;
+      // The form modal is shared by every workflow. Some dialogs temporarily
+      // disable their submit action, so always restore its default state before
+      // the next dialog's onOpen hook applies its own rules.
+      submitButton.disabled = false;
+    }
     if (footerEl) {
       footerEl.hidden = !showFooter;
     }
