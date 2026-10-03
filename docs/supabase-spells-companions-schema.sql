@@ -50,7 +50,7 @@ create table if not exists public.character_companions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
   character_id uuid not null references public.characters(id) on delete cascade,
-  kind text not null check (kind in ('familiar', 'summon', 'transformation')),
+  kind text not null check (kind in ('familiar', 'summon', 'transformation', 'animal')),
   name text not null,
   rules_version text check (rules_version in ('2014', '2024')),
   stat_block jsonb not null default '{}'::jsonb,
