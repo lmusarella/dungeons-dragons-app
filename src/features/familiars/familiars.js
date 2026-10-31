@@ -92,6 +92,9 @@ function getSavingThrowModifier(statBlock, abilityKey) {
 
 function buildCompanionQuickButton(companion, isSelected = false) {
   const statBlock = normalizeStatBlock(companion.stat_block);
+  const hpCurrent = Number(statBlock.hp.current) || 0;
+  const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
+  const armorClass = statBlock.armor_class ?? (10 + (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0));
   const imageUrl = statBlock.image_url?.trim();
   const avatar = imageUrl
     ? `<img src="${escapeHtml(imageUrl)}" alt="Foto di ${escapeHtml(companion.name)}" draggable="false" />`
@@ -103,6 +106,7 @@ function buildCompanionQuickButton(companion, isSelected = false) {
       <span class="familiar-quick-card__body">
         <strong>${escapeHtml(companion.name)}</strong>
         <span>${escapeHtml(formatKind(companion.kind))}</span>
+        <small><b>${hpCurrent}/${hpMax}</b> PF · <b>${armorClass}</b> CA</small>
       </span>
     </button>
   `;
@@ -149,6 +153,7 @@ function buildCompanionCard(companion, isSelected = false) {
           <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
         </div>
         <div class="familiar-attack-actions">
+          <button class="resource-cta-button resource-cta-button--label familiar-hit-button" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">Colpire</button>
           <button class="attack-action-button attack-action-button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}" title="Tira i danni">${DAMAGE_ACTION_ICON}</button>
         </div>
       </div>
@@ -183,6 +188,8 @@ function buildCompanionCard(companion, isSelected = false) {
             <strong>${escapeHtml(companion.name)}</strong>
             <span class="character-meta">
               <span class="meta-tag"><small>Tipo</small><strong>${escapeHtml(formatKind(companion.kind))}</strong></span>
+              <span class="meta-tag"><small>PF</small><strong>${hpCurrent}/${hpMax}</strong></span>
+              <span class="meta-tag"><small>CA</small><strong>${armorClass}</strong></span>
             </span>
           </span>
         </button>
@@ -297,7 +304,7 @@ export async function renderFamiliars(container) {
     setGlobalLoading(false);
   }
 
-  const selectedCompanionId = companions[0]?.id;
+  const selectedCompanionId = companions.find(companion => String(companion.id) === container.dataset.selectedCompanion)?.id || companions[0]?.id;
   container.innerHTML = `
     <div class="home-layout familiars-layout familiars-layout--refined">
       <aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
@@ -326,6 +333,7 @@ export async function renderFamiliars(container) {
     </div>
   `;
 
+  container.polishShortcut?.();
   const openCompanionForm = async (companion = null) => {
     const current = normalizeStatBlock(companion?.stat_block);
     let draftAttacks = (current.attacks || []).map((attack) => ({
@@ -727,6 +735,7 @@ export async function renderFamiliars(container) {
   container.querySelector('[data-add-companion]')?.addEventListener('click', () => { void openCompanionForm(); });
   container.querySelectorAll('[data-select-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companionId = btn.dataset.selectCompanion;
+    container.dataset.selectedCompanion = companionId;
     container.querySelectorAll('[data-select-companion]').forEach((entry) => {
       const isActive = entry.dataset.selectCompanion === companionId;
       entry.classList.toggle('is-active', isActive);

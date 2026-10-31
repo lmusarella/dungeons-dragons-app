@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { calcTotalWeight } from '../../../src/lib/calc.js';
+import { calcItemWeight, calcSelectionWeight, calcTotalWeight } from '../../../src/lib/calc.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -31,5 +31,23 @@ describe('src/lib/calc.js', () => {
       { qty: 'bad', weight: 4 }
     ])).toBe(3);
     expect(calcTotalWeight(null)).toBe(0);
+  });
+
+  it('includes nested contents in a container without double counting a selected child', () => {
+    const items = [
+      { id: 'pack', qty: 1, weight: 2 },
+      { id: 'pouch', container_item_id: 'pack', qty: 1, weight: 0.5 },
+      { id: 'coin', container_item_id: 'pouch', qty: 10, weight: 0.02 }
+    ];
+    expect(calcItemWeight(items[0], items)).toBeCloseTo(2.7);
+    expect(calcSelectionWeight([items[0], items[1]], items)).toBeCloseTo(2.7);
+  });
+
+  it('terminates safely when imported containment data contains a cycle', () => {
+    const items = [
+      { id: 'a', container_item_id: 'b', qty: 1, weight: 1 },
+      { id: 'b', container_item_id: 'a', qty: 1, weight: 2 }
+    ];
+    expect(calcItemWeight(items[0], items)).toBe(3);
   });
 });

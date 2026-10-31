@@ -25,9 +25,12 @@ describe('src/features/auth/login.js', () => {
 
   it('renders the refined login card and profile note', () => {
     const source = readFileSync('src/features/auth/login.js', 'utf8');
-    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
     expect(source).toContain('login-card--refined');
+    expect(source).toContain('login-experience');
+    expect(source).toContain('login-story');
     expect(source).toContain('login-security-note');
     expect(styles).toContain('.login-security-note');
+    expect(styles).toContain("url('/img/sfondo_login.jpg')");
   });
 });

@@ -83,7 +83,7 @@ export function getCompatibleEquipSlots(item) {
 }
 
 export function getWeightUnit(character) {
-  return character?.data?.settings?.weight_unit ?? 'lb';
+  return 'kg';
 }
 
 export function getItemStatusLabels(item = {}) {

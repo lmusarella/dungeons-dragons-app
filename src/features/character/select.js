@@ -30,19 +30,24 @@ export async function renderCharacterSelect(container) {
 
     container.innerHTML = `
     <section class="auth-screen character-select-view">
-      <div class="card character-select-card character-select-card--refined">
-      <header class="character-select-header">
-        <div>
-          <span class="character-select-header__eyebrow">Personaggi</span>
-          <p class="title-car-select">Seleziona o crea un personaggio</p>
-          <small class="character-select-header__count">${characters.length} ${characters.length === 1 ? 'personaggio disponibile' : 'personaggi disponibili'}</small>
-        </div>
-        ${canCreateCharacter ? '<button class="icon-button icon-button--add character-select-add" type="button" data-create-character aria-label="Nuovo personaggio" title="Nuovo personaggio">+</button>' : ''}
-      </header>
-        <div class="character-card-grid">
-        ${characters.length
+      <div class="character-select-experience">
+        <header class="character-select-hero">
+          <div class="character-select-hero__copy">
+            <span class="character-select-header__eyebrow">Sala degli eroi</span>
+            <h1>Scegli il tuo personaggio</h1>
+            <p>Riprendi l’avventura da dove l’avevi lasciata.</p>
+          </div>
+          <div class="character-select-hero__actions">
+            <span class="character-select-header__count"><strong>${characters.length}</strong> ${characters.length === 1 ? 'personaggio' : 'personaggi'}</span>
+            ${canCreateCharacter ? '<button class="character-select-add" type="button" data-create-character><span aria-hidden="true">＋</span> Nuovo personaggio</button>' : ''}
+          </div>
+        </header>
+        <div class="card character-select-card character-select-card--refined">
+          <div class="character-card-grid">
+          ${characters.length
     ? characters.map((character) => buildCharacterCard(character, character.id === activeCharacter?.id)).join('')
     : '<div class="character-select-empty"><span aria-hidden="true">◇</span><div><strong>Nessun personaggio</strong><small>Crea il tuo primo personaggio per iniziare l’avventura.</small></div></div>'}
+          </div>
         </div>
       </div>
     </section>
@@ -84,6 +89,7 @@ function buildCharacterCard(character, isActive) {
         ${avatar}
       </div>
       <div class="character-card-info">
+        <span class="character-card-status">${isActive ? 'In uso' : 'Apri scheda'}</span>
         <h3>${safeName}</h3>
         ${tagMeta.length
     ? `<div class="character-card-tags">
@@ -91,6 +97,7 @@ function buildCharacterCard(character, isActive) {
           </div>`
     : '<p class="character-card-meta muted">Dettagli base non specificati</p>'}
       </div>
+      <span class="character-card-enter" aria-hidden="true">›</span>
     </button>
   `;
 }

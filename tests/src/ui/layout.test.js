@@ -23,26 +23,34 @@ describe('src/ui/layout.js', () => {
     });
   });
 
-  it('renders the refined branded header and icon navigation footer', () => {
+  it('keeps the branded header and menu without redundant navigation launchers', () => {
     const source = readFileSync('src/ui/layout.js', 'utf8');
-    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
+    const baseStyles = readFileSync('src/styles/base.css', 'utf8');
 
     expect(source).toContain('class="app-brand"');
+    expect(source).toContain('app-brand__eyebrow');
     expect(source).toContain('Gestionale schede personaggi');
     expect(source).toContain('href="#/home" data-character-row');
-    expect(source).toContain('aria-label="Navigazione principale"');
-    expect(source).toContain('class="bottom-nav__icon"');
+    expect(source).not.toContain('<nav class="bottom-nav"');
+    expect(source).not.toContain('data-actions-toggle');
+    expect(source).not.toContain('data-actions-fab');
+
     expect(styles).toContain('.app-shell .app-header');
-    expect(styles).toContain('.app-shell .bottom-nav');
-    expect(styles).toContain('.bottom-nav a.active .bottom-nav__pill');
-    expect(source).toContain('class="actions-fab-item__icon"');
-    expect(source).toContain('class="actions-fab-toggle__icon"');
-    expect(styles).toContain('.actions-fab-item__icon');
+    expect(styles).toContain("url('/img/sfondo_header_1.webp')");
     expect(source).toContain("wrapper.className = 'menu-list menu-navigation'");
     expect(source).toContain('menu-navigation__profile');
     expect(source).toContain('aria-current="page"');
+    expect(source).not.toContain("route: 'settings'");
     expect(source).toContain("menuButton.setAttribute('aria-expanded', 'true')");
-    expect(styles).toContain('.menu-navigation .menu-item.is-active');
+    expect(baseStyles).toContain('.menu-navigation .menu-item.is-active');
+  });
+
+  it('uses the shared centered header structure for rest confirmations', () => {
+    const source = readFileSync('src/ui/layout.js', 'utf8');
+    const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
+    expect(source).toContain('modal-header__top modal-header__top--confirm');
+    expect(styles).toContain('.modal[data-confirm-modal] .modal-header__top--confirm');
   });
 
 });

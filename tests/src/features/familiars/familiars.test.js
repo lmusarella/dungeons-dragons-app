@@ -44,12 +44,24 @@ describe('src/features/familiars/familiars.js', () => {
     expect(styles).toContain('"attacks notes";');
   });
 
-  it('shows only the companion kind in compact selectors and supports animals', () => {
+  it('shows kind plus immediate combat status in compact selectors and supports animals', () => {
     const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
     expect(source).toContain("{ value: 'animal', label: 'Animale' }");
     expect(source).toContain('<span>${escapeHtml(formatKind(companion.kind))}</span>');
+    expect(source).toContain('<small><b>${hpCurrent}/${hpMax}</b> PF · <b>${armorClass}</b> CA</small>');
     expect(source).not.toContain('familiar-sheet__chevron');
     expect(source).not.toContain('familiar-sheet__hp-summary');
+  });
+
+  it('builds a focused roster-first shortcut with explicit attack actions', () => {
+    const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
+    const shortcut = readFileSync('src/features/character/home/shortcutViews.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    expect(source).toContain('class="resource-cta-button resource-cta-button--label familiar-hit-button"');
+    expect(shortcut).toContain("layout?.classList.add('companion-shortcut-layout')");
+    expect(shortcut).toContain("identity.className = 'familiar-sheet__identity'");
+    expect(styles).toContain("grid-template-areas: 'quick' 'detail'");
+    expect(styles).toContain('.companion-sheet-hero');
   });
 
   it('renders softly contrasted familiar panels and a compact damage action', () => {

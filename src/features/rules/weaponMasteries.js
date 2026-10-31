@@ -1,42 +1,42 @@
 export const weaponMasteries2024 = [
   {
     key: 'cleave',
-    label: 'Fendente',
-    summary: 'Dopo aver colpito, puoi fare un attacco extra contro una seconda creatura entro 1,5 m dal bersaglio originale e dalla tua portata.'
+    label: 'Fendente (Cleave)',
+    summary: 'Una volta per turno, dopo un colpo in mischia, attacca una seconda creatura entro 1,5 m dal bersaglio e nella tua portata; il secondo danno non aggiunge il modificatore, salvo se negativo.'
   },
   {
     key: 'graze',
-    label: 'Di striscio',
-    summary: 'Se manchi con un attacco, infliggi comunque danni pari al modificatore di caratteristica usato per il tiro.'
+    label: 'Di striscio (Graze)',
+    summary: 'Se manchi, infliggi comunque danni del tipo dell’arma pari al modificatore usato per il tiro; il danno aumenta solo aumentando quel modificatore.'
   },
   {
     key: 'nick',
-    label: 'Colpo rapido',
-    summary: 'Quando fai l’attacco extra della proprietà Leggera, puoi includerlo nell’azione Attacco invece di usare l’azione bonus.'
+    label: 'Colpo rapido (Nick)',
+    summary: 'Una volta per turno, l’attacco extra della proprietà Leggera può essere incluso nell’azione Attacco invece di richiedere un’azione bonus.'
   },
   {
     key: 'push',
-    label: 'Spingere',
+    label: 'Spingere (Push)',
     summary: 'Quando colpisci una creatura Grande o più piccola, puoi spingerla fino a 3 m lontano da te.'
   },
   {
     key: 'sap',
-    label: 'Fiaccare',
+    label: 'Fiaccare (Sap)',
     summary: 'Quando colpisci una creatura, il suo prossimo tiro per colpire prima dell’inizio del tuo prossimo turno ha svantaggio.'
   },
   {
     key: 'slow',
-    label: 'Rallentare',
-    summary: 'Quando colpisci e infliggi danni, puoi ridurre la velocità del bersaglio di 3 m fino all’inizio del tuo prossimo turno.'
+    label: 'Rallentare (Slow)',
+    summary: 'Quando colpisci e infliggi danni, puoi ridurre la velocità del bersaglio di 3 m fino all’inizio del tuo prossimo turno; più colpi non sommano la riduzione.'
   },
   {
     key: 'topple',
-    label: 'Abbattere',
-    summary: 'Quando colpisci, il bersaglio deve superare un TS Costituzione o cadere prono.'
+    label: 'Abbattere (Topple)',
+    summary: 'Quando colpisci, puoi imporre un TS Costituzione (CD 8 + modificatore usato per l’attacco + competenza); se fallisce, il bersaglio cade prono.'
   },
   {
     key: 'vex',
-    label: 'Incalzare',
+    label: 'Incalzare (Vex)',
     summary: 'Quando colpisci e infliggi danni, hai vantaggio al prossimo tiro per colpire contro quel bersaglio prima della fine del tuo prossimo turno.'
   }
 ];

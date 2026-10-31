@@ -5,8 +5,9 @@ const styles = readFileSync('src/styles/design-system.css', 'utf8');
 const baseStyles = readFileSync('src/styles/base.css', 'utf8');
 
 describe('D&D Companion design refinements', () => {
-  it('uses the cleaner Inter family for body and headings', () => {
-    expect(baseStyles).not.toContain('family=Fraunces');
+  it('uses Inter for UI copy and Fraunces only as the fantasy display accent', () => {
+    expect(baseStyles).toContain('family=Fraunces');
+    expect(baseStyles).toContain('family=Inter');
     expect(styles).toMatch(/--font-display:\s*'Inter'/);
   });
 

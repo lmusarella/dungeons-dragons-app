@@ -20,6 +20,16 @@ export async function createItem(payload) {
   return data;
 }
 
+export async function createItems(payloads = []) {
+  if (!Array.isArray(payloads) || !payloads.length) return [];
+  const { data, error } = await supabase
+    .from('items')
+    .insert(payloads)
+    .select('*');
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function updateItem(id, payload) {
   const { data, error } = await supabase
     .from('items')

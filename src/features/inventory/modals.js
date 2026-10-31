@@ -5,7 +5,9 @@ import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMa
 import { getCompatibleEquipSlots, getEquipSlots, getWeightUnit } from './utils.js';
 import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
 
-export async function openItemModal(character, item, items, onSave) {
+export async function openItemModal(character, item, items = [], onSave, options = {}) {
+  const catalogMode = Boolean(options.catalogMode);
+  const present = options.present || openFormModal;
   const enhanceNumericFields = (root) => {
     root?.querySelectorAll('input[type="number"]').forEach((input) => {
       const fieldLabel = input.closest('.field')?.querySelector('span')?.textContent?.trim();
@@ -625,8 +627,10 @@ export async function openItemModal(character, item, items, onSave) {
 
   enhanceNumericFields(fields);
 
-  const formData = await openFormModal({
-    title: item ? 'Modifica oggetto' : 'Nuovo oggetto',
+  const formData = await present({
+    title: item
+      ? (catalogMode ? 'Modifica oggetto del compendio' : 'Modifica oggetto')
+      : (catalogMode ? 'Nuovo oggetto del compendio' : 'Nuovo oggetto'),
     submitLabel: item ? 'Salva' : 'Crea',
     content: fields,
     cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--item-editor'],
@@ -658,8 +662,10 @@ export async function openItemModal(character, item, items, onSave) {
   })).filter((mode) => mode.damage_die);
 
   const payload = {
-    user_id: character.user_id,
-    character_id: character.id,
+    ...(catalogMode ? {} : {
+      user_id: character?.user_id,
+      character_id: character?.id
+    }),
     name: formData.get('name'),
     image_url: formData.get('image_url')?.trim() || null,
     qty: Number(formData.get('qty')),
@@ -667,7 +673,7 @@ export async function openItemModal(character, item, items, onSave) {
     volume: Number(formData.get('volume')) || 0,
     value_cp: Number(formData.get('value_cp')),
     category,
-    container_item_id: formData.get('container_item_id') || null,
+    container_item_id: catalogMode ? null : (formData.get('container_item_id') || null),
     max_volume: formData.get('max_volume') === '' ? null : Number(formData.get('max_volume')),
     equipable: equipableEnabled,
     equip_slot: equipSlot,
@@ -713,6 +719,11 @@ export async function openItemModal(character, item, items, onSave) {
 
   setGlobalLoading(true);
   try {
+    if (catalogMode) {
+      await onSave?.(payload);
+      createToast(item ? 'Oggetto del compendio aggiornato' : 'Oggetto aggiunto al compendio');
+      return payload;
+    }
     if (item) {
       await updateItem(item.id, payload);
       createToast('Oggetto aggiornato');

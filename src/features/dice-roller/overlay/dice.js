@@ -605,6 +605,9 @@ export function openDiceOverlay({
     document.addEventListener('keydown', escClose, true);
   }
 
+  const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
+  const overlayParent = shortcutHost || document.body;
+  if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
   resetLegacyDiceScene();
 
 
@@ -1197,7 +1200,10 @@ export function openDiceOverlay({
     };
     state.rerollHint = `Swipe sul tavolo per ritirare ${die.label.toUpperCase()} (${die.value}).`;
     setRerollOpen(true);
-    resetLegacyDiceScene();
+    const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
+  const overlayParent = shortcutHost || document.body;
+  if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
+  resetLegacyDiceScene();
     updateDiceInput(overlayEl, `1${die.type}`);
     renderRollResult(state.lastRoll, { playCriticalSound: false });
   }
@@ -1490,7 +1496,10 @@ export function openDiceOverlay({
         window.main.init();
         legacyDiceInitialized = true;
       }
-      resetLegacyDiceScene();
+      const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
+  const overlayParent = shortcutHost || document.body;
+  if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
+  resetLegacyDiceScene();
       if (window.main && typeof window.main.setInput === 'function') {
         window.main.setInput();
       }
@@ -1571,7 +1580,10 @@ export function openDiceOverlay({
     overlaySessionToken += 1;
     closeSession();
     if (overlayEl) overlayEl.setAttribute('hidden', '');
-    resetLegacyDiceScene();
+    const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
+  const overlayParent = shortcutHost || document.body;
+  if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
+  resetLegacyDiceScene();
 
     if (last == null) resolveFn?.(null);
 
@@ -1585,7 +1597,11 @@ export function openDiceOverlay({
 }
 
 function escClose(e) {
-  if (e.key === 'Escape' && overlayEl && !overlayEl.hasAttribute('hidden')) closeDiceOverlay();
+  if (e.key === 'Escape' && overlayEl && !overlayEl.hasAttribute('hidden')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closeDiceOverlay();
+  }
 }
 
 
@@ -1605,5 +1621,8 @@ export function closeDiceOverlay() {
   }
   if (!overlayEl) return;
   overlayEl.setAttribute('hidden', '');
+  const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
+  const overlayParent = shortcutHost || document.body;
+  if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
   resetLegacyDiceScene();
 }

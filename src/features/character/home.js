@@ -1,10 +1,19 @@
+import { openEquipmentPicker } from './home/equipmentPicker.js';
+import { openEquipmentItemDetail } from './home/itemDetail.js';
+import { openQuickAttackDetail, openQuickRollEditor } from './home/quickRollEditor.js';
+import { weaponForAttackRange } from './home/attackRanges.js';
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildInput, buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberStepper, attachNumberSteppers } from '../../ui/components.js';
+import { buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberSteppers } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
+import { escapeHtml } from '../../lib/html.js';
 import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
+import { presentSheetDetail } from './home/sheetDetail.js';
+import { openGeneralModifierEditor } from './home/generalModifiers.js';
+import { mountTabletLayout, captureSheetPanel, restoreSheetPanel, retainOpenSheetPanel } from './home/tabletLayout.js';
+import { showShortcutLoader } from './home/shortcutViews.js';
 import { openEquipmentMannequin } from './home/equipmentMannequin.js';
 import {
   buildAttackSection,
@@ -17,18 +26,22 @@ import {
   buildSpecialSkillList,
   buildSpellSection
 } from './home/sections.js';
-import { buildLootFields, moneyFields } from '../inventory/render.js';
-import { openItemImageModal } from '../inventory/modals.js';
+import { buildLootFields, moneyBundleFields } from '../inventory/render.js';
+import { openItemModal } from '../inventory/modals.js';
+import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from '../inventory/catalogPicker.js';
 import { getWeightUnit } from '../inventory/utils.js';
-import { ammunitionTypeLabels } from '../inventory/constants.js';
+import { ammunitionTypeLabels, itemCategories } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
 import { fetchWallet, createTransaction } from '../wallet/walletApi.js';
+import { buildCoinBundleMovement } from '../wallet/coinMovements.js';
 import { fetchCompanions } from './companionsApi.js';
-import { assignSharedSpellToCharacter, createSharedSpell, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
+import { assignSharedSpellToCharacter, fetchCharacterSpells, fetchSharedSpellSources, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
+import { dedupeCharacterSpells } from './spellPreparation.js';
 import {
   openAvatarModal,
   openBackgroundModal,
   openConditionsModal,
+  openWeaknessModal,
   openPreparedSpellsModal,
   openResourceDetail,
   openResourcePoolConsumeModal,
@@ -42,6 +55,8 @@ import {
 import { consumeSpellSlot, restoreSpellSlot, saveCharacterData } from './home/data.js';
 import { attachModalValueStepper, buildHpShortcutFields } from './home/hpModal.js';
 import { abilityShortLabel, conditionList, damageTypeList, savingThrowList, skillList } from './home/constants.js';
+import { normalizeSpellSchool } from './spellSchools.js';
+import { expandSpellSourceSelection, groupSpellSources } from './spellSources.js';
 import {
   applyDeathSaveRoll,
   applyRestRecovery,
@@ -199,7 +214,7 @@ function restoreHomeScrollState(container, scrollState) {
   }
 }
 
-function mapSharedSpellToCharacterSpell(sharedSpell) {
+function mapSharedSpellToCharacterSpell(sharedSpell, { prepState = 'known' } = {}) {
   if (!sharedSpell) return null;
   return {
     id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -211,17 +226,27 @@ function mapSharedSpellToCharacterSpell(sharedSpell) {
     duration: sharedSpell.duration,
     range: sharedSpell.range,
     components: sharedSpell.components,
+    material: sharedSpell.material || null,
     concentration: Boolean(sharedSpell.concentration),
     attack_roll: Boolean(sharedSpell.attack_roll),
+    saving_throw_ability: sharedSpell.saving_throw_ability || null,
+    attack_range_type: sharedSpell.attack_range_type || null,
     is_ritual: Boolean(sharedSpell.ritual),
     damage_die: sharedSpell.damage_die,
     damage_modifier: sharedSpell.damage_modifier,
+    damage_type: sharedSpell.damage_type || null,
     upcast_damage_die: sharedSpell.upcast_damage_die,
     upcast_damage_modifier: sharedSpell.upcast_damage_modifier,
     upcast_start_level: sharedSpell.upcast_start_level,
+    upcast_description: sharedSpell.upcast_description || null,
     description: sharedSpell.description,
+    source: sharedSpell.source || null,
+    source_url: sharedSpell.source_url || null,
+    source_key: sharedSpell.source_key || null,
+    school: sharedSpell.school || null,
+    caster_classes: sharedSpell.caster_classes || [],
     rules_version: sharedSpell.rules_version,
-    prep_state: 'known'
+    prep_state: prepState
   };
 }
 
@@ -231,6 +256,7 @@ function mapCharacterSpellRowToSpell(row) {
   const source = row?.shared_spell_id ? sharedSpell : customSpell;
   if (!source?.name) return null;
   const level = Number(source.level) || 0;
+  const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known');
   return {
     id: row.id || `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     shared_spell_id: row.shared_spell_id || null,
@@ -241,26 +267,35 @@ function mapCharacterSpellRowToSpell(row) {
     duration: source.duration || null,
     range: source.range || null,
     components: source.components || null,
+    material: source.material || null,
     concentration: Boolean(source.concentration),
     attack_roll: Boolean(source.attack_roll),
+    saving_throw_ability: source.saving_throw_ability || null,
+    attack_range_type: source.attack_range_type || null,
     is_ritual: Boolean(source.ritual ?? source.is_ritual),
     damage_die: source.damage_die || null,
     damage_modifier: source.damage_modifier ?? null,
+    damage_type: source.damage_type || null,
     upcast_damage_die: source.upcast_damage_die || null,
     upcast_damage_modifier: source.upcast_damage_modifier ?? null,
     upcast_start_level: source.upcast_start_level ?? null,
+    upcast_description: source.upcast_description || null,
     description: source.description || null,
+    source: source.source || null,
+    source_url: source.source_url || null,
+    source_key: source.source_key || null,
     school: source.school || null,
     caster_classes: source.caster_classes || [],
     rules_version: source.rules_version || null,
-    prep_state: row.prep_state || 'known'
+    prep_state: prepState
   };
 }
 
-async function openSharedSpellPicker() {
+export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014' } = {}) {
   const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
   const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
-  const PAGE_SIZE = 30;
+  const PAGE_SIZE = 50;
+  const initialRulesVersion = ['2014', '2024'].includes(String(defaultRulesVersion)) ? String(defaultRulesVersion) : '2014';
   const content = document.createElement('div');
   content.className = 'shared-spell-picker';
   content.innerHTML = `
@@ -273,38 +308,40 @@ async function openSharedSpellPicker() {
         </label>
         <button type="button" class="ghost-button shared-spell-picker__reset" data-reset-spell-filters>Azzera filtri</button>
       </div>
-      <div class="shared-spell-picker__filter-row">
-        <label class="field">
-          <span>Livello</span>
-          <select name="spell_level_filter">
-            <option value="">Tutti i livelli</option>
-            <option value="0">Trucchetti</option>
-            ${Array.from({ length: 9 }, (_, index) => `<option value="${index + 1}">Livello ${index + 1}</option>`).join('')}
-          </select>
-        </label>
+      <div class="shared-spell-picker__filter-toolbar">
         <label class="field">
           <span>Scuola</span>
           <select name="spell_school_filter">
             ${SCHOOLS.map((school) => `<option value="${school}">${school || 'Tutte le scuole'}</option>`).join('')}
           </select>
         </label>
-        <label class="field">
-          <span>Regole</span>
-          <select name="rules_version">
-            <option value="">Tutte le versioni</option>
-            <option value="2024">2024</option>
-            <option value="2014">2014</option>
-            <option value="Custom">Custom</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Proprietà</span>
-          <select name="spell_property_filter">
-            <option value="">Qualsiasi</option>
-            <option value="concentration">Concentrazione</option>
-            <option value="ritual">Rituale</option>
-          </select>
-        </label>
+        <details class="spell-manual-filter shared-spell-picker__source-filter" data-picker-source-filter>
+          <summary><span>Manuali</span><strong data-picker-source-summary>Tutti</strong></summary>
+          <div class="spell-manual-filter__options" data-picker-source-options>
+            <span class="muted">Caricamento manuali…</span>
+          </div>
+        </details>
+        <div class="shared-spell-picker__edition-filter" role="group" aria-label="Edizione delle regole">
+          <span class="shared-spell-picker__filter-label">Regole</span>
+          <div>
+            <button type="button" data-picker-version="2014" aria-pressed="${initialRulesVersion === '2014'}" class="${initialRulesVersion === '2014' ? 'is-active' : ''}">2014</button>
+            <button type="button" data-picker-version="2024" aria-pressed="${initialRulesVersion === '2024'}" class="${initialRulesVersion === '2024' ? 'is-active' : ''}">2024</button>
+          </div>
+        </div>
+        <div class="shared-spell-picker__property-filter" role="group" aria-label="Proprietà incantesimo">
+          <span class="shared-spell-picker__filter-label">Proprietà</span>
+          <div>
+            <button type="button" data-picker-property="concentration" aria-pressed="false">Concentrazione</button>
+            <button type="button" data-picker-property="ritual" aria-pressed="false">Rituale</button>
+          </div>
+        </div>
+      </div>
+      <div class="shared-spell-picker__levels" role="group" aria-label="Filtra per livello">
+        <span class="shared-spell-picker__filter-label">Livello</span>
+        <div>
+          <button type="button" data-picker-level="0" aria-pressed="false">Trucchetti</button>
+          ${Array.from({ length: 9 }, (_, index) => `<button type="button" data-picker-level="${index + 1}" aria-pressed="false">${index + 1}°</button>`).join('')}
+        </div>
       </div>
       <div class="shared-spell-picker__classes">
         <span class="shared-spell-picker__filter-label">Classi</span>
@@ -317,6 +354,7 @@ async function openSharedSpellPicker() {
           `).join('')}
         </div>
       </div>
+      <output class="shared-spell-picker__active-filters" data-picker-active-filters>Regole ${initialRulesVersion}</output>
     </section>
     <div class="shared-spell-picker__workspace">
       <section class="shared-spell-picker__results" aria-label="Risultati ricerca">
@@ -325,7 +363,10 @@ async function openSharedSpellPicker() {
             <strong data-spell-results-title>Incantesimi</strong>
             <span class="muted" data-spell-results-count>Caricamento...</span>
           </div>
-          <span class="shared-spell-picker__hint">Seleziona un incantesimo per vedere i dettagli</span>
+          <div class="shared-spell-picker__selection-summary">
+            <strong data-spell-selected-count>0 selezionati</strong>
+            <button type="button" class="ghost-button" data-clear-spell-selection hidden>Deseleziona</button>
+          </div>
         </div>
         <div class="shared-spell-picker__list" data-spell-results aria-live="polite"></div>
         <div class="shared-spell-picker__paging" data-spell-paging hidden>
@@ -342,15 +383,12 @@ async function openSharedSpellPicker() {
         </div>
       </aside>
     </div>
-    <input type="hidden" name="shared_spell_id" value="" />
   `;
 
   const queryInput = content.querySelector('input[name="spell_query"]');
-  const levelSelect = content.querySelector('select[name="spell_level_filter"]');
   const schoolSelect = content.querySelector('select[name="spell_school_filter"]');
-  const versionSelect = content.querySelector('select[name="rules_version"]');
-  const propertySelect = content.querySelector('select[name="spell_property_filter"]');
-  const selectedInput = content.querySelector('input[name="shared_spell_id"]');
+  const sourceOptions = content.querySelector('[data-picker-source-options]');
+  const sourceSummary = content.querySelector('[data-picker-source-summary]');
   const resultsEl = content.querySelector('[data-spell-results]');
   const resultsCountEl = content.querySelector('[data-spell-results-count]');
   const previewEl = content.querySelector('[data-spell-preview]');
@@ -358,16 +396,30 @@ async function openSharedSpellPicker() {
   const pageLabel = content.querySelector('[data-page-label]');
   const prevBtn = content.querySelector('[data-prev-page]');
   const nextBtn = content.querySelector('[data-next-page]');
+  const selectedCountEl = content.querySelector('[data-spell-selected-count]');
+  const clearSelectionButton = content.querySelector('[data-clear-spell-selection]');
   let currentPage = 1;
   let totalPages = 1;
-  let selectedSpell = null;
   let loadSequence = 0;
   let searchTimer = null;
   let submitButton = null;
+  let selectedLevel = '';
+  let selectedRulesVersion = initialRulesVersion;
+  const selectedProperties = new Set();
+  const selectedSpells = new Map();
+  const selectedSourceKeys = new Set();
+  let sourceGroups = [];
+  let sourceLoadSequence = 0;
 
   const formatSpellLevel = (level) => Number(level) === 0 ? 'Trucchetto' : `Livello ${level}`;
   const setSubmitState = () => {
-    if (submitButton) submitButton.disabled = !selectedSpell;
+    const count = selectedSpells.size;
+    if (submitButton) {
+      submitButton.disabled = count === 0;
+      submitButton.textContent = count ? `Aggiungi ${count} ${count === 1 ? 'incantesimo' : 'incantesimi'}` : 'Aggiungi al personaggio';
+    }
+    if (selectedCountEl) selectedCountEl.textContent = `${count} ${count === 1 ? 'selezionato' : 'selezionati'}`;
+    if (clearSelectionButton) clearSelectionButton.hidden = count === 0;
   };
   const renderPreview = (spell) => {
     previewEl.innerHTML = '';
@@ -385,7 +437,7 @@ async function openSharedSpellPicker() {
     heading.className = 'shared-spell-picker__preview-heading';
     const eyebrow = document.createElement('span');
     eyebrow.className = 'shared-spell-picker__preview-eyebrow';
-    eyebrow.textContent = [formatSpellLevel(spell.level), spell.school].filter(Boolean).join(' · ');
+    eyebrow.textContent = [formatSpellLevel(spell.level), normalizeSpellSchool(spell.school)].filter(Boolean).join(' · ');
     const title = document.createElement('strong');
     title.className = 'shared-spell-picker__preview-title';
     title.textContent = spell.name;
@@ -397,7 +449,12 @@ async function openSharedSpellPicker() {
       ['Lancio', spell.cast_time],
       ['Gittata', spell.range],
       ['Durata', spell.duration],
-      ['Componenti', spell.components]
+      ['Componenti', spell.components],
+      ['Materiale', spell.material],
+      ['Fonte', spell.source],
+      ['Tiro salvezza', savingThrowList.find((entry) => entry.key === spell.saving_throw_ability)?.label],
+      ['Danni', spell.damage_die],
+      ['Tipo', damageTypeList.find((type) => type.key === spell.damage_type)?.label || spell.damage_type]
     ].filter(([, value]) => value).forEach(([label, value]) => {
       const fact = document.createElement('div');
       const term = document.createElement('dt');
@@ -424,16 +481,77 @@ async function openSharedSpellPicker() {
     previewEl.append(heading, facts, tags, classes, description);
   };
 
-  const selectSpell = (spell, card) => {
-    selectedSpell = spell;
-    selectedInput.value = spell.id;
-    content.querySelectorAll('.shared-spell-picker__spell').forEach((entry) => {
-      const isSelected = entry === card;
-      entry.classList.toggle('is-selected', isSelected);
-      entry.setAttribute('aria-pressed', String(isSelected));
+  const syncFilterSummary = () => {
+    const parts = [`Regole ${selectedRulesVersion}`];
+    if (selectedLevel !== '') parts.push(selectedLevel === '0' ? 'Trucchetti' : `${selectedLevel}° livello`);
+    if (schoolSelect.value) parts.push(schoolSelect.value);
+    if (selectedSourceKeys.size === 1) {
+      parts.push(sourceGroups.find((group) => selectedSourceKeys.has(group.key))?.label || '1 manuale');
+    } else if (selectedSourceKeys.size > 1) {
+      parts.push(`${selectedSourceKeys.size} manuali`);
+    }
+    if (selectedProperties.has('concentration')) parts.push('Concentrazione');
+    if (selectedProperties.has('ritual')) parts.push('Rituale');
+    const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked'))
+      .map((entry) => entry.value);
+    if (selectedClasses.length) parts.push(selectedClasses.join(', '));
+    const summary = content.querySelector('[data-picker-active-filters]');
+    if (summary) summary.textContent = parts.join(' · ');
+  };
+
+  const loadSourceOptions = async () => {
+    const sequence = ++sourceLoadSequence;
+    sourceOptions.setAttribute('aria-busy', 'true');
+    try {
+      const sources = await fetchSharedSpellSources({ rulesVersion: selectedRulesVersion });
+      if (sequence !== sourceLoadSequence) return;
+      sourceGroups = groupSpellSources(sources);
+      const availableKeys = new Set(sourceGroups.map((group) => group.key));
+      [...selectedSourceKeys].forEach((key) => { if (!availableKeys.has(key)) selectedSourceKeys.delete(key); });
+      sourceOptions.innerHTML = sourceGroups.length
+        ? sourceGroups.map((group) => `
+          <label class="spell-manual-filter__option">
+            <input type="checkbox" value="${escapeHtml(group.key)}" ${selectedSourceKeys.has(group.key) ? 'checked' : ''} />
+            <span>${escapeHtml(group.label)}</span>
+          </label>`).join('')
+        : '<span class="muted">Nessun manuale disponibile</span>';
+    } catch (error) {
+      if (sequence !== sourceLoadSequence) return;
+      sourceGroups = [];
+      selectedSourceKeys.clear();
+      sourceOptions.innerHTML = '<span class="muted">Manuali non disponibili</span>';
+    } finally {
+      if (sequence === sourceLoadSequence) sourceOptions.removeAttribute('aria-busy');
+      sourceSummary.textContent = selectedSourceKeys.size
+        ? (selectedSourceKeys.size === 1 ? sourceGroups.find((group) => selectedSourceKeys.has(group.key))?.label || '1' : `${selectedSourceKeys.size} scelti`)
+        : 'Tutti';
+      syncFilterSummary();
+    }
+  };
+
+  const syncVisibleSelection = () => {
+    content.querySelectorAll('[data-shared-spell-id]').forEach((card) => {
+      const selected = selectedSpells.has(String(card.dataset.sharedSpellId));
+      card.classList.toggle('is-selected', selected);
+      card.setAttribute('aria-pressed', String(selected));
+      const marker = card.querySelector('[data-spell-selection-marker]');
+      if (marker) marker.textContent = selected ? '✓' : '+';
     });
-    renderPreview(spell);
     setSubmitState();
+  };
+
+  const clearSelection = () => {
+    selectedSpells.clear();
+    renderPreview(null);
+    syncVisibleSelection();
+  };
+
+  const selectSpell = (spell, card) => {
+    const spellId = String(spell.id);
+    selectedSpells.has(spellId) ? selectedSpells.delete(spellId) : selectedSpells.set(spellId, spell);
+    renderPreview(spell);
+    syncVisibleSelection();
+    card?.focus({ preventScroll: true });
   };
 
   const renderResults = (items, total) => {
@@ -453,14 +571,16 @@ async function openSharedSpellPicker() {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'shared-spell-picker__spell';
-      card.setAttribute('aria-pressed', String(selectedSpell?.id === spell.id));
-      if (selectedSpell?.id === spell.id) card.classList.add('is-selected');
+      card.dataset.sharedSpellId = spell.id;
+      const isSelected = selectedSpells.has(String(spell.id));
+      card.setAttribute('aria-pressed', String(isSelected));
+      if (isSelected) card.classList.add('is-selected');
       const main = document.createElement('span');
       main.className = 'shared-spell-picker__spell-main';
       const name = document.createElement('strong');
       name.textContent = spell.name;
       const meta = document.createElement('small');
-      meta.textContent = [formatSpellLevel(spell.level), spell.school || 'Scuola non indicata'].join(' · ');
+      meta.textContent = [formatSpellLevel(spell.level), normalizeSpellSchool(spell.school) || 'Scuola non indicata'].join(' · ');
       main.append(name, meta);
       const badges = document.createElement('span');
       badges.className = 'shared-spell-picker__spell-badges';
@@ -468,14 +588,11 @@ async function openSharedSpellPicker() {
       if (spell.ritual) badges.appendChild(Object.assign(document.createElement('small'), { textContent: 'R' }));
       const arrow = document.createElement('span');
       arrow.className = 'shared-spell-picker__spell-arrow';
+      arrow.dataset.spellSelectionMarker = '';
       arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '›';
+      arrow.textContent = isSelected ? '✓' : '+';
       card.append(main, badges, arrow);
       card.addEventListener('click', () => selectSpell(spell, card));
-      card.addEventListener('dblclick', () => {
-        selectSpell(spell, card);
-        submitButton?.click();
-      });
       resultsEl.appendChild(card);
     });
   };
@@ -490,16 +607,16 @@ async function openSharedSpellPicker() {
     `;
     resultsCountEl.textContent = 'Caricamento...';
     const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked')).map((el) => el.value);
-    const property = propertySelect.value;
     try {
       const result = await searchSharedSpells({
         query: queryInput.value,
-        rulesVersion: versionSelect.value || null,
-        level: levelSelect.value,
+        rulesVersion: selectedRulesVersion,
+        level: selectedLevel,
         school: schoolSelect.value,
+        sources: expandSpellSourceSelection(sourceGroups, selectedSourceKeys),
         casterClasses: selectedClasses,
-        concentration: property === 'concentration' ? true : '',
-        ritual: property === 'ritual' ? true : '',
+        concentration: selectedProperties.has('concentration') ? true : '',
+        ritual: selectedProperties.has('ritual') ? true : '',
         page: currentPage,
         pageSize: PAGE_SIZE
       });
@@ -507,6 +624,7 @@ async function openSharedSpellPicker() {
       totalPages = Math.max(1, Math.ceil((result.total || 0) / (result.pageSize || PAGE_SIZE)));
       currentPage = Math.min(currentPage, totalPages);
       renderResults(result.items || [], result.total || 0);
+      resultsEl.scrollTop = 0;
       pageLabel.textContent = `Pagina ${currentPage} di ${totalPages}`;
       prevBtn.disabled = currentPage <= 1;
       nextBtn.disabled = currentPage >= totalPages;
@@ -529,21 +647,75 @@ async function openSharedSpellPicker() {
 
   const refreshFromFirstPage = () => {
     currentPage = 1;
+    syncFilterSummary();
     void loadResults();
   };
   queryInput.addEventListener('input', () => {
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(refreshFromFirstPage, 250);
   });
-  [levelSelect, schoolSelect, versionSelect, propertySelect].forEach((control) => control.addEventListener('change', refreshFromFirstPage));
+  schoolSelect.addEventListener('change', refreshFromFirstPage);
+  sourceOptions.addEventListener('change', (event) => {
+    const checkbox = event.target.closest('input[type="checkbox"]');
+    if (!checkbox) return;
+    checkbox.checked ? selectedSourceKeys.add(checkbox.value) : selectedSourceKeys.delete(checkbox.value);
+    sourceSummary.textContent = selectedSourceKeys.size
+      ? (selectedSourceKeys.size === 1 ? sourceGroups.find((group) => selectedSourceKeys.has(group.key))?.label || '1' : `${selectedSourceKeys.size} scelti`)
+      : 'Tutti';
+    refreshFromFirstPage();
+  });
+  content.querySelectorAll('[data-picker-version]').forEach((button) => button.addEventListener('click', () => {
+    const nextRulesVersion = button.dataset.pickerVersion;
+    if (nextRulesVersion !== selectedRulesVersion) {
+      selectedRulesVersion = nextRulesVersion;
+      clearSelection();
+    }
+    content.querySelectorAll('[data-picker-version]').forEach((entry) => {
+      const active = entry.dataset.pickerVersion === selectedRulesVersion;
+      entry.classList.toggle('is-active', active);
+      entry.setAttribute('aria-pressed', String(active));
+    });
+    selectedSourceKeys.clear();
+    void loadSourceOptions();
+    refreshFromFirstPage();
+  }));
+  content.querySelectorAll('[data-picker-level]').forEach((button) => button.addEventListener('click', () => {
+    const level = button.dataset.pickerLevel || '';
+    selectedLevel = selectedLevel === level ? '' : level;
+    content.querySelectorAll('[data-picker-level]').forEach((entry) => {
+      const active = entry.dataset.pickerLevel === selectedLevel;
+      entry.classList.toggle('is-active', active);
+      entry.setAttribute('aria-pressed', String(active));
+    });
+    refreshFromFirstPage();
+  }));
+  content.querySelectorAll('[data-picker-property]').forEach((button) => button.addEventListener('click', () => {
+    const property = button.dataset.pickerProperty;
+    selectedProperties.has(property) ? selectedProperties.delete(property) : selectedProperties.add(property);
+    button.classList.toggle('is-active', selectedProperties.has(property));
+    button.setAttribute('aria-pressed', String(selectedProperties.has(property)));
+    refreshFromFirstPage();
+  }));
   content.querySelectorAll('input[name="spell_caster_filter"]').forEach((control) => control.addEventListener('change', refreshFromFirstPage));
+  clearSelectionButton?.addEventListener('click', clearSelection);
   content.querySelector('[data-reset-spell-filters]')?.addEventListener('click', () => {
     queryInput.value = '';
-    levelSelect.value = '';
+    selectedLevel = '';
+    selectedRulesVersion = initialRulesVersion;
+    selectedProperties.clear();
     schoolSelect.value = '';
-    versionSelect.value = '';
-    propertySelect.value = '';
+    selectedSourceKeys.clear();
     content.querySelectorAll('input[name="spell_caster_filter"]').forEach((control) => { control.checked = false; });
+    content.querySelectorAll('[data-picker-level], [data-picker-property]').forEach((button) => {
+      button.classList.remove('is-active');
+      button.setAttribute('aria-pressed', 'false');
+    });
+    content.querySelectorAll('[data-picker-version]').forEach((button) => {
+      const active = button.dataset.pickerVersion === selectedRulesVersion;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    void loadSourceOptions();
     queryInput.focus();
     refreshFromFirstPage();
   });
@@ -558,7 +730,7 @@ async function openSharedSpellPicker() {
     void loadResults();
   });
 
-  const formData = await openFormModal({
+  const formData = await present({
     title: 'Scegli un incantesimo dalla raccolta',
     submitLabel: 'Aggiungi al personaggio',
     cancelLabel: 'Annulla',
@@ -567,17 +739,15 @@ async function openSharedSpellPicker() {
     onOpen: ({ modal }) => {
       submitButton = modal.querySelector('[data-form-submit]');
       setSubmitState();
+      syncFilterSummary();
       queryInput.focus();
+      void loadSourceOptions();
       void loadResults();
       return () => window.clearTimeout(searchTimer);
     }
   });
   if (!formData) return null;
-  return selectedSpell;
-}
-
-function shouldAutoUsageDice(character) {
-  return character?.data?.settings?.auto_usage_dice !== false;
+  return [...selectedSpells.values()];
 }
 
 function getAvailableSpellSlotLevels(character, spellLevel) {
@@ -591,7 +761,8 @@ async function chooseSpellSlotLevel(character, spell) {
     createToast('Slot incantesimo esauriti', 'error');
     return null;
   }
-  if (options.length === 1) {
+  const hasHigherLevelOption = options.some((option) => option.level > baseLevel);
+  if (options.length === 1 && !hasHigherLevelOption) {
     return options[0].level;
   }
   const field = document.createElement('label');
@@ -624,6 +795,7 @@ async function chooseSpellSlotLevel(character, spell) {
 
 export async function renderHome(container) {
   const scrollState = captureHomeScrollState(container);
+  const panelContext = captureSheetPanel(container);
 
   lastHomeContainer = container;
   const state = getState();
@@ -691,11 +863,15 @@ export async function renderHome(container) {
         .filter(Boolean);
       if (linkedSpells.length) {
         const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
-        const merged = [...currentSpells];
-        linkedSpells.forEach((entry) => {
-          const exists = merged.some((spell) => spell.shared_spell_id && spell.shared_spell_id === entry.shared_spell_id);
-          if (!exists) merged.push(entry);
-        });
+        const linkedToMerge = activeCharacter.data?.spell_preparation_synced
+          ? linkedSpells.filter((linkedSpell) => currentSpells.some((spell) => (
+            (spell.shared_spell_id && String(spell.shared_spell_id) === String(linkedSpell.shared_spell_id))
+            || (!spell.shared_spell_id && spell.source_key && linkedSpell.source_key
+              && String(spell.source_key) === String(linkedSpell.source_key)
+              && String(spell.rules_version || '') === String(linkedSpell.rules_version || ''))
+          )))
+          : linkedSpells;
+        const merged = dedupeCharacterSpells([...currentSpells, ...linkedToMerge]);
         activeCharacter.data = { ...(activeCharacter.data || {}), spells: merged };
       }
     }
@@ -706,6 +882,7 @@ export async function renderHome(container) {
 
   const sheetCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
 
+  retainOpenSheetPanel(container);
   container.innerHTML = `
     <div class="home-layout">
       <div class="home-column home-column--left">
@@ -721,7 +898,7 @@ export async function renderHome(container) {
               </button>
             </div>
           </header>
-          ${sheetCharacter ? buildSavingThrowSection(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+          ${sheetCharacter ? buildSavingThrowSection(sheetCharacter, canEditCharacter) : '<p>Nessun personaggio selezionato.</p>'}
         </section>
         <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--skills">
           <header class="card-header home-feature-header">
@@ -735,7 +912,7 @@ export async function renderHome(container) {
             </div>
           </header>
           <div class="home-scroll-body">
-            ${sheetCharacter ? buildSkillList(sheetCharacter) : '<p>Nessun personaggio selezionato.</p>'}
+            ${sheetCharacter ? buildSkillList(sheetCharacter, canEditCharacter) : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
         <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--special-skills">
@@ -755,15 +932,20 @@ export async function renderHome(container) {
         </section>
       </div>
       <div class="home-column home-column--center">
-        <section class="card home-card home-section">
-          <header class="card-header">
-            <div>
-              <p class="eyebrow">Scheda Personaggio</p>           
+        <section class="card home-card home-section character-sheet-card">
+          <header class="card-header character-sheet-header">
+            <div class="character-sheet-header__title">
+              <span class="character-sheet-header__crest" aria-hidden="true">✦</span>
+              <div>
+                <p class="eyebrow">Personaggio attivo</p>
+                <h2>Panoramica di gioco</h2>
+              </div>
             </div>
             <div class="actions">
               ${activeCharacter && canEditCharacter ? `
-                <button class="icon-button" data-edit-character aria-label="Modifica personaggio">
-                  <span aria-hidden="true">✏️</span>
+                <button class="character-edit-trigger" data-edit-character aria-label="Modifica scheda personaggio">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
+                  <span>Modifica scheda</span>
                 </button>
               ` : ''}
             </div>
@@ -786,7 +968,7 @@ export async function renderHome(container) {
           </header>
           <div class="home-scroll-body">
             ${activeCharacter
-    ? buildAttackSection(sheetCharacter, items || [], companions)
+    ? buildAttackSection(sheetCharacter, items || [], companions, canEditCharacter)
     : '<p>Nessun personaggio selezionato.</p>'}
           </div>
         </section>
@@ -797,9 +979,6 @@ export async function renderHome(container) {
               <p class="eyebrow">Incantesimi</p>
             </div>
             <div class="actions">
-              <button class="icon-button icon-button--dice" data-open-dice="spell-attack" aria-label="Lancia dado tiro per colpire incantesimi">
-                <span aria-hidden="true">🎲</span>
-              </button>
               ${activeCharacter?.data?.spellcasting?.can_prepare ? `
                 <button class="icon-button icon-button--spell-prepare" type="button" data-open-prepared-spells aria-label="Prepara incantesimi" title="Prepara incantesimi">
                   <span aria-hidden="true">📖</span>
@@ -842,7 +1021,30 @@ export async function renderHome(container) {
     </div>
   `;
 
+  mountTabletLayout(container, {
+    characterName: activeCharacter?.name || '',
+    onRefresh: () => renderHome(container),
+    onAddRoll: container.querySelector('[data-edit-character]') ? kind => openQuickRollEditor(activeCharacter, kind, () => renderHome(container)) : null,
+    onOpenAttack: index => openQuickAttackDetail(activeCharacter, index, () => renderHome(container))
+  });
   bindFabHandlers();
+
+  container.querySelectorAll('[data-edit-general-modifier]')
+    .forEach((button) => button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!activeCharacter || !canEditCharacter) return;
+      const dialog = button.closest('dialog.sheet-detail');
+      const present = dialog?.open
+        ? (options) => presentSheetDetail(dialog, options)
+        : openFormModal;
+      await openGeneralModifierEditor(
+        activeCharacter,
+        button.dataset.editGeneralModifier,
+        () => renderHome(container),
+        { present }
+      );
+    }));
 
   const createButton = container.querySelector('[data-create-character]');
   if (createButton) {
@@ -869,64 +1071,46 @@ export async function renderHome(container) {
   if (addSpellButton) {
     addSpellButton.addEventListener('click', async () => {
       if (!activeCharacter) return;
-      const mode = await openSpellSourceModal();
+      const spellDialog = addSpellButton.closest('dialog');
+      const presentInShortcut = (modalOptions) => presentSheetDetail(spellDialog, modalOptions);
+      const mode = await openSpellSourceModal({ present: presentInShortcut });
       if (!mode) return;
       if (mode === 'shared') {
         try {
-          const sharedSpell = await openSharedSpellPicker();
-          if (!sharedSpell) return;
-          const nextSpell = mapSharedSpellToCharacterSpell(sharedSpell);
+          const preferredRulesVersion = (activeCharacter.data?.spells || [])
+            .find((entry) => ['2014', '2024'].includes(String(entry.rules_version)))?.rules_version || '2014';
+          const sharedSpells = await openSharedSpellPicker(presentInShortcut, { defaultRulesVersion: preferredRulesVersion });
+          if (!sharedSpells?.length) return;
           const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
-          const alreadyLinked = currentSpells.some((entry) => entry.shared_spell_id === sharedSpell.id);
-          if (alreadyLinked) {
-            createToast('Incantesimo già presente nella scheda personaggio', 'info');
+          const linkedIds = new Set(currentSpells.map((entry) => String(entry.shared_spell_id || '')).filter(Boolean));
+          const spellsToAdd = sharedSpells.filter((spell) => !linkedIds.has(String(spell.id)));
+          const duplicateCount = sharedSpells.length - spellsToAdd.length;
+          if (!spellsToAdd.length) {
+            createToast('Gli incantesimi selezionati sono già presenti nella scheda', 'info');
             return;
           }
+          const nextSpells = spellsToAdd.map((sharedSpell) => mapSharedSpellToCharacterSpell(sharedSpell, {
+            prepState: Number(sharedSpell.level) > 0 ? 'prepared' : 'known'
+          }));
           if (activeCharacter.user_id) {
-            await assignSharedSpellToCharacter({
+            await Promise.all(spellsToAdd.map((sharedSpell, index) => assignSharedSpellToCharacter({
               user_id: activeCharacter.user_id,
               character_id: activeCharacter.id,
               shared_spell_id: sharedSpell.id,
-              prep_state: nextSpell.prep_state
-            });
+              prep_state: nextSpells[index].prep_state
+            })));
           }
-          const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, nextSpell] };
-          await saveCharacterData(activeCharacter, nextData, 'Incantesimo aggiunto dalla lista condivisa', () => renderHome(container));
+          const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, ...nextSpells] };
+          const addedLabel = `${nextSpells.length} ${nextSpells.length === 1 ? 'incantesimo aggiunto' : 'incantesimi aggiunti'} dalla raccolta`;
+          await saveCharacterData(activeCharacter, nextData, addedLabel, () => renderHome(container));
+          if (duplicateCount) createToast(`${duplicateCount} ${duplicateCount === 1 ? 'incantesimo già presente è stato ignorato' : 'incantesimi già presenti sono stati ignorati'}`, 'info');
           return;
         } catch (error) {
           createToast('Errore durante l\'associazione dell\'incantesimo condiviso', 'error');
           return;
         }
       }
-      openSpellDrawer(activeCharacter, async (createdSpell) => {
-        if (!createdSpell) return renderHome(container);
-        try {
-          await createSharedSpell({
-            created_by: activeCharacter.user_id,
-            rules_version: createdSpell.rules_version || '2024',
-            name: createdSpell.name,
-            level: createdSpell.level,
-            school: createdSpell.school || null,
-            caster_classes: Array.isArray(createdSpell.caster_classes) ? createdSpell.caster_classes : [],
-            cast_time: createdSpell.cast_time || null,
-            range: createdSpell.range || null,
-            duration: createdSpell.duration || null,
-            components: createdSpell.components || null,
-            concentration: Boolean(createdSpell.concentration),
-            ritual: Boolean(createdSpell.is_ritual),
-            attack_roll: Boolean(createdSpell.attack_roll),
-            damage_die: createdSpell.damage_die || null,
-            damage_modifier: createdSpell.damage_modifier ?? null,
-            upcast_damage_die: createdSpell.upcast_damage_die || null,
-            upcast_damage_modifier: createdSpell.upcast_damage_modifier ?? null,
-            upcast_start_level: createdSpell.upcast_start_level ?? null,
-            description: createdSpell.description || null
-          });
-        } catch (error) {
-          createToast('Incantesimo salvato sul personaggio ma non sul catalogo condiviso', 'info');
-        }
-        renderHome(container);
-      });
+      openSpellDrawer(activeCharacter, () => renderHome(container), null, { present: presentInShortcut });
     });
   }
 
@@ -975,8 +1159,19 @@ export async function renderHome(container) {
 
   const preparedSpellsButton = container.querySelector('[data-open-prepared-spells]');
   if (preparedSpellsButton) {
-    preparedSpellsButton.addEventListener('click', () => {
-      openPreparedSpellsModal(activeCharacter, () => renderHome(container));
+    preparedSpellsButton.addEventListener('click', async () => {
+      const shortcutBody = preparedSpellsButton.closest('dialog.sheet-detail')?.querySelector('.modal-body');
+      const stopLoading = shortcutBody
+        ? showShortcutLoader(shortcutBody, 'Caricamento grimorio')
+        : (() => {
+          setGlobalLoading(true);
+          return () => setGlobalLoading(false);
+        })();
+      try {
+        await openPreparedSpellsModal(activeCharacter, () => renderHome(container));
+      } finally {
+        stopLoading();
+      }
     });
   }
 
@@ -985,9 +1180,10 @@ export async function renderHome(container) {
       const spellId = button.dataset.spellQuickOpen;
       if (!spellId || !activeCharacter) return;
       const spells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
-      const spell = spells.find((entry) => entry.id === spellId);
+      const spell = spells.find((entry) => String(entry.id) === String(spellId));
       if (!spell) return;
       openSpellQuickDetailModal(activeCharacter, spell, () => renderHome(container), {
+        present: (options) => presentSheetDetail(button.closest('dialog'), options),
         onEdit: canEditCharacter ? () => openSpellDrawer(activeCharacter, () => renderHome(container), spell) : null,
         onDelete: canEditCharacter ? () => deleteSpellWithConfirmation(spell) : null
       });
@@ -1004,6 +1200,12 @@ export async function renderHome(container) {
   if (conditionsButton) {
     conditionsButton.addEventListener('click', async () => {
       await handleConditionsAction(container);
+    });
+  }
+  const weaknessButton = container.querySelector('[data-edit-weakness]');
+  if (weaknessButton) {
+    weaknessButton.addEventListener('click', async () => {
+      await handleWeaknessAction(container);
     });
   }
 
@@ -1090,7 +1292,7 @@ export async function renderHome(container) {
         }
       };
 
-      const result = await openEquipmentMannequin({
+      const result = await (canEditCharacter ? openEquipmentPicker : openEquipmentMannequin)({
         items: items || [],
         weightUnit: getWeightUnit(activeCharacter),
         canEdit: canEditCharacter,
@@ -1209,6 +1411,23 @@ export async function renderHome(container) {
         characterId: activeCharacter.id
       });
     }));
+  container.querySelectorAll('[data-ability-card]')
+    .forEach((card) => card.addEventListener('click', () => {
+      if (!activeCharacter) return;
+      const abilityKey = card.dataset.abilityCard;
+      const options = buildAbilityRollOptions(sheetCharacter || activeCharacter, items || []);
+      const selected = options.find((entry) => entry.value === abilityKey);
+      if (!selected) return;
+      openDiceRollerModal({
+        title: `Prova di caratteristica • ${selected.shortLabel}`,
+        mode: 'd20',
+        rollType: 'TA',
+        selection: { label: 'Caratteristica', options, value: selected.value },
+        allowInspiration: Boolean(activeCharacter?.data?.inspiration) && canEditCharacter,
+        weakPoints: Number(activeCharacter?.data?.hp?.weak_points) || 0,
+        characterId: activeCharacter.id
+      });
+    }));
   container.querySelectorAll('[data-special-skill-card]')
     .forEach((card) => card.addEventListener('click', () => {
       if (!activeCharacter) return;
@@ -1250,9 +1469,9 @@ export async function renderHome(container) {
     }));
 
   container.querySelectorAll('[data-roll-attack]')
-    .forEach((card) => card.addEventListener('click', (event) => {
-      if (event.target.closest('button')) return;
-      openPresetAttackRoll(card.dataset.rollAttack);
+    .forEach((control) => control.addEventListener('click', (event) => {
+      if (!control.matches('button') && event.target.closest('button')) return;
+      openPresetAttackRoll(control.dataset.rollAttack, control.dataset.attackRange);
     }));
 
   container.querySelectorAll('[data-cycle-weapon-mode]')
@@ -1359,7 +1578,7 @@ export async function renderHome(container) {
       const weaponMode = weaponParts[2] || 'default';
       const weapon = items?.find((entry) => String(entry.id) === weaponLookup || entry.name === weaponLookup);
       if (!weapon) return;
-      const overlayConfig = buildWeaponDamageOverlayConfig(activeCharacter, weapon, weaponMode);
+      const overlayConfig = buildWeaponDamageOverlayConfig(activeCharacter, button.closest('[data-attack-range]') ? weaponForAttackRange(weapon, button.closest('[data-attack-range]').dataset.attackRange) : weapon, weaponMode);
       if (!overlayConfig) {
         createToast('Danno non calcolabile per questa arma.', 'error');
         return;
@@ -1418,9 +1637,6 @@ export async function renderHome(container) {
         used: used + consumedAmount
       });
       createToast(usageResource === parentResource ? 'Risorsa usata' : `${usageResource.name} usata`);
-      if (shouldAutoUsageDice(activeCharacter)) {
-        openResourceRollOverlay(usageResource);
-      }
       renderHome(container);
       return true;
     } catch (error) {
@@ -1438,7 +1654,11 @@ export async function renderHome(container) {
     const childResources = getResourceChildren(parentResource);
     let usageResource = resource.parent_resource_id ? resource : parentResource;
     if (!resource.parent_resource_id && childResources.length) {
-      const selectedChildId = await openResourceOptionModal(parentResource, childResources);
+      const resourceDialog = container.querySelector('.home-feature-panel--resources')?.closest('dialog');
+      const selectedChildId = await openResourceOptionModal(parentResource, childResources, {
+        present: (options) => presentSheetDetail(resourceDialog, options),
+        onRollOption: (child) => openResourceRollOverlay(child)
+      });
       if (!selectedChildId) return;
       usageResource = childResources.find((entry) => String(entry.id) === String(selectedChildId));
       if (!usageResource) return;
@@ -1487,7 +1707,10 @@ export async function renderHome(container) {
     const childResources = getResourceChildren(resource);
     const canHaveChildren = Boolean(resource.can_have_children);
     const canManageChildResources = canManageResources && canHaveChildren;
+    const resourceDialog = container.querySelector('.home-feature-panel--resources')?.closest('dialog');
+    if (resourceDialog) resourceDialog.dataset.resourceId = String(resource.id);
     openResourceDetail(resource, {
+      present: (options) => presentSheetDetail(container.querySelector('.home-feature-panel--resources')?.closest('dialog'), options),
       childResources,
       canHaveChildren,
       onUse: () => requestResourceUse(resource),
@@ -1523,6 +1746,12 @@ export async function renderHome(container) {
     });
   };
 
+  container.querySelectorAll('[data-roll-resource]')
+    .forEach((button) => button.addEventListener('click', () => {
+      const resource = resources.find((entry) => String(entry.id) === String(button.dataset.rollResource));
+      if (resource) openResourceRollOverlay(resource);
+    }));
+
   container.querySelectorAll('[data-resource-card]')
     .forEach((card) => {
       card.addEventListener('click', (event) => {
@@ -1535,6 +1764,8 @@ export async function renderHome(container) {
   container.querySelectorAll('[data-use-resource]')
     .forEach((button) => button.addEventListener('click', async () => {
       const resource = resources.find((entry) => entry.id === button.dataset.useResource);
+      const dialog = button.closest('dialog');
+      if (dialog) delete dialog.dataset.resourceId;
       if (!resource) return;
       await requestResourceUse(resource);
     }));
@@ -1565,27 +1796,20 @@ export async function renderHome(container) {
           }, 'Concentrazione attiva', () => renderHome(container));
         }
       }
-
-      if (!shouldAutoUsageDice(refreshedCharacter)) {
-        renderHome(container);
-        return;
-      }
+      await renderHome(container);
       const overlayConfig = buildSpellDamageOverlayConfig(spell, selectedLevel);
-      if (!overlayConfig) {
-        createToast('Danno non calcolabile per questo incantesimo.', 'error');
-        return;
+      if (overlayConfig) {
+        openDiceOverlay({
+          keepOpen: true,
+          title: overlayConfig.title,
+          mode: 'generic',
+          notation: overlayConfig.notation,
+          modifier: overlayConfig.modifier,
+          rollType: 'DMG',
+          characterId: activeCharacter.id,
+          historyLabel: spell.name || null
+        });
       }
-      openDiceOverlay({
-        keepOpen: true,
-        title: overlayConfig.title,
-        mode: 'generic',
-        notation: overlayConfig.notation,
-        modifier: overlayConfig.modifier,
-        rollType: 'DMG',
-        characterId: activeCharacter.id,
-        historyLabel: spell.name || null,
-          sneakAttackDice: activeCharacter?.data?.sneak_attack_dice || null
-      });
     }));
 
 
@@ -1709,6 +1933,58 @@ export async function renderHome(container) {
     });
   }
 
+  const openItemDetails = async (item, { attackDetail = false } = {}) => {
+    let modeChanged = false;
+    const formData = await openEquipmentItemDetail(item, {
+      items,
+      weightUnit: getWeightUnit(activeCharacter),
+      onEdit: canEditCharacter
+        ? () => openItemModal(activeCharacter, item, items, () => renderHome(container))
+        : null,
+      removeLabel: 'Disequipaggia',
+      onRemove: canEditCharacter && attackDetail
+        ? async () => {
+          const confirmed = await openConfirmModal({
+            title: 'Disequipaggia arma',
+            message: `${item.name || 'Questa arma'} resterà nell’inventario, ma non comparirà più tra gli attacchi.`,
+            confirmLabel: 'Disequipaggia',
+            cancelLabel: 'Annulla',
+            danger: true
+          });
+          if (!confirmed) return false;
+          try {
+            await updateItem(item.id, { equip_slot: null, equip_slots: [] });
+            createToast('Arma disequipaggiata');
+            await renderHome(container);
+            return true;
+          } catch (error) {
+            createToast('Errore durante il disequipaggiamento', 'error');
+            return false;
+          }
+        }
+        : null,
+      onModeChange: canEditCharacter && attackDetail
+        ? async (modeId) => {
+          try {
+            const saved = await updateItem(item.id, { selected_damage_mode: modeId });
+            const nextItems = (getState().cache.items || items || []).map(entry => String(entry.id) === String(item.id)
+              ? { ...entry, ...(saved || {}), selected_damage_mode: modeId }
+              : entry);
+            updateCache('items', nextItems);
+            await cacheSnapshot({ items: nextItems });
+            modeChanged = true;
+            createToast('Impugnatura aggiornata');
+            return saved || { selected_damage_mode: modeId };
+          } catch (error) {
+            createToast('Errore cambio impugnatura', 'error');
+            return null;
+          }
+        }
+        : null
+    });
+    if (modeChanged && !formData?.get?.('item_detail_action')) await renderHome(container);
+  };
+
   container.querySelectorAll('[data-item-image]')
     .forEach((image) => {
       image.setAttribute('draggable', 'false');
@@ -1716,7 +1992,7 @@ export async function renderHome(container) {
         event.preventDefault();
         event.stopPropagation();
         const item = items?.find((entry) => String(entry.id) === image.dataset.itemImage);
-        if (item) openItemImageModal(item);
+        if (item) openItemDetails(item);
       });
     });
   container.querySelectorAll('[data-item-preview]')
@@ -1725,10 +2001,11 @@ export async function renderHome(container) {
         event.preventDefault();
         event.stopPropagation();
         const item = items?.find((entry) => String(entry.id) === button.dataset.itemPreview);
-        if (item) openItemImageModal(item);
+        if (item) openItemDetails(item, { attackDetail: Boolean(button.closest('.play-card--attack')) });
       });
     });
   restoreHomeScrollState(container, scrollState);
+  restoreSheetPanel(container, panelContext);
   } finally {
     setGlobalLoading(false);
   }
@@ -1741,8 +2018,8 @@ export function bindGlobalFabHandlers() {
 function bindFabHandlers() {
   if (fabHandlersBound) return;
   document.addEventListener('click', async (event) => {
-    const fabContainer = event.target.closest('[data-actions-fab]');
-    if (!fabContainer) return;
+    const gameAction = event.target.closest('[data-game-action]');
+    if (!gameAction) return;
     const hpButton = event.target.closest('[data-hp-action]');
     const moneyButton = event.target.closest('[data-money-action]');
     const restButton = event.target.closest('[data-rest]');
@@ -1753,7 +2030,6 @@ function bindFabHandlers() {
     const rollAdjustmentsButton = event.target.closest('[data-edit-roll-adjustments]');
     if (!hpButton && !moneyButton && !restButton && !diceButton && !lootButton && !conditionsButton && !resistancesButton && !rollAdjustmentsButton) return;
     event.preventDefault();
-    closeFabMenu();
     const container = lastHomeContainer ?? null;
     if (hpButton) {
       await handleHpAction(hpButton.dataset.hpAction, container);
@@ -1793,16 +2069,6 @@ function bindFabHandlers() {
   });
   fabHandlersBound = true;
 }
-
-function closeFabMenu() {
-  const actionsFab = document.querySelector('[data-actions-fab]');
-  const actionsToggle = document.querySelector('[data-actions-toggle]');
-  if (!actionsFab || !actionsFab.classList.contains('is-open')) return;
-  actionsFab.classList.remove('is-open');
-  actionsToggle?.setAttribute('aria-expanded', 'false');
-}
-
-
 
 function getHomeContext() {
   const state = getState();
@@ -1849,7 +2115,19 @@ async function handleConditionsAction(container) {
     if (container) renderHome(container);
   });
 }
-
+async function handleWeaknessAction(container) {
+  const { activeCharacter, canEditCharacter } = getHomeContext();
+  if (!activeCharacter || !canEditCharacter) return;
+  const formData = await openWeaknessModal(activeCharacter);
+  if (!formData) return;
+  const level = Math.max(0, Math.min(6, Number(formData.get('weakness_level')) || 0));
+  await saveCharacterData(activeCharacter, {
+    ...activeCharacter.data,
+    hp: { ...(activeCharacter.data?.hp || {}), weak_points: level }
+  }, 'Punti indebolimento aggiornati', () => {
+    if (container) renderHome(container);
+  });
+}
 function getRollAdjustmentData(character) {
   const adjustments = character?.data?.roll_adjustments || {};
   return {
@@ -2025,28 +2303,52 @@ async function handleLootAction(container) {
     createToast('Loot disponibile solo online.', 'error');
     return;
   }
-  const weightUnit = getWeightUnit(activeCharacter);
-  const weightStep = weightUnit === 'kg' ? '0.1' : '1';
+  const source = await openItemSourceModal({
+    title: 'Aggiungi loot rapido',
+    manualLabel: 'Inserimento rapido',
+    manualHint: 'Inserisci nome, quantità e tipologia in pochi secondi.',
+    catalogLabel: 'Scegli dall’archivio',
+    catalogHint: 'Seleziona uno o più oggetti completi dal compendio.'
+  });
+  if (source === 'catalog') {
+    const selected = await openSharedItemPicker({ title: 'Loot dall’archivio centralizzato' });
+    if (!selected.length) return;
+    setGlobalLoading(true);
+    try {
+      await addSharedItemsToInventory(selected, activeCharacter);
+      createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} al loot`, 'success');
+      if (container) await renderHome(container);
+    } catch (error) {
+      createToast('Errore durante l’aggiunta del loot dall’archivio', 'error');
+    } finally {
+      setGlobalLoading(false);
+    }
+    return;
+  }
+  if (source !== 'manual') return;
   const formData = await openFormModal({
     title: 'Aggiungi loot rapido',
     submitLabel: 'Aggiungi',
-    content: buildLootFields(weightStep),
+    cardClass: 'modal-card--quick-action',
+    content: buildLootFields(),
     onOpen: ({ fieldsEl }) => {
       attachNumberSteppers(fieldsEl);
     }
   });
   if (!formData) return;
   try {
+    const category = formData.get('category')?.toString() || 'loot';
+    const categoryDefinition = itemCategories.find((entry) => entry.value === category);
     await createItem({
       user_id: activeCharacter.user_id,
       character_id: activeCharacter.id,
       name: formData.get('name'),
       qty: Number(formData.get('qty')),
-      weight: Number(formData.get('weight')),
-      volume: Number(formData.get('volume')) || 0,
-      value_cp: Number(formData.get('value_cp')),
-      category: 'loot',
-      equipable: false,
+      weight: 0,
+      volume: 0,
+      value_cp: 0,
+      category,
+      equipable: Boolean(categoryDefinition?.equipable),
       equip_slot: null,
       equip_slots: [],
       sovrapponibile: false,
@@ -2085,10 +2387,12 @@ async function handleMoneyAction(direction, container) {
   const formData = await openFormModal({
     title,
     submitLabel,
-    content: moneyFields({ direction }),
+    cardClass: 'modal-card--quick-action',
+    content: moneyBundleFields({ direction, wallet }),
     onOpen: ({ fieldsEl }) => {
-      const amountInput = fieldsEl?.querySelector('input[name="amount"]');
-      if (amountInput) attachModalValueStepper(amountInput, { min: 0 });
+      fieldsEl?.querySelectorAll('.money-bundle__coin input[type="number"]').forEach((input) => {
+        attachModalValueStepper(input, { min: 0, max: input.max === '' ? null : Number(input.max) });
+      });
     }
   });
   if (!formData) return;
@@ -2102,18 +2406,16 @@ async function handleMoneyAction(direction, container) {
       pp: 0
     };
   }
-  const coin = formData.get('coin');
-  const amount = Number(formData.get('amount') || 0);
-  const delta = {
-    cp: coin === 'cp' ? amount : 0,
-    sp: coin === 'sp' ? amount : 0,
-    gp: coin === 'gp' ? amount : 0,
-    pp: coin === 'pp' ? amount : 0
-  };
-  const sign = direction === 'pay' ? -1 : 1;
-  const signedDelta = Object.fromEntries(
-    Object.entries(delta).map(([key, value]) => [key, value * sign])
-  );
+  let signedDelta;
+  try {
+    signedDelta = buildCoinBundleMovement(wallet, {
+      pp: formData.get('amount_pp'), gp: formData.get('amount_gp'),
+      sp: formData.get('amount_sp'), cp: formData.get('amount_cp')
+    }, direction);
+  } catch (error) {
+    createToast(error.message, 'error');
+    return;
+  }
   try {
     const saved = await createTransaction({
       user_id: wallet.user_id,
@@ -2309,27 +2611,6 @@ function resolveRollModeEffects(effects) {
   return { rollMode: null, rollModeReason: null };
 }
 
-function getAttackRollMode(conditionState) {
-  const advantageKeys = attackRollEffects.advantage.filter((key) => conditionState.includes(key));
-  const disadvantageKeys = attackRollEffects.disadvantage.filter((key) => conditionState.includes(key));
-  if (advantageKeys.length && disadvantageKeys.length) {
-    return { rollMode: null, rollModeReason: null };
-  }
-  if (advantageKeys.length) {
-    return {
-      rollMode: 'advantage',
-      rollModeReason: `Vantaggio: condizioni ${formatConditionList(advantageKeys).join(', ')}.`
-    };
-  }
-  if (disadvantageKeys.length) {
-    return {
-      rollMode: 'disadvantage',
-      rollModeReason: `Svantaggio: condizioni ${formatConditionList(disadvantageKeys).join(', ')}.`
-    };
-  }
-  return { rollMode: null, rollModeReason: null };
-}
-
 function getSavingThrowEffects(conditionState, saveKey) {
   const autoFailKeys = savingThrowEffects.autoFail[saveKey] || [];
   const autoFailConditions = autoFailKeys.filter((key) => conditionState.includes(key));
@@ -2356,10 +2637,12 @@ function buildSkillRollOptions(character, items = []) {
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
+  const generalBonus = Number(data.skill_check_bonus) || 0;
   return skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
-    const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
+    const baseTotal = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
+    const total = baseTotal === null ? null : baseTotal + generalBonus;
     const modifierValue = total ?? 0;
     const rollEffects = getAutomaticSkillRollEffects(character, items, skill);
     rollEffects.push(getManualRollAdjustment(character, 'skills', skill.key, skill.label));
@@ -2375,10 +2658,35 @@ function buildSkillRollOptions(character, items = []) {
   });
 }
 
+function buildAbilityRollOptions(character, items = []) {
+  const data = character.data || {};
+  const abilities = data.abilities || {};
+  const generalBonus = Number(data.skill_check_bonus) || 0;
+  return savingThrowList.map((ability) => {
+    const modifier = getAbilityModifier(abilities[ability.key]) ?? 0;
+    const total = modifier + generalBonus;
+    const effects = getAutomaticSpecialSkillRollEffects(character, items, ability.key, {
+      id: `ability_${ability.key}`,
+      name: ability.label,
+      ability: ability.key
+    });
+    const rollMode = resolveRollModeEffects(effects);
+    return {
+      value: ability.key,
+      label: `${ability.label} (${formatSigned(total)})`,
+      shortLabel: ability.label,
+      modifier: total,
+      rollMode: rollMode.rollMode,
+      rollModeReason: rollMode.rollModeReason
+    };
+  });
+}
+
 function buildSpecialSkillRollOptions(character, items = []) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
+  const generalBonus = Number(data.skill_check_bonus) || 0;
   const configuredSpecialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
   const hasInitiative = configuredSpecialSkills.some((skill) => {
     const id = String(skill?.id ?? '').toLowerCase();
@@ -2395,7 +2703,7 @@ function buildSpecialSkillRollOptions(character, items = []) {
     const mastery = Boolean(skill.mastery) && proficient;
     const baseTotal = calculateSkillModifier(abilities[abilityKey], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
     const extraBonus = Number(skill.bonus) || 0;
-    const total = (baseTotal ?? 0) + extraBonus;
+    const total = (baseTotal ?? 0) + extraBonus + generalBonus;
     const name = skill.name?.trim() || `Tiro speciale ${index + 1}`;
     const rollEffects = getAutomaticSpecialSkillRollEffects(character, items, abilityKey, skill);
     const rollMode = resolveRollModeEffects(rollEffects);
@@ -2415,10 +2723,12 @@ function buildSavingThrowRollOptions(character) {
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const savingStates = data.saving_throws || {};
+  const generalBonus = Number(data.saving_throw_bonus) || 0;
   const conditionState = getConditionState(character);
   return savingThrowList.map((save) => {
     const proficient = Boolean(savingStates[save.key]);
-    const total = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
+    const baseTotal = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
+    const total = baseTotal === null ? null : baseTotal + generalBonus;
     const modifierValue = total ?? 0;
     const effects = getSavingThrowEffects(conditionState, save.key);
     const manualEffect = getManualRollAdjustment(character, 'saving_throws', save.key, save.label);
@@ -2527,7 +2837,7 @@ function buildAttackRollOptions(character, items = [], companions = []) {
   const spells = Array.isArray(data.spells) ? data.spells : [];
   const cantripAttacks = spells.filter((spell) => {
     const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
-    return isCantrip && spell.attack_roll && spell.damage_die;
+    return isCantrip && spell.attack_roll;
   });
   if (spellAbilityKey && spellAttackBonus !== null) {
     cantripAttacks.forEach((spell) => {
@@ -2638,11 +2948,12 @@ async function consumeWeaponAmmunition(items, weapon) {
   return { ammunition: updatedAmmunition, nextQty };
 }
 
-function openPresetAttackRoll(attackKey) {
+function openPresetAttackRoll(attackKey, range) {
   const { activeCharacter, sheetCharacter, canEditCharacter, companions } = getHomeContext();
   if (!activeCharacter || !attackKey) return;
   const items = getState().cache.items || [];
-  const options = buildAttackRollOptions(sheetCharacter || activeCharacter, items, companions);
+  const rollItems = range ? items.map(item => 'weapon:' + (item.id ?? item.name) === attackKey ? weaponForAttackRange(item, range) : item) : items;
+  const options = buildAttackRollOptions(sheetCharacter || activeCharacter, rollItems, companions);
   const selected = options.find((entry) => entry.value === attackKey);
   if (!selected) return;
   const weaponId = attackKey.startsWith('weapon:') ? attackKey.replace('weapon:', '') : null;
@@ -2909,6 +3220,7 @@ async function handleHpAction(action, container) {
   const formData = await openFormModal({
     title,
     submitLabel,
+    cardClass: 'modal-card--quick-action',
     content: buildHpShortcutFields(activeCharacter, {
       allowHitDice: false,
       allowTempHp: action === 'heal',

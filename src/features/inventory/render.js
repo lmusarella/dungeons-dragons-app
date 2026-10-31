@@ -1,10 +1,13 @@
+import { isCoinExchange } from '../wallet/coinMovements.js';
+import { buildCompactItemList } from './compactTables.js';
 import { formatWeight } from '../../lib/format.js';
+import { calcItemWeight } from '../../lib/calc.js';
 import {
   getCategoryLabel,
   getItemStatusLabels,
   normalizeTransactionAmount
 } from './utils.js';
-import { ammunitionTypeLabels, damageTypeLabels } from './constants.js';
+import { ammunitionTypeLabels, damageTypeLabels, itemCategories } from './constants.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 
 function buildTransactionAmount(amount) {
@@ -60,7 +63,8 @@ function buildCoinField(label, name, value, iconSrc, coinClass) {
 
 function buildTransactionItem(transaction) {
   const item = document.createElement('li');
-  const directionLabel = transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
+  const exchange = isCoinExchange(normalizeTransactionAmount(transaction.amount));
+  const directionLabel = exchange ? 'Scambio' : transaction.direction === 'pay' ? 'Pagamento' : 'Entrata';
   const amountLabel = buildTransactionAmount(transaction.amount);
   const amountLabelText = buildTransactionAmountLabel(transaction.amount);
   const directionClass = transaction.direction === 'pay' ? 'transaction-item--outgoing' : 'transaction-item--incoming';
@@ -73,9 +77,10 @@ function buildTransactionItem(transaction) {
       <div class="transaction-meta">
         <span class="resource-chip transaction-direction-chip ${transaction.direction === 'pay' ? 'transaction-direction-chip--outgoing' : 'transaction-direction-chip--incoming'}">${directionLabel}</span>
         <div class="transaction-actions">
-          <button class="icon-button transaction-action-button" type="button" data-edit-transaction="${escapeHtml(transaction.id)}" aria-label="Modifica transazione" title="Modifica">
+          ${exchange ? '' : `<button class="icon-button transaction-action-button" type="button" data-edit-transaction="${escapeHtml(transaction.id)}" aria-label="Modifica transazione" title="Modifica">
             <span aria-hidden="true">✏️</span>
-          </button>
+          </button>`}
+
           <button class="icon-button icon-button--danger transaction-action-button transaction-action-button--danger" type="button" data-delete-transaction="${escapeHtml(transaction.id)}" aria-label="Elimina transazione" title="Elimina">
             <span aria-hidden="true">🗑️</span>
           </button>
@@ -126,7 +131,8 @@ export function buildTransactionList(transactions) {
   return wrapper;
 }
 
-export function buildInventoryTree(items, weightUnit = 'lb') {
+export function buildInventoryTree(items, weightUnit = 'kg', { compact = false } = {}) {
+  const renderItems = compact ? buildCompactItemList : buildItemList;
   const containers = items.filter((item) => item.category === 'container');
   const topLevel = items.filter((item) => !item.container_item_id && item.category !== 'container');
 
@@ -155,7 +161,7 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
           </div>
           <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${escapeHtml(getCategoryLabel(container.category))}</span></div>
           <div class="inventory-table__cell" data-label="Quantità">${escapeHtml(container.qty)}</div>
-          <div class="inventory-table__cell" data-label="Peso">${escapeHtml(formatWeight(container.weight ?? 0, weightUnit))}</div>
+          <div class="inventory-table__cell" data-label="Peso">${escapeHtml(formatWeight(calcItemWeight(container, items), weightUnit))}</div>
           <div class="inventory-table__cell" data-label="Volume">${escapeHtml(container.max_volume ?? '-')}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
             <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${escapeHtml(container.id)}" aria-label="Inserisci oggetti sfusi in ${escapeHtml(container.name)}">
@@ -172,7 +178,7 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
         </summary>
         <div class="inventory-group__children">
           <p class="inventory-group__label">Contenuto del contenitore</p>
-          ${buildItemList(children, weightUnit, { nested: true, emptyLabel: 'Nessun oggetto nel contenitore.' })}
+          ${renderItems(children, weightUnit, { nested: true, emptyLabel: 'Nessun oggetto nel contenitore.', allItems: items })}
         </div>
       </details>
     `;
@@ -187,13 +193,13 @@ export function buildInventoryTree(items, weightUnit = 'lb') {
         <span class="inventory-loose-accordion__count">${topLevel.length} ${topLevel.length === 1 ? 'oggetto' : 'oggetti'}</span>
       </summary>
       <div class="inventory-group__children inventory-group__children--loose">
-        ${buildItemList(topLevel, weightUnit)}
+        ${renderItems(topLevel, weightUnit, { allItems: items })}
       </div>
     </details>
   `;
 }
 
-export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyLabel = 'Nessun oggetto.' } = {}) {
+export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyLabel = 'Nessun oggetto.', allItems = items } = {}) {
   if (!items.length) {
     return `<div class="inventory-empty-state"><span aria-hidden="true">◇</span><div><strong>${escapeHtml(emptyLabel)}</strong><small>Aggiungi o sposta qui un oggetto per visualizzarlo.</small></div></div>`;
   }
@@ -232,7 +238,7 @@ export function buildItemList(items, weightUnit = 'lb', { nested = false, emptyL
             </div>
             <div class="inventory-table__cell" data-label="Categoria"><span class="inventory-data-pill">${escapeHtml(getCategoryLabel(item.category))}</span></div>
             <div class="inventory-table__cell inventory-table__metric" data-label="Quantità"><small>Qtà</small><strong>${escapeHtml(item.qty)}</strong></div>
-            <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${escapeHtml(formatWeight(item.weight ?? 0, weightUnit))}</strong></div>
+            <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${escapeHtml(formatWeight(calcItemWeight(item, allItems), weightUnit))}</strong></div>
             <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${escapeHtml(volumeValue)}</strong></div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${safeId}">Consuma</button>` : ''}
@@ -295,6 +301,36 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
       </label>
     `}
    
+  `;
+}
+
+export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet = {}, reason = '', occurredOn } = {}) {
+  const resolvedDate = occurredOn || new Date().toISOString().split('T')[0];
+  const baseUrl = import.meta.env.BASE_URL;
+  const entries = [
+    ['pp', 'Platino', `${baseUrl}icons/moneta_platino.png`],
+    ['gp', 'Oro', `${baseUrl}icons/moneta_oro.png`],
+    ['sp', 'Argento', `${baseUrl}icons/moneta_argento.png`],
+    ['cp', 'Rame', `${baseUrl}icons/moneta_rame.png`]
+  ];
+  return `
+    <div class="money-bundle money-bundle--${direction}">
+      <p class="money-bundle__intro">${direction === 'pay' ? 'Indica tutte le monete da consegnare.' : 'Indica tutte le monete ricevute.'} I valori a zero verranno ignorati.</p>
+      <div class="money-bundle__grid">
+        ${entries.map(([key, label, icon]) => {
+    const available = Math.max(0, Number(wallet?.[key] || 0));
+    const value = Math.max(0, Number(amounts?.[key] || 0));
+    return `<label class="money-bundle__coin money-bundle__coin--${key}">
+            <span class="money-bundle__coin-heading"><span class="coin-avatar coin-avatar--${key}"><img src="${icon}" alt="" /></span><span><strong>${label}</strong><small>${direction === 'pay' ? `${available} disponibili` : 'Aggiungi quantità'}</small></span></span>
+            <input name="amount_${key}" type="number" value="${value}" min="0" step="1" ${direction === 'pay' ? `max="${available}"` : ''} inputmode="numeric" />
+          </label>`;
+  }).join('')}
+      </div>
+      <div class="money-bundle__details">
+        <label class="field"><span>Motivo</span><input name="reason" placeholder="Es. ricompensa, locanda, acquisto" value="${escapeHtml(reason)}" /></label>
+        <label class="field"><span>Data</span><input name="occurred_on" type="date" value="${escapeHtml(resolvedDate)}" /></label>
+      </div>
+    </div>
   `;
 }
 
@@ -387,32 +423,33 @@ export function walletEditFields(wallet = {}) {
   `;
 }
 
-export function buildLootFields(weightStep) {
+export function buildLootFields() {
+  const categoryIcons = {
+    gear: '♙', loot: '◇', consumable: '✚', weapon: '⚔', armor: '⛨', jewelry: '✦', tool: '⚒', container: '▱'
+  };
   return `
-   <div class="compact-field-grid">
+   <div class="quick-loot-form">
+    <div class="compact-field-grid quick-loot-form__basics">
       <label class="field">
         <span>Nome</span>
-        <input name="name" required />
+        <input name="name" placeholder="Es. Pozione di guarigione" required />
       </label>
-       <label class="field">
-        <span>Valore</span>
-        <input name="value_cp" type="number" value="0" min="0" step="1" />
-      </label>
-   </div>
-    <div class="compact-field-grid">  
       <label class="field">
         <span>Quantità</span>
         <input name="qty" type="number" value="1" min="0" step="1" />
       </label>
-      <label class="field">
-        <span>Peso</span>
-        <input name="weight" type="number" value="0" min="0" step="${weightStep || '0.1'}" />
-      </label>
-      <label class="field">
-        <span>Volume</span>
-        <input name="volume" type="number" value="0" min="0" step="0.1" />
-      </label>
-     
     </div>
+    <fieldset class="quick-loot-categories">
+      <legend>Tipologia oggetto</legend>
+      <div class="quick-loot-categories__grid">
+        ${itemCategories.map((category) => `
+          <label class="quick-loot-category">
+            <input type="radio" name="category" value="${escapeHtml(category.value)}" ${category.value === 'loot' ? 'checked' : ''} />
+            <span class="quick-loot-category__card"><span aria-hidden="true">${categoryIcons[category.value] || '◇'}</span><strong>${escapeHtml(category.label)}</strong></span>
+          </label>
+        `).join('')}
+      </div>
+    </fieldset>
+   </div>
   `;
 }

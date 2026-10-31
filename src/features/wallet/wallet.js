@@ -10,7 +10,7 @@ export function renderWalletSummary(wallet) {
     <div class="wallet-summary">     
       <div class="wallet-list">
         ${coins.map((coin) => `
-          <div class="stat-card wallet-card">
+          <div class="stat-card wallet-card" data-wallet-coin="${coin.key}">
             <div class="wallet-card__info">
               <span class="coin-avatar coin-avatar--${coin.key}" aria-hidden="true">
                 <img src="${coin.icon}" alt="" loading="lazy" />

@@ -15,10 +15,13 @@ describe('src/features/character/spellbookApi.js', () => {
     const exports = extractNamedExports(source);
     expect(exports).toEqual([
       'searchSharedSpells',
+      'fetchSharedSpellSources',
       'createSharedSpell',
+      'createSharedSpells',
       'updateSharedSpell',
       'fetchCharacterSpells',
       'assignSharedSpellToCharacter',
+      'updateCharacterSpellAssignment',
       'removeCharacterSpell',
       'removeSharedSpellAndAssignments'
     ]);

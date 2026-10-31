@@ -128,6 +128,16 @@ export const conditionList = [
   }
 ];
 
+export const weaknessLevelList = [
+  { value: 0, label: 'Nessun indebolimento', effect: 'Il personaggio non subisce penalità da indebolimento.' },
+  { value: 1, label: 'Livello 1', effect: 'Svantaggio sulle prove di caratteristica.' },
+  { value: 2, label: 'Livello 2', effect: 'Velocità dimezzata.' },
+  { value: 3, label: 'Livello 3', effect: 'Svantaggio sui tiri per colpire e sui tiri salvezza.' },
+  { value: 4, label: 'Livello 4', effect: 'Punti ferita massimi dimezzati.' },
+  { value: 5, label: 'Livello 5', effect: 'Velocità ridotta a 0.' },
+  { value: 6, label: 'Livello 6', effect: 'Morte.' }
+];
+
 export const equipmentProficiencyList = [
   { key: 'weapon_simple', label: 'Armi semplici' },
   { key: 'weapon_martial', label: 'Armi da guerra' },

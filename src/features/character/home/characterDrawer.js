@@ -10,14 +10,14 @@ import {
 } from '../../../ui/components.js';
 import {
   abilityShortLabel,
-  conditionList,
   damageTypeList,
   equipmentProficiencyList,
   savingThrowList,
   skillList
 } from './constants.js';
 import { weaponMasteries2024 } from '../../rules/weaponMasteries.js';
-import { calculateUnarmedAttackBonuses, formatSigned, getAbilityModifier, getEquipSlots, getUnarmedAttackAbility, normalizeNumber } from './utils.js';
+import { getAbilityModifier, normalizeNumber } from './utils.js';
+import { getCharacterRulesVersion, inferCharacterCasterClasses, SPELLCASTER_CLASS_OPTIONS } from '../spellPreparation.js';
 
 
 function attachDrawerNumberStepper(input, {
@@ -78,107 +78,6 @@ function attachDrawerNumberStepper(input, {
   inc.addEventListener('click', () => onClickStep(1));
 }
 
-const rollAdjustmentSourceOptions = [
-  { value: '', label: 'Seleziona fonte' },
-  { value: 'situational', label: 'Situazionale' },
-  { value: 'effect', label: 'Effetto temporaneo' },
-  { value: 'condition', label: 'Condizione' },
-  { value: 'armor', label: 'Armatura' },
-  { value: 'racial', label: 'Abilità razziale' },
-  { value: 'class', label: 'Privilegio di classe' },
-  { value: 'spell', label: 'Incantesimo' },
-  { value: 'item', label: 'Oggetto magico/equipaggiamento' },
-  { value: 'other', label: 'Altro' }
-];
-
-const conditionLabels = conditionList.reduce((acc, condition) => {
-  acc[condition.key] = condition.label;
-  return acc;
-}, {});
-
-function escapeAttribute(value) {
-  return (value || '').toString()
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function getCharacterConditions(data) {
-  if (Array.isArray(data?.conditions)) return data.conditions;
-  if (data?.condition) return [data.condition];
-  return [];
-}
-
-function formatConditionNames(keys) {
-  return keys.map((key) => conditionLabels[key] || key).filter(Boolean).join(', ');
-}
-
-function hasEquippedHeavyArmor(items = []) {
-  return (items || []).some((item) => item.category === 'armor'
-    && item.armor_type === 'heavy'
-    && item.equipable
-    && getEquipSlots(item).length);
-}
-
-function getDrawerAttackRollEntries(characterData, items = []) {
-  const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
-  const weaponEntries = equippedWeapons.map((weapon) => ({
-    key: `weapon:${weapon.id ?? weapon.name}`,
-    label: weapon.name || 'Arma'
-  }));
-  const unarmedAttacks = Array.isArray(characterData?.unarmed_attacks) ? characterData.unarmed_attacks : [];
-  const unarmedEntries = unarmedAttacks.map((attack, index) => ({
-    key: `unarmed:${index}`,
-    label: attack.name || `Colpo senz’arma ${index + 1}`
-  }));
-  const spells = Array.isArray(characterData?.spells) ? characterData.spells : [];
-  const spellEntries = spells
-    .filter((spell) => {
-      const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
-      return isCantrip && spell.attack_roll && spell.damage_die;
-    })
-    .map((spell) => ({
-      key: `spell:${spell.id}`,
-      label: spell.name || 'Incantesimo'
-    }));
-  const spellcasting = characterData?.spellcasting || {};
-  const hasSpellAttack = Boolean(spellcasting.ability && normalizeNumber(characterData?.proficiency_bonus) !== null);
-  const genericSpellEntry = hasSpellAttack ? [{ key: 'spell-attack', label: 'Incantesimi' }] : [];
-  return [...weaponEntries, ...unarmedEntries, ...spellEntries, ...genericSpellEntry];
-}
-
-function getAutomaticDrawerAttackEffects(characterData) {
-  const conditions = getCharacterConditions(characterData);
-  const advantage = conditions.filter((key) => ['invisibile'].includes(key));
-  const disadvantage = conditions.filter((key) => ['accecato', 'avvelenato', 'intralciato', 'prono', 'spaventato'].includes(key));
-  const effects = [];
-  if (advantage.length) effects.push(`Vantaggio: condizioni ${formatConditionNames(advantage)}.`);
-  if (disadvantage.length) effects.push(`Svantaggio: condizioni ${formatConditionNames(disadvantage)}.`);
-  return effects;
-}
-
-function getAutomaticDrawerRollEffects(characterData, items, scope, entry) {
-  const conditions = getCharacterConditions(characterData);
-  const effects = [];
-  if (scope === 'attack_rolls') {
-    effects.push(...getAutomaticDrawerAttackEffects(characterData));
-  }
-  if (scope === 'skills') {
-    const poisoned = conditions.includes('avvelenato') ? ['avvelenato'] : [];
-    if (poisoned.length) {
-      effects.push(`Svantaggio: condizioni ${formatConditionNames(poisoned)}.`);
-    }
-    if (entry.key === 'stealth' && hasEquippedHeavyArmor(items)) {
-      effects.push('Svantaggio automatico: armatura pesante su Furtività.');
-    }
-  }
-  if (scope === 'saving_throws' && entry.key === 'dex' && conditions.includes('intralciato')) {
-    effects.push('Svantaggio: condizioni Intralciato.');
-  }
-  return effects;
-}
-
 export async function openCharacterDrawer(user, onSave, character = null) {
   if (!user) return;
   const characterData = character?.data || {};
@@ -187,34 +86,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const abilities = characterData.abilities || {};
   const skillStates = characterData.skills || {};
   const skillMasteryStates = characterData.skill_mastery || {};
-  const specialSkillRolls = Array.isArray(characterData.special_skill_rolls) ? characterData.special_skill_rolls : [];
-  const buildUnarmedAttackDraft = (attack = {}) => {
-    const ability = getUnarmedAttackAbility(attack);
-    const abilityMod = getAbilityModifier(characterData.abilities?.[ability]) ?? 0;
-    const proficiencyBonus = normalizeNumber(characterData.proficiency_bonus) ?? 0;
-    const hasCalculatedFields = attack?.ability || attack?.attack_bonus !== undefined || attack?.damage_bonus !== undefined;
-    return {
-      name: attack?.name || '',
-      ability,
-      attack_bonus: hasCalculatedFields
-        ? (Number(attack?.attack_bonus) || 0)
-        : ((Number(attack?.to_hit) || 0) - abilityMod - proficiencyBonus),
-      damage: attack?.damage || '',
-      damage_bonus: hasCalculatedFields
-        ? (Number(attack?.damage_bonus) || 0)
-        : ((Number(attack?.damage_modifier) || 0) - abilityMod)
-    };
-  };
-  let draftUnarmedAttacks = (Array.isArray(characterData.unarmed_attacks) ? characterData.unarmed_attacks : []).map(buildUnarmedAttackDraft);
   const savingStates = characterData.saving_throws || {};
   const proficiencies = characterData.proficiencies || {};
   const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
   const hasWeaponMasteryFeature = Boolean(characterData.weapon_mastery_enabled) || selectedWeaponMasteries.length > 0;
   const damageDefenses = characterData.damage_defenses || {};
-  const rollAdjustments = characterData.roll_adjustments || {};
-  const drawerItems = getState().cache.items || [];
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
+  const characterRulesVersion = getCharacterRulesVersion(character || characterData);
+  const selectedCasterClasses = new Set(inferCharacterCasterClasses(characterData));
   const spellSlots = spellcasting.slots || {};
   const spellSlotsMax = spellcasting.slots_max || {};
   const enhanceNumericFields = (root) => {
@@ -228,9 +108,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   };
   const form = document.createElement('div');
   form.className = 'character-edit-form character-edit-form--guided';
-  const buildEditGroup = (title, sections, { icon = '', description = '' } = {}) => {
+  const buildEditGroup = (title, sections, { icon = '', description = '', layoutClass = '' } = {}) => {
     const group = document.createElement('section');
     group.className = 'character-edit-group';
+    if (layoutClass) group.classList.add(layoutClass);
 
     const header = document.createElement('header');
     header.className = 'character-edit-group__header';
@@ -248,6 +129,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
 
     const content = document.createElement('div');
     content.className = 'character-edit-group__content';
+    if (layoutClass) content.classList.add(`${layoutClass}__content`);
     sections.forEach((section) => {
       section.classList.add('character-edit-subsection');
       content.appendChild(section);
@@ -257,7 +139,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   };
 
   const mainSection = document.createElement('div');
-  mainSection.className = 'character-edit-section';
+  mainSection.className = 'character-edit-section character-edit-section--identity';
  
   const identityRow = document.createElement('div');
   identityRow.className = 'character-edit-grid character-edit-grid--identity';
@@ -272,6 +154,16 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   mainGrid.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: characterData.level ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' }));
   mainGrid.appendChild(buildInput({ label: 'Allineamento', name: 'alignment', value: characterData.alignment ?? '' }));
+  const characterSystemField = document.createElement('label');
+  characterSystemField.className = 'field';
+  characterSystemField.innerHTML = '<span>Regole del personaggio</span>';
+  const characterSystemSelect = buildSelect([
+    { value: '2014', label: 'D&D 2014' },
+    { value: '2024', label: 'D&D 2024' }
+  ], characterRulesVersion);
+  characterSystemSelect.name = 'spell_rules_version';
+  characterSystemField.appendChild(characterSystemSelect);
+  mainGrid.appendChild(characterSystemField);
   mainSection.appendChild(mainGrid);
   mainSection.appendChild(buildInput({
     label: 'Foto (URL)',
@@ -280,7 +172,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     value: characterData.avatar_url ?? ''
   }));
   const backgroundSection = document.createElement('div');
-  backgroundSection.className = 'character-edit-section';
+  backgroundSection.className = 'character-edit-section character-edit-section--background';
   const backgroundGrid = document.createElement('div');
   backgroundGrid.className = 'character-edit-grid';
   backgroundGrid.appendChild(buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' }));
@@ -293,34 +185,27 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }));
 
   const statsSection = document.createElement('div');
-  statsSection.className = 'character-edit-section';
-
-  const hpRow = document.createElement('div');
-  hpRow.className = 'life-armor-row life-armor-row--hp';
-  hpRow.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
-  hpRow.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
-  hpRow.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
-
-  const hitDiceRow = document.createElement('div');
-  hitDiceRow.className = 'life-armor-row life-armor-row--hit-dice';
-  hitDiceRow.appendChild(buildInput({ label: 'Dado vita (es. d8)', name: 'hit_dice_die', value: hitDice.die ?? '' }));
-  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
-  hitDiceRow.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
-
-  const armorRow = document.createElement('div');
-  armorRow.className = 'life-armor-row life-armor-row--armor';
-  armorRow.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
-  armorRow.appendChild(buildInput({
+  statsSection.className = 'character-edit-section character-edit-section--vitals compact-character-section';
+  statsSection.innerHTML = '<h4>Vita e difesa</h4>';
+  const vitalGrid = document.createElement('div');
+  vitalGrid.className = 'character-vitals-grid';
+  vitalGrid.appendChild(buildInput({ label: 'HP attuali', name: 'hp_current', type: 'number', value: hp.current ?? 0 }));
+  vitalGrid.appendChild(buildInput({ label: 'HP massimi', name: 'hp_max', type: 'number', value: hp.max ?? 0 }));
+  vitalGrid.appendChild(buildInput({ label: 'HP temporanei', name: 'hp_temp', type: 'number', value: hp.temp ?? 0 }));
+  vitalGrid.appendChild(buildInput({ label: 'Classe Armatura', name: 'ac', type: 'number', value: characterData.ac ?? 0 }));
+  vitalGrid.appendChild(buildInput({ label: 'Dado vita', name: 'hit_dice_die', placeholder: 'Es. d8', value: hitDice.die ?? '' }));
+  vitalGrid.appendChild(buildInput({ label: 'Dadi vita totali', name: 'hit_dice_max', type: 'number', value: hitDice.max ?? 0 }));
+  vitalGrid.appendChild(buildInput({ label: 'Dadi vita usati', name: 'hit_dice_used', type: 'number', value: hitDice.used ?? 0 }));
+  vitalGrid.appendChild(buildInput({
     label: 'Modificatore CA totale',
     name: 'ac_bonus',
     type: 'number',
     value: characterData.ac_bonus ?? 0
   }));
-
-  statsSection.append(hpRow, hitDiceRow, armorRow);
+  statsSection.appendChild(vitalGrid);
 
   const acSection = document.createElement('div');
-  acSection.className = 'character-edit-section compact-ac-options';
+  acSection.className = 'character-edit-section character-edit-section--armor-options compact-ac-options';
   acSection.innerHTML = `
     <div class="compact-ac-options__header">
       <h4>Opzioni CA base</h4>
@@ -342,7 +227,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     </div>
   `;
   const abilitySection = document.createElement('div');
-  abilitySection.className = 'character-edit-section compact-character-section';
+  abilitySection.className = 'character-edit-section character-edit-section--abilities compact-character-section';
   abilitySection.innerHTML = '<h4>Caratteristiche</h4>';
   const abilityGrid = document.createElement('div');
   abilityGrid.className = 'compact-ability-grid';
@@ -378,7 +263,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   abilitySection.appendChild(abilityMetaGrid);
 
   const skillSection = document.createElement('div');
-  skillSection.className = 'character-edit-section compact-character-section';
+  skillSection.className = 'character-edit-section character-edit-section--skills compact-character-section';
   skillSection.innerHTML = `
     <h4>Competenze e maestria</h4>
     <div class="compact-competency-grid">
@@ -406,178 +291,17 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }).join('')}
     </div>
   `;
-
-  const createSpecialSkillId = () => {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    return `special-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-  };
-  const normalizedSpecialSkillRolls = specialSkillRolls.map((entry, index) => ({
-    id: String(entry?.id ?? `special-${index + 1}`),
-    name: entry?.name ?? '',
-    ability: abilityShortLabel[entry?.ability] ? entry.ability : 'str',
-    proficient: Boolean(entry?.proficient),
-    mastery: Boolean(entry?.mastery),
-    bonus: Number(entry?.bonus ?? entry?.extra_bonus ?? entry?.modifier) || 0
-  }));
-  const hasInitiativeSpecialSkill = normalizedSpecialSkillRolls.some((entry) => {
-    const id = String(entry.id ?? '').toLowerCase();
-    const name = String(entry.name ?? '').trim().toLowerCase();
-    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  const skillGeneralBonusField = buildInput({
+    label: 'Bonus generale tiri abilità',
+    name: 'skill_check_bonus',
+    type: 'number',
+    value: characterData.skill_check_bonus ?? 0
   });
-  let draftSpecialSkills = hasInitiativeSpecialSkill
-    ? normalizedSpecialSkillRolls
-    : [{
-      id: 'default_initiative',
-      name: 'Iniziativa',
-      ability: 'dex',
-      proficient: false,
-      mastery: false,
-      bonus: 0
-    }, ...normalizedSpecialSkillRolls];
-
-  const specialSkillAbilityOptions = [
-    { value: 'str', label: 'Forza (FOR)' },
-    { value: 'dex', label: 'Destrezza (DES)' },
-    { value: 'con', label: 'Costituzione (COS)' },
-    { value: 'int', label: 'Intelligenza (INT)' },
-    { value: 'wis', label: 'Saggezza (SAG)' },
-    { value: 'cha', label: 'Carisma (CAR)' }
-  ];
-
-  const specialSkillSection = document.createElement('div');
-  specialSkillSection.className = 'character-edit-section compact-character-section';
-  specialSkillSection.innerHTML = '<h4>Tiri abilità speciali</h4><p class="muted compact-settings-help">Crea tiri personalizzati (es. Forgiatura = FOR + competenza + 8).</p>';
-  const specialSkillList = document.createElement('div');
-  specialSkillList.className = 'compact-special-skill-list';
-  const addSpecialSkillButton = document.createElement('button');
-  addSpecialSkillButton.type = 'button';
-  addSpecialSkillButton.className = 'ghost-button ghost-button--compact';
-  addSpecialSkillButton.textContent = '+ Aggiungi tiro speciale';
-
-  const readSpecialSkillRows = () => {
-    draftSpecialSkills = draftSpecialSkills.map((entry, index) => {
-      const row = specialSkillList.querySelector(`[data-special-skill-row="${entry.id}"]`);
-      if (!row) return entry;
-      const mastery = Boolean(row.querySelector(`input[name="special_skill_mastery_${index}"]`)?.checked);
-      const proficient = Boolean(row.querySelector(`input[name="special_skill_proficient_${index}"]`)?.checked) || mastery;
-      const ability = row.querySelector(`select[name="special_skill_ability_${index}"]`)?.value || entry.ability || 'str';
-      return {
-        ...entry,
-        name: row.querySelector(`input[name="special_skill_name_${index}"]`)?.value ?? entry.name,
-        ability: abilityShortLabel[ability] ? ability : 'str',
-        proficient,
-        mastery: mastery && proficient,
-        bonus: Number(row.querySelector(`input[name="special_skill_bonus_${index}"]`)?.value || 0) || 0
-      };
-    });
-  };
-
-  const renderSpecialSkillRows = () => {
-    specialSkillList.innerHTML = '';
-    if (!draftSpecialSkills.length) {
-      const emptyState = document.createElement('p');
-      emptyState.className = 'muted';
-      emptyState.textContent = 'Nessun tiro speciale configurato.';
-      specialSkillList.appendChild(emptyState);
-      return;
-    }
-    draftSpecialSkills.forEach((entry, index) => {
-      const row = document.createElement('div');
-      row.className = 'compact-special-skill-row';
-      row.dataset.specialSkillRow = entry.id;
-
-      const grid = document.createElement('div');
-      grid.className = 'compact-special-skill-grid';
-      grid.appendChild(buildInput({
-        label: 'Nome',
-        name: `special_skill_name_${index}`,
-        value: entry.name,
-        placeholder: 'Es. Forgiatura'
-      }));
-
-      const abilityField = document.createElement('label');
-      abilityField.className = 'field';
-      const abilityLabel = document.createElement('span');
-      abilityLabel.textContent = 'Caratteristica';
-      const abilitySelect = buildSelect(specialSkillAbilityOptions, entry.ability);
-      abilitySelect.name = `special_skill_ability_${index}`;
-      abilityField.append(abilityLabel, abilitySelect);
-      grid.appendChild(abilityField);
-
-      grid.appendChild(buildInput({
-        label: 'Bonus extra',
-        name: `special_skill_bonus_${index}`,
-        type: 'number',
-        value: entry.bonus
-      }));
-
-      const toggleGroup = document.createElement('div');
-      toggleGroup.className = 'character-toggle-group';
-      const proficiencyLabel = document.createElement('label');
-      proficiencyLabel.className = 'toggle-pill';
-      const proficiencyInput = document.createElement('input');
-      proficiencyInput.type = 'checkbox';
-      proficiencyInput.name = `special_skill_proficient_${index}`;
-      proficiencyInput.checked = Boolean(entry.proficient);
-      const proficiencyText = document.createElement('span');
-      proficiencyText.textContent = 'Competenza';
-      proficiencyLabel.append(proficiencyInput, proficiencyText);
-
-      const masteryLabel = document.createElement('label');
-      masteryLabel.className = 'toggle-pill';
-      const masteryInput = document.createElement('input');
-      masteryInput.type = 'checkbox';
-      masteryInput.name = `special_skill_mastery_${index}`;
-      masteryInput.checked = Boolean(entry.mastery);
-      const masteryText = document.createElement('span');
-      masteryText.textContent = 'Maestria';
-      masteryLabel.append(masteryInput, masteryText);
-
-      const removeButton = document.createElement('button');
-      removeButton.type = 'button';
-      removeButton.className = 'ghost-button ghost-button--compact';
-      removeButton.textContent = 'Rimuovi';
-      removeButton.dataset.removeSpecialSkill = entry.id;
-
-      toggleGroup.append(proficiencyLabel, masteryLabel, removeButton);
-      row.append(grid, toggleGroup);
-
-      masteryInput.addEventListener('change', () => {
-        if (masteryInput.checked) proficiencyInput.checked = true;
-      });
-      row.querySelectorAll('input[type="number"]').forEach((input) => {
-        attachDrawerNumberStepper(input, {
-          decrementLabel: 'Riduci bonus extra',
-          incrementLabel: 'Aumenta bonus extra'
-        });
-      });
-      removeButton.addEventListener('click', () => {
-        readSpecialSkillRows();
-        draftSpecialSkills = draftSpecialSkills.filter((item) => item.id !== entry.id);
-        renderSpecialSkillRows();
-      });
-      specialSkillList.appendChild(row);
-    });
-  };
-  addSpecialSkillButton.addEventListener('click', () => {
-    readSpecialSkillRows();
-    draftSpecialSkills.push({
-      id: createSpecialSkillId(),
-      name: '',
-      ability: 'str',
-      proficient: false,
-      mastery: false,
-      bonus: 0
-    });
-    renderSpecialSkillRows();
-  });
-  specialSkillSection.append(specialSkillList, addSpecialSkillButton);
-  renderSpecialSkillRows();
+  skillGeneralBonusField.classList.add('character-general-modifier-field');
+  skillSection.querySelector('h4')?.after(skillGeneralBonusField);
 
   const savingSection = document.createElement('div');
-  savingSection.className = 'character-edit-section compact-character-section';
+  savingSection.className = 'character-edit-section character-edit-section--saving-throws compact-character-section';
   savingSection.innerHTML = `
     <h4>Tiri salvezza</h4>
     <div class="compact-pill-grid">
@@ -592,9 +316,17 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }).join('')}
     </div>
   `;
+  const savingThrowGeneralBonusField = buildInput({
+    label: 'Bonus generale tiri salvezza',
+    name: 'saving_throw_bonus',
+    type: 'number',
+    value: characterData.saving_throw_bonus ?? 0
+  });
+  savingThrowGeneralBonusField.classList.add('character-general-modifier-field');
+  savingSection.querySelector('h4')?.after(savingThrowGeneralBonusField);
 
   const proficiencySection = document.createElement('div');
-  proficiencySection.className = 'character-edit-section compact-character-section';
+  proficiencySection.className = 'character-edit-section character-edit-section--equipment-proficiencies compact-character-section';
   proficiencySection.innerHTML = `
     <h4>Competenze equipaggiamento</h4>
     <div class="compact-pill-grid">
@@ -611,160 +343,36 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   `;
 
   const combatSection = document.createElement('div');
-  combatSection.className = 'character-edit-section';
-  combatSection.innerHTML = '<h4>Combattimento e magia</h4>';
-  const combatBonusRow = document.createElement('div');
-  combatBonusRow.className = 'character-edit-grid';
-  combatBonusRow.appendChild(buildInput({
+  combatSection.className = 'character-edit-section character-edit-section--combat compact-character-section';
+  combatSection.innerHTML = '<h4>Combattimento</h4>';
+  const combatValuesGrid = document.createElement('div');
+  combatValuesGrid.className = 'character-edit-grid character-combat-values-grid';
+  combatValuesGrid.appendChild(buildInput({
     label: 'Bonus danni extra (mischia)',
     name: 'damage_bonus_melee',
     type: 'number',
     value: characterData.damage_bonus_melee ?? characterData.damage_bonus ?? 0
   }));
-  combatBonusRow.appendChild(buildInput({
+  combatValuesGrid.appendChild(buildInput({
     label: 'Bonus danni extra (distanza)',
     name: 'damage_bonus_ranged',
     type: 'number',
     value: characterData.damage_bonus_ranged ?? characterData.damage_bonus ?? 0
   }));
-  combatSection.appendChild(combatBonusRow);
-  const combatOtherRow = document.createElement('div');
-  combatOtherRow.className = 'character-edit-grid';
-  combatOtherRow.appendChild(buildInput({
+  combatValuesGrid.appendChild(buildInput({
     label: 'Attacchi extra',
     name: 'extra_attacks',
     type: 'number',
     value: characterData.extra_attacks ?? 0
   }));
-  combatOtherRow.appendChild(buildInput({
+  combatValuesGrid.appendChild(buildInput({
     label: 'Dadi attacco furtivo',
     name: 'sneak_attack_dice',
     placeholder: 'Es. 2d6',
     value: characterData.sneak_attack_dice ?? ''
   }));
-  combatSection.appendChild(combatOtherRow);
+  combatSection.appendChild(combatValuesGrid);
 
-  const unarmedAttacksSection = document.createElement('div');
-  unarmedAttacksSection.className = 'character-edit-section compact-character-section familiar-edit-attacks-section';
-  unarmedAttacksSection.innerHTML = `
-    <div class="familiar-edit-section-header">
-      <h4>Colpi senz’arma</h4>
-      <p class="muted">Scegli FOR o DES: tiro per colpire e danni vengono calcolati automaticamente con caratteristica, competenza e bonus extra.</p>
-    </div>
-  `;
-  const unarmedAttackCountInput = document.createElement('input');
-  unarmedAttackCountInput.type = 'hidden';
-  unarmedAttackCountInput.name = 'unarmed_attack_count';
-  const unarmedAttackList = document.createElement('div');
-  unarmedAttackList.className = 'familiar-edit-attack-list';
-  const addUnarmedAttackButton = document.createElement('button');
-  addUnarmedAttackButton.type = 'button';
-  addUnarmedAttackButton.className = 'ghost-button ghost-button--compact familiar-edit-add-attack';
-  addUnarmedAttackButton.textContent = '+ Aggiungi colpo senz’arma';
-
-  const readUnarmedAttackRows = () => {
-    draftUnarmedAttacks = Array.from(unarmedAttackList.querySelectorAll('[data-unarmed-attack-row]')).map((row) => ({
-      name: row.querySelector('[name^="unarmed_attack_name_"]')?.value || '',
-      ability: row.querySelector('[name^="unarmed_attack_ability_"]')?.value === 'dex' ? 'dex' : 'str',
-      attack_bonus: Number(row.querySelector('[name^="unarmed_attack_bonus_"]')?.value) || 0,
-      damage: row.querySelector('[name^="unarmed_attack_damage_"]')?.value || '',
-      damage_bonus: Number(row.querySelector('[name^="unarmed_attack_damage_bonus_"]')?.value) || 0
-    }));
-  };
-
-  const renderUnarmedAttackRows = () => {
-    unarmedAttackList.innerHTML = '';
-    unarmedAttackCountInput.value = String(draftUnarmedAttacks.length);
-    if (!draftUnarmedAttacks.length) {
-      const empty = document.createElement('p');
-      empty.className = 'muted familiar-edit-empty-attacks';
-      empty.textContent = 'Nessun colpo senz’arma configurato.';
-      unarmedAttackList.appendChild(empty);
-      return;
-    }
-    draftUnarmedAttacks.forEach((attack, index) => {
-      const row = document.createElement('div');
-      row.className = 'compact-special-skill-row familiar-edit-attack-row';
-      row.dataset.unarmedAttackRow = String(index);
-      const grid = document.createElement('div');
-      grid.className = 'compact-special-skill-grid familiar-edit-attack-grid character-unarmed-attack-grid';
-      const nameField = buildInput({ label: 'Nome', name: `unarmed_attack_name_${index}`, value: attack.name, placeholder: 'Es. Pugno' });
-      nameField.classList.add('character-unarmed-attack-field--name');
-      grid.appendChild(nameField);
-      const abilityField = document.createElement('label');
-      abilityField.className = 'field character-unarmed-attack-field--ability';
-      abilityField.innerHTML = '<span>Caratt.</span>';
-      const abilitySelect = buildSelect([
-        { value: 'str', label: 'FOR' },
-        { value: 'dex', label: 'DES' }
-      ], attack.ability || 'str');
-      abilitySelect.name = `unarmed_attack_ability_${index}`;
-      abilityField.appendChild(abilitySelect);
-      grid.appendChild(abilityField);
-      const damageField = buildInput({ label: 'Dado danno', name: `unarmed_attack_damage_${index}`, value: attack.damage, placeholder: 'Es. 1d4' });
-      damageField.classList.add('character-unarmed-attack-field--damage');
-      grid.appendChild(damageField);
-      const attackBonusField = buildInput({ label: 'Bonus TC', name: `unarmed_attack_bonus_${index}`, type: 'number', value: attack.attack_bonus ?? 0 });
-      attackBonusField.classList.add('character-unarmed-attack-field--attack-bonus');
-      attackBonusField.querySelector('input').step = '1';
-      grid.appendChild(attackBonusField);
-      const damageBonusField = buildInput({ label: 'Bonus danni', name: `unarmed_attack_damage_bonus_${index}`, type: 'number', value: attack.damage_bonus ?? 0 });
-      damageBonusField.classList.add('character-unarmed-attack-field--damage-bonus');
-      damageBonusField.querySelector('input').step = '1';
-      grid.appendChild(damageBonusField);
-      const preview = document.createElement('div');
-      preview.className = 'unarmed-attack-preview';
-      preview.dataset.unarmedAttackPreview = String(index);
-      const actions = document.createElement('div');
-      actions.className = 'character-toggle-group familiar-edit-attack-actions';
-      const removeButton = document.createElement('button');
-      removeButton.type = 'button';
-      removeButton.className = 'ghost-button ghost-button--compact';
-      removeButton.textContent = 'Rimuovi';
-      removeButton.addEventListener('click', () => {
-        readUnarmedAttackRows();
-        draftUnarmedAttacks.splice(index, 1);
-        renderUnarmedAttackRows();
-        enhanceNumericFields(unarmedAttackList);
-        updateUnarmedAttackPreviews();
-      });
-      actions.appendChild(removeButton);
-      row.append(grid, preview, actions);
-      unarmedAttackList.appendChild(row);
-    });
-  };
-
-  addUnarmedAttackButton.addEventListener('click', () => {
-    readUnarmedAttackRows();
-    draftUnarmedAttacks.push({ name: '', ability: 'str', attack_bonus: 0, damage: '', damage_bonus: 0 });
-    renderUnarmedAttackRows();
-    enhanceNumericFields(unarmedAttackList);
-    updateUnarmedAttackPreviews();
-  });
-  const updateUnarmedAttackPreviews = () => {
-    const abilityScores = {
-      str: normalizeNumber(abilitySection.querySelector('input[name="ability_str"]')?.value) ?? normalizeNumber(characterData.abilities?.str) ?? 10,
-      dex: normalizeNumber(abilitySection.querySelector('input[name="ability_dex"]')?.value) ?? normalizeNumber(characterData.abilities?.dex) ?? 10
-    };
-    const proficiencyBonus = normalizeNumber(abilitySection.querySelector('input[name="proficiency_bonus"]')?.value) ?? normalizeNumber(characterData.proficiency_bonus) ?? 0;
-    unarmedAttackList.querySelectorAll('[data-unarmed-attack-row]').forEach((row) => {
-      const index = row.dataset.unarmedAttackRow;
-      const ability = row.querySelector(`[name="unarmed_attack_ability_${index}"]`)?.value === 'dex' ? 'dex' : 'str';
-      const abilityMod = getAbilityModifier(abilityScores[ability]) ?? 0;
-      const attackBonus = Number(row.querySelector(`[name="unarmed_attack_bonus_${index}"]`)?.value) || 0;
-      const damageBonus = Number(row.querySelector(`[name="unarmed_attack_damage_bonus_${index}"]`)?.value) || 0;
-      const attackTotal = abilityMod + proficiencyBonus + attackBonus;
-      const damageTotal = abilityMod + damageBonus;
-      const preview = row.querySelector('[data-unarmed-attack-preview]');
-      if (preview) preview.textContent = `Totale: TC ${formatSigned(attackTotal)} · Danni ${formatSigned(damageTotal)}`;
-    });
-  };
-  renderUnarmedAttackRows();
-  updateUnarmedAttackPreviews();
-  unarmedAttackList.addEventListener('input', updateUnarmedAttackPreviews);
-  unarmedAttackList.addEventListener('change', updateUnarmedAttackPreviews);
-  unarmedAttacksSection.append(unarmedAttackCountInput, unarmedAttackList, addUnarmedAttackButton);
-  combatSection.appendChild(unarmedAttacksSection);
   const weaponMasteryFeatureField = document.createElement('div');
   weaponMasteryFeatureField.className = 'modal-toggle-field';
   weaponMasteryFeatureField.innerHTML = `
@@ -804,12 +412,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   if (wildShapeInput) {
     wildShapeInput.checked = Boolean(characterData.wild_shape_enabled);
   }
-  combatSection.appendChild(wildShapeField);
-  combatSection.appendChild(weaponMasteryFeatureField);
-  combatSection.appendChild(spellcasterField);
+  const combatFeatureGrid = document.createElement('div');
+  combatFeatureGrid.className = 'character-combat-feature-grid';
+  combatFeatureGrid.append(wildShapeField, weaponMasteryFeatureField, spellcasterField);
+  combatSection.appendChild(combatFeatureGrid);
   const spellcastingSection = document.createElement('div');
-  spellcastingSection.className = 'character-edit-section spellcasting-section';
-  spellcastingSection.innerHTML = '<h4>Incantesimi</h4>';
+  spellcastingSection.className = 'character-edit-section character-edit-section--spellcasting spellcasting-section compact-character-section';
+  spellcastingSection.innerHTML = '<h4>Magia</h4>';
   const spellcastingGrid = document.createElement('div');
   spellcastingGrid.className = 'character-edit-grid';
   const spellcastingAbilityField = document.createElement('label');
@@ -852,6 +461,25 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   }
   spellcastingGrid.appendChild(spellAttackField);
   spellcastingSection.appendChild(spellcastingGrid);
+  const spellListConfig = document.createElement('section');
+  spellListConfig.className = 'spell-list-config';
+  spellListConfig.innerHTML = `
+    <div class="spell-list-config__heading">
+      <div>
+        <strong>Liste disponibili per la preparazione</strong>
+        <small>Puoi combinare più classi per personaggi multiclasse.</small>
+      </div>
+    </div>
+    <div class="spell-list-config__classes" role="group" aria-label="Liste incantesimi disponibili">
+      ${SPELLCASTER_CLASS_OPTIONS.map((casterClass) => `
+        <label class="toggle-pill">
+          <input type="checkbox" name="spell_caster_classes" value="${casterClass}" ${selectedCasterClasses.has(casterClass) ? 'checked' : ''} />
+          <span>${casterClass.charAt(0).toUpperCase()}${casterClass.slice(1)}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  spellcastingSection.appendChild(spellListConfig);
   const slotGrid = document.createElement('div');
   slotGrid.className = 'spell-slot-edit-grid';
   Array.from({ length: 9 }, (_, index) => index + 1).forEach((level) => {
@@ -861,13 +489,13 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     const slotRow = document.createElement('div');
     slotRow.className = 'spell-slot-edit-row';
     slotRow.appendChild(buildInput({
-      label: `Slot ${level}° totali`,
+      label: `${level}° totali`,
       name: `spell_slot_max_${level}`,
       type: 'number',
       value: totalSlots
     }));
     slotRow.appendChild(buildInput({
-      label: 'Consumati',
+      label: 'Usati',
       name: `spell_slot_used_${level}`,
       type: 'number',
       value: usedSlots
@@ -884,7 +512,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ], spellcasting.recharge ?? 'long_rest');
   slotRechargeSelect.name = 'spell_slot_recharge';
   slotRechargeField.appendChild(slotRechargeSelect);
-  spellcastingSection.appendChild(slotRechargeField);
   const canPrepareField = document.createElement('div');
   canPrepareField.className = 'modal-toggle-field';
   canPrepareField.innerHTML = `
@@ -898,8 +525,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   if (canPrepareInput) {
     canPrepareInput.checked = Boolean(spellcasting.can_prepare);
   }
-  spellcastingSection.appendChild(canPrepareField);
-  combatSection.appendChild(spellcastingSection);
+  const spellcastingOptions = document.createElement('div');
+  spellcastingOptions.className = 'spellcasting-options-grid';
+  spellcastingOptions.append(slotRechargeField, canPrepareField);
+  spellcastingSection.appendChild(spellcastingOptions);
   const abilityInputs = {
     str: abilitySection.querySelector('input[name="ability_str"]'),
     dex: abilitySection.querySelector('input[name="ability_dex"]'),
@@ -925,7 +554,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   };
   const toggleSpellcastingSection = () => {
     if (!spellcasterInput) return;
-    spellcastingSection.style.display = spellcasterInput.checked ? '' : 'none';
+    const enabled = spellcasterInput.checked;
+    spellcastingSection.hidden = !enabled;
+    spellcastingSection.setAttribute('aria-hidden', String(!enabled));
+    combatSection.classList.toggle('is-combat-only', !enabled);
   };
   spellcasterInput?.addEventListener('change', toggleSpellcastingSection);
   spellcastingAbilitySelect.addEventListener('change', syncSpellcastingDerived);
@@ -934,135 +566,68 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   toggleSpellcastingSection();
   syncSpellcastingDerived();
 
-  const rollAdjustmentSection = document.createElement('div');
-  rollAdjustmentSection.className = 'character-edit-section compact-settings-form compact-settings-form--rolls';
-  const rollModeOptions = [
-    { value: '', label: 'Nessuno' },
-    { value: 'advantage', label: 'Vantaggio' },
-    { value: 'disadvantage', label: 'Svantaggio' }
-  ];
-  const getAutomaticDrawerRollMode = (effects) => {
-    const hasAdvantage = effects.some((effect) => effect.startsWith('Vantaggio'));
-    const hasDisadvantage = effects.some((effect) => effect.startsWith('Svantaggio'));
-    if (hasAdvantage && hasDisadvantage) return '';
-    if (hasAdvantage) return 'advantage';
-    if (hasDisadvantage) return 'disadvantage';
-    return '';
-  };
-  const getAutomaticDrawerSource = (effects) => {
-    if (effects.length !== 1) return '';
-    if (effects[0].toLowerCase().includes('armatura')) return 'armor';
-    if (effects[0].toLowerCase().includes('condizion')) return 'condition';
-    return '';
-  };
-  const renderRollAdjustmentRows = (scope, entries) => entries.map((entry) => {
-    const current = rollAdjustments?.[scope]?.[entry.key] || {};
-    const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
-    const selectedMode = current.mode || getAutomaticDrawerRollMode(automaticEffects);
-    const selectedSource = current.source || getAutomaticDrawerSource(automaticEffects);
-    return `
-      <div class="compact-setting-row compact-setting-row--roll">
-        <label class="field compact-setting-field">
-          <span>${entry.label}</span>
-          <select name="roll_${scope}_${entry.key}_mode">
-            ${rollModeOptions.map((option) => `<option value="${option.value}" ${option.value === selectedMode ? 'selected' : ''}>${option.label}</option>`).join('')}
-          </select>
-        </label>
-        <label class="field compact-setting-field">
-          <span>Fonte manuale</span>
-          <select name="roll_${scope}_${entry.key}_source">
-            ${rollAdjustmentSourceOptions.map((option) => `<option value="${option.value}" ${option.value === selectedSource ? 'selected' : ''}>${option.label}</option>`).join('')}
-          </select>
-        </label>
-        ${automaticEffects.length ? `<p class="muted compact-setting-note">Automatico: ${escapeAttribute(automaticEffects.join(' '))}</p>` : ''}
-      </div>
-    `;
-  }).join('');
-  rollAdjustmentSection.innerHTML = `
-    <h4>Vantaggi & Svantaggi</h4>
-    <p class="muted compact-settings-help">Registra solo override manuali; condizioni, armature ed effetti automatici vengono mostrati direttamente nelle righe.</p>
-    <div class="character-edit-subsection compact-settings-section">
-      <h5>Tiri per colpire</h5>
-      <div class="compact-setting-grid compact-setting-grid--roll">
-        ${renderRollAdjustmentRows('attack_rolls', getDrawerAttackRollEntries(characterData, drawerItems))}
-      </div>
-    </div>
-    <div class="character-edit-subsection compact-settings-section">
-      <h5>Tiri salvezza</h5>
-      <div class="compact-setting-grid compact-setting-grid--roll">
-        ${renderRollAdjustmentRows('saving_throws', savingThrowList)}
-      </div>
-    </div>
-    <div class="character-edit-subsection compact-settings-section">
-      <h5>Abilità</h5>
-      <div class="compact-setting-grid compact-setting-grid--roll">
-        ${renderRollAdjustmentRows('skills', skillList)}
-      </div>
-    </div>
-  `;
-
   const damageDefenseSection = document.createElement('div');
   damageDefenseSection.className = 'character-edit-section compact-settings-form compact-settings-form--defenses';
-  const groupedDamageTypes = damageTypeList.reduce((groups, type) => {
-    const group = type.group || 'Altro';
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(type);
-    return groups;
-  }, {});
   damageDefenseSection.innerHTML = `
-    <h4>Resistenze & Immunità</h4>
-    <p class="muted compact-settings-help">Seleziona rapidamente resistenza o immunità. “Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
-    ${Object.entries(groupedDamageTypes).map(([group, types]) => `
-      <div class="character-edit-subsection compact-settings-section">
-        <h5>${group}</h5>
-        <div class="compact-setting-grid compact-setting-grid--defense">
-          ${types.map((type) => `
-            <div class="compact-setting-row compact-setting-row--defense">
-              <strong>${type.label}</strong>
-              <div class="character-toggle-group">
-                <label class="toggle-pill">
-                  <input type="checkbox" name="damage_resistance_${type.key}" ${(Array.isArray(damageDefenses.resistances) && damageDefenses.resistances.includes(type.key)) ? 'checked' : ''} />
-                  <span>Resistenza</span>
-                </label>
-                <label class="toggle-pill">
-                  <input type="checkbox" name="damage_immunity_${type.key}" ${(Array.isArray(damageDefenses.immunities) && damageDefenses.immunities.includes(type.key)) ? 'checked' : ''} />
-                  <span>Immunità</span>
-                </label>
-              </div>
-            </div>
-          `).join('')}
-        </div>
+    <div class="defense-editor-heading">
+      <div>
+        <h4>Resistenze & Immunità</h4>
+        <p class="muted compact-settings-help">“Tutti i danni” copre ogni tipo nella modale Subisci danno.</p>
       </div>
-    `).join('')}
+    </div>
+    <div class="defense-type-grid">
+      ${damageTypeList.map((type) => `
+        <div class="defense-type-card">
+          <span class="defense-type-card__name">
+            <small>${type.group || 'Altro'}</small>
+            <strong>${type.label}</strong>
+          </span>
+          <label class="defense-choice defense-choice--resistance">
+            <input type="checkbox" name="damage_resistance_${type.key}" ${(Array.isArray(damageDefenses.resistances) && damageDefenses.resistances.includes(type.key)) ? 'checked' : ''} />
+            <span>Resistenza</span>
+          </label>
+          <label class="defense-choice defense-choice--immunity">
+            <input type="checkbox" name="damage_immunity_${type.key}" ${(Array.isArray(damageDefenses.immunities) && damageDefenses.immunities.includes(type.key)) ? 'checked' : ''} />
+            <span>Immunità</span>
+          </label>
+        </div>
+      `).join('')}
+    </div>
   `;
 
   const proficiencyNotesSection = document.createElement('div');
-  proficiencyNotesSection.className = 'character-edit-section';
-  proficiencyNotesSection.appendChild(buildTextarea({
+  proficiencyNotesSection.className = 'character-edit-section character-edit-section--proficiency-notes compact-character-section';
+  proficiencyNotesSection.innerHTML = '<h4>Note e talenti</h4>';
+  const proficiencyNotesGrid = document.createElement('div');
+  proficiencyNotesGrid.className = 'character-edit-notes-grid';
+  proficiencyNotesGrid.appendChild(buildTextarea({
     label: 'Competenze (strumenti, lingue, ecc.)',
     name: 'proficiency_notes',
     placeholder: 'Es. Strumenti: kit da ladro, strumenti musicali; Lingue: comune, elfico',
     value: characterData.proficiency_notes ?? ''
   }));
-  const languageNotesSection = document.createElement('div');
-  languageNotesSection.className = 'character-edit-section';
-  languageNotesSection.appendChild(buildTextarea({
+  proficiencyNotesGrid.appendChild(buildTextarea({
     label: 'Lingue conosciute',
     name: 'language_proficiencies',
     placeholder: 'Es. comune, elfico, draconico',
     value: characterData.language_proficiencies ?? ''
   }));
-  const talentNotesSection = document.createElement('div');
-  talentNotesSection.className = 'character-edit-section';
-  talentNotesSection.appendChild(buildTextarea({
+  proficiencyNotesGrid.appendChild(buildTextarea({
     label: 'Talenti',
     name: 'talents',
     placeholder: 'Es. Maestro d\'armi, Tiratore scelto',
     value: characterData.talents ?? ''
   }));
+  proficiencyNotesGrid.appendChild(buildTextarea({
+    label: 'Stili di combattimento',
+    name: 'fighting_styles',
+    placeholder: 'Es. Duellare, Difesa, Tiro con l’arco',
+    value: characterData.fighting_styles ?? ''
+  }));
+  proficiencyNotesSection.appendChild(proficiencyNotesGrid);
 
   const weaponMasterySection = document.createElement('div');
-  weaponMasterySection.className = 'character-edit-section';
+  weaponMasterySection.className = 'character-edit-section character-edit-section--weapon-masteries compact-character-section';
   weaponMasterySection.innerHTML = `
     <h4>Maestrie delle armi (2024)</h4>
     <p class="muted compact-settings-help">Attiva il flag "Maestria armi" in questo step per selezionare le maestrie conosciute dal personaggio. Ogni arma dell'inventario può indicare quale maestria usa.</p>
@@ -1080,90 +645,58 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   `;
   const syncWeaponMasteryControls = () => {
     const enabled = Boolean(weaponMasteryFeatureInput?.checked);
+    weaponMasterySection.hidden = !enabled;
+    weaponMasterySection.setAttribute('aria-hidden', String(!enabled));
     weaponMasterySection.querySelectorAll('input[type="checkbox"]').forEach((input) => {
       input.disabled = !enabled;
     });
-    weaponMasterySection.classList.toggle('is-disabled', !enabled);
   };
   weaponMasteryFeatureInput?.addEventListener('change', syncWeaponMasteryControls);
   syncWeaponMasteryControls();
 
   const steps = [
     {
-      title: 'Identità',
+      title: 'Identità & Background',
       icon: '🪪',
-      description: 'Nome, classe, livello e ritratto: ciò che identifica subito il personaggio.',
-      content: buildEditGroup('Identità', [mainSection], {
+      description: 'Identità, origini e storia del personaggio.',
+      content: buildEditGroup('Identità & Background', [mainSection, backgroundSection], {
         icon: '🪪',
-        description: 'Compila solo i dati narrativi e di scheda che vuoi vedere sempre in evidenza.'
+        description: 'Tutte le informazioni narrative e identificative, organizzate in un’unica schermata.',
+        layoutClass: 'character-edit-group--identity-background'
       })
     },
     {
-      title: 'Background',
-      icon: '📜',
-      description: 'Origini, storia e tratti descrittivi.',
-      content: buildEditGroup('Background', [backgroundSection], {
-        icon: '📜',
-        description: 'Tieni qui storia, provenienza e dettagli di interpretazione senza mescolarli ai numeri.'
-      })
-    },
-    {
-      title: 'Caratteristiche e TS',
-      icon: '🎲',
-      description: 'Punteggi base, iniziativa, velocità e tiri salvezza.',
-      content: buildEditGroup('Caratteristiche e Tiri Salvezza', [abilitySection, savingSection], {
-        icon: '🎲',
-        description: 'Imposta i punteggi principali: da qui derivano bonus, CD e molte prove.'
-      })
-    },
-    {
-      title: 'Vita e CA',
+      title: 'Caratteristiche & Vita',
       icon: '❤️',
-      description: 'Punti ferita, dadi vita e classe armatura.',
-      content: buildEditGroup('Vita e Classe Armatura', [statsSection, acSection], {
+      description: 'Punteggi, PF, difesa, movimento e tiri salvezza.',
+      content: buildEditGroup('Caratteristiche & Vita', [abilitySection, statsSection, savingSection, acSection], {
         icon: '❤️',
-        description: 'Controlla sopravvivenza e difesa senza cercare tra le impostazioni avanzate.'
+        description: 'I numeri principali della scheda sono allineati e leggibili in un solo passaggio.',
+        layoutClass: 'character-edit-group--core-stats'
       })
     },
     {
-      title: 'Abilità',
+      title: 'Abilità & Competenze',
       icon: '🧠',
-      description: 'Competenze, maestrie e prove speciali.',
-      content: buildEditGroup('Abilità', [skillSection, specialSkillSection], {
-        icon: '🧠',
-        description: 'Gestisci competenza, maestria e abilità personalizzate in un unico punto.'
-      })
-    },
-    {
-      title: 'Competenze e talenti',
-      icon: '🏅',
-      description: 'Equipaggiamenti, strumenti, lingue e talenti.',
-      content: buildEditGroup('Competenze e Talenti', [
+      description: 'Abilità, maestrie, equipaggiamento, lingue e talenti.',
+      content: buildEditGroup('Abilità & Competenze', [
+        skillSection,
         proficiencySection,
-        proficiencyNotesSection,
-        languageNotesSection,
-        talentNotesSection
+        proficiencyNotesSection
       ], {
-        icon: '🏅',
-        description: 'Separa le competenze operative dalle note libere su lingue e talenti.'
+        icon: '🧠',
+        description: 'Competenze operative e note libere sono raccolte senza duplicazioni.',
+        layoutClass: 'character-edit-group--skills-proficiencies'
       })
     },
     {
       title: 'Combattimento e magia',
       icon: '⚔️',
       description: 'Attacchi, danni, incantesimi e slot.',
-      content: buildEditGroup('Combattimento e magia', [combatSection, weaponMasterySection], {
+      content: buildEditGroup('Combattimento e magia', [combatSection, spellcastingSection, weaponMasterySection], {
         icon: '⚔️',
-        description: 'Raccoglie i parametri usati durante il turno: attacchi, bonus, incantesimi e risorse.'
-      })
-    },
-    {
-      title: 'Vantaggi & Svantaggi',
-      icon: '↕️',
-      description: 'Override manuali per tiri e prove.',
-      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection], {
-        icon: '↕️',
-        description: 'Imposta solo le eccezioni manuali: gli effetti automatici restano indicati nelle righe.'
+        description: 'Raccoglie i parametri globali di attacchi e incantesimi; le azioni si gestiscono dalle shortcut.',
+        layoutClass: 'character-edit-group--combat-magic'
       })
     },
     {
@@ -1261,11 +794,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   nextButton.addEventListener('click', () => setActiveStep(activeStepIndex + 1));
   form.addEventListener('input', updateStepperState);
   form.addEventListener('change', updateStepperState);
-  [abilityInputs.str, abilityInputs.dex, proficiencyInput].forEach((input) => {
-    input?.addEventListener('input', updateUnarmedAttackPreviews);
-    input?.addEventListener('change', updateUnarmedAttackPreviews);
-  });
-
   stepper.append(stepperNav, stepperContent);
   form.appendChild(stepper);
   updateStepperState();
@@ -1285,6 +813,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     ac: 'Classe armatura totale.',
     initiative: 'Bonus iniziativa ai tiri di iniziativa.',
     proficiency_bonus: 'Bonus competenza globale.',
+    skill_check_bonus: 'Modificatore aggiunto a tutte le prove di abilità.',
+    saving_throw_bonus: 'Modificatore aggiunto a tutti i tiri salvezza.',
     extra_attacks: 'Numero di attacchi extra disponibili.',
     damage_bonus_melee: 'Bonus fisso ai danni in mischia.',
     damage_bonus_ranged: 'Bonus fisso ai danni a distanza.'
@@ -1394,22 +924,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
-  const nextRollAdjustments = { attack_rolls: {}, saving_throws: {}, skills: {} };
-  [
-    { scope: 'attack_rolls', entries: getDrawerAttackRollEntries(characterData, drawerItems) },
-    { scope: 'saving_throws', entries: savingThrowList },
-    { scope: 'skills', entries: skillList }
-  ].forEach(({ scope, entries }) => {
-    entries.forEach((entry) => {
-      const mode = formData.get(`roll_${scope}_${entry.key}_mode`)?.toString() || '';
-      const source = formData.get(`roll_${scope}_${entry.key}_source`)?.toString().trim() || '';
-      const automaticEffects = getAutomaticDrawerRollEffects(characterData, drawerItems, scope, entry);
-      const matchesAutomatic = mode === getAutomaticDrawerRollMode(automaticEffects) && source === getAutomaticDrawerSource(automaticEffects);
-      if ((mode === 'advantage' || mode === 'disadvantage') && !matchesAutomatic) {
-        nextRollAdjustments[scope][entry.key] = { mode, source };
-      }
-    });
-  });
+  // The legacy manual advantage/disadvantage editor is no longer part of this
+  // workflow. Keep any existing data intact instead of silently erasing it.
+  const nextRollAdjustments = characterData.roll_adjustments || { attack_rolls: {}, saving_throws: {}, skills: {} };
   const nextDamageDefenses = {
     resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
     immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
@@ -1418,29 +935,24 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   ['str', 'con', 'int', 'wis', 'cha'].forEach((ability) => {
     nextAcModifiers[ability] = formData.has(`ac_mod_${ability}`);
   });
-  const nextSpecialSkillRolls = draftSpecialSkills.map((entry, index) => {
-    const name = formData.get(`special_skill_name_${index}`)?.toString().trim() || '';
-    if (!name) return null;
-    const ability = formData.get(`special_skill_ability_${index}`)?.toString() || 'str';
-    const masteryChecked = formData.has(`special_skill_mastery_${index}`);
-    const proficientChecked = formData.has(`special_skill_proficient_${index}`) || masteryChecked;
-    return {
-      id: entry.id,
-      name,
-      ability: abilityShortLabel[ability] ? ability : 'str',
-      proficient: proficientChecked,
-      mastery: masteryChecked && proficientChecked,
-      bonus: toNumberOrNull(formData.get(`special_skill_bonus_${index}`)) ?? 0
-    };
-  }).filter(Boolean);
+  // Tiri speciali e colpi senz'arma sono gestiti dalle rispettive shortcut.
+  // Il salvataggio del wizard non deve modificarli o cancellarli.
+  const nextSpecialSkillRolls = Array.isArray(characterData.special_skill_rolls)
+    ? characterData.special_skill_rolls
+    : [];
   const isSpellcaster = formData.get('is_spellcaster') === 'on';
   const canPrepare = formData.get('spell_can_prepare') === 'on';
+  const selectedRulesVersion = ['2014', '2024'].includes(String(formData.get('spell_rules_version')))
+    ? String(formData.get('spell_rules_version'))
+    : characterRulesVersion;
   const spellSlotLevels = Array.from({ length: 9 }, (_, index) => index + 1);
   const nextSpellcasting = isSpellcaster
     ? {
       ability: formData.get('spellcasting_ability') || null,
       recharge: formData.get('spell_slot_recharge') || 'long_rest',
       can_prepare: canPrepare,
+      caster_classes: formData.getAll('spell_caster_classes'),
+      rules_version: selectedRulesVersion,
       slots: spellSlotLevels.reduce((acc, level) => {
         const maxSlots = Math.max(0, toNumberOrNull(formData.get(`spell_slot_max_${level}`)) ?? 0);
         const usedSlots = Math.min(maxSlots, Math.max(0, toNumberOrNull(formData.get(`spell_slot_used_${level}`)) ?? 0));
@@ -1462,23 +974,9 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     cha: toNumberOrNull(formData.get('ability_cha'))
   };
   const nextProficiencyBonus = toNumberOrNull(formData.get('proficiency_bonus'));
-  const unarmedAttackCount = Number(formData.get('unarmed_attack_count')) || 0;
-  const nextUnarmedAttacks = Array.from({ length: unarmedAttackCount }, (_, index) => {
-    const ability = formData.get(`unarmed_attack_ability_${index}`) === 'dex' ? 'dex' : 'str';
-    const attack = {
-      name: String(formData.get(`unarmed_attack_name_${index}`) || '').trim(),
-      ability,
-      attack_bonus: Number(formData.get(`unarmed_attack_bonus_${index}`) || 0),
-      damage: String(formData.get(`unarmed_attack_damage_${index}`) || '').trim(),
-      damage_bonus: Number(formData.get(`unarmed_attack_damage_bonus_${index}`) || 0)
-    };
-    const calculated = calculateUnarmedAttackBonuses({ ...characterData, abilities: nextAbilities, proficiency_bonus: nextProficiencyBonus }, attack);
-    return {
-      ...attack,
-      to_hit: calculated.attackTotal,
-      damage_modifier: calculated.damageModifier
-    };
-  }).filter((attack) => attack.name || attack.damage);
+  const nextUnarmedAttacks = Array.isArray(characterData.unarmed_attacks)
+    ? characterData.unarmed_attacks
+    : [];
   const nextData = {
     ...characterData,
     avatar_url: formData.get('avatar_url')?.trim() || null,
@@ -1504,6 +1002,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     darkvision_enabled: formData.has('darkvision_enabled'),
     darkvision_range_m: formData.has('darkvision_enabled') ? (toNumberOrNull(formData.get('darkvision_range_m')) ?? 18) : null,
     proficiency_bonus: nextProficiencyBonus,
+    skill_check_bonus: toNumberOrNull(formData.get('skill_check_bonus')) ?? 0,
+    saving_throw_bonus: toNumberOrNull(formData.get('saving_throw_bonus')) ?? 0,
     initiative: toNumberOrNull(formData.get('initiative')),
     attack_bonus_melee: toNumberOrNull(formData.get('attack_bonus_melee')) ?? (Number(characterData.attack_bonus_melee ?? characterData.attack_bonus) || 0),
     attack_bonus_ranged: toNumberOrNull(formData.get('attack_bonus_ranged')) ?? (Number(characterData.attack_bonus_ranged ?? characterData.attack_bonus) || 0),
@@ -1513,6 +1013,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     sneak_attack_dice: formData.get('sneak_attack_dice')?.toString().trim() || null,
     ac_bonus: toNumberOrNull(formData.get('ac_bonus')) ?? 0,
     is_spellcaster: isSpellcaster,
+    rules_version: selectedRulesVersion,
     wild_shape_enabled: formData.get('wild_shape_enabled') === 'on',
     wild_shape: formData.get('wild_shape_enabled') === 'on' ? (characterData.wild_shape || null) : null,
     spellcasting: nextSpellcasting,
@@ -1520,6 +1021,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     proficiency_notes: formData.get('proficiency_notes')?.trim() || null,
     language_proficiencies: formData.get('language_proficiencies')?.trim() || null,
     talents: formData.get('talents')?.trim() || null,
+    fighting_styles: formData.get('fighting_styles')?.trim() || null,
     abilities: nextAbilities,
     skills: nextSkills,
     skill_mastery: nextMastery,
@@ -1538,7 +1040,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   };
   const payload = {
     name,
-    system: character ? (character.system?.trim() || '5e') : '5e',
+    system: selectedRulesVersion,
     data: nextData
   };
 

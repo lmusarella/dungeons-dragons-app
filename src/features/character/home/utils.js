@@ -65,13 +65,14 @@ export function getUnarmedAttackAbility(attack = {}) {
 }
 
 export function calculateUnarmedAttackBonuses(characterData = {}, attack = {}) {
+  const generalDamageBonus = Number(characterData?.damage_bonus_melee ?? characterData?.damage_bonus) || 0;
   const hasCalculatedFields = attack?.ability || attack?.attack_bonus !== undefined || attack?.damage_bonus !== undefined;
   if (!hasCalculatedFields) {
     return {
       ability: null,
       abilityMod: 0,
       attackTotal: Number(attack?.to_hit) || 0,
-      damageModifier: Number(attack?.damage_modifier) || 0,
+      damageModifier: (Number(attack?.damage_modifier) || 0) + generalDamageBonus,
       attackBonus: 0,
       damageBonus: 0,
       legacy: true
@@ -86,9 +87,10 @@ export function calculateUnarmedAttackBonuses(characterData = {}, attack = {}) {
     ability,
     abilityMod,
     attackTotal: abilityMod + proficiencyBonus + attackBonus,
-    damageModifier: abilityMod + damageBonus,
+    damageModifier: abilityMod + damageBonus + generalDamageBonus,
     attackBonus,
-    damageBonus,
+    damageBonus: damageBonus + generalDamageBonus,
+    generalDamageBonus,
     legacy: false
   };
 }

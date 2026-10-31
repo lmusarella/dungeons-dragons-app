@@ -6,7 +6,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Build output
-# Build output
 dist/
 docs/
 
@@ -32,3 +31,5 @@ coverage/
 # Misc
 *.tmp
 *.swp
+.pnpm-store/
+.tmp-*

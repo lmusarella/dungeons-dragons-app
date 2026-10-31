@@ -101,6 +101,7 @@ export const ammunitionTypes = [
   { value: '', label: 'Nessuna' },
   { value: 'arrow', label: 'Frecce' },
   { value: 'bolt', label: 'Dardi' },
+  { value: 'needle', label: 'Aghi da cerbottana' },
   { value: 'bullet', label: 'Proiettili' }
 ];
 

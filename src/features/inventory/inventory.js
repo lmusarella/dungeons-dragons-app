@@ -1,12 +1,13 @@
+import { getContainerView, buildContainerCatalog } from './containerCatalog.js';
+import { buildCompactTransactionList } from './compactTables.js';
+import { buildCoinBundleMovement, buildCoinExchange, isCoinExchange } from '../wallet/coinMovements.js';
+import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
 import { fetchItems, updateItem, deleteItem } from './inventoryApi.js';
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
-import { applyMoneyDelta, calcTotalWeight } from '../../lib/calc.js';
-import { formatWeight } from '../../lib/format.js';
-import { createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberSteppers } from '../../ui/components.js';
+import { createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import {
   fetchWallet,
-  upsertWallet,
   createTransaction,
   fetchTransactions,
   updateTransaction,
@@ -14,10 +15,11 @@ import {
 } from '../wallet/walletApi.js';
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories } from './constants.js';
-import { openItemImageModal, openItemModal } from './modals.js';
-import { buildInventoryTree, buildTransactionList, exchangeFields, moneyFields, walletEditFields } from './render.js';
+import { openItemModal } from './modals.js';
+import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from './catalogPicker.js';
+import { buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
 import { getCategoryLabel, getWeightUnit, normalizeTransactionAmount } from './utils.js';
-import { escapeHtml } from '../../lib/html.js';
+import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 
 
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
@@ -40,7 +42,11 @@ async function openLooseItemsPicker(containerItem, items) {
   looseItems.forEach((item) => {
     const option = document.createElement('label');
     option.className = 'inventory-insert-picker__item';
+    const image = sanitizeImageUrl(item.image_url);
     option.innerHTML = `
+      <span class="inventory-insert-picker__visual">
+        ${image ? `<img src="${image}" alt="" loading="lazy" />` : '<span aria-hidden="true">◇</span>'}
+      </span>
       <span class="inventory-insert-picker__details">
         <strong>${escapeHtml(item.name)}</strong>
         <span class="muted">${escapeHtml(getCategoryLabel(item.category))} · Quantità ${escapeHtml(item.qty)}</span>
@@ -153,7 +159,6 @@ export async function renderInventory(container) {
     }
   }
 
-  const totalWeight = calcTotalWeight(items);
   const weightUnit = getWeightUnit(activeCharacter);
   const weightStep = weightUnit === 'kg' ? '0.1' : '1';
   container.innerHTML = `
@@ -170,21 +175,24 @@ export async function renderInventory(container) {
             </button>
           </div>
         </header>
-        <div class="filters inventory-toolbar">
+        <div class="filters inventory-toolbar ${container.hasAttribute('data-inventory-shortcut') ? 'inventory-toolbar--shortcut' : ''}">
           <label class="inventory-search">
             <span aria-hidden="true">⌕</span>
-            <input type="search" placeholder="Cerca oggetto" aria-label="Cerca oggetto" data-search />
+            <input type="search" placeholder="Cerca" aria-label="Cerca oggetto" data-search />
           </label>
-          <label class="inventory-category-filter"><span>Categoria</span><select data-category></select></label>
+          ${container.hasAttribute('data-inventory-shortcut') ? `
+            <div class="inventory-category-pills" role="group" aria-label="Filtra per categoria">
+              ${categories.filter((category) => category.value).map((category) => `<button type="button" data-category-option="${escapeHtml(category.value)}" aria-pressed="false">${escapeHtml(category.label)}</button>`).join('')}
+            </div>
+          ` : '<label class="inventory-category-filter"><span>Categoria</span><select data-category></select></label>'}
           <label class="toggle-pill filter-toggle">
             <input type="checkbox" data-equipable-filter />
-            <span>Oggetti equipaggiabili</span>
+            <span>Equipaggiabili</span>
           </label>
           <label class="toggle-pill filter-toggle">
             <input type="checkbox" data-magic-filter />
-            <span>Oggetti magici</span>
+            <span>Magici</span>
           </label>
-          <span class="pill inventory-carry-summary"><small>Carico totale</small><strong data-carry-total>${formatWeight(totalWeight, weightUnit)}</strong></span>
         </div>
         <div class="inventory-list-scroll" data-inventory-list></div>
       </section>
@@ -192,11 +200,6 @@ export async function renderInventory(container) {
         <section class="card inventory-wallet inventory-side-card inventory-side-card--wallet">
           <header class="card-header inventory-side-card__header">
             <p class="eyebrow">Monete</p>
-            <div class="button-row">
-              <button class="icon-button" type="button" data-edit-wallet aria-label="Modifica monete" title="Modifica monete">
-                <span aria-hidden="true">✏️</span>
-              </button>
-            </div>
           </header>
           ${renderWalletSummary(wallet)}
         </section>
@@ -210,31 +213,44 @@ export async function renderInventory(container) {
             </div>
           </header>
           <div class="inventory-transactions">
-            ${state.offline ? '<p class="muted">Transazioni disponibili solo online.</p>' : buildTransactionList(transactions).outerHTML}
+            ${state.offline ? '<p class="muted">Transazioni disponibili solo online.</p>' : container.hasAttribute('data-inventory-shortcut') ? buildCompactTransactionList(transactions) : buildTransactionList(transactions).outerHTML}
           </div>
         </section>
       </div>
     </div>
   `;
 
+  container.polishShortcut?.({ offline: state.offline, wallet });
   const listEl = container.querySelector('[data-inventory-list]');
   const searchInput = container.querySelector('[data-search]');
   const categorySelect = container.querySelector('[data-category]');
+  const categoryButtons = [...container.querySelectorAll('[data-category-option]')];
   const equipableFilter = container.querySelector('[data-equipable-filter]');
   const magicFilter = container.querySelector('[data-magic-filter]');
-  const carryTotalEl = container.querySelector('[data-carry-total]');
   categories.forEach((cat) => {
+    if (!categorySelect) return;
     const option = document.createElement('option');
     option.value = cat.value;
     option.textContent = cat.equipable ? `${cat.label}` : cat.label;
     categorySelect.appendChild(option);
   });
 
+  const previousFilters = container.inventoryFilters || {};
+  let activeCategory = previousFilters.category || '';
+  searchInput.value = previousFilters.term || '';
+  if (categorySelect) categorySelect.value = previousFilters.category || '';
+  const syncCategoryButtons = () => categoryButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.categoryOption === activeCategory));
+  });
+  syncCategoryButtons();
+  if (equipableFilter) equipableFilter.checked = Boolean(previousFilters.equipableOnly);
+  if (magicFilter) magicFilter.checked = Boolean(previousFilters.magicOnly);
   function renderList() {
     const term = searchInput.value.toLowerCase();
-    const category = categorySelect.value;
+    const category = categorySelect?.value ?? activeCategory;
     const equipableOnly = equipableFilter?.checked ?? false;
     const magicOnly = magicFilter?.checked ?? false;
+    container.inventoryFilters = { term, category, equipableOnly, magicOnly };
     const directlyMatched = items.filter((item) => {
       const matchesTerm = item.name.toLowerCase().includes(term);
       const matchesCategory = !category || item.category === category;
@@ -290,10 +306,20 @@ export async function renderInventory(container) {
 
     const filtered = items.filter((item) => visibleIds.has(String(item.id)));
 
-    listEl.innerHTML = buildInventoryTree(filtered, weightUnit);
-    if (carryTotalEl) {
-      carryTotalEl.textContent = formatWeight(calcTotalWeight(filtered), weightUnit);
-    }
+    if (container.hasAttribute('data-inventory-shortcut')) {
+      const view = getContainerView(items, container.inventoryFilters, container.dataset.inventoryContainer);
+      if (!view.container) delete container.dataset.inventoryContainer;
+      listEl.innerHTML = buildContainerCatalog(view, weightUnit);
+      listEl.querySelectorAll('[data-open-container]').forEach(button => button.addEventListener('click', () => {
+        container.dataset.inventoryContainer = button.dataset.openContainer; renderList();
+      }));
+      listEl.querySelectorAll('[data-extract-item]').forEach(button => button.addEventListener('click', async () => {
+        await runWithGlobalLoader(async () => {
+          try { await updateItem(button.dataset.extractItem, { container_item_id: null }); createToast('Oggetto estratto'); await renderInventory(container); }
+          catch { createToast('Errore durante l’estrazione', 'error'); }
+        });
+      }));
+    } else listEl.innerHTML = buildInventoryTree(filtered, weightUnit);
     listEl.querySelectorAll('[data-insert-container]')
       .forEach((button) => button.addEventListener('click', async (event) => {
         event.preventDefault();
@@ -324,14 +350,22 @@ export async function renderInventory(container) {
         event.preventDefault();
         event.stopPropagation();
         const item = items.find((entry) => String(entry.id) === image.dataset.itemImage);
-        if (item) openItemImageModal(item);
+        if (item) openEquipmentItemDetail(item, {
+          items,
+          weightUnit: getWeightUnit(activeCharacter),
+          onEdit: () => openItemModal(activeCharacter, item, items, renderInventory.bind(null, container))
+        });
       }));
     listEl.querySelectorAll('[data-item-preview]')
       .forEach((button) => button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         const item = items.find((entry) => String(entry.id) === button.dataset.itemPreview);
-        if (item) openItemImageModal(item);
+        if (item) openEquipmentItemDetail(item, {
+          items,
+          weightUnit: getWeightUnit(activeCharacter),
+          onEdit: () => openItemModal(activeCharacter, item, items, renderInventory.bind(null, container))
+        });
       }));
     listEl.querySelectorAll('[data-delete]')
       .forEach((btn) => btn.addEventListener('click', async (event) => {
@@ -389,7 +423,13 @@ export async function renderInventory(container) {
 
   renderList();
   searchInput.addEventListener('input', renderList);
-  categorySelect.addEventListener('change', renderList);
+  categorySelect?.addEventListener('change', renderList);
+  categoryButtons.forEach((button) => button.addEventListener('click', () => {
+    const nextCategory = button.dataset.categoryOption || '';
+    activeCategory = nextCategory === activeCategory && nextCategory !== '' ? '' : nextCategory;
+    syncCategoryButtons();
+    renderList();
+  }));
   equipableFilter?.addEventListener('change', renderList);
   magicFilter?.addEventListener('change', renderList);
 
@@ -399,7 +439,7 @@ export async function renderInventory(container) {
       button.dataset.bound = 'true';
       button.addEventListener('click', async () => {
         const route = window.location.hash.replace('#/', '') || 'home';
-        if (route !== 'inventory') return;
+        if (route !== 'inventory' && !button.closest('[data-inventory-shortcut]')) return;
         const latestState = getState();
         const latestCharacterId = normalizeCharacterId(latestState.activeCharacterId);
         const latestCharacter = latestState.characters
@@ -413,38 +453,28 @@ export async function renderInventory(container) {
         const direction = button.dataset.moneyAction;
         const title = direction === 'pay' ? 'Paga monete' : 'Ricevi monete';
         const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
+        wallet = ensureWallet(wallet, latestCharacter);
+        const initialAmounts = button.dataset.coin ? { [button.dataset.coin]: 1 } : {};
         const formData = await openFormModal({
           title,
           submitLabel,
-          content: moneyFields({ direction }),
+          cardClass: 'modal-card--quick-action',
+          content: moneyBundleFields({ direction, amounts: initialAmounts, wallet }),
           onOpen: ({ fieldsEl }) => {
-            const amountInput = fieldsEl?.querySelector('input[name="amount"]');
-            if (amountInput) attachInventoryAmountStepper(amountInput, { min: 0 });
+            fieldsEl?.querySelectorAll('.money-bundle__coin input[type="number"]').forEach((input) => {
+              attachInventoryAmountStepper(input, { min: 0, max: input.max === '' ? null : Number(input.max) });
+            });
           }
         });
         if (!formData) return;
-        if (!wallet) {
-          wallet = {
-            user_id: activeUserId,
-            character_id: activeCharacterId,
-            cp: 0,
-            sp: 0,
-            gp: 0,
-            pp: 0
-          };
+        let signedDelta;
+        try {
+          signedDelta = buildCoinBundleMovement(wallet, {
+            pp: formData.get('amount_pp'), gp: formData.get('amount_gp'),
+            sp: formData.get('amount_sp'), cp: formData.get('amount_cp')
+          }, direction);
         }
-        const coin = formData.get('coin');
-        const amount = Number(formData.get('amount') || 0);
-        const delta = {
-          cp: coin === 'cp' ? amount : 0,
-          sp: coin === 'sp' ? amount : 0,
-          gp: coin === 'gp' ? amount : 0,
-          pp: coin === 'pp' ? amount : 0
-        };
-        const sign = direction === 'pay' ? -1 : 1;
-        const signedDelta = Object.fromEntries(
-          Object.entries(delta).map(([key, value]) => [key, value * sign])
-        );
+        catch (error) { createToast(error.message, 'error'); return; }
         await runWithGlobalLoader(async () => {
           try {
             const saved = await createTransaction({
@@ -466,42 +496,6 @@ export async function renderInventory(container) {
         });
       });
     });
-
-  const editWalletButton = container.querySelector('[data-edit-wallet]');
-  if (editWalletButton && !editWalletButton.dataset.bound) {
-    editWalletButton.dataset.bound = 'true';
-    editWalletButton.addEventListener('click', async () => {
-      wallet = ensureWallet(wallet, activeCharacter);
-      const formData = await openFormModal({
-        title: 'Modifica monete',
-        submitLabel: 'Salva',
-        content: walletEditFields(wallet),
-        onOpen: ({ fieldsEl }) => {
-          attachNumberSteppers(fieldsEl);
-        }
-      });
-      if (!formData) return;
-      const nextWallet = {
-        ...wallet,
-        pp: Math.max(0, Number(formData.get('pp') || 0)),
-        gp: Math.max(0, Number(formData.get('gp') || 0)),
-        sp: Math.max(0, Number(formData.get('sp') || 0)),
-        cp: Math.max(0, Number(formData.get('cp') || 0))
-      };
-
-      await runWithGlobalLoader(async () => {
-        try {
-          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
-          updateCache('wallet', saved);
-          await cacheSnapshot({ wallet: saved });
-          createToast('Monete aggiornate');
-          renderInventory(container);
-        } catch (error) {
-          createToast('Errore aggiornamento monete', 'error');
-        }
-      });
-    });
-  }
 
   const exchangeButton = container.querySelector('[data-exchange-coins]');
   if (exchangeButton && !exchangeButton.dataset.bound) {
@@ -614,38 +608,18 @@ export async function renderInventory(container) {
       const amount = Number(formData.get('amount') || 0);
       const source = formData.get('source');
       const target = formData.get('target');
-      const availableAmount = Number(wallet[source] || 0);
-      const sourceValue = COIN_VALUES[source];
-      const targetValue = COIN_VALUES[target];
-      const normalizedAmount = Math.min(amount, availableAmount);
-      const totalCp = normalizedAmount * sourceValue;
-      const targetAmount = Math.floor(totalCp / targetValue);
-      const adjustedAmount = Math.floor((targetAmount * targetValue) / sourceValue);
-      if (amount <= 0) {
-        createToast('Inserisci un importo valido', 'error');
-        return;
-      }
-      if (source === target) {
-        createToast('Scegli due monete diverse', 'error');
-        return;
-      }
-      if (adjustedAmount <= 0) {
-        createToast('Importo troppo basso per il cambio', 'error');
-        return;
-      }
-      if (adjustedAmount > Number(wallet[source] || 0)) {
-        createToast('Monete insufficienti', 'error');
-        return;
-      }
-      if (adjustedAmount !== amount) {
-        createToast(`Adeguato a ${adjustedAmount} ${source.toUpperCase()} per un cambio preciso`, 'info');
-      }
-      const delta = { cp: 0, sp: 0, gp: 0, pp: 0, [source]: -adjustedAmount, [target]: targetAmount };
-      const nextWallet = applyMoneyDelta(wallet, delta);
-
+      let exchange;
+      try { exchange = buildCoinExchange(wallet, source, target, amount); }
+      catch (error) { createToast(error.message, 'error'); return; }
+      const { amount: adjustedAmount, targetAmount, delta } = exchange;
+      if (adjustedAmount !== amount) createToast('Quantità adeguata a ' + adjustedAmount + ' per un cambio preciso', 'info');
       await runWithGlobalLoader(async () => {
         try {
-          const saved = await upsertWallet({ ...nextWallet, user_id: wallet.user_id, character_id: wallet.character_id });
+          const saved = await createTransaction({
+            character_id: activeCharacter.id, direction: 'receive', amount: delta,
+            reason: 'Scambio: ' + adjustedAmount + ' ' + source.toUpperCase() + ' → ' + targetAmount + ' ' + target.toUpperCase()
+          });
+          wallet = saved;
           updateCache('wallet', saved);
           await cacheSnapshot({ wallet: saved });
           createToast('Scambio completato');
@@ -686,6 +660,7 @@ export async function renderInventory(container) {
       const transaction = transactions.find((entry) => entry.id === button.dataset.editTransaction);
       if (!transaction) return;
       const currentAmounts = transactionAmount(transaction);
+      if (isCoinExchange(currentAmounts)) return;
       const { coin, value } = findPrimaryCoin(currentAmounts);
       const formData = await openFormModal({
         title: 'Modifica transazione',
@@ -753,7 +728,23 @@ export async function renderInventory(container) {
     }));
 
 
-  container.querySelector('[data-add-item]').addEventListener('click', () => {
-    openItemModal(activeCharacter, null, items, renderInventory.bind(null, container));
+  container.querySelector('[data-add-item]').addEventListener('click', async () => {
+    const source = await openItemSourceModal();
+    if (source === 'manual') {
+      openItemModal(activeCharacter, null, items, renderInventory.bind(null, container));
+      return;
+    }
+    if (source !== 'catalog') return;
+    const selected = await openSharedItemPicker({ title: 'Aggiungi oggetti dall’archivio' });
+    if (!selected.length) return;
+    await runWithGlobalLoader(async () => {
+      try {
+        await addSharedItemsToInventory(selected, activeCharacter);
+        createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} all’inventario`, 'success');
+        await renderInventory(container);
+      } catch (error) {
+        createToast('Errore durante l’aggiunta dall’archivio', 'error');
+      }
+    });
   });
 }

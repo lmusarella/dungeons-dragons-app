@@ -8,6 +8,8 @@ export async function searchSharedSpells({
   rulesVersion = null,
   level = null,
   school = '',
+  source = '',
+  sources = [],
   casterClasses = [],
   concentration = '',
   ritual = '',
@@ -37,6 +39,14 @@ export async function searchSharedSpells({
   if (school?.trim()) {
     request = request.ilike('school', `%${school.trim()}%`);
   }
+  const normalizedSources = Array.isArray(sources)
+    ? [...new Set(sources.map((entry) => String(entry).trim()).filter(Boolean))]
+    : [];
+  if (normalizedSources.length) {
+    request = request.in('source', normalizedSources);
+  } else if (source?.trim()) {
+    request = request.eq('source', source.trim());
+  }
   if (concentration !== null && concentration !== '') {
     request = request.eq('concentration', concentration === true || concentration === 'true');
   }
@@ -60,6 +70,19 @@ export async function searchSharedSpells({
   };
 }
 
+export async function fetchSharedSpellSources({ rulesVersion = null } = {}) {
+  let request = supabase
+    .from(SHARED_SPELLS_TABLE)
+    .select('source')
+    .not('source', 'is', null)
+    .order('source', { ascending: true })
+    .range(0, 999);
+  if (rulesVersion) request = request.eq('rules_version', rulesVersion);
+  const { data, error } = await request;
+  if (error) throw error;
+  return [...new Set((data || []).map((row) => String(row.source || '').trim()).filter(Boolean))];
+}
+
 export async function createSharedSpell(payload) {
   const { data, error } = await supabase
     .from(SHARED_SPELLS_TABLE)
@@ -68,6 +91,16 @@ export async function createSharedSpell(payload) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function createSharedSpells(payloads = []) {
+  if (!Array.isArray(payloads) || !payloads.length) return [];
+  const { data, error } = await supabase
+    .from(SHARED_SPELLS_TABLE)
+    .insert(payloads)
+    .select('*');
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function updateSharedSpell(id, payload) {
@@ -92,6 +125,17 @@ export async function fetchCharacterSpells(characterId) {
 }
 
 export async function assignSharedSpellToCharacter(payload) {
+  if (payload?.character_id && payload?.shared_spell_id) {
+    const { data: existing, error: lookupError } = await supabase
+      .from(CHARACTER_SPELLS_TABLE)
+      .select('*')
+      .eq('character_id', payload.character_id)
+      .eq('shared_spell_id', payload.shared_spell_id)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (existing) return existing;
+  }
   const { data, error } = await supabase
     .from(CHARACTER_SPELLS_TABLE)
     .insert(payload)
@@ -99,6 +143,17 @@ export async function assignSharedSpellToCharacter(payload) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function updateCharacterSpellAssignment(characterId, sharedSpellId, payload) {
+  const { data, error } = await supabase
+    .from(CHARACTER_SPELLS_TABLE)
+    .update(payload)
+    .eq('character_id', characterId)
+    .eq('shared_spell_id', sharedSpellId)
+    .select('*');
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function removeCharacterSpell(id) {

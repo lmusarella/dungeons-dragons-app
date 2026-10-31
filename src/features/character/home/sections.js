@@ -1,3 +1,5 @@
+import { sanitizeImageUrl } from '../../../lib/html.js';
+import { buildCompactSpellSlots } from './slotOverview.js';
 import {
   abilityShortLabel,
   conditionList,
@@ -5,7 +7,8 @@ import {
   equipmentProficiencyList,
   RESOURCE_CAST_TIME_ORDER,
   savingThrowList,
-  skillList
+  skillList,
+  weaknessLevelList
 } from './constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
 import {
@@ -26,7 +29,8 @@ import {
   parseProficiencyNotesSections,
   sortSpellsByLevel
 } from './utils.js';
-import { calcTotalWeight } from '../../../lib/calc.js';
+import { normalizeSpellSchool } from '../spellSchools.js';
+import { calcItemWeight, calcSelectionWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
 import { getBodyPartLabels, getCategoryLabel, getItemStatusLabels, getWeightUnit } from '../../inventory/utils.js';
 import { ammunitionTypeLabels } from '../../inventory/constants.js';
@@ -37,12 +41,6 @@ const DAMAGE_ACTION_ICON = `
     <circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="9" r="1"></circle>
     <circle cx="12" cy="12" r="1"></circle><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle>
   </svg>`;
-const WEAPON_MODE_ICON = `
-  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3"></path>
-  </svg>`;
-
-
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -107,7 +105,6 @@ export function buildEmptyState(canCreateCharacter, offline) {
     </div>
   `;
 }
-
 export function buildCharacterOverview(character, canEditCharacter, items = [], companions = []) {
   const data = character.data || {};
   const hp = data.hp || {};
@@ -154,18 +151,8 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     ? data.conditions
     : (data.condition ? [data.condition] : []);
   const activeConditions = conditionList.filter((condition) => conditionState.includes(condition.key));
-  const conditionsLabel = activeConditions.length
-    ? activeConditions.map((condition) => condition.label).join(', ')
-    : 'Nessuna condizione';
-  const weaknessLevels = [
-    { value: 1, description: 'Svantaggio sulle prove di caratteristica.' },
-    { value: 2, description: 'Velocità dimezzata.' },
-    { value: 3, description: 'Svantaggio sui tiri per colpire e tiri salvezza.' },
-    { value: 4, description: 'Punti ferita massimi dimezzati.' },
-    { value: 5, description: 'Velocità ridotta a 0.' },
-    { value: 6, description: 'Morte.' }
-  ];
-  const activeWeaknesses = weaknessLevels.filter((level) => level.value <= weakPoints);
+  const weaknessLevels = weaknessLevelList.filter((level) => level.value > 0);
+  const currentWeakness = weakPoints > 0 ? weaknessLevels[weakPoints - 1] : null;
   const armorClass = calculateArmorClass(data, abilities, items);
   const wildShapeArmorClass = activeWildShape
     ? (normalizeNumber(activeWildShape.statBlock.armor_class) ?? (10 + (getAbilityModifier(activeWildShape.statBlock.abilities.dex) || 0)))
@@ -195,19 +182,19 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     { key: 'cha', label: abilityShortLabel.cha, value: abilities.cha }
   ];
   return `
-    <div class="character-overview">
+    <div class="character-overview character-manual">
       <div class="character-summary ${data.avatar_url ? '' : 'character-summary--no-avatar'}">
         ${data.avatar_url ? `<div class="character-avatar-frame"><img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" /></div>` : ''}
         <div class="character-profile-body">
           <div class="character-identity">
-            <h3 class="character-name">${character.name}</h3>
+            <span class="character-identity__kicker">${escapeHtml([data.class_name ?? data.class_archetype, data.archetype].filter(Boolean).join(' · ') || 'Avventuriero')}</span>
+            <div class="character-identity__heading">
+              <h3 class="character-name">${character.name}</h3>
+              <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+            </div>
+            <p class="character-lineage">${escapeHtml([data.race, data.background].filter(Boolean).join(' · ') || 'Origini non specificate')}</p>
             <div class="character-meta">
-              <span class="meta-tag meta-tag--level"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
               <span class="meta-tag meta-tag--level"><small>Bonus Competenza</small><strong>${formatSigned(proficiencyBonus)}</strong></span>
-              <span class="meta-tag"><small>Razza</small><strong>${data.race ?? '-'}</strong></span>
-              <span class="meta-tag"><small>Classe</small><strong>${data.class_name ?? data.class_archetype ?? '-'}</strong></span>
-              <span class="meta-tag"><small>Archetipo</small><strong>${data.archetype ?? '-'}</strong></span>
-              <span class="meta-tag"><small>Background</small><strong>${data.background ?? '-'}</strong></span>
               <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
             </div>
           </div>
@@ -262,11 +249,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     const score = normalizeNumber(ability.value);
     const modifier = score === null ? '-' : formatModifier(score);
     return `
-            <div class="stat-card stat-card--${ability.key} ${ability.wild ? 'stat-card--wild-shape' : ''}">
+            <button class="stat-card stat-card--interactive stat-card--${ability.key} ${ability.wild ? 'stat-card--wild-shape' : ''}" type="button" data-ability-card="${ability.key}" aria-label="Tira una prova di ${ability.label} con modificatore ${modifier}">
               <span>${ability.label}${ability.wild ? ' <small>forma</small>' : ''}</span>
               <strong>${score ?? '-'}</strong>
               <span class="stat-card__modifier" aria-label="Modificatore ${ability.label}">${modifier}</span>
-            </div>
+              <span class="stat-card__roll" aria-hidden="true">d20</span>
+            </button>
           `;
   }).join('')}
         </div>
@@ -280,13 +268,14 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <span class="combat-stat__label">Classe armatura</span>
             <strong>${effectiveArmorClass ?? '-'}</strong>
           </div>
-          <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
+          <button class="combat-stat combat-stat--initiative combat-stat--interactive" type="button" data-special-skill-card="default_initiative" title="Tira iniziativa" aria-label="Tira iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
             </span>
             <span class="combat-stat__label">Iniziativa</span>
             <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-          </div>
+            <span class="combat-stat__roll" aria-hidden="true">d20</span>
+          </button>
           <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
             <span class="combat-stat__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
@@ -300,14 +289,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="hp-bar-label__title">Punti ferita</span>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
-              <span class="character-hp-actions character-hp-actions--inline" aria-label="Azioni sui punti ferita">
-                <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'}>
-                  <span aria-hidden="true">+</span><strong>Cura</strong>
-                </button>
-                <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'}>
-                  <span aria-hidden="true">−</span><strong>Danno</strong>
-                </button>
-              </span>
               ${hasTempHp ? `
               <span class="hp-bar-label__temp-group is-active">
                 <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
@@ -370,54 +351,25 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             ` : ''}
           </div>
         </div>
-        <div class="hp-panel-status-row">
-          <div class="combat-status-card combat-status-card--weakness weakness-track">
-            <div class="combat-status-card__header">
-              <div class="track-label-row">
-                <span class="weakness-track__label">Punti indebolimento</span>
-              </div>
-              <strong class="combat-status-card__value">${weakPoints}<small>/6</small></strong>
-            </div>
-            <div class="weakness-track__group" role="radiogroup" aria-label="Livelli indebolimento">
-              ${weaknessLevels.map((level) => {
-    const isActive = level.value <= weakPoints;
-    const isCurrent = level.value === weakPoints;
-    return `
-                <button
-                  class="death-save-dot ${isActive ? 'is-filled' : ''} ${isCurrent ? 'is-current' : ''}"
-                  type="button"
-                  role="radio"
-                  aria-checked="${isCurrent}"
-                  data-weakness-level="${level.value}"
-                  aria-label="Livello ${level.value}: ${level.description}"
-                  title="Livello ${level.value}: ${level.description}"
-                  ${canEditCharacter ? '' : 'disabled'}
-                ><span aria-hidden="true">${level.value}</span></button>
-              `;
-  }).join('')}
-            </div>
-            <div class="weakness-track__description">
-              ${activeWeaknesses.length
-    ? activeWeaknesses.map((level) => `<span><strong>${level.value}.</strong> ${level.description}</span>`).join('')
-    : '<span>Nessun effetto attivo</span>'}
-            </div>
-          </div>
-          <div class="combat-status-card condition-track">
-            <div class="combat-status-card__header">
-              <div class="track-label-row">
-                <span class="condition-track__label">Condizioni</span>
-              </div>
-              <button
-                class="condition-track__add"
-                type="button"
-                data-edit-conditions
-                aria-label="Modifica condizioni"
-                title="Modifica condizioni"
-                ${canEditCharacter ? '' : 'disabled'}
-              >+</button>
-            </div>
-            <span class="condition-track__value">${conditionsLabel}</span>
-          </div>
+        <div class="hp-panel-status-row" aria-label="Stati rapidi del personaggio">
+          <button class="combat-status-card status-launch-card status-launch-card--weakness" type="button" data-edit-weakness ${canEditCharacter ? '' : 'disabled'}>
+            <span class="status-launch-card__icon" aria-hidden="true">◒</span>
+            <span class="status-launch-card__copy">
+              <span>Punti indebolimento</span>
+              <strong>${weakPoints}<small>/6</small></strong>
+              <small>${escapeHtml(currentWeakness?.effect || 'Nessun effetto attivo')}</small>
+            </span>
+            <span class="status-launch-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="combat-status-card status-launch-card status-launch-card--conditions" type="button" data-edit-conditions ${canEditCharacter ? '' : 'disabled'}>
+            <span class="status-launch-card__icon" aria-hidden="true">✦</span>
+            <span class="status-launch-card__copy">
+              <span>Condizioni</span>
+              <strong>${activeConditions.length || 'Nessuna'}</strong>
+              <small>${activeConditions.length ? escapeHtml(activeConditions.map((condition) => condition.label).join(' · ')) : 'Nessuna condizione attiva'}</small>
+            </span>
+            <span class="status-launch-card__arrow" aria-hidden="true">›</span>
+          </button>
           <div class="combat-status-card death-saves">
             <div class="combat-status-card__header death-saves__heading">
               <div class="track-label-row">
@@ -454,35 +406,45 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
           </div>
         </div>
       </section>
-      <div class="home-section">
-        <header class="card-header">
+      ${buildCompactSpellSlots(character)}
+      <section class="character-proficiency-section character-manual-section" aria-label="Competenze del personaggio">
+        <header class="character-manual-section__header">
+          <span class="character-manual-section__icon" aria-hidden="true">⌘</span>
           <div>
-            <p class="eyebrow">Competenze extra</p>
+            <strong>Competenze</strong>
+            <small>Equipaggiamento, maestrie, strumenti, lingue e difese</small>
           </div>
         </header>
         ${buildProficiencyOverview(character, items, canEditCharacter)}
-      </div>
+      </section>
     </div>
   `;
 }
 
-export function buildSkillList(character) {
+export function buildSkillList(character, canEditCharacter = false) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const skillStates = data.skills || {};
   const skillMasteryStates = data.skill_mastery || {};
+  const generalBonus = Number(data.skill_check_bonus) || 0;
 
   return `
     <div class="detail-section">
+      <div class="roll-general-modifier" aria-label="Modificatore generale tiri abilità">
+        <span><small>Bonus generale</small><strong>${formatSigned(generalBonus)}</strong></span>
+        ${canEditCharacter ? '<button type="button" data-edit-general-modifier="skills" aria-label="Modifica bonus generale tiri abilità" title="Modifica bonus generale">✎</button>' : ''}
+      </div>
       <div class="detail-grid detail-grid--compact">
         ${skillList.map((skill) => {
     const proficient = Boolean(skillStates[skill.key]);
     const mastery = Boolean(skillMasteryStates[skill.key]);
-    const total = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
+    const baseTotal = calculateSkillModifier(abilities[skill.ability], proficiencyBonus, proficient ? (mastery ? 2 : 1) : 0);
+    const total = baseTotal === null ? null : baseTotal + generalBonus;
     const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
+    const rank = mastery ? 'mastery' : proficient ? 'proficiency' : 'untrained';
     return `
-          <button class="modifier-card modifier-card--interactive skill-card ${statusClass}" type="button" data-skill-card="${skill.key}" aria-label="Tira abilità ${skill.label}">
+          <button class="modifier-card modifier-card--interactive skill-card ${statusClass}" type="button" data-skill-card="${skill.key}" data-skill-rank="${rank}" data-skill-ability="${skill.ability}" aria-label="Tira abilità ${skill.label}">
             <span class="skill-card__ability skill-card__ability--${skill.ability}" aria-hidden="true">${abilityShortLabel[skill.ability]}</span>
             <span class="skill-card__content">
               <span class="skill-card__name">${skill.label}</span>
@@ -520,6 +482,7 @@ export function buildSpecialSkillList(character) {
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const specialSkills = getSpecialSkillRollsWithDefault(data);
+  const generalBonus = Number(data.skill_check_bonus) || 0;
 
   return `
     <div class="detail-section">
@@ -534,11 +497,12 @@ export function buildSpecialSkillList(character) {
       proficient ? (mastery ? 2 : 1) : 0
     );
     const extraBonus = Number(skill.bonus) || 0;
-    const total = (baseTotal ?? 0) + extraBonus;
+    const total = (baseTotal ?? 0) + extraBonus + generalBonus;
     const statusClass = mastery ? 'modifier-card--mastery' : proficient ? 'modifier-card--proficiency' : '';
+    const rank = mastery ? 'mastery' : proficient ? 'proficiency' : 'untrained';
     const skillLabel = skill.name?.trim() || `Tiro speciale ${index + 1}`;
     return `
-          <button class="modifier-card modifier-card--interactive skill-card special-skill-card ${statusClass}" type="button" data-special-skill-card="${skill.id ?? index}" aria-label="Tira abilità speciale ${skillLabel}">
+          <button class="modifier-card modifier-card--interactive skill-card special-skill-card ${statusClass}" type="button" data-special-skill-card="${skill.id ?? index}" data-skill-rank="${rank}" data-skill-ability="${abilityKey}" aria-label="Tira abilità speciale ${skillLabel}">
             <span class="skill-card__ability skill-card__ability--${abilityKey}" aria-hidden="true">${abilityShortLabel[abilityKey]}</span>
             <span class="skill-card__content">
               <span class="skill-card__name">${skillLabel}</span>
@@ -553,18 +517,24 @@ export function buildSpecialSkillList(character) {
   `;
 }
 
-export function buildSavingThrowSection(character) {
+export function buildSavingThrowSection(character, canEditCharacter = false) {
   const data = character.data || {};
   const abilities = data.abilities || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const savingStates = data.saving_throws || {};
+  const generalBonus = Number(data.saving_throw_bonus) || 0;
 
   return `
     <div class="detail-section">
+      <div class="roll-general-modifier" aria-label="Modificatore generale tiri salvezza">
+        <span><small>Bonus generale</small><strong>${formatSigned(generalBonus)}</strong></span>
+        ${canEditCharacter ? '<button type="button" data-edit-general-modifier="savingThrows" aria-label="Modifica bonus generale tiri salvezza" title="Modifica bonus generale">✎</button>' : ''}
+      </div>
       <div class="detail-grid detail-grid--compact">
         ${savingThrowList.map((save) => {
     const proficient = Boolean(savingStates[save.key]);
-    const total = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
+    const baseTotal = calculateSkillModifier(abilities[save.key], proficiencyBonus, proficient ? 1 : 0);
+    const total = baseTotal === null ? null : baseTotal + generalBonus;
     const statusClass = proficient ? 'modifier-card--proficiency' : '';
     return `
           <button class="modifier-card modifier-card--interactive saving-throw-card ${statusClass}" type="button" data-saving-throw-card="${save.key}" aria-label="Tira salvezza ${save.label}">
@@ -588,7 +558,7 @@ function buildDefenseTags(damageDefenses, type) {
     .map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key)
     .filter(Boolean);
   return labels.length
-    ? `<div class="tag-row">${labels.map((label) => `<span class="chip chip--defense">${label}</span>`).join('')}</div>`
+    ? `<div class="tag-row proficiency-chip-list">${labels.map((label) => `<span class="chip proficiency-chip">${label}</span>`).join('')}</div>`
     : '<p class="muted">Nessuna voce configurata.</p>';
 }
 
@@ -668,13 +638,13 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
         </div>
         <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="defenses">
-          <div class="defense-summary-grid">
-            <div class="defense-summary-card">
-              <span>Resistenze</span>
+          <div class="proficiency-defense-list">
+            <div class="proficiency-defense-group">
+              <strong>Resistenze</strong>
               ${buildDefenseTags(damageDefenses, 'resistances')}
             </div>
-            <div class="defense-summary-card">
-              <span>Immunità</span>
+            <div class="proficiency-defense-group">
+              <strong>Immunità</strong>
               ${buildDefenseTags(damageDefenses, 'immunities')}
             </div>
           </div>
@@ -686,25 +656,26 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
 
 export function buildEquipSection(character, items = [], canEditCharacter = false) {
   const equippedItems = (items || []).filter((item) => getEquipSlots(item).length);
-  const attunedCount = (items || []).filter((item) => item.attunement_active).length;
-  const totalWeight = calcTotalWeight(items);
+  const attunedCount = equippedItems.filter((item) => item.attunement_active).length;
+  const equippedWeight = calcSelectionWeight(equippedItems, items || []);
   const weightUnit = getWeightUnit(character);
   return `
     <section class="card home-card home-section home-scroll-panel equipment-management">
       <header class="card-header equipment-management__header">
         <div>
           <p class="eyebrow">Gestione Equipaggiamento</p>
-          <div class="pill-row equipment-summary">
-            <span class="pill equipment-summary__pill equipment-summary__pill--attunement"><small>Sintonia</small><strong>${attunedCount}</strong></span>
-            <span class="pill equipment-summary__pill equipment-summary__pill--weight"><small>Carico</small><strong>${formatWeight(totalWeight, weightUnit)}</strong></span>
-          </div>
+          <dl class="equipment-summary" aria-label="Riepilogo equipaggiamento">
+            <div class="equipment-summary__item equipment-summary__item--count"><dt>Equipaggiati</dt><dd>${equippedItems.length}</dd></div>
+            <div class="equipment-summary__item equipment-summary__item--equipped-weight"><dt>Peso equipaggiato</dt><dd>${formatWeight(equippedWeight, weightUnit)}</dd></div>
+            <div class="equipment-summary__item equipment-summary__item--attunement" data-filter-equipped-attunement role="button" tabindex="${attunedCount ? '0' : '-1'}" aria-pressed="false" ${attunedCount ? '' : 'aria-disabled="true"'}><dt>In sintonia</dt><dd>${attunedCount}</dd></div>
+          </dl>
         </div>
         <div class="actions">
-          <button class="icon-button equipment-mannequin-trigger" type="button" data-open-equipment-mannequin aria-label="${canEditCharacter ? 'Gestisci equipaggiamento sul manichino 3D' : 'Visualizza manichino 3D'}" title="${canEditCharacter ? 'Gestisci equipaggiamento' : 'Visualizza manichino 3D'}">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <button class="icon-button equipment-mannequin-trigger" type="button" data-open-equipment-mannequin aria-label="${canEditCharacter ? 'Equipaggia oggetto' : 'Visualizza manichino 3D'}" title="${canEditCharacter ? 'Equipaggia oggetto' : 'Visualizza manichino 3D'}">
+            ${canEditCharacter ? '+' : `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
               <circle cx="12" cy="12" r="2.6"></circle>
-            </svg>
+            </svg>`}
           </button>
         </div>
       </header>
@@ -713,8 +684,13 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
           <ul class="inventory-list resource-list resource-list--compact">
             ${equippedItems.map((item) => {
     const statusLabels = getItemStatusLabels(item);
+    const itemWeight = calcItemWeight(item, items || []);
     return `
-              <li class="modifier-card attack-card resource-card inventory-item-card equipped-item-card">
+              <li class="modifier-card attack-card resource-card inventory-item-card equipped-item-card"
+                data-equipped-location="${escapeHtml(getBodyPartLabels(getEquipSlots(item)))}"
+                data-equipped-weight="${escapeHtml(formatWeight(itemWeight, weightUnit))}"
+                data-equipped-attunement="${item.attunement_active ? 'Attiva' : 'No'}"
+                data-equipped-attuned="${String(Boolean(item.attunement_active))}">
                 <div class="resource-card__badges equipped-item-card__badges">
                   ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${statusLabels.magic}</span>` : ''}
                   ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${statusLabels.attunement}</span>` : ''}
@@ -747,7 +723,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
   `;
 }
 
-export function buildAttackSection(character, items = [], companions = []) {
+export function buildAttackSection(character, items = [], companions = [], canEditCharacter = false) {
   const data = character.data || {};
   const attackBonusMelee = Number(data.attack_bonus_melee ?? data.attack_bonus) || 0;
   const attackBonusRanged = Number(data.attack_bonus_ranged ?? data.attack_bonus) || 0;
@@ -757,43 +733,31 @@ export function buildAttackSection(character, items = [], companions = []) {
   const equippedWeapons = items.filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
   const unarmedAttacks = Array.isArray(data.unarmed_attacks) ? data.unarmed_attacks : [];
   const activeWildShape = getActiveWildShape(character, companions);
-  const spellcasting = data.spellcasting || {};
-  const spellAbilityKey = spellcasting.ability;
-  const spellAbilityScore = spellAbilityKey ? data.abilities?.[spellAbilityKey] : null;
-  const spellAbilityMod = getAbilityModifier(spellAbilityScore);
-  const spellProficiencyBonus = normalizeNumber(data.proficiency_bonus);
-  const spellAttackBonus = spellAbilityMod === null || spellProficiencyBonus === null
-    ? null
-    : spellAbilityMod + spellProficiencyBonus;
-  const spells = Array.isArray(data.spells) ? data.spells : [];
-  const cantripAttacks = spells.filter((spell) => {
-    const isCantrip = spell.kind === 'cantrip' || Number(spell.level) === 0;
-    return isCantrip && spell.attack_roll && spell.damage_die;
-  });
-  const hasSpellAttacks = cantripAttacks.length && spellAttackBonus !== null && spellAbilityKey;
-  if (!equippedWeapons.length && !unarmedAttacks.length && !hasSpellAttacks && !activeWildShape?.statBlock.attacks.length) {
-    return '<p class="muted">Nessun attacco configurato.</p>';
-  }
-  const bonusChips = [];
-  if (extraAttacks > 0) bonusChips.push(`Attacco Extra (${extraAttacks})`);
-  if (attackBonusMelee) bonusChips.push(`Mischia attacco ${formatSigned(attackBonusMelee)}`);
-  if (damageBonusMelee) bonusChips.push(`Mischia danni ${formatSigned(damageBonusMelee)}`);
-  if (attackBonusRanged) bonusChips.push(`Distanza attacco ${formatSigned(attackBonusRanged)}`);
-  if (damageBonusRanged) bonusChips.push(`Distanza danni ${formatSigned(damageBonusRanged)}`);
-  const bonusLabel = bonusChips.length
-    ? `<div class="tag-row">${bonusChips.map((label) => `<span class="chip">${label}</span>`).join('')}</div>`
-    : '';
+  const hasConfiguredAttacks = Boolean(equippedWeapons.length || unarmedAttacks.length || activeWildShape?.statBlock.attacks.length);
+  const attacksPerAction = 1 + Math.max(0, extraAttacks);
   return `
-    ${activeWildShape ? `<div class="tag-row"><span class="chip chip--wild-shape">Forma selvatica: ${escapeHtml(activeWildShape.companion.name)}</span><span class="chip">FOR/DES/COS sostituite</span></div>` : ''}
-    ${bonusLabel}
+    <section class="attack-turn-summary" aria-label="Riepilogo combattimento">
+      ${canEditCharacter ? '<button class="attack-turn-summary__edit" type="button" data-edit-general-modifier="damage" aria-label="Modifica bonus generali ai danni" title="Modifica bonus danni">✎</button>' : ''}
+      <div class="attack-turn-summary__primary">
+        <span class="attack-turn-summary__icon" aria-hidden="true">⚔</span>
+        <span><small>Attacchi per azione</small><strong>${attacksPerAction}</strong></span>
+        ${extraAttacks > 0 ? `<em>Attacco Extra ×${extraAttacks}</em>` : ''}
+      </div>
+      <div class="attack-turn-summary__bonuses">
+        <span><small>Mischia</small><strong>${formatSigned(attackBonusMelee)} <i>/</i> ${formatSigned(damageBonusMelee)}</strong><em>colpire / danni</em></span>
+        <span><small>Distanza</small><strong>${formatSigned(attackBonusRanged)} <i>/</i> ${formatSigned(damageBonusRanged)}</strong><em>colpire / danni</em></span>
+      </div>
+      ${activeWildShape ? `<div class="attack-turn-summary__form"><small>Forma selvatica</small><strong>${escapeHtml(activeWildShape.companion.name)}</strong><span>FOR, DES e COS sostituite</span></div>` : ''}
+    </section>
     <div class="detail-section">
       <div class="detail-grid detail-grid--compact">
+        ${hasConfiguredAttacks ? '' : '<p class="muted">Nessun attacco configurato.</p>'}
         ${activeWildShape?.statBlock.attacks.length ? activeWildShape.statBlock.attacks.map((attack, index) => {
       const attackName = attack.name || `Attacco ${index + 1}`;
       const damageModifier = Number(attack.damage_modifier) || 0;
       const damageText = `${attack.damage || '-'}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
       return `
-          <div class="modifier-card attack-card attack-card--wild-shape attack-card--creature" data-roll-attack="wildshape:${index}">
+          <div class="modifier-card attack-card attack-card--wild-shape attack-card--creature" data-attack-range="melee" data-roll-attack="wildshape:${index}" data-attack-origin="Forma" data-attack-magic="false" data-attack-damage-type="${escapeHtml(attack.damage_type ? (damageTypeList.find((type) => type.key === attack.damage_type)?.label || attack.damage_type) : '')}">
             <div class="attack-card__body">
               <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attack.to_hit || 0)}, caratteristica Forma">
                 <small>Forma</small>
@@ -822,7 +786,7 @@ export function buildAttackSection(character, items = [], companions = []) {
     const abilityLabel = abilityShortLabel[abilityKey] || 'Fisico';
     const damageText = `${attack.damage || '-'}${attackStats.damageModifier ? ` ${formatSigned(attackStats.damageModifier)}` : ''}`;
     return `
-          <div class="modifier-card attack-card attack-card--unarmed" data-roll-attack="unarmed:${index}">
+          <div class="modifier-card attack-card attack-card--unarmed" data-attack-range="melee" data-roll-attack="unarmed:${index}" data-custom-attack-index="${index}" data-attack-origin="Senz’arma" data-attack-magic="false" data-attack-damage-type="${escapeHtml(attack.damage_type ? (damageTypeList.find((type) => type.key === attack.damage_type)?.label || attack.damage_type) : 'Contundente')}">
             <div class="attack-card__body">
               <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attackStats.attackTotal)}, caratteristica ${escapeHtml(abilityLabel)}">
                 <small>${escapeHtml(abilityLabel)}</small>
@@ -845,9 +809,11 @@ export function buildAttackSection(character, items = [], companions = []) {
         `;
   }).join('')}
         ${equippedWeapons.map((weapon) => {
-    const weaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
+    const baseWeaponRange = weapon.weapon_range || (weapon.range_normal ? 'ranged' : 'melee');
+    const isHybrid = baseWeaponRange === 'melee' && Boolean(weapon.is_thrown);
+    const weaponRange = isHybrid ? 'hybrid' : baseWeaponRange;
     const attackAbility = weapon.attack_ability
-      || (weaponRange === 'ranged' ? 'dex' : 'str');
+      || (baseWeaponRange === 'ranged' ? 'dex' : 'str');
     const abilityMod = getAbilityModifier(data.abilities?.[attackAbility]) ?? 0;
     const proficiencies = data.proficiencies || {};
     const proficient = weapon.weapon_type === 'simple'
@@ -856,21 +822,19 @@ export function buildAttackSection(character, items = [], companions = []) {
         ? Boolean(proficiencies.weapon_martial)
         : false;
     const proficiencyBonus = proficient ? (normalizeNumber(data.proficiency_bonus) ?? 0) : 0;
-    const attackBonus = weaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee;
-    const damageBonus = weaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee;
     const damageModes = getWeaponDamageModes(weapon).filter((mode) => mode.damageDie);
     const normalRange = Number(weapon.range_normal) || null;
     const disadvantageRange = Number(weapon.range_disadvantage) || null;
     const meleeRange = Number(weapon.melee_range) || 1.5;
     const rangeParts = [];
-    if (weaponRange === 'melee' && meleeRange > 1.5) {
+    if (baseWeaponRange === 'melee' && meleeRange > 1.5) {
       rangeParts.push(`Portata ${meleeRange} m`);
     }
-    if (weaponRange === 'melee' && weapon.is_thrown && normalRange) {
-      rangeParts.push(`Lancio ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
+    if (isHybrid && normalRange) {
+      rangeParts.push(`${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''} m`);
     }
-    if (weaponRange !== 'melee' && normalRange) {
-      rangeParts.push(`Gittata ${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''}`);
+    if (baseWeaponRange === 'ranged' && normalRange) {
+      rangeParts.push(`${normalRange}${disadvantageRange ? `/${disadvantageRange}` : ''} m`);
     }
     const requiredAmmoType = weapon.required_ammunition_type || weapon.ammunition_type;
     const ammoRemaining = weapon.consumes_ammunition
@@ -881,27 +845,34 @@ export function buildAttackSection(character, items = [], companions = []) {
       : null;
     const ammoLabel = ammunitionTypeLabels.get(requiredAmmoType) || 'Munizioni';
     const ammoText = ammoRemaining !== null ? `${ammoLabel} ${ammoRemaining}` : '';
-    const rangeText = [...rangeParts, ammoText].filter(Boolean).join(' · ');
+    const rangeText = rangeParts.join(' · ');
     const abilityLabel = attackAbility === 'dex' ? 'DES' : attackAbility === 'str' ? 'FOR' : attackAbility.toUpperCase();
     const weaponKey = weapon.id ?? weapon.name;
     const renderedModes = damageModes.length ? damageModes : [{ id: 'default', label: '', damageDie: null, damageModifier: Number(weapon.damage_modifier) || 0 }];
     const selectedMode = renderedModes.find((mode) => mode.id === weapon.selected_damage_mode) || renderedModes[0];
-    const attackTotal = abilityMod + proficiencyBonus + (Number(selectedMode.attackModifier) || 0) + attackBonus;
-    const modeDamageTotal = abilityMod + (Number(selectedMode.damageModifier) || 0) + damageBonus;
+    const baseAttackTotal = abilityMod + proficiencyBonus + (Number(selectedMode.attackModifier) || 0);
+    const meleeAttackTotal = baseAttackTotal + attackBonusMelee;
+    const rangedAttackTotal = baseAttackTotal + attackBonusRanged;
+    const attackTotal = baseAttackTotal + (baseWeaponRange === 'ranged' ? attackBonusRanged : attackBonusMelee);
+    const baseDamageTotal = abilityMod + (Number(selectedMode.damageModifier) || 0);
+    const meleeDamageTotal = baseDamageTotal + damageBonusMelee;
+    const rangedDamageTotal = baseDamageTotal + damageBonusRanged;
+    const modeDamageTotal = baseDamageTotal + (baseWeaponRange === 'ranged' ? damageBonusRanged : damageBonusMelee);
     const damageText = selectedMode.damageDie
       ? `${selectedMode.damageDie}${modeDamageTotal ? ` ${formatSigned(modeDamageTotal)}` : ''}`
       : '-';
+    const meleeDamageText = selectedMode.damageDie ? `${selectedMode.damageDie}${meleeDamageTotal ? ` ${formatSigned(meleeDamageTotal)}` : ''}` : '-';
+    const rangedDamageText = selectedMode.damageDie ? `${selectedMode.damageDie}${rangedDamageTotal ? ` ${formatSigned(rangedDamageTotal)}` : ''}` : '-';
     const modeLabel = selectedMode.id !== 'default' ? selectedMode.label : '';
-    const modeText = modeLabel ? `Impugnatura: ${modeLabel}` : '';
     const masteryLabel = weapon.weapon_mastery ? getWeaponMasteryLabel(weapon.weapon_mastery) : '';
     const masteryKnown = weapon.weapon_mastery && Array.isArray(data.weapon_masteries) && data.weapon_masteries.includes(weapon.weapon_mastery);
     const masteryText = masteryLabel ? `Maestria: ${masteryLabel}${masteryKnown ? '' : ' (non selezionata)'}` : '';
+    const damageType = selectedMode.damageType || weapon.damage_type || '';
+    const damageTypeLabel = damageType ? (damageTypeList.find((type) => type.key === damageType)?.label || damageType) : '';
     const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
-    const cycleButton = renderedModes.length > 1
-      ? `<button class="attack-action-button attack-action-button--mode" data-cycle-weapon-mode="${weaponKey}" aria-label="Cambia impugnatura ${weapon.name}" title="Cambia impugnatura: ${modeLabel || selectedMode.label}">${WEAPON_MODE_ICON}</button>`
-      : '';
     return `
-          <div class="modifier-card attack-card attack-card--weapon" data-roll-attack="weapon:${weapon.id ?? weapon.name}">
+          <div class="modifier-card attack-card attack-card--weapon" data-attack-range="${weaponRange}" data-attack-range-label="${escapeHtml(rangeText)}" data-attack-ammo-label="${escapeHtml(ammoLabel)}" data-attack-ammo-value="${ammoRemaining ?? ''}" data-attack-grip-label="${escapeHtml(selectedMode.label || '')}" data-roll-attack="weapon:${weapon.id ?? weapon.name}" data-attack-item-id="${escapeHtml(weapon.id ?? '')}" data-attack-origin="Arma" data-attack-magic="${Boolean(weapon.is_magic)}" data-attack-damage-type="${escapeHtml(damageTypeLabel)}" data-attack-melee-bonus="${formatSigned(meleeAttackTotal)}" data-attack-ranged-bonus="${formatSigned(rangedAttackTotal)}" data-attack-melee-damage="${escapeHtml(meleeDamageText)}" data-attack-ranged-damage="${escapeHtml(rangedDamageText)}">
+            ${sanitizeImageUrl(weapon.image_url) ? `<img class="attack-item-thumbnail" data-attack-item-image src="${sanitizeImageUrl(weapon.image_url)}" alt="" loading="lazy" />` : ''}
             <div class="attack-card__body">
               <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attackTotal)}, caratteristica ${abilityLabel}">
                 <small>${abilityLabel}</small>
@@ -912,13 +883,11 @@ export function buildAttackSection(character, items = [], companions = []) {
               </div>
               <div class="attack-card__meta">
                 <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
-                ${modeText ? `<span class="muted">${modeText}</span>` : ''}
                 ${masteryText ? `<span class="muted" title="${getWeaponMasterySummary(weapon.weapon_mastery)}">${masteryText}</span>` : ''}
                 ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
               </div>
             </div>
             <div class="attack-card__actions">
-              ${cycleButton}
               <button class="attack-action-button attack-action-button--damage" data-roll-damage="${rollDamageKey}" aria-label="Calcola danni ${weapon.name}${modeLabel ? ` ${modeLabel}` : ''}" title="Tira i danni">
                 ${DAMAGE_ACTION_ICON}
               </button>
@@ -926,44 +895,12 @@ export function buildAttackSection(character, items = [], companions = []) {
           </div>
         `;
   }).join('')}
-        ${hasSpellAttacks
-    ? cantripAttacks.map((spell) => {
-      const damageModifier = Number(spell.damage_modifier) || 0;
-      const damageText = `${spell.damage_die}${damageModifier ? ` ${formatSigned(damageModifier)}` : ''}`;
-      const abilityLabel = abilityShortLabel[spellAbilityKey] ?? spellAbilityKey?.toUpperCase();
-      const rangeText = spell.range ? `Range ${spell.range}` : '';
-      return `
-            <div class="modifier-card attack-card attack-card--spell" data-roll-attack="spell:${spell.id}">
-              <div class="attack-card__body">
-                <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(spellAttackBonus)}, caratteristica ${abilityLabel}">
-                  <small>${abilityLabel}</small>
-                  <strong>${formatSigned(spellAttackBonus)}</strong>
-                </span>
-                <div class="attack-card__title">
-                  <strong class="attack-card__name">${spell.name}</strong>
-                </div>
-                <div class="attack-card__meta">
-                  <span class="attack-card__damage"><small>Danni</small>${damageText}</span>
-                 
-                  ${rangeText ? `<span class="muted">${rangeText}</span>` : ''}
-                </div>
-              </div>
-              <button class="attack-action-button attack-action-button--damage attack-action-button--spell" data-roll-damage="spell:${spell.id}" aria-label="Calcola danni ${spell.name}" title="Tira i danni">
-                ${DAMAGE_ACTION_ICON}
-              </button>
-            </div>
-          `;
-    }).join('')
-    : ''}
       </div>
     </div>
   `;
 }
 
-export function buildSpellSection(character, canManageSpells = false) {
-  const data = character.data || {};
-  const notes = data.spell_notes || '';
-  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
+function getSpellcastingStats(data) {
   const spellcasting = data.spellcasting || {};
   const proficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const abilityKey = spellcasting.ability;
@@ -976,6 +913,83 @@ export function buildSpellSection(character, canManageSpells = false) {
     ? null
     : abilityMod + proficiencyBonus;
   const spellAbilityLabel = abilityKey ? abilityShortLabel[abilityKey] : null;
+  return {
+    ability: spellAbilityLabel ?? '-',
+    saveDc: spellSaveDc === null ? '-' : spellSaveDc,
+    attackBonus: spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus)
+  };
+}
+
+function buildSpellStatsRow(data, { includeAttack = true } = {}) {
+  const stats = getSpellcastingStats(data);
+  const summaryChips = [
+    { label: 'Caratteristica incantatore', value: stats.ability, tone: 'ability' },
+    { label: 'CD salvezza', value: stats.saveDc, tone: 'save' },
+    ...(includeAttack ? [{ label: 'Tiro incantesimo', value: stats.attackBonus, tone: 'attack' }] : [])
+  ];
+  return `<div class="spell-stats" aria-label="Statistiche da incantatore">${summaryChips.map((chip) => `
+    <span class="spell-stat spell-stat--${chip.tone}">
+      <small>${chip.label}</small>
+      <strong>${chip.value}</strong>
+    </span>
+  `).join('')}</div>`;
+}
+
+function renderSpellQuickItem(spell, spellAttackBonus = '—') {
+  const level = Number(spell.level) || 0;
+  const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
+  const castTimeClass = getResourceCastTimeClass(castTimeLabel);
+  const damageOverlay = buildSpellDamageOverlayConfig(spell, level);
+  const damageNotation = damageOverlay
+    ? `${damageOverlay.notation}${damageOverlay.modifier ? ` ${formatSigned(damageOverlay.modifier)}` : ''}`
+    : '';
+  const damageTypeLabel = spell.damage_type
+    ? (damageTypeList.find((type) => type.key === spell.damage_type)?.label || spell.damage_type)
+    : '';
+  return `
+    <div class="modifier-card attack-card resource-card spell-prepared-list__card"
+      data-spell-level="${level}"
+      data-spell-ritual="${Boolean(spell.is_ritual)}"
+      data-spell-concentration="${Boolean(spell.concentration)}"
+      data-spell-attack-roll="${Boolean(spell.attack_roll)}"
+      data-spell-saving-throw="${escapeHtml(spell.saving_throw_ability || '')}"
+      data-spell-damage-type="${escapeHtml(damageTypeLabel)}">
+      <div class="resource-card__badges spell-card__badges">
+        ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
+        ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
+        ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
+      </div>
+      <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
+        ${level > 0
+    ? `<span class="spell-card__sigil" aria-label="Incantesimo di ${level}° livello">${level}°</span>`
+    : '<span class="spell-card__sigil" aria-hidden="true">✦</span>'}
+        <span class="spell-card__identity">
+          <span class="spell-prepared-list__name">${spell.name}</span>
+          <span class="spell-card__meta">${normalizeSpellSchool(spell.school) || (level > 0 ? 'Incantesimo' : 'Trucchetto')}</span>
+        </span>
+      </button>
+      ${(spell.cast_time || spell.range || spell.duration || spell.components) ? '<div class="catalog-spell-facts">' +
+    [['Tempo', spell.cast_time], ['Gittata', spell.range], ['Componenti', spell.components], ['Durata', spell.duration]]
+      .filter(([, value]) => value).map(([label, value]) => '<span><small>' + label + '</small>' + escapeHtml(value) + '</span>').join('') +
+    '</div>' : ''}
+      <div class="resource-card-actions spell-card-actions">
+        ${damageOverlay ? `
+          <button class="attack-action-button attack-action-button--damage attack-action-button--spell spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" data-damage-notation="${escapeHtml(damageNotation)}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
+            ${DAMAGE_ACTION_ICON}
+          </button>
+        ` : ''}
+        ${spell.attack_roll ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-roll-attack="spell:${spell.id}" data-attack-range="${getCantripAttackRange(spell)}" data-attack-modifier="${escapeHtml(spellAttackBonus)}">Colpire</button>` : ''}
+        ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+export function buildSpellSection(character, canManageSpells = false) {
+  const data = character.data || {};
+  const notes = data.spell_notes || '';
+  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
+  const spellcasting = data.spellcasting || {};
   const slots = spellcasting.slots || {};
   const slotsMax = spellcasting.slots_max || {};
   const recharge = spellcasting.recharge || 'long_rest';
@@ -983,73 +997,29 @@ export function buildSpellSection(character, canManageSpells = false) {
   const slotEntries = slotLevels.map((level) => {
     const remaining = Math.max(0, Number(slots[level]) || 0);
     const max = Math.max(remaining, Number(slotsMax[level]) || 0);
-    return {
-      level,
-      count: remaining,
-      max
-    };
+    return { level, count: remaining, max };
   }).filter((entry) => entry.max > 0);
-  const summaryChips = [
-    { label: 'Caratteristica', value: spellAbilityLabel ?? '-', tone: 'ability' },
-    { label: 'CD salvezza', value: spellSaveDc === null ? '-' : spellSaveDc, tone: 'save' },
-    { label: 'Tiro incantesimo', value: spellAttackBonus === null ? '-' : formatSigned(spellAttackBonus), tone: 'attack' }
-  ];
-  const summaryChipRow = `<div class="spell-stats" aria-label="Statistiche da incantatore">${summaryChips.map((chip) => `
-    <span class="spell-stat spell-stat--${chip.tone}">
-      <small>${chip.label}</small>
-      <strong>${chip.value}</strong>
-    </span>
-  `).join('')}</div>`;
+  const spellAttackBonus = getSpellcastingStats(data).attackBonus;
+  const cantrips = spells.filter((spell) => (Number(spell.level) || 0) === 0);
   const preparedSpells = spells
     .filter((spell) => {
       const level = Number(spell.level) || 0;
       if (level < 1) return false;
       const prepState = spell.prep_state || 'known';
-      return prepState === 'prepared' || prepState === 'always';
+      return !data.spellcasting?.can_prepare || prepState === 'prepared' || prepState === 'always';
     });
-  const cantrips = spells.filter((spell) => (Number(spell.level) || 0) === 0);
-  const alwaysKnownSpells = preparedSpells.filter((spell) => (spell.prep_state || 'known') === 'always');
-  const preparedOnlySpells = preparedSpells.filter((spell) => (spell.prep_state || 'known') !== 'always');
-
-  const renderSpellQuickItem = (spell, prepLabel = '') => {
-    const level = Number(spell.level) || 0;
-    const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
-    const castTimeClass = getResourceCastTimeClass(castTimeLabel);
-    const damageOverlay = buildSpellDamageOverlayConfig(spell, level);
-    return `
-      <div class="modifier-card attack-card resource-card spell-prepared-list__card">
-        <div class="resource-card__badges spell-card__badges">
-          ${spell.concentration ? '<span class="resource-chip resource-chip--floating resource-chip--concentration">C</span>' : ''}
-          ${spell.is_ritual ? '<span class="resource-chip resource-chip--floating resource-chip--ritual">R</span>' : ''}
-          ${castTimeLabel ? `<span class="resource-chip resource-chip--floating ${castTimeClass}">${castTimeLabel}</span>` : ''}
-        </div>
-        <button class="spell-prepared-list__item" type="button" data-spell-quick-open="${spell.id}">
-          ${level > 0
-    ? `<span class="spell-card__sigil" aria-label="Incantesimo di ${level}° livello">${level}°</span>`
-    : '<span class="spell-card__sigil" aria-hidden="true">✦</span>'}
-          <span class="spell-card__identity">
-            <span class="spell-prepared-list__name">${spell.name}</span>
-            <span class="spell-card__meta">${spell.school?.trim() || (level > 0 ? 'Incantesimo' : 'Trucchetto')}${prepLabel ? ` · ${prepLabel}` : ''}</span>
-          </span>
-        </button>
-        <div class="resource-card-actions spell-card-actions">
-          ${damageOverlay ? `
-            <button class="attack-action-button attack-action-button--damage attack-action-button--spell spell-card-actions__damage" type="button" data-roll-damage="spell:${spell.id}" aria-label="Lancia danni ${spell.name}" title="Lancia danni">
-              ${DAMAGE_ACTION_ICON}
-            </button>
-          ` : ''}
-          ${level > 0 ? `<button class="resource-cta-button resource-cta-button--label" type="button" data-use-spell="${spell.id}">Usa</button>` : ''}
-        </div>
-      </div>
-    `;
-  };
+  const launchSpells = [...cantrips, ...preparedSpells];
   return `
-    ${summaryChipRow}
+    ${buildSpellStatsRow(data, { includeAttack: false })}
     <div class="detail-section">
       <div class="detail-card detail-card--text spell-summary-card">
         <div class="spell-slots">
           <span class="spell-slots__title">Slot rimanenti</span>
           <div class="spell-slots__list">
+            <div class="spell-slot-row spell-slot-row--cantrips" data-spell-slot-filter="0" role="button" tabindex="0" aria-pressed="false" aria-label="Mostra trucchetti">
+              <span class="spell-slot-label">Trucchetti</span>
+              <span class="spell-slot-cantrip-mark" aria-hidden="true">✧</span>
+            </div>
             ${slotEntries.map((entry) => {
     const baseIndicatorClass = recharge === 'short_rest' ? 'charge-indicator' : 'charge-indicator charge-indicator--long';
     const charges = Array.from({ length: entry.max }, (_, index) => {
@@ -1065,9 +1035,8 @@ export function buildSpellSection(character, canManageSpells = false) {
       return `<span class="${classes}"></span>`;
     }).join('');
     return `
-              <div class="spell-slot-row">
+              <div class="spell-slot-row" data-spell-slot-filter="${entry.level}" role="button" tabindex="0" aria-pressed="false" aria-label="Mostra incantesimi di ${entry.level}° livello">
                 <span class="spell-slot-label">Slot ${entry.level}°</span>
-                <span class="spell-slot-count">${entry.count}</span>
                 <div class="spell-slot-charges" aria-hidden="true">${charges || '<span class="spell-slot-empty">-</span>'}</div>
               </div>
             `;
@@ -1080,37 +1049,13 @@ export function buildSpellSection(character, canManageSpells = false) {
         <details class="spell-list-accordion" open>
           <summary class="spell-list-accordion__summary">
             <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
-            <span class="spell-list-accordion__title">Trucchetti</span>
-            <span class="spell-list-accordion__count">${cantrips.length}</span>
+            <span class="spell-list-accordion__title">Trucchetti e incantesimi</span>
+            <span class="spell-list-accordion__count">${launchSpells.length}</span>
           </summary>
           <div class="spell-list-accordion__body">
-            ${cantrips.length
-    ? `<div class="spell-prepared-list__items">${cantrips.map((spell) => renderSpellQuickItem(spell)).join('')}</div>`
-    : '<p class="muted spell-list-accordion__empty">Nessun trucchetto disponibile.</p>'}
-          </div>
-        </details>
-        <details class="spell-list-accordion" open>
-          <summary class="spell-list-accordion__summary">
-            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
-            <span class="spell-list-accordion__title">Preparati</span>
-            <span class="spell-list-accordion__count">${preparedOnlySpells.length}</span>
-          </summary>
-          <div class="spell-list-accordion__body">
-            ${preparedOnlySpells.length
-      ? `<div class="spell-prepared-list__items">${preparedOnlySpells.map((spell) => renderSpellQuickItem(spell, 'Preparato')).join('')}</div>`
-      : '<p class="muted spell-list-accordion__empty">Nessun incantesimo preparato.</p>'}
-          </div>
-        </details>
-        <details class="spell-list-accordion" open>
-          <summary class="spell-list-accordion__summary">
-            <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
-            <span class="spell-list-accordion__title">Sempre conosciuti</span>
-            <span class="spell-list-accordion__count">${alwaysKnownSpells.length}</span>
-          </summary>
-          <div class="spell-list-accordion__body">
-            ${alwaysKnownSpells.length
-      ? `<div class="spell-prepared-list__items">${alwaysKnownSpells.map((spell) => renderSpellQuickItem(spell, 'Sempre preparato')).join('')}</div>`
-      : '<p class="muted spell-list-accordion__empty">Nessun incantesimo sempre conosciuto.</p>'}
+            ${launchSpells.length
+      ? `<div class="spell-prepared-list__items">${launchSpells.map((spell) => renderSpellQuickItem(spell, spellAttackBonus)).join('')}</div>`
+      : '<p class="muted spell-list-accordion__empty">Nessuna magia pronta da lanciare.</p>'}
           </div>
         </details>
       </div>
@@ -1130,6 +1075,13 @@ function normalizeCastTimeLabel(castTime) {
   if (normalized.includes('azion')) return 'Azione';
   const exactMatch = RESOURCE_CAST_TIME_ORDER.find((entry) => entry.label.toLowerCase() === normalized);
   return exactMatch?.label ?? '';
+}
+
+function getCantripAttackRange(spell) {
+  if (spell?.attack_range_type === 'melee' || spell?.attack_range_type === 'ranged') {
+    return spell.attack_range_type;
+  }
+  return String(spell?.range || '').trim() ? 'ranged' : 'melee';
 }
 
 function getResourceCastTimeRank(castTime) {
@@ -1153,6 +1105,19 @@ function sortResourcesByCastTime(resources) {
   });
 }
 
+function getResourceDiceLabel(resource) {
+  const notation = String(resource?.damage_dice_notation || '').trim();
+  if (!notation) return '';
+  const modifier = Number(resource?.damage_modifier) || 0;
+  return `${notation}${modifier ? ` ${modifier > 0 ? '+' : ''}${modifier}` : ''}`;
+}
+
+function getResourceDamageTypeLabel(resource) {
+  const damageType = String(resource?.damage_type || '').trim();
+  if (!damageType) return '';
+  return damageTypeList.find((type) => type.key === damageType)?.label || damageType;
+}
+
 export function buildResourceList(
   resources,
   canManageResources,
@@ -1166,8 +1131,9 @@ export function buildResourceList(
   return `
     <ul class="resource-list resource-list--compact">
       ${resources.map((res) => `
-        <li class="modifier-card attack-card resource-card resource-card--${res.resource_type || 'uses'}" data-resource-card="${res.id}">
+        <li class="modifier-card attack-card resource-card resource-card--${res.resource_type || 'uses'}" data-resource-card="${res.id}" data-resource-saving-throw="${escapeHtml(res.saving_throw_ability || '')}" data-resource-damage-type="${escapeHtml(getResourceDamageTypeLabel(res))}">
           ${showCastTime && normalizeCastTimeLabel(res.cast_time) ? `<span class="resource-chip resource-chip--floating ${getResourceCastTimeClass(res.cast_time)}">${normalizeCastTimeLabel(res.cast_time)}</span>` : ''}
+          ${res.reset_on && res.reset_on !== 'none' ? `<span data-resource-recovery="${res.reset_on}">${res.reset_on === 'short_rest' ? 'Riposo breve' : res.reset_on === 'long_rest' ? 'Riposo lungo' : res.reset_on === 'daily' ? 'Giornaliera' : res.reset_on}</span>` : ''}
           <span class="resource-card__marker" aria-hidden="true">${res.resource_type === 'passive' ? '◇' : res.resource_type === 'pool' ? '◉' : '◆'}</span>
           <div class="attack-card__body resource-card__body">
             <div class="attack-card__title resource-card__title">
@@ -1187,6 +1153,15 @@ export function buildResourceList(
     : ''}
           </div>
           <div class="resource-card-actions">
+            ${getResourceDiceLabel(res) ? `
+              <button
+                class="resource-cta-button resource-cta-button--dice"
+                type="button"
+                data-roll-resource="${res.id}"
+                data-dice-notation="${escapeHtml(getResourceDiceLabel(res))}"
+                aria-label="Tira ${escapeHtml(getResourceDiceLabel(res))} per ${escapeHtml(res.name)}"
+              >${escapeHtml(getResourceDiceLabel(res))}</button>
+            ` : ''}
             ${showUseButton ? `
               <button
                 class="resource-cta-button resource-cta-button--label"
@@ -1214,21 +1189,21 @@ export function buildResourceSections(resources, canManageResources) {
   const activeSection = `
     <details class="resource-accordion resource-section resource-section--active" open>
       <summary class="resource-accordion__summary">
-        <span>Attive</span>
+        <span>Consumabili</span>
         <span class="resource-accordion__meta">${activeResources.length} risorse</span>
         <span class="resource-accordion__icon" aria-hidden="true">▾</span>
       </summary>
       <div class="resource-section__body resource-accordion__body">
         ${activeResources.length
     ? buildResourceList(activeResources, canManageResources, { showUseButton: true })
-    : '<p class="muted">Nessuna risorsa attiva.</p>'}
+    : '<p class="muted">Nessuna abilità consumabile.</p>'}
       </div>
     </details>
   `;
   const passiveSection = `
     <details class="resource-accordion resource-section" ${activeResources.length ? '' : 'open'}>
       <summary class="resource-accordion__summary">
-        <span>Passive</span>
+        <span>Sempre attiva</span>
         <span class="resource-accordion__meta">${passiveResources.length} risorse</span>
         <span class="resource-accordion__icon" aria-hidden="true">▾</span>
       </summary>
@@ -1240,7 +1215,7 @@ export function buildResourceSections(resources, canManageResources) {
       showDescription: true,
       showCastTime: true
     })
-    : '<p class="muted">Nessuna risorsa passiva.</p>'}
+    : '<p class="muted">Nessuna abilità sempre attiva.</p>'}
       </div>
     </details>
   `;
@@ -1255,7 +1230,7 @@ export function buildResourcePool(resource) {
   const percent = Math.min(Math.max((remaining / maxUses) * 100, 0), 100);
   return `
     <div class="resource-pool" aria-label="Pool risorsa ${remaining} su ${maxUses}">
-      <div class="resource-pool__label"><span>Pool</span><strong>${remaining}/${maxUses}</strong></div>
+      <div class="resource-pool__label"><span>Pool</span><strong><span class="resource-pool__value">${remaining}/${maxUses}</span><small>${Math.round(percent)}%</small></strong></div>
       <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
         <div class="resource-pool__fill" style="width: ${percent}%;"></div>
       </div>

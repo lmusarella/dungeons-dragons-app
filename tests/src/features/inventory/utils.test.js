@@ -29,7 +29,8 @@ describe('src/features/inventory/utils.js', () => {
     expect(getEquipSlots({ equip_slots: '["body"]' })).toEqual(['body']);
     expect(getEquipSlots({ equip_slot: 'ring' })).toEqual(['ring']);
     expect(getBodyPartLabels(null)).toBe('');
-    expect(getWeightUnit(undefined)).toBe('lb');
+    expect(getWeightUnit(undefined)).toBe('kg');
+    expect(getWeightUnit({ data: { settings: { weight_unit: 'lb' } } })).toBe('kg');
   });
 
   it('keeps compatible destinations separate from equipped slots', () => {

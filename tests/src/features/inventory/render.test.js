@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildInventoryTree, moneyFields } from '../../../../src/features/inventory/render.js';
+import { buildInventoryTree, moneyBundleFields, moneyFields, buildLootFields } from '../../../../src/features/inventory/render.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -87,6 +87,20 @@ describe('src/features/inventory/render.js', () => {
     expect(markup).not.toContain('javascript:alert(1)');
     expect(markup).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(fields).toContain('&quot; autofocus onfocus=&quot;alert(1)');
+  });
+
+  it('builds a compact multi-currency operation and a loot form without volume', () => {
+    const fields = moneyBundleFields({ direction: 'pay', amounts: { gp: 2 }, wallet: { gp: 7, pp: 1 } });
+    ['amount_pp', 'amount_gp', 'amount_sp', 'amount_cp'].forEach((name) => expect(fields).toContain(`name="${name}"`));
+    expect(fields).toContain('7 disponibili');
+    expect(fields).toContain('value="2"');
+    const loot = buildLootFields();
+    expect(loot).not.toContain('name="volume"');
+    expect(loot).not.toContain('name="value_cp"');
+    expect(loot).not.toContain('name="weight"');
+    expect(loot).toContain('name="category"');
+    expect(loot).toContain('type="radio"');
+    expect(loot).toContain('value="loot" checked');
   });
 
 });

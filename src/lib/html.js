@@ -27,3 +27,15 @@ export function sanitizeImageUrl(value) {
     return '';
   }
 }
+
+export function sanitizeExternalUrl(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    return escapeHtml(raw);
+  } catch {
+    return '';
+  }
+}

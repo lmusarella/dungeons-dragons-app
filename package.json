@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "audit:unused": "node scripts/audit-unused.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

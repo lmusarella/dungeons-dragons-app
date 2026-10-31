@@ -497,7 +497,7 @@ export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
   return { field, inputs: [...inputByPartId.values()], sync, mount };
 }
 
-function buildMannequinContent({ canEdit, items = [], weightUnit = 'lb' }) {
+function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
   const content = document.createElement('div');
   content.className = 'equipment-mannequin equipment-mannequin--studio';
 
@@ -669,7 +669,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-  camera.position.set(0, 0.24, 8.35);
+  camera.position.set(0, 0.24, options.focusItemId != null ? 9.4 : 8.35);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -726,7 +726,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   const pointer = new THREE.Vector2();
   let selectedId = null;
   let hoveredId = null;
-  let pendingItemId = null;
+  let pendingItemId = options.initialItemId == null ? null : String(options.initialItemId);
   const pendingPartIds = new Set();
   let rotating = false;
   let dragDistance = 0;
@@ -787,7 +787,11 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
           : isCompatible
           ? compatibilityPulseOn ? 'compatible-on' : 'compatible-off'
           : 'inactive'
-        : mesh.userData.partId === selectedId
+        : options.focusItemId != null
+          ? (itemMap.get(mesh.userData.partId) || []).some(item => String(item.id) === String(options.focusItemId))
+            ? compatibilityPulseOn ? 'selected-on' : 'selected-off'
+            : 'inactive'
+          : mesh.userData.partId === selectedId
           ? compatibilityPulseOn ? 'selected-on' : 'selected-off'
           : mesh.userData.partId === hoveredId ? 'hover' : 'default';
       setPartMaterialState(mesh, state);
@@ -827,7 +831,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
         ? `Equipaggia ${pendingPartIds.size === 1 ? 'qui' : `in ${pendingPartIds.size} zone`}`
         : 'Seleziona una zona';
     }
-    guidance.textContent = pendingItem
+    guidance.textContent = options.focusItemId != null ? 'La parte evidenziata indica dove è equipaggiato questo oggetto. Trascina per ruotare.' : pendingItem
       ? `${pendingItem.name}: seleziona una o più parti lampeggianti, poi conferma`
       : canEdit
         ? 'Scegli un oggetto, poi tocca una parte del corpo'
@@ -842,7 +846,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     }
     compatibilityPulseOn = true;
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if ((selectedId || pendingItemId) && !reduceMotion) {
+    if ((selectedId || pendingItemId || options.focusItemId != null) && !reduceMotion) {
       compatibilityPulseTimer = window.setInterval(() => {
         compatibilityPulseOn = !compatibilityPulseOn;
         updatePartStates();
@@ -1056,6 +1060,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   };
 
   const selectPart = (partId) => {
+    if (options.focusItemId != null) return;
     if (!meshesById.has(partId) || busy) return;
     if (pendingItemId && canEdit) {
       togglePendingPart(partId);
@@ -1168,7 +1173,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
 
   const resize = () => {
     const width = Math.max(280, canvasHost.clientWidth);
-    const height = Math.max(360, canvasHost.clientHeight);
+    const height = Math.max(options.focusItemId != null ? 280 : 360, canvasHost.clientHeight);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -1222,7 +1227,8 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   });
 
   rebuildItemMap();
-  selectedId = null;
+  selectedId = options.focusItemId == null ? null : PART_DEFINITIONS.find(part =>
+    getItemsForMannequinPart(workingItems, part).some(item => String(item.id) === String(options.focusItemId)))?.id || null;
   root.classList.add('is-ready');
   refreshEquipment();
   syncCompatibilityPulse();
@@ -1256,15 +1262,16 @@ export function openEquipmentMannequin(configuration = {}) {
   const options = Array.isArray(configuration) ? { items: configuration } : configuration;
   const workingItems = [...(options.items || [])];
   const content = buildMannequinContent(options);
+  if (options.singleItem) content.classList.add('equipment-mannequin--assign');
   let changed = false;
   return openFormModal({
-    title: options.canEdit ? 'Gestisci equipaggiamento' : 'Manichino equipaggiamento',
+    title: options.title || (options.canEdit ? 'Gestisci equipaggiamento' : 'Manichino equipaggiamento'),
     content,
     submitLabel: 'Chiudi',
     cancelLabel: null,
     cardClass: 'modal-card--equipment-mannequin',
     closeOnOverlay: true,
-    onOpen: ({ modal }) => {
+    onOpen: ({ modal, formEl }) => {
       let closed = false;
       let dispose = () => {};
       const resetButton = document.createElement('button');
@@ -1272,6 +1279,7 @@ export function openEquipmentMannequin(configuration = {}) {
       resetButton.className = 'ghost-button';
       resetButton.dataset.mannequinReset = '';
       resetButton.textContent = 'Reimposta vista';
+      resetButton.hidden = Boolean(options.singleItem);
       modal.querySelector('.modal-actions__left')?.appendChild(resetButton);
       ensureLegacyThree()
         .then((THREE) => {
@@ -1279,8 +1287,12 @@ export function openEquipmentMannequin(configuration = {}) {
           dispose = initializeEquipmentManager(content, workingItems, THREE, {
             ...options,
             resetButton,
-            onChanged: () => { changed = true; }
+            onChanged: () => { changed = true; if (options.singleItem) formEl?.requestSubmit(); }
           });
+          if (options.singleItem) {
+            const equipButton = content.querySelector('[data-mannequin-equip]');
+            if (equipButton) modal.querySelector('.modal-footer .modal-actions__right')?.append(equipButton);
+          }
         })
         .catch(() => {
           const loading = content.querySelector('.equipment-mannequin__loading');
@@ -1293,4 +1305,19 @@ export function openEquipmentMannequin(configuration = {}) {
       };
     }
   }).then(() => ({ changed }));
+}
+
+export function mountEquipmentMannequin(host, options = {}) {
+  const content = buildMannequinContent({ ...options, canEdit: false });
+  host.append(content);
+  let closed = false;
+  let dispose = () => {};
+  ensureLegacyThree().then(THREE => {
+    if (closed) return;
+    dispose = initializeEquipmentManager(content, [...(options.items || [])], THREE, { ...options, canEdit: false });
+  }).catch(() => {
+    const loading = content.querySelector('.equipment-mannequin__loading');
+    if (loading) loading.textContent = 'Vista 3D non disponibile. Gli slot equipaggiati sono indicati nei dettagli.';
+  });
+  return () => { closed = true; dispose(); content.remove(); };
 }

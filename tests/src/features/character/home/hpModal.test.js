@@ -8,5 +8,7 @@ describe('src/features/character/home/hpModal.js', () => {
     expect(source).toContain('if (allowTempHp)');
     expect(source).toContain('name="temp_hp"');
     expect(source).toContain('if (!allowHitDice)');
+    expect(source).not.toContain("name = 'damage_type'");
+    expect(source).not.toContain('Tipo di danno');
   });
 });

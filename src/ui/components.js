@@ -1,5 +1,19 @@
 let globalLoadingDepth = 0;
 
+function getTopOpenDialog() {
+  return [...document.querySelectorAll('dialog[open]')].at(-1) || null;
+}
+function syncDialogLoadingOverlay() {
+  document.querySelectorAll('[data-dialog-loader]').forEach((entry) => entry.remove());
+  if (globalLoadingDepth === 0) return;
+  const dialog = getTopOpenDialog();
+  if (!dialog) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'app-loading-overlay dialog-loading-overlay is-visible';
+  overlay.dataset.dialogLoader = '';
+  overlay.innerHTML = '<div class="app-loading-spinner" aria-hidden="true"></div><p class="app-loading-text">Caricamento in corso...</p>';
+  dialog.appendChild(overlay);
+}
 export function setGlobalLoading(isLoading) {
   const loader = document.querySelector('[data-app-loader]');
   if (!loader) return;
@@ -8,6 +22,7 @@ export function setGlobalLoading(isLoading) {
     globalLoadingDepth += 1;
     loader.hidden = false;
     loader.classList.add('is-visible');
+    syncDialogLoadingOverlay();
     return;
   }
 
@@ -16,6 +31,7 @@ export function setGlobalLoading(isLoading) {
     loader.classList.remove('is-visible');
     loader.hidden = true;
   }
+  syncDialogLoadingOverlay();
 }
 
 export function createToast(message, type = 'info') {
@@ -60,7 +76,15 @@ export function createToast(message, type = 'info') {
   content.append(title, text);
   toast.append(icon, content);
 
-  const container = document.querySelector('[data-toast-container]');
+  const openDialog = getTopOpenDialog();
+  let container = openDialog?.querySelector('[data-dialog-toast-container]') || null;
+  if (openDialog && !container) {
+    container = document.createElement('div');
+    container.className = 'toast-container toast-container--dialog';
+    container.dataset.dialogToastContainer = '';
+    openDialog.appendChild(container);
+  }
+  container ||= document.querySelector('[data-toast-container]');
   if (container) {
     let dismissTimer = null;
     let dismissed = false;
@@ -228,7 +252,6 @@ export function attachNumberSteppers(root, labels = {}) {
     });
   });
 }
-
 export function buildTextarea({ label, name, value = '', placeholder = '' }) {
   const wrapper = document.createElement('label');
   wrapper.className = 'field';
@@ -249,6 +272,13 @@ export function openConfirmModal({
   confirmLabel = 'Conferma',
   cancelLabel = 'Annulla'
 } = {}) {
+  const sheetHost = document.querySelector('dialog.sheet-detail[open]');
+  if (sheetHost?.presentForm) {
+    const content = document.createElement('p');
+    content.textContent = message || '';
+    return sheetHost.presentForm({ title, content, submitLabel: confirmLabel, cancelLabel })
+      .then(result => Boolean(result));
+  }
   return new Promise((resolve) => {
     const modal = document.querySelector('[data-confirm-modal]');
     if (!modal) {
@@ -286,7 +316,6 @@ export function openConfirmModal({
     overlay?.addEventListener('click', onCancel);
   });
 }
-
 export function openFormModal({
   title = 'Inserisci dati',
   content = '',
@@ -297,6 +326,10 @@ export function openFormModal({
   onOpen,
   closeOnOverlay
 } = {}) {
+  const sheetHost = document.querySelector('dialog.sheet-detail[open]');
+  if (sheetHost?.presentForm) {
+    return sheetHost.presentForm({ title, content, submitLabel, cancelLabel, cardClass, showFooter, onOpen, closeOnOverlay });
+  }
   return new Promise((resolve) => {
     const modal = document.querySelector('[data-form-modal]');
     if (!modal) {

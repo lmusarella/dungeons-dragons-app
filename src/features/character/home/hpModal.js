@@ -1,5 +1,4 @@
-import { attachNumberStepper, buildInput, buildSelect } from '../../../ui/components.js';
-import { damageTypeList } from './constants.js';
+import { attachNumberStepper, buildInput } from '../../../ui/components.js';
 import { getHitDiceSides } from './utils.js';
 
 export function attachModalValueStepper(input, {
@@ -87,18 +86,6 @@ export function buildHpShortcutFields(
 
   if (!allowHitDice) {
     if (allowMaxOverride) {
-      const damageTypeField = document.createElement('label');
-      damageTypeField.className = 'field hp-shortcut-fields__damage-type';
-      const damageTypeLabel = document.createElement('span');
-      damageTypeLabel.textContent = 'Tipo di danno';
-      const damageTypeSelect = buildSelect([
-        { value: '', label: 'Nessun tipo (danno normale)' },
-        ...damageTypeList.map((type) => ({ value: type.key, label: type.label }))
-      ], '');
-      damageTypeSelect.name = 'damage_type';
-      damageTypeField.append(damageTypeLabel, damageTypeSelect);
-      primaryRow.appendChild(damageTypeField);
-
       const maxHpField = buildInput({
         label: 'Nuovo massimo PF',
         name: 'hp_max_override',

@@ -32,9 +32,13 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('container-type: inline-size');
     expect(styles).toContain('@container (max-width: 430px)');
     expect(source).toContain('profile-status-card__label">Concentrazione');
-    expect(source).toContain('<small>Archetipo</small>');
+    expect(source).toContain('class="character-identity__kicker"');
+    expect(source).toContain('class="character-level-seal"');
+    expect(source).toContain('class="character-lineage"');
     expect(source).toContain('<small>Bonus Competenza</small><strong>${formatSigned(proficiencyBonus)}</strong>');
-    expect(source).toContain("<small>Background</small><strong>${data.background ?? '-'}</strong>");
+    expect(source).toContain("[data.race, data.background].filter(Boolean).join(' · ')");
+    expect(source).not.toContain("<small>Background</small><strong>${data.background ?? '-'}</strong>");
+    expect(source).not.toContain("<small>Razza</small><strong>${data.race ?? '-'}</strong>");
     expect(source).not.toContain('meta-tag--background');
     expect(source).toContain('profile-status-card__label">Storia Personaggio');
     expect(source).toContain("profile-status-card__state\">${hasInspiration ? 'Attiva' : 'Non attiva'}");
@@ -43,6 +47,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('grid-template-columns: minmax(112px, 1fr)');
     expect(styles).toMatch(/\.profile-status-card__label\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/s);
     expect(styles).not.toMatch(/\.profile-status-card__label\s*\{[^}]*text-overflow:\s*ellipsis;/s);
+    expect(source).toContain('aria-label="Stati rapidi del personaggio"');
+    expect(source).toContain('status-launch-card--conditions');
+    expect(source).toContain('status-launch-card--weakness');
+    expect(source).toContain('character-proficiency-section');
+    expect(source).toContain('const currentWeakness = weakPoints > 0');
   });
 
   it('renders the combat vitals panel with readable stats and preserved controls', () => {
@@ -52,18 +61,16 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="combat-vitals-grid"');
     expect(source).toContain('class="combat-stat combat-stat--armor"');
     expect(source).toContain('data-roll-hit-dice');
-    expect(source).toContain('data-weakness-level');
+    expect(source).toContain('data-edit-weakness');
     expect(source).toContain('data-death-save');
     expect(source).toContain('role="meter"');
     expect(source).toContain('data-edit-conditions');
-    expect(source).toContain("const isActive = level.value <= weakPoints");
-    expect(source).toContain("const isCurrent = level.value === weakPoints");
+    expect(source).toContain('weaknessLevelList.filter');
     expect(source).toContain('Punti ferita temporanei');
     expect(source).toContain('Percezione passiva');
     expect(source).toContain('Scurovisione');
     expect(source).toContain('Dadi vita');
-    expect(source).toContain('data-hp-action="heal"');
-    expect(source).toContain('data-hp-action="damage"');
+    expect(source).not.toContain('character-hp-actions character-hp-actions--inline');
     expect(source).toContain('buildResourcePool(res)');
     expect(source).not.toContain('data-edit-resource="${res.id}"');
     expect(source).not.toContain('data-delete-resource="${res.id}"');
@@ -98,6 +105,7 @@ describe('src/features/character/home/sections.js', () => {
 
     expect(homeSource).toContain('home-feature-panel--skills');
     expect(homeSource).toContain('home-feature-panel--attacks');
+    expect(homeSource).not.toContain('home-feature-panel--cantrips');
     expect(homeSource).toContain('home-feature-panel--spells');
     expect(homeSource).toContain('home-feature-panel--saves');
     expect(homeSource).toContain('home-feature-panel--special-skills');
@@ -108,7 +116,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="attack-card__damage"><small>Danni</small>');
     expect(source).toContain('class="spell-stats"');
     expect(source).toContain('class="spell-card__sigil"');
-    expect(source).toContain('spell.school?.trim()');
+    expect(source).toContain('normalizeSpellSchool(spell.school)');
     expect(source).toContain('class="modifier-card modifier-card--interactive saving-throw-card');
     expect(source).toContain('class="modifier-card modifier-card--interactive skill-card special-skill-card');
     expect(source).toContain('class="resource-card__marker"');
@@ -155,8 +163,9 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.journal-section-card--entries');
     expect(styles).toContain('.settings-panel--inventory');
     expect(source).toContain('attack-action-button--damage');
-    expect(source).toContain('attack-action-button--mode');
-    expect(source).toContain('const WEAPON_MODE_ICON');
+    expect(source).not.toContain('attack-action-button--mode');
+    expect(source).not.toContain('const WEAPON_MODE_ICON');
+    expect(readFileSync('src/features/character/home/itemDetail.js', 'utf8')).toContain('weapon-grip-picker');
     expect(source).toContain('attack-action-button__svg');
     expect(styles).toContain('.modifier-card--mastery .skill-card__status::before');
     expect(styles).toContain('.modifier-card--proficiency .saving-throw-card__status::before');
@@ -182,5 +191,18 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('Colpo senz’arma');
     expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
     expect(source).toContain('caratteristica ${escapeHtml(abilityLabel)}');
+  });
+
+  it('shows editable general modifiers in the related play shortcuts', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    expect(source).toContain('const generalBonus = Number(data.skill_check_bonus) || 0');
+    expect(source).toContain('const generalBonus = Number(data.saving_throw_bonus) || 0');
+    expect(source).toContain('data-edit-general-modifier="skills"');
+    expect(source).toContain('data-edit-general-modifier="savingThrows"');
+    expect(source).toContain('data-edit-general-modifier="damage"');
+    expect(source).toContain('const hasConfiguredAttacks = Boolean(');
+    expect(styles).toContain('.roll-general-modifier');
+    expect(styles).toContain('.attack-turn-summary__edit');
   });
 });

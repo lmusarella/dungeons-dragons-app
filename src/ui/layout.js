@@ -11,8 +11,9 @@ export function renderLayout(container) {
             <img src="${baseUrl}icons/logo_dd.png" alt="Dungeons & Dragons" class="app-logo-image" />
           </div>
           <div class="app-brand">
+            <span class="app-brand__eyebrow">Dungeons &amp; Dragons</span>
             <strong>Gestionale schede personaggi</strong>
-            <span>Scheda digitale</span>
+            <span class="app-brand__caption">Compendio digitale</span>
           </div>
         </div>
         <div class="app-header-right">
@@ -30,6 +31,7 @@ export function renderLayout(container) {
                 <span class="header-meta-label">Personaggio</span>
                 <strong data-character-name></strong>
               </div>
+              <span class="header-character-chevron" aria-hidden="true">›</span>
             </a>
           </div>
           <div class="header-action-wrap">
@@ -45,51 +47,6 @@ export function renderLayout(container) {
         Offline (solo lettura)
       </div>
       <main class="app-main" data-route-outlet></main>
-      <div class="actions-fab" data-actions-fab>
-        <div class="actions-fab-menu" data-actions-menu>
-          <section class="actions-fab-group" data-fab-group aria-label="Riposo">
-            <p class="actions-fab-group__title">Riposo</p>
-            <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-rest="short_rest"><span class="actions-fab-item__icon" aria-hidden="true">◐</span><span>Breve</span></button>
-              <button class="actions-fab-item" type="button" data-rest="long_rest"><span class="actions-fab-item__icon" aria-hidden="true">☾</span><span>Lungo</span></button>
-            </div>
-          </section>
-          <section class="actions-fab-group" data-fab-group aria-label="Azioni">
-            <p class="actions-fab-group__title">Azioni</p>
-            <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-hp-action="heal"><span class="actions-fab-item__icon" aria-hidden="true">＋</span><span>Cura</span></button>
-              <button class="actions-fab-item" type="button" data-hp-action="damage"><span class="actions-fab-item__icon" aria-hidden="true">−</span><span>Danno</span></button>
-              <button class="actions-fab-item" type="button" data-open-dice="roller"><span class="actions-fab-item__icon" aria-hidden="true">◆</span><span>Dadi</span></button>
-            </div>
-          </section>
-          <section class="actions-fab-group" data-fab-group aria-label="Effetti temporanei">
-            <p class="actions-fab-group__title">Effetti temporanei</p>
-            <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-edit-conditions data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">!</span><span>Condizioni</span></button>
-              <button class="actions-fab-item" type="button" data-edit-resistances data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">◈</span><span>Resistenze</span></button>
-              <button class="actions-fab-item" type="button" data-edit-roll-adjustments data-fab-scope="home"><span class="actions-fab-item__icon" aria-hidden="true">±</span><span>Vant/Svant</span></button>
-            </div>
-          </section>
-          <section class="actions-fab-group" data-fab-group aria-label="Inventario">
-            <p class="actions-fab-group__title">Inventario</p>
-            <div class="actions-fab-group__items">
-              <button class="actions-fab-item" type="button" data-add-loot><span class="actions-fab-item__icon" aria-hidden="true">◇</span><span>Loot</span></button>
-              <button class="actions-fab-item" type="button" data-money-action="pay" data-fab-scope="inventory"><span class="actions-fab-item__icon" aria-hidden="true">↑</span><span>Paga</span></button>
-              <button class="actions-fab-item" type="button" data-money-action="receive" data-fab-scope="inventory"><span class="actions-fab-item__icon" aria-hidden="true">↓</span><span>Ricevi</span></button>
-            </div>
-          </section>
-        </div>
-        <button class="actions-fab-toggle" type="button" data-actions-toggle aria-expanded="false">
-          <span class="actions-fab-toggle__icon" aria-hidden="true">＋</span><span>Azioni</span>
-        </button>
-      </div>
-      <div class="actions-fab-backdrop" aria-hidden="true"></div>
-      <nav class="bottom-nav" data-bottom-nav aria-label="Navigazione principale">
-        <a href="#/home" data-tab="home"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">⌂</span><span>Scheda</span></span></a>
-        <a href="#/familiars" data-tab="familiars"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">♞</span><span>Famigli</span></span></a>
-        <a href="#/inventory" data-tab="inventory"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">◇</span><span>Inventario</span></span></a>
-        <a href="#/journal" data-tab="journal"><span class="bottom-nav__pill"><span class="bottom-nav__icon" aria-hidden="true">☷</span><span>Diario</span></span></a>
-      </nav>
       <div class="drawer" data-drawer>
         <div class="drawer-overlay" data-drawer-close></div>
         <div class="drawer-panel">          
@@ -100,7 +57,9 @@ export function renderLayout(container) {
         <div class="modal-overlay" data-confirm-overlay></div>
         <div class="modal-card" role="dialog" aria-modal="true">
           <div class="modal-header">
-            <p class="modal-title" data-confirm-title>Conferma</p>
+            <div class="modal-header__top modal-header__top--confirm">
+              <p class="modal-title" data-confirm-title>Conferma</p>
+            </div>
             <div class="modal-divider" aria-hidden="true"></div>
           </div>
           <div class="modal-body">
@@ -164,28 +123,11 @@ export function renderLayout(container) {
     });
   }
 
-  const actionsFab = container.querySelector('[data-actions-fab]');
-  const actionsToggle = container.querySelector('[data-actions-toggle]');
-  if (actionsFab && actionsToggle) {
-    actionsToggle.addEventListener('click', (event) => {
-      event.stopPropagation();
-      actionsFab.classList.toggle('is-open');
-      actionsToggle.setAttribute('aria-expanded', actionsFab.classList.contains('is-open'));
-    });
-  }
-
   container.addEventListener('click', (event) => {
     const target = event.target.closest('[data-drawer-close]');
     if (target) {
       closeDrawer();
       menuButton?.setAttribute('aria-expanded', 'false');
-    }
-    if (actionsFab && actionsFab.classList.contains('is-open')) {
-      const insideFab = event.target.closest('[data-actions-fab]');
-      if (!insideFab) {
-        actionsFab.classList.remove('is-open');
-        actionsToggle?.setAttribute('aria-expanded', 'false');
-      }
     }
   });
 }
@@ -253,8 +195,7 @@ function buildMenuContent() {
   const userName = user?.user_metadata?.display_name || user?.email || 'Utente';
   const menuEntries = [
     { route: 'characters', icon: '♙', label: 'Personaggi', description: 'Seleziona o crea un personaggio' },
-    { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci gli incantesimi condivisi' },
-    { route: 'settings', icon: '⚙', label: 'Impostazioni', description: 'Configura il personaggio attivo' }
+    { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci incantesimi e oggetti condivisi' }
   ];
 
   const wrapper = document.createElement('div');

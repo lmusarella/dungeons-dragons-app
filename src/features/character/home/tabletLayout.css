@@ -1,0 +1,216 @@
+/* A quiet, symmetrical play surface around the character. */
+.home-layout.sheet-dashboard {
+  --sheet-line: #d5d9d2;
+  --sheet-surface: #fffdf8;
+  display: grid;
+  grid-template-columns: minmax(164px, 196px) minmax(0, 1fr);
+  gap: 16px;
+  max-width: 1440px;
+  align-items: start;
+  padding: 20px;
+}
+.sheet-dashboard .home-column--center { min-width: 0; grid-column: 2; grid-row: 1; }
+.sheet-shortcuts { display: grid; gap: 12px; }
+.sheet-shortcuts--left { grid-column: 1; grid-row: 1; }
+.sheet-shortcuts--right { display: none; }
+.sheet-shortcut {
+  display: grid; grid-template-columns: 36px 1fr; align-items: center;
+  column-gap: 10px; row-gap: 4px; min-height: 92px; padding: 16px 12px;
+  border: 1px solid var(--sheet-line); border-radius: 14px;
+  background: var(--sheet-surface); color: #263a34; text-align: left;
+  cursor: pointer; box-shadow: none; transition: background .15s, border-color .15s;
+}
+.sheet-shortcut > span { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 40px; font-size: 24px; color: #466a61; }
+.sheet-shortcut strong { font-size: 14px; font-weight: 600; }
+.sheet-shortcut small { font-size: 11px; line-height: 1.4; color: #59675e; }
+.sheet-shortcut:hover { background: #e9efea; border-color: #8e9d87; }
+.sheet-dashboard button:focus-visible { outline: 2px solid #d3be91; outline-offset: 3px; }
+.sheet-quickbar {
+  grid-column: 2;
+  position: sticky;
+  bottom: 10px;
+  z-index: 32;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(160, 137, 97, .36);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, .94);
+  box-shadow: 0 12px 34px rgba(45, 35, 27, .16);
+  backdrop-filter: blur(14px);
+}
+.sheet-quickbar button { min-height: 54px; padding: 10px 6px; border: 1px solid var(--sheet-line); border-radius: 14px; background: var(--sheet-surface); color: #263a34; font-size: 12px; font-weight: 600; cursor: pointer; }
+.sheet-quickbar button span { display: block; margin-bottom: 4px; font-size: 20px; color: #466a61; }
+.sheet-quickbar button:first-child span { color: #9d3838; }
+.sheet-quickbar button:nth-child(2) span { color: #286546; }
+.sheet-quickbar button:hover { background: #e9efea; }
+.app-shell[data-route='home'] .sheet-dashboard .home-column--center > .home-card {
+  padding: 16px; border: 1px solid var(--sheet-line) !important; border-radius: 14px !important;
+  background: var(--sheet-surface) !important; box-shadow: none !important;
+}
+.sheet-dashboard .character-overview { display: grid; gap: 12px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-summary {
+  display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px;
+  padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+}
+.sheet-dashboard .character-summary::after { display: none; }
+.sheet-dashboard .character-summary--no-avatar { grid-template-columns: 1fr !important; }
+.sheet-dashboard .character-avatar-frame { width: 170px; height: 200px; padding: 0; border: 1px solid var(--sheet-line); border-radius: 14px; overflow: hidden; }
+.sheet-dashboard .character-avatar { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: center top; border: 0; border-radius: 0; }
+.sheet-dashboard .character-name { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.15; margin-bottom: 12px; }
+.sheet-dashboard .character-meta { gap: 6px; }
+.sheet-dashboard .meta-tag { padding: 5px 8px; }
+.sheet-dashboard .character-summary-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.sheet-dashboard .profile-status-card { min-height: 48px; padding: 8px 10px; }
+.app-shell[data-route='home'] .sheet-dashboard :is(.stat-panel, .combat-stat, .combat-status-card, .profile-status-card, .hp-panel, .hp-vitals-card) {
+  border: 1px solid var(--sheet-line) !important; border-radius: 14px; box-shadow: none; background: #f4f5ef !important;
+}
+.sheet-dashboard .stat-panel { padding: 8px; }
+.sheet-dashboard .stat-grid--abilities { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.sheet-dashboard .stat-card { padding: 6px; min-height: 0; border: 0; box-shadow: none; background: transparent; }
+.sheet-dashboard .combat-stat { padding: 10px; }
+.sheet-dashboard .hp-panel { padding: 10px; }
+.sheet-dashboard .hp-panel-status-row { gap: 8px; }
+.sheet-detail.modal-card { padding: 0; margin: auto; color: var(--ink); }
+.sheet-detail::backdrop { background: rgba(11,16,15,.56); backdrop-filter: blur(5px); }
+.sheet-detail > .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.sheet-detail .modal-title { margin: 0; }
+.sheet-detail-close { min-height: 44px; }
+.sheet-detail > .modal-body { max-height: calc(85dvh - 85px); overflow-y: auto; padding: 0 20px 20px; }
+.sheet-detail .home-scroll-body, .sheet-detail .home-scroll-panel { overflow: visible; max-height: none; }
+.sheet-detail .home-card { margin: 0; }
+@media (max-width: 1100px) {
+  .home-layout.sheet-dashboard { grid-template-columns: 142px minmax(0, 1fr); gap: 10px; padding: 12px; }
+  .sheet-shortcut { grid-template-columns: 1fr; padding: 12px; min-height: 100px; }
+  .sheet-shortcut > span { grid-row: auto; height: 28px; justify-content: start; }
+  .sheet-dashboard .character-avatar-frame { width: 140px; height: 180px; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-summary { grid-template-columns: 140px minmax(0, 1fr); }
+  .sheet-quickbar { grid-column: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .home-layout.sheet-dashboard { grid-template-columns: 1fr; }
+  .sheet-dashboard .home-column--center { grid-column: 1 / -1; grid-row: 1; }
+  .sheet-shortcuts--left { grid-column: 1; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sheet-shortcut { grid-template-columns: 36px 1fr; min-height: 76px; }
+  .sheet-shortcut > span { grid-row: 1 / 3; }
+  .sheet-quickbar { grid-column: 1; }
+}
+@media (max-width: 480px) {
+  .sheet-dashboard .character-avatar-frame { width: 110px; height: 150px; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-summary { grid-template-columns: 110px minmax(0, 1fr); }
+  .sheet-dashboard .character-summary-actions { grid-template-columns: 1fr 1fr; }
+  .sheet-shortcut small { display: none; }
+  .sheet-quickbar { grid-template-columns: repeat(4, 1fr); bottom: 6px; }
+}
+
+/* Shared modal-card uses flex; preserve native dialog visibility. */
+.sheet-detail.modal-card:not([open]) { display: none; }
+.sheet-detail.modal-card[open] { display: flex; position: fixed; }
+
+/* The existing character controls use a light palette: keep their surface light
+   too, rather than mixing dark panels with inherited brown text. */
+.app-shell[data-route='home'] .sheet-dashboard .home-column--center {
+  --sheet-line: #d5d9d2;
+  --sheet-surface: #fffdf8;
+  color: #263a34;
+}
+.app-shell[data-route='home'] .sheet-dashboard .home-column--center :is(.stat-panel, .combat-stat, .combat-status-card, .profile-status-card, .hp-panel, .hp-vitals-card) {
+  background: #f4f5ef !important;
+  color: #263a34;
+}
+.app-shell[data-route='home'] .sheet-dashboard .home-column--center :is(.character-name, .stat-card > strong, .combat-stat > strong, .hp-bar-label__value, .combat-status-card__value) {
+  color: #233b33 !important;
+}
+.app-shell[data-route='home'] .sheet-dashboard .home-column--center :is(.eyebrow, .character-summary, .character-meta, .profile-status-card__label, .profile-status-card__state, .combat-stat__label, .hp-bar-label, .weakness-track__label, .weakness-track__description, .condition-track__label, .condition-track__value, .death-saves__label, .stat-card > span:not(.stat-card__modifier)) {
+  color: #4b5b51 !important;
+}
+.sheet-dashboard .stat-card > strong { font-size: 20px; }
+.sheet-dashboard .stat-card > span:not(.stat-card__modifier) { font-size: 12px; }
+.sheet-dashboard .character-summary-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sheet-dashboard .sheet-shortcut--inline {
+  grid-template-columns: 24px 1fr; min-height: 48px; padding: 8px 10px;
+  background: #f4f5ef; color: #263a34; border-color: #d5d9d2;
+}
+.sheet-dashboard .sheet-shortcut--inline > span { width: 24px; height: 24px; color: #526c60; }
+.sheet-dashboard .sheet-shortcut--inline strong { font-size: 12px; }
+.sheet-dashboard .sheet-shortcut--inline small { display: none; }
+.sheet-dashboard .sheet-shortcut--inline:hover { background: #e7ede3; }
+.sheet-dashboard .profile-status-card__label { font-size: 11px; }
+.sheet-dashboard .profile-status-card__state { font-size: 12px; }
+/* Leave space above the global action button instead of covering the dice shortcut. */
+.home-layout.sheet-dashboard { padding-bottom: 18px; }
+@media (max-width: 1100px) {
+  .sheet-dashboard .character-summary-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+
+/* Restrict the canvas treatment to the sheet, preserving the original menu,
+   header and navigation imagery. */
+.app-main:has(.sheet-dashboard) {
+  background: #e9e8e1;
+  background-image: linear-gradient(135deg, #eeeee8, #e3e8e2);
+}
+.sheet-dashboard .sheet-shortcut,
+.sheet-dashboard .sheet-quickbar button {
+  box-shadow: 0 2px 8px rgba(33, 53, 44, .04);
+}
+.sheet-detail--rolls.modal-card {
+  width: min(1180px, calc(100vw - 40px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  border: 1px solid #bfcac2;
+  border-radius: 18px;
+  background: #fffdf8;
+}
+.sheet-detail--rolls > .modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #d5d9d2;
+}
+.sheet-detail--rolls > .modal-body {
+  max-height: calc(100dvh - 130px);
+  padding: 16px 24px 24px;
+}
+.sheet-detail--rolls .sheet-roll-options {
+  margin: 0; padding: 0; border: 0; background: transparent;
+  box-shadow: none; backdrop-filter: none;
+}
+.sheet-detail--rolls .sheet-roll-options > .card-header,
+.sheet-detail--rolls .sheet-roll-options > .eyebrow { display: none; }
+.sheet-detail--rolls .sheet-roll-hint {
+  margin: 0 0 16px; color: #53645a; font-size: 14px;
+}
+.sheet-detail--rolls .detail-section { margin: 0; padding: 0; }
+.sheet-detail--rolls .detail-grid.detail-grid--compact {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px; max-height: none; overflow: visible;
+}
+.sheet-detail--rolls .modifier-card {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) 52px;
+  gap: 10px; align-items: center; min-height: 68px; padding: 10px 12px;
+  border: 1px solid #d5d9d2; border-radius: 12px;
+  background: #f7f8f3; color: #263a34; box-shadow: none; text-align: left;
+}
+.sheet-detail--rolls .modifier-card:hover { background: #e9efea; border-color: #648677; }
+.sheet-detail--rolls .modifier-card:focus-visible { outline: 2px solid #35695c; outline-offset: 2px; }
+.sheet-detail--rolls :is(.skill-card__name, .saving-throw-card__name) {
+  font-size: 15px; font-weight: 650; color: #263a34; white-space: normal;
+}
+.sheet-detail--rolls :is(.skill-card__status, .saving-throw-card__status) { color: #53645a; font-size: 12px; }
+.sheet-detail--rolls .modifier-value {
+  width: auto; min-width: 0; height: auto; padding: 5px;
+  background: #e5ede7; color: #285246; border: 0; border-radius: 8px;
+  font-size: 23px; box-shadow: none;
+}
+.sheet-detail--rolls .modifier-value small { font-size: 10px; color: #466557; }
+.sheet-detail--rolls .home-feature-panel--saves .modifier-card { min-height: 112px; }
+@media (min-width: 1050px) and (max-height: 700px) {
+  .sheet-detail--rolls .detail-grid.detail-grid--compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sheet-detail--rolls .modifier-card { min-height: 60px; padding: 8px; }
+}
+@media (max-width: 700px) {
+  .sheet-detail--rolls .detail-grid.detail-grid--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sheet-detail--rolls > .modal-body { padding: 12px; }
+  .sheet-detail--rolls .modifier-card { grid-template-columns: minmax(0, 1fr) 42px; }
+  .sheet-detail--rolls :is(.skill-card__ability, .saving-throw-card__ability) { display: none; }
+}

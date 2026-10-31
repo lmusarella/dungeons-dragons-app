@@ -1380,7 +1380,11 @@ body {
 
 .inventory-insert-picker {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .inventory-insert-picker__intro {
@@ -1389,16 +1393,19 @@ body {
 
 .inventory-insert-picker__list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: 8px;
-  max-height: min(52vh, 430px);
+  min-height: 0;
+  max-height: none;
   overflow: auto;
-  padding: 2px;
+  padding: 2px 6px 2px 2px;
 }
 
 .inventory-insert-picker__item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(148, 123, 90, 0.38);
@@ -1407,6 +1414,13 @@ body {
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
+
+.inventory-insert-picker__visual {
+  display: grid; place-items: center; width: 52px; height: 56px; overflow: hidden;
+  border: 1px solid rgba(148,123,90,.28); border-radius: 11px; background: #f0e3cc; color: #9b793f; font-size: 25px;
+}
+
+.inventory-insert-picker__visual img { width: 100%; height: 100%; object-fit: contain; }
 
 .inventory-insert-picker__item:hover,
 .inventory-insert-picker__item.is-selected {
@@ -1428,8 +1442,18 @@ body {
   flex: 0 0 auto;
 }
 
-.modal-card--inventory-insert {
-  width: min(560px, 94vw);
+.modal-card.modal-card--inventory-insert {
+  width: min(760px, 94vw);
+  height: min(720px, calc(100dvh - 28px));
+  max-height: calc(100dvh - 28px);
+}
+
+.modal-card.modal-card--inventory-insert .modal-body { display: flex; min-height: 0; overflow: hidden; }
+.modal-card.modal-card--inventory-insert .modal-form,
+.modal-card.modal-card--inventory-insert [data-form-fields] { display: flex; flex: 1 1 auto; width: 100%; min-height: 0; }
+
+@media (max-width: 650px) {
+  .inventory-insert-picker__list { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 820px) {

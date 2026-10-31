@@ -150,6 +150,7 @@ export async function renderJournal(container) {
     </div>
   `;
 
+  container.polishShortcut?.();
   const listEl = container.querySelector('[data-journal-list]');
   const filesListEl = container.querySelector('[data-session-files-list]');
   const searchInput = container.querySelector('[data-search]');

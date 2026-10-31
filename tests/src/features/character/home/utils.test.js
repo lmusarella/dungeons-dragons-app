@@ -148,4 +148,20 @@ describe('src/features/character/home/utils.js', () => {
     });
   });
 
+  it('applies the general melee damage bonus to unarmed attacks', () => {
+    expect(calculateUnarmedAttackBonuses({
+      abilities: { str: 16, dex: 10 },
+      proficiency_bonus: 3,
+      damage_bonus_melee: 2
+    }, {
+      ability: 'str',
+      attack_bonus: 0,
+      damage_bonus: 1
+    })).toMatchObject({
+      attackTotal: 6,
+      damageModifier: 6,
+      generalDamageBonus: 2
+    });
+  });
+
 });

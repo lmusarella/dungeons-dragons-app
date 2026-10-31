@@ -54,8 +54,11 @@ describe('src/features/character/home/modals.js', () => {
 
   it('aligns detail actions in the modal header row', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const management = readFileSync('src/features/character/home/detailManagement.js', 'utf8');
     const layout = readFileSync('src/ui/layout.js', 'utf8');
-    expect(source).toContain("modal.querySelector('[data-form-header-actions]')");
+    expect(source).toContain('attachUnifiedDetailActions(modal, formEl, { onEdit, onDelete })');
+    expect(management).toContain("modal.querySelector('[data-form-header-actions]')");
+    expect(management).toContain("actions.closest('.sheet-management-menu')");
     expect(layout).toContain('class="modal-header__top"');
     expect(layout).toContain('data-form-header-actions');
   });
@@ -84,15 +87,43 @@ describe('src/features/character/home/modals.js', () => {
     expect(detailModal).toContain("submitChildAction(`delete:${button.dataset.resourceChildDelete}`)");
   });
 
+  it('keeps option dice in the selection flow and reports the filtered spell total', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    const optionModal = source.slice(
+      source.indexOf('export async function openResourceOptionModal'),
+      source.indexOf('export function openResourceDetail')
+    );
+    const preparedModal = source.slice(
+      source.indexOf('export function openPreparedSpellsModal'),
+      source.indexOf('export function openResourceDrawer')
+    );
+    expect(optionModal).toContain('data-resource-option-roll');
+    expect(optionModal).toContain('onRollOption?.(child)');
+    expect(optionModal).toContain('present = openFormModal');
+    expect(optionModal).toContain('const formData = await present({');
+    expect(optionModal).not.toContain('data-resource-child-roll');
+    expect(preparedModal).toContain('data-prepared-visible-count');
+    expect(preparedModal).toContain("visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'");
+    expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__sticky-filters\s*\{[^}]*position:\s*sticky;/s);
+    expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__catalog\s*\{[^}]*overflow-y:\s*auto;/s);
+    expect(styles).toMatch(/:is\(\.sheet-detail,\.modal-card--prepared-spells\) \.prepared-spells-modal\s*\{[^}]*height:\s*100%;/s);
+    expect(styles).toContain('.sheet-detail--preparing > .modal-body > .sheet-inline-detail.modal-card--prepared-spells');
+  });
+
   it('renders a structured parent overview and linked ability cards', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
-    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8')
+      + readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
     expect(source).toContain('resource-parent-overview');
+    expect(source).toContain('spell-manual power-manual');
+    expect(source).toContain("title: 'Scheda abilità'");
     expect(source).toContain('resource-detail-option__branch');
     expect(source).toContain('resource-detail-option__badges');
     expect(source).toContain("cardClass: 'modal-card--resource-detail'");
     expect(styles).toContain('.resource-parent-overview');
     expect(styles).toContain('.resource-detail-option__actions .resource-icon-button');
+    expect(styles).toContain('.power-manual .resource-parent-overview');
   });
 
   it('adds an explicit parent ability flag and hides child management for non-parents', () => {
@@ -142,15 +173,12 @@ describe('src/features/character/home/modals.js', () => {
 
   it('keeps child actions separate from parent detail actions', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
-    const detailActions = source.slice(
-      source.indexOf('function attachDetailManagementActions'),
-      source.indexOf('export async function openResourcePoolConsumeModal')
-    );
+    const detailActions = readFileSync('src/features/character/home/detailManagement.js', 'utf8');
     const detailModal = source.slice(
       source.indexOf('export function openResourceDetail'),
       source.indexOf('export function openSpellDrawer')
     );
-    expect(detailActions).toContain("staleActionInputs.forEach((input) => input.remove())");
+    expect(detailActions).toContain('staleInputs.forEach((input) => input.remove())');
     expect(detailActions).toContain('actionInput.remove()');
     expect(detailModal).toContain("if (detailActionInput) detailActionInput.value = ''");
     expect(detailModal.indexOf("const childAction = formData.get('resource_child_action')"))
@@ -197,54 +225,147 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.spell-source-picker__recommendation');
   });
 
+  it('allows catalog editors to update and normalize the spell manual', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain("label: 'Manuale / fonte'");
+    expect(source).toContain("name: 'spell_source'");
+    expect(source).toContain("source: normalizeSpellSource(formData.get('spell_source')) || null");
+  });
+
+  it('opens the character story as a wide background document', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const backgroundModal = source.slice(
+      source.indexOf('export function openBackgroundModal'),
+      source.indexOf('export async function openConditionsModal')
+    );
+    expect(backgroundModal).toContain('background-modal-hero__background');
+    expect(backgroundModal).toContain("'modal-card--wide'");
+    expect(backgroundModal).toContain("title: `Storia di ${character.name || 'personaggio'}`");
+  });
+
   it('renders an accessible preparation workflow with live selection feedback', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
-    const styles = readFileSync('src/styles/base.css', 'utf8');
+    const styles = readFileSync('src/styles/base.css', 'utf8')
+      + readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
     const preparedModal = source.slice(
       source.indexOf('export function openPreparedSpellsModal'),
       source.indexOf('export function openAvatarModal')
     );
 
-    expect(preparedModal).toContain('prepared-spells-modal__intro');
+    expect(preparedModal).not.toContain('prepared-spells-modal__intro');
     expect(preparedModal).toContain('prepared-spells-modal__workspace');
-    expect(preparedModal).toContain('data-prepared-search');
-    expect(preparedModal).toContain('data-prepared-status-filter');
-    expect(preparedModal).toContain('data-prepared-level="all"');
-    expect(preparedModal).toContain('data-prepare-visible');
-    expect(preparedModal).toContain('data-unprepare-visible');
-    expect(preparedModal).toContain('const updateLevelCounts = (query) =>');
-    expect(preparedModal).toContain('const matchesActiveStatus = (spellId) =>');
+    expect(preparedModal).toContain('const selectable = spells.filter((entry) => Number(entry.level) > 0)');
+    expect(preparedModal).toContain('dedupeCharacterSpells([...archiveSpells, ...customPreparedSpells])');
+    expect(preparedModal).not.toContain('data-prepared-search');
+    expect(preparedModal).not.toContain('data-prepared-level="all"');
+    expect(preparedModal).not.toContain('data-prepare-visible');
+    expect(preparedModal).not.toContain('data-unprepare-visible');
     expect(preparedModal).toContain('const applyFilters = () =>');
-    expect(preparedModal).toContain('updateLevelCounts(query)');
-    expect(preparedModal).toContain("activeLevel === 'all'");
-    expect(preparedModal).toContain('getVisibleItems().forEach');
-    expect(preparedModal).toContain('data-prepared-count');
-    expect(preparedModal).toContain('data-removed-count');
-    expect(preparedModal).toContain('data-prepared-status');
-    expect(preparedModal).toContain('prepared-spells-modal__inline-info');
-    expect(preparedModal).toContain('prepared-spells-modal__details');
-    expect(preparedModal).toContain('<dt>Tempo di lancio</dt>');
-    expect(preparedModal.indexOf('prepared-spells-modal__meta')).toBeGreaterThan(preparedModal.indexOf('prepared-spells-modal__details'));
+    expect(preparedModal).toContain("activeLevel === selectedLevel ? '' : selectedLevel");
+    expect(preparedModal).not.toContain('data-prepared-count');
+    expect(preparedModal).not.toContain('data-always-count');
+    expect(preparedModal).not.toContain('data-removed-count');
+    expect(preparedModal).not.toContain('data-prepared-cast-time');
+    expect(preparedModal).toContain('data-prepared-status-filter="prepared"');
+    expect(preparedModal).toContain('data-prepared-status-filter="known"');
+    expect(preparedModal).toContain('data-prepared-status-filter="always"');
+    expect(preparedModal).toContain("activeStatus === 'known' && prepareableIds.has(spellId) && !preparedIds.has(spellId)");
+    expect(preparedModal).toContain("activeStatus === selectedStatus ? '' : selectedStatus");
+    expect(preparedModal).not.toContain('prepared-spells-modal__inline-info');
+    expect(preparedModal).not.toContain('prepared-spells-modal__quick-facts');
+    expect(preparedModal).not.toContain('prepared-spells-modal__facts');
+    expect(preparedModal).not.toContain('<small>Scuola</small>');
+    expect(preparedModal).not.toContain('<small>Tempo</small>');
+    expect(preparedModal).toContain('play-card play-card--spell');
+    expect(preparedModal).toContain('data-prepared-quick-detail');
+    expect(preparedModal).toContain('prepared-spells-modal__detail-surface');
+    expect(preparedModal).not.toContain('data-prepared-description-toggle');
     expect(preparedModal).toContain('data-prepared-delete');
     expect(preparedModal).toContain("title: 'Elimina incantesimo'");
     expect(preparedModal).toContain('deletedIds.add(spellId)');
     expect(preparedModal).toContain('.filter((entry) => !deletedIds.has(entry.id))');
-    expect(preparedModal).toContain('await Promise.all(linksToRemove.map((row) => removeCharacterSpell(row.id)))');
+    expect(preparedModal).toContain('await Promise.allSettled(associationOperations)');
+    expect(preparedModal).toContain("prep_state: entry.prep_state === 'always' ? 'always_prepared' : 'prepared'");
+    expect(preparedModal).toContain('const hasAssociationWarnings = Boolean(associationReadError) || associationFailures.length > 0');
+    expect(preparedModal).toContain('updateCharacterSpellAssignment(character.id, entry.shared_spell_id');
+    expect(preparedModal).not.toContain("createToast('Errore sincronizzazione associazioni incantesimi', 'error')");
     expect(preparedModal).toContain("item?.classList.toggle('is-prepared', isPrepared)");
+    expect(preparedModal).toContain("isPrepared ? 'Preparato' : 'Da preparare'");
     expect(preparedModal).toContain("cardClass: ['modal-card--form', 'modal-card--prepared-spells']");
     expect(preparedModal).toContain("submitLabel: 'Salva preparazione'");
+    expect(preparedModal).toContain('`Prepara gli incantesimi di ${character.name}`');
     expect(styles).toContain('.modal-card--prepared-spells');
     expect(styles).toContain('width: min(1180px, calc(100vw - 32px))');
     expect(styles).toContain('.prepared-spells-modal__workspace');
     expect(styles).toContain('.prepared-spells-modal__level-rail');
-    expect(styles).toContain('.prepared-spells-modal__bulk-actions');
-    expect(styles).toContain('.prepared-spells-modal__details[hidden]');
-    expect(styles).toContain('.prepared-spells-modal__inline-info');
     expect(styles).toContain('.prepared-spells-modal__spell.is-prepared');
     expect(styles).toContain('.prepared-spells-modal__check');
     expect(styles).toContain('.prepared-spells-modal__delete');
-    expect(styles).toContain('.prepared-spells-modal__school');
+    expect(styles).toContain('.prepared-spells-modal__detail-surface');
     expect(styles).toContain('.prepared-spells-modal__empty');
+  });
+
+  it('keeps spell range classification out of the manual detail', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const detail = source.slice(
+      source.indexOf('export function openSpellQuickDetailModal'),
+      source.indexOf('export function openPreparedSpellsModal')
+    );
+    expect(detail).not.toContain('<dt>Proprietà</dt>');
+    expect(detail).not.toContain("'In mischia'");
+    expect(detail).not.toContain("'A distanza'");
+  });
+
+  it('renders imported material, upcast and source metadata in spell details', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    const detail = source.slice(
+      source.indexOf('export function openSpellQuickDetailModal'),
+      source.indexOf('export function openPreparedSpellsModal')
+    );
+    expect(detail).toContain('spell.upcast_description');
+    expect(detail).toContain('normalizeSpellSchool(spell.school)');
+    expect(detail).toContain('rawDescription.endsWith(upcastDescription)');
+    expect(detail).toContain('spell-manual__material');
+    expect(detail).toContain('Componente materiale');
+    expect(detail).toContain('spell-manual__upcast');
+    expect(detail).toContain("level === 0 ? 'Potenziamento del trucchetto' : 'Ai livelli superiori'");
+    expect(detail).toContain('spell.source_url || spell.linkSource || spell.detailUrl');
+    expect(detail).toContain('rel="noopener noreferrer"');
+    expect(detail).toContain('Apri fonte ↗');
+    expect(styles).toContain('.spell-manual__material');
+    expect(styles).toContain('.spell-manual__upcast');
+    expect(styles).toContain('.spell-manual__reference-meta a');
+  });
+
+  it('captures spell damage type and the explicit cantrip attack category', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const editor = source.slice(
+      source.indexOf('export function openSpellDrawer'),
+      source.indexOf('export async function openSpellSourceModal')
+    );
+    const migration = readFileSync('db/shared_spells_attack_range_type.sql', 'utf8');
+
+    expect(editor).toContain("damageTypeSelect.name = 'spell_damage_type'");
+    expect(editor).toContain('name="spell_attack_range_type" value="melee"');
+    expect(editor).toContain('name="spell_attack_range_type" value="ranged"');
+    expect(editor).toContain("attack_range_type: selectedKind === 'cantrip'");
+    expect(editor).toContain('cantripRangeField.hidden = true');
+    expect(migration).toContain('add column if not exists attack_range_type text');
+    expect(migration).toContain("attack_range_type in ('melee', 'ranged')");
+  });
+
+  it('captures saving throw abilities for spells and powers', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const migration = readFileSync('db/add_saving_throw_ability.sql', 'utf8');
+    expect(source).toContain("savingThrowSelect.name = 'spell_saving_throw_ability'");
+    expect(source).toContain("saving_throw_ability: formData.get('spell_saving_throw_ability')?.toString() || null");
+    expect(source).toContain("resourceSavingThrowSelect.name = 'saving_throw_ability'");
+    expect(source).toContain("saving_throw_ability: formData.get('saving_throw_ability')?.toString() || null");
+    expect(source).not.toContain('Mostra la CTA “Colpire”');
+    expect(migration).toContain('alter table public.shared_spells');
+    expect(migration).toContain('alter table public.resources');
+    expect(migration).toContain("saving_throw_ability in ('str', 'dex', 'con', 'int', 'wis', 'cha')");
   });
 
 

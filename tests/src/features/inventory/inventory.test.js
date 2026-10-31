@@ -22,4 +22,20 @@ describe('src/features/inventory/inventory.js', () => {
       expect(source).toContain(name);
     });
   });
+
+  it('uses compact category buttons in the shortcut and image-led container insertion cards', () => {
+    const source = readFileSync('src/features/inventory/inventory.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    const modalStyles = readFileSync('src/styles/theme.css', 'utf8');
+    expect(source).toContain('inventory-category-pills');
+    expect(source).toContain('data-category-option');
+    expect(source).toContain('categories.filter((category) => category.value)');
+    expect(source).toContain('openItemSourceModal');
+    expect(source).toContain('openSharedItemPicker');
+    expect(source).toContain("sanitizeImageUrl(item.image_url)");
+    expect(source).toContain('inventory-insert-picker__visual');
+    expect(styles).toContain('.inventory-category-pills button');
+    expect(modalStyles).toContain('grid-template-rows: auto minmax(0, 1fr)');
+    expect(modalStyles).toContain('.inventory-insert-picker__visual img');
+  });
 });

@@ -12,6 +12,18 @@ function extractNamedExports(source) {
 }
 
 describe('src/features/character/home.js', () => {
+  it('makes spells added from the launch shortcut immediately available', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain("prepState: Number(sharedSpell.level) > 0 ? 'prepared' : 'known'");
+    expect(source).toContain("const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known')");
+  });
+
+  it('reconnects an edited archive snapshot through its source key', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain('!spell.shared_spell_id && spell.source_key && linkedSpell.source_key');
+    expect(source).toContain('String(spell.source_key) === String(linkedSpell.source_key)');
+  });
+
   it('defines module-level API surface', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const exports = extractNamedExports(source);
@@ -41,22 +53,89 @@ describe('src/features/character/home.js', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
     const picker = source.slice(
-      source.indexOf('async function openSharedSpellPicker()'),
-      source.indexOf('function shouldAutoUsageDice')
+      source.indexOf('async function openSharedSpellPicker('),
+      source.indexOf('function getAvailableSpellSlotLevels')
     );
 
     expect(picker).toContain("content.className = 'shared-spell-picker'");
     expect(picker).toContain('Scrivi il nome di un incantesimo...');
-    expect(picker).toContain('Tutte le versioni');
+    expect(picker).toContain('data-picker-version="2014"');
+    expect(picker).toContain('data-picker-version="2024"');
+    expect(picker).toContain('data-picker-level="0"');
+    expect(picker).toContain('data-picker-property="concentration"');
+    expect(picker).toContain("let selectedRulesVersion = initialRulesVersion");
+    expect(picker).toContain("const selectedProperties = new Set()");
+    expect(picker).toContain('rulesVersion: selectedRulesVersion');
+    expect(picker).toContain('level: selectedLevel');
+    expect(picker).not.toContain('Tutte le versioni');
     expect(picker).toContain('data-reset-spell-filters');
+    expect(picker).toContain('data-picker-source-options');
+    expect(picker).toContain('fetchSharedSpellSources({ rulesVersion: selectedRulesVersion })');
+    expect(picker).toContain('sources: expandSpellSourceSelection(sourceGroups, selectedSourceKeys)');
+    expect(picker).toContain('const selectedSourceKeys = new Set()');
     expect(picker).toContain('data-spell-preview');
     expect(picker).toContain("pageSize: PAGE_SIZE");
     expect(picker).toContain("cardClass: ['modal-card--form', 'modal-card--shared-spell-picker']");
-    expect(picker).toContain('submitButton.disabled = !selectedSpell');
+    expect(picker).toContain('const selectedSpells = new Map()');
+    expect(picker).toContain('submitButton.disabled = count === 0');
+    expect(picker).toContain('return [...selectedSpells.values()]');
+    expect(picker).toContain('data-clear-spell-selection');
+    expect(picker).toContain('if (nextRulesVersion !== selectedRulesVersion)');
+    expect(picker).toContain('const formData = await present({');
     expect(styles).toContain('.modal-card--shared-spell-picker');
     expect(styles).toContain('width: min(1180px, calc(100vw - 32px))');
     expect(styles).toContain('.shared-spell-picker__workspace');
+    expect(styles).toContain('.sheet-inline-detail.modal-card--shared-spell-picker');
+    expect(styles).toContain('scrollbar-gutter: stable');
     expect(styles).toContain('@media (max-width: 820px)');
+  });
+
+  it('keeps spell creation and the shared collection inside the shortcut flow', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const addFlow = source.slice(
+      source.indexOf("const addSpellButton = container.querySelector('[data-add-spell]')"),
+      source.indexOf('const deleteSpellWithConfirmation')
+    );
+    expect(addFlow).toContain('const presentInShortcut = (modalOptions) => presentSheetDetail(spellDialog, modalOptions)');
+    expect(addFlow).toContain('openSpellSourceModal({ present: presentInShortcut })');
+    expect(addFlow).toContain('openSharedSpellPicker(presentInShortcut, { defaultRulesVersion: preferredRulesVersion })');
+    expect(addFlow).toContain('const spellsToAdd = sharedSpells.filter');
+    expect(addFlow).toContain('await Promise.all(spellsToAdd.map');
+    expect(addFlow).toContain('spells: [...currentSpells, ...nextSpells]');
+    expect(addFlow).toContain('{ present: presentInShortcut }');
+    expect(addFlow).not.toContain('createSharedSpell');
+    expect(addFlow).toContain('openSpellDrawer(activeCharacter, () => renderHome(container), null');
+  });
+
+  it('does not open dice automatically when consuming an ability option', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const useResource = source.slice(
+      source.indexOf('const useResource = async'),
+      source.indexOf('const requestResourceUse = async')
+    );
+    expect(useResource).toContain('await updateResource(parentResource.id');
+    expect(useResource).not.toContain('openResourceRollOverlay');
+  });
+
+  it('shows ability option selection inside the shortcut dialog', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const requestHandler = source.slice(
+      source.indexOf('const requestResourceUse = async'),
+      source.indexOf('const editResource')
+    );
+    expect(requestHandler).toContain("const resourceDialog = container.querySelector('.home-feature-panel--resources')?.closest('dialog')");
+    expect(requestHandler).toContain('present: (options) => presentSheetDetail(resourceDialog, options)');
+    expect(requestHandler).toContain('onRollOption: (child) => openResourceRollOverlay(child)');
+  });
+
+  it('opens spell details inside the launch shortcut dialog', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const spellDetails = source.slice(
+      source.indexOf("container.querySelectorAll('[data-spell-quick-open]')"),
+      source.indexOf('const backgroundButton')
+    );
+    expect(spellDetails).toContain("String(entry.id) === String(spellId)");
+    expect(spellDetails).toContain("present: (options) => presentSheetDetail(button.closest('dialog'), options)");
   });
 
   it('keeps the death save dice modal open after a roll', () => {
@@ -66,6 +145,28 @@ describe('src/features/character/home.js', () => {
       source.indexOf("container.querySelectorAll('[data-death-save]')")
     );
     expect(deathSaveHandler).toContain('keepOpen: true');
+  });
+
+  it('consumes the selected slot and opens configured spell damage dice', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const launchHandler = source.slice(
+      source.indexOf("container.querySelectorAll('[data-use-spell]')"),
+      source.indexOf("container.querySelectorAll('[data-consume-spell-slot]')")
+    );
+    expect(launchHandler).toContain('consumeSpellSlot(activeCharacter, selectedLevel');
+    expect(launchHandler).toContain('buildSpellDamageOverlayConfig(spell, selectedLevel)');
+    expect(launchHandler).toContain('openDiceOverlay');
+    expect(launchHandler).toContain("rollType: 'DMG'");
+  });
+
+  it('asks for confirmation when only a higher-level spell slot remains', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const slotPicker = source.slice(
+      source.indexOf('async function chooseSpellSlotLevel'),
+      source.indexOf('export async function renderHome')
+    );
+    expect(slotPicker).toContain('options.some((option) => option.level > baseLevel)');
+    expect(slotPicker).toContain('options.length === 1 && !hasHigherLevelOption');
   });
 
   it('opens a compact amount picker when consuming a pool resource', () => {
@@ -119,12 +220,55 @@ describe('src/features/character/home.js', () => {
 
   it('keeps equipment assignment inside the mannequin workflow without quick creation', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
-    expect(source).toContain('openEquipmentMannequin({');
+    expect(source).toContain('canEditCharacter ? openEquipmentPicker : openEquipmentMannequin');
     expect(source).toContain('onEquip: canEditCharacter ? equipFromMannequin : null');
     expect(source).toContain('onUnequip: canEditCharacter ? async (item) =>');
     expect(source).toContain('weightUnit: getWeightUnit(activeCharacter)');
     expect(source).not.toContain('onCreateItem: canEditCharacter');
     expect(source).not.toContain("container.querySelector('[data-add-equip]')");
+  });
+
+  it('routes footer game actions directly and uses aligned compact dialogs', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
+    expect(source).toContain("event.target.closest('[data-game-action]')");
+    expect(source).not.toContain("event.target.closest('[data-actions-fab]')");
+    expect(source.match(/cardClass: 'modal-card--quick-action'/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(styles).toContain('.modal-card--quick-action .modal-footer');
+    expect(styles).toContain('.modal-card--quick-action .modal-actions');
+  });
+
+  it('uses a compact character sheet header with an explicit edit action', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    expect(source).toContain('character-sheet-header__crest');
+    expect(source).toContain('Panoramica di gioco');
+    expect(source).toContain('class="character-edit-trigger"');
+    expect(source).toContain('<span>Modifica scheda</span>');
+    expect(styles).toContain('.character-edit-trigger');
+    expect(styles).toContain('grid-template-columns: minmax(0,1.75fr) repeat(3,minmax(100px,.68fr))');
+  });
+
+  it('edits shortcut modifiers in place and includes them in actual rolls', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const editor = readFileSync('src/features/character/home/generalModifiers.js', 'utf8');
+    expect(source).toContain("container.querySelectorAll('[data-edit-general-modifier]')");
+    expect(source).toContain('presentSheetDetail(dialog, options)');
+    expect(source).toContain('button.dataset.editGeneralModifier');
+    expect(source).toContain('const generalBonus = Number(data.skill_check_bonus) || 0');
+    expect(source).toContain('const generalBonus = Number(data.saving_throw_bonus) || 0');
+    expect(editor).toContain("key: 'damage_bonus_melee'");
+    expect(editor).toContain("key: 'damage_bonus_ranged'");
+    expect(editor).toContain('await saveCharacterData(character, nextData');
+  });
+
+  it('carries imported spellbook metadata into character spell details', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain('material: sharedSpell.material || null');
+    expect(source).toContain('upcast_description: sharedSpell.upcast_description || null');
+    expect(source).toContain('source_url: sharedSpell.source_url || null');
+    expect(source).toContain('material: source.material || null');
+    expect(source).toContain('upcast_description: source.upcast_description || null');
   });
 
 });

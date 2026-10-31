@@ -1,3 +1,4 @@
+import { buildResourceFacts } from './resourceFacts.js';
 import { createResource, updateResource } from '../characterApi.js';
 import { getState } from '../../../app/state.js';
 import {
@@ -12,12 +13,23 @@ import {
 import { consumeSpellSlot, saveCharacterData } from './data.js';
 import { openDiceOverlay } from '../../dice-roller/overlay/dice.js';
 import { buildSpellDamageOverlayConfig, getCastableSpellSlotLevels, sortSpellsByLevel } from './utils.js';
-import { conditionList } from './constants.js';
+import { conditionList, damageTypeList, savingThrowList, weaknessLevelList } from './constants.js';
 import { attachModalValueStepper } from './hpModal.js';
-import { fetchCharacterSpells, removeCharacterSpell } from '../spellbookApi.js';
+import { assignSharedSpellToCharacter, fetchCharacterSpells, removeCharacterSpell, searchSharedSpells, updateCharacterSpellAssignment } from '../spellbookApi.js';
+import {
+  dedupeCharacterSpells,
+  getCharacterMaxSpellLevel,
+  getCharacterRulesVersion,
+  inferCharacterCasterClasses,
+  mapSharedSpellForPreparation
+} from '../spellPreparation.js';
+import { attachUnifiedDetailActions } from './detailManagement.js';
+import { sanitizeExternalUrl } from '../../../lib/html.js';
+import { normalizeSpellSchool, spellSchoolLabels } from '../spellSchools.js';
+import { normalizeSpellSource } from '../spellSources.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
-const SPELL_SCHOOL_OPTIONS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
+const SPELL_SCHOOL_OPTIONS = ['', ...spellSchoolLabels];
 const SPELL_CASTER_CLASS_OPTIONS = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
 const SPELL_RULES_VERSION_OPTIONS = ['2014', '2024', 'Custom'];
 
@@ -65,7 +77,8 @@ async function chooseCastSlotLevel(character, spell) {
     createToast('Slot incantesimo esauriti', 'error');
     return null;
   }
-  if (castSlotOptions.length === 1) {
+  const hasHigherLevelOption = castSlotOptions.some((option) => Number(option.value) > level);
+  if (castSlotOptions.length === 1 && !hasHigherLevelOption) {
     return Math.max(level, Number(castSlotOptions[0].value) || level);
   }
   const field = document.createElement('label');
@@ -92,6 +105,7 @@ export function openBackgroundModal(character) {
   if (!character) return;
   const data = character.data || {};
   const description = data.description || 'Aggiungi una descrizione del background.';
+  const backgroundName = data.background || 'Background non specificato';
   const content = document.createElement('div');
   content.className = 'background-modal';
 
@@ -100,6 +114,7 @@ export function openBackgroundModal(character) {
   hero.innerHTML = `
     <span class="background-modal-hero__eyebrow">Storia del personaggio</span>
     <strong>${escapeHtml(character.name || 'Background')}</strong>
+    <span class="background-modal-hero__background">${escapeHtml(backgroundName)}</span>
   `;
 
   const descriptionCard = document.createElement('div');
@@ -121,10 +136,10 @@ export function openBackgroundModal(character) {
   content.appendChild(descriptionCard);
 
   openFormModal({
-    title: 'Descrizione background',
+    title: `Storia di ${character.name || 'personaggio'}`,
     cancelLabel: null,
     content,
-    cardClass: ['modal-card--scrollable', 'modal-card--background'],
+    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--background'],
     showFooter: false
   });
 }
@@ -146,15 +161,8 @@ export async function openConditionsModal(character) {
     label.className = `condition-modal__item${isChecked ? ' is-selected' : ''}`;
     label.setAttribute('role', 'group');
     label.innerHTML = `
-      <span class="condition-modal__item-label"><strong>${condition.label}</strong></span>
+      <span class="condition-modal__item-label"><strong>${condition.label}</strong><small>${condition.effect}</small></span>
       <span class="condition-modal__actions">
-        <details class="info-tooltip condition-modal__tooltip">
-          <summary aria-label="Descrivi ${condition.label}">?</summary>
-          <div class="info-tooltip__panel">
-            <p><strong>${condition.label}</strong></p>
-            <p>${condition.effect}</p>
-          </div>
-        </details>
         <label class="diceov-toggle condition-modal__toggle">
           <input type="checkbox" name="conditions" value="${condition.key}" ${isChecked ? 'checked' : ''} />
           <span class="diceov-toggle-track" aria-hidden="true"></span>
@@ -162,15 +170,8 @@ export async function openConditionsModal(character) {
       </span>
     `;
     const checkbox = label.querySelector('input[type="checkbox"]');
-    const tooltip = label.querySelector('.condition-modal__tooltip');
-    tooltip?.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-    tooltip?.addEventListener('keydown', (event) => {
-      event.stopPropagation();
-    });
     label.addEventListener('click', (event) => {
-      if (event.target.closest('.condition-modal__tooltip, .condition-modal__toggle')) return;
+      if (event.target.closest('.condition-modal__toggle')) return;
       checkbox?.click();
     });
     checkbox?.addEventListener('change', () => {
@@ -185,55 +186,45 @@ export async function openConditionsModal(character) {
     submitLabel: 'Applica',
     cancelLabel: 'Annulla',
     content,
-    cardClass: 'modal-card--wide'
+    cardClass: ['modal-card--wide', 'modal-card--status-editor']
   });
 }
 
-
+export async function openWeaknessModal(character) {
+  if (!character) return null;
+  const current = Math.max(0, Math.min(6, Number(character.data?.hp?.weak_points) || 0));
+  const content = document.createElement('div');
+  content.className = 'weakness-modal';
+  content.innerHTML = `
+    <div class="weakness-modal__intro">
+      <span aria-hidden="true">◒</span>
+      <div><strong>Livello di indebolimento</strong><small>Seleziona il livello attuale. Gli effetti sono cumulativi.</small></div>
+    </div>
+    <div class="weakness-modal__list" role="radiogroup" aria-label="Livello di indebolimento">
+      ${weaknessLevelList.map((level) => `
+        <label class="weakness-modal__item ${current === level.value ? 'is-selected' : ''}">
+          <input type="radio" name="weakness_level" value="${level.value}" ${current === level.value ? 'checked' : ''} />
+          <span class="weakness-modal__level">${level.value || '—'}</span>
+          <span class="weakness-modal__copy"><strong>${level.label}</strong><small>${level.effect}</small></span>
+          <span class="weakness-modal__check" aria-hidden="true">✓</span>
+        </label>
+      `).join('')}
+    </div>`;
+  content.querySelectorAll('input[name="weakness_level"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      content.querySelectorAll('.weakness-modal__item').forEach((item) => item.classList.toggle('is-selected', item.contains(input)));
+    });
+  });
+  return openFormModal({
+    title: `Indebolimento di ${character.name || 'personaggio'}`,
+    submitLabel: 'Applica',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: ['modal-card--wide', 'modal-card--status-editor']
+  });
+}
 function attachDetailManagementActions(modal, formEl, { onEdit, onDelete } = {}) {
-  if (!onEdit && !onDelete) return null;
-  const actions = modal.querySelector('[data-form-header-actions]');
-  if (!actions || !formEl) return null;
-  actions.classList.add('detail-modal-actions');
-
-  const staleActionInputs = [...formEl.querySelectorAll('input[name="detail_action"]')];
-  staleActionInputs.forEach((input) => input.remove());
-  const actionInput = document.createElement('input');
-  actionInput.type = 'hidden';
-  actionInput.name = 'detail_action';
-  formEl.appendChild(actionInput);
-
-  const submitAction = (action) => {
-    actionInput.value = action;
-    const childActionInput = formEl.querySelector('input[name="resource_child_action"]');
-    if (childActionInput) childActionInput.value = '';
-    formEl.requestSubmit();
-  };
-  if (onEdit) {
-    const editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.className = 'resource-action-button resource-icon-button';
-    editButton.setAttribute('aria-label', 'Modifica');
-    editButton.title = 'Modifica';
-    editButton.textContent = '✏️';
-    editButton.addEventListener('click', () => submitAction('edit'));
-    actions.appendChild(editButton);
-  }
-  if (onDelete) {
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'resource-action-button resource-icon-button';
-    deleteButton.setAttribute('aria-label', 'Elimina');
-    deleteButton.title = 'Elimina';
-    deleteButton.textContent = '🗑️';
-    deleteButton.addEventListener('click', () => submitAction('delete'));
-    actions.appendChild(deleteButton);
-  }
-  return () => {
-    actionInput.remove();
-    actions.replaceChildren();
-    actions.classList.remove('detail-modal-actions');
-  };
+  return attachUnifiedDetailActions(modal, formEl, { onEdit, onDelete });
 }
 
 export async function openResourcePoolConsumeModal(resource) {
@@ -320,7 +311,10 @@ export async function openVariableResourceCostModal(resource, parentResource) {
   return Math.max(1, Math.min(Number(formData.get('variable_resource_cost')) || 1, remaining));
 }
 
-export async function openResourceOptionModal(resource, childResources = []) {
+export async function openResourceOptionModal(resource, childResources = [], {
+  onRollOption,
+  present = openFormModal
+} = {}) {
   if (!childResources.length) return null;
   const maxUses = Math.max(0, Number(resource?.max_uses) || 0);
   const used = Math.max(0, Number(resource?.used) || 0);
@@ -336,34 +330,49 @@ export async function openResourceOptionModal(resource, childResources = []) {
   content.innerHTML = `
     <p class="muted">Scegli come usare <strong>${escapeHtml(resource?.name || 'questa abilità')}</strong>. Hai <strong>${remaining}</strong> risorse disponibili.</p>
     <div class="resource-option-picker__list">
-      ${options.map(({ child, cost, variableCost, available }) => `
-        <label class="resource-option-picker__item ${available ? '' : 'is-disabled'}">
-          <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${String(child.id) === String(firstAvailableId) ? 'checked' : ''} ${available ? '' : 'disabled'} />
-          <span class="resource-option-picker__content">
-            <span class="resource-option-picker__heading">
-              <strong>${escapeHtml(child.name || 'Opzione')}</strong>
-              <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">${variableCost ? 'Costo variabile' : `Costo ${cost}`}</span>
+      ${options.map(({ child, cost, variableCost, available }) => {
+    const diceLabel = child.damage_dice_notation
+      ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}`
+      : '';
+    return `
+        <div class="resource-option-picker__item ${available ? '' : 'is-disabled'}">
+          <label class="resource-option-picker__choice">
+            <input type="radio" name="resource_option_id" value="${escapeHtml(child.id)}" ${String(child.id) === String(firstAvailableId) ? 'checked' : ''} ${available ? '' : 'disabled'} />
+            <span class="resource-option-picker__content">
+              <span class="resource-option-picker__heading">
+                <strong>${escapeHtml(child.name || 'Opzione')}</strong>
+                <span class="resource-option-picker__cost ${available ? '' : 'is-unavailable'}">${variableCost ? 'Costo variabile' : `Costo ${cost}`}</span>
+              </span>
+              <small>${[child.cast_time, diceLabel || 'Nessun tiro'].filter(Boolean).map(escapeHtml).join(' · ')}</small>
+              ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
+              ${available ? '' : `<small class="resource-option-picker__warning">${variableCost ? 'Non ci sono risorse disponibili.' : `Servono ${cost} risorse; disponibili ${remaining}.`}</small>`}
             </span>
-            <small>${[
-    child.cast_time,
-    child.damage_dice_notation ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}` : 'Nessun tiro'
-  ].filter(Boolean).map(escapeHtml).join(' · ')}</small>
-            ${child.description ? `<span>${escapeHtml(child.description)}</span>` : ''}
-            ${available ? '' : `<small class="resource-option-picker__warning">${variableCost ? 'Non ci sono risorse disponibili.' : `Servono ${cost} risorse; disponibili ${remaining}.`}</small>`}
-          </span>
-        </label>
-      `).join('')}
+          </label>
+          ${diceLabel && onRollOption ? `<button class="resource-option-picker__roll" type="button" data-resource-option-roll="${escapeHtml(child.id)}" aria-label="Tira ${escapeHtml(diceLabel)} per ${escapeHtml(child.name || 'opzione')}" ${available ? '' : 'disabled'}>${escapeHtml(diceLabel)}</button>` : ''}
+        </div>
+      `;
+  }).join('')}
     </div>
   `;
-  const formData = await openFormModal({
+  const formData = await present({
     title: `Usa ${resource?.name || 'abilità'}`,
     submitLabel: 'Usa opzione',
     cancelLabel: 'Annulla',
     content,
     onOpen: ({ modal }) => {
       const submitButton = modal.querySelector('[data-form-submit]');
+      const rollButtons = [...modal.querySelectorAll('[data-resource-option-roll]')];
+      const rollHandlers = rollButtons.map((button) => {
+        const handler = () => {
+          const child = childResources.find((entry) => String(entry.id) === String(button.dataset.resourceOptionRoll));
+          if (child) onRollOption?.(child);
+        };
+        button.addEventListener('click', handler);
+        return [button, handler];
+      });
       if (submitButton) submitButton.disabled = !firstAvailableId;
       return () => {
+        rollHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
         if (submitButton) submitButton.disabled = false;
       };
     }
@@ -372,6 +381,7 @@ export async function openResourceOptionModal(resource, childResources = []) {
 }
 
 export function openResourceDetail(resource, {
+  present = openFormModal,
   childResources = [],
   canHaveChildren = Boolean(resource?.can_have_children),
   onUse,
@@ -399,18 +409,29 @@ export function openResourceDetail(resource, {
   const imageUrl = resource.image_url?.trim() || '';
   const usageLabel = isPool ? 'Pool disponibile' : 'Cariche disponibili';
   const showChildSection = Boolean(canHaveChildren);
+  const resourceFacts = buildResourceFacts(resource).replace(
+    'class="power-detail-facts"',
+    'class="spell-manual__facts power-detail-facts"'
+  );
+  const resourceKind = resource.resource_type === 'passive'
+    ? 'Sempre attiva'
+    : resource.resource_type === 'pool' ? 'Riserva' : 'Abilità consumabile';
 
   detail.innerHTML = `
-    <section class="resource-parent-overview ${hasDisplayImage ? '' : 'resource-parent-overview--text-only'}">
-      ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'risorsa')}" />` : ''}
-      <div class="resource-parent-overview__content">
-        <div class="resource-parent-overview__meta">
-          ${resource.cast_time ? `<span class="resource-chip">${escapeHtml(resource.cast_time)}</span>` : ''}
-          ${maxUses ? `<span class="resource-parent-overview__uses ${isExhausted ? 'is-exhausted' : ''}">${usageLabel}: <strong>${remaining}/${maxUses}</strong></span>` : ''}
-          ${childResources.length ? `<span class="resource-parent-overview__count">${childResources.length} ${childResources.length === 1 ? 'opzione' : 'opzioni'}</span>` : ''}
+    <article class="spell-manual power-manual ${hasDisplayImage ? 'spell-manual--illustrated' : ''}">
+      <header class="spell-manual__hero power-manual__hero">
+        ${hasDisplayImage ? `<img class="spell-manual__image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(resource.name || 'abilità')}" />` : '<span class="spell-manual__crest" aria-hidden="true">◆</span>'}
+        <div class="spell-manual__heading">
+          <span class="spell-manual__kicker">${escapeHtml(resourceKind)}</span>
+          <h3>${escapeHtml(resource.name || 'Abilità')}</h3>
         </div>
+      </header>
+      ${resourceFacts}
+    <section class="spell-manual__body resource-parent-overview resource-parent-overview--text-only">
+      <div class="resource-parent-overview__content">
         ${isPool && maxUses ? `
           <div class="resource-pool resource-pool--detail" aria-label="${usageLabel} ${remaining} su ${maxUses}">
+            <div class="resource-pool__label"><span>${usageLabel}</span><strong><span class="resource-pool__value">${remaining}/${maxUses}</span><small>${Math.round(poolPercent)}%</small></strong></div>
             <div class="resource-pool__track" role="meter" aria-valuemin="0" aria-valuemax="${maxUses}" aria-valuenow="${remaining}">
               <div class="resource-pool__fill" style="width: ${poolPercent}%;"></div>
             </div>
@@ -459,10 +480,11 @@ export function openResourceDetail(resource, {
         </div>` : '<div class="resource-detail-options__empty"><span aria-hidden="true">◇</span><p>Nessuna sotto-abilità configurata.</p></div>'}
       </section>
     ` : ''}
+    </article>
   `;
 
-  openFormModal({
-    title: resource.name || 'Risorsa',
+  present({
+    title: 'Scheda abilità',
     submitLabel: hasAction
       ? (isExhausted ? 'Ripristina' : (isPool ? 'Consuma' : 'Usa'))
       : 'Chiudi',
@@ -564,7 +586,7 @@ export function openResourceDetail(resource, {
 }
 
 export function openSpellDrawer(character, onSave, spell = null, options = {}) {
-  const { catalogMode = false } = options;
+  const { catalogMode = false, present = openFormModal, defaultRulesVersion = '2024' } = options;
   if (!character && !catalogMode) return;
   const enhanceSpellNumericField = (field) => {
     const input = field?.querySelector('input[type="number"]');
@@ -578,6 +600,21 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   const canPrepare = !catalogMode && Boolean(character?.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form spell-editor-form';
+  const editorOverview = document.createElement('section');
+  editorOverview.className = 'spell-editor-overview';
+  editorOverview.innerHTML = `
+    <span class="spell-editor-overview__sigil" aria-hidden="true">✦</span>
+    <div class="spell-editor-overview__identity">
+      <small data-spell-editor-kicker>Nuovo incantesimo</small>
+      <strong data-spell-editor-name>Incantesimo senza nome</strong>
+      <span data-spell-editor-school>Definisci livello e scuola</span>
+    </div>
+    <div class="spell-editor-overview__facts">
+      <span><small>Tempo</small><strong data-spell-editor-time>—</strong></span>
+      <span><small>Danni</small><strong data-spell-editor-damage>—</strong></span>
+    </div>
+  `;
+  form.appendChild(editorOverview);
   const buildSection = (title, description = '') => {
     const section = document.createElement('section');
     section.className = 'spell-form-section';
@@ -659,7 +696,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   schoolField.innerHTML = '<span>Scuola di magia</span>';
   const schoolSelect = buildSelect(
     SPELL_SCHOOL_OPTIONS.map((value) => ({ value, label: value || 'N/D' })),
-    spell?.school ?? ''
+    normalizeSpellSchool(spell?.school)
   );
   schoolSelect.name = 'spell_school';
   schoolField.appendChild(schoolSelect);
@@ -668,11 +705,17 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   rulesVersionField.innerHTML = '<span>Versione regole</span>';
   const rulesVersionSelect = buildSelect(
     SPELL_RULES_VERSION_OPTIONS.map((value) => ({ value, label: value })),
-    spell?.rules_version ?? '2024'
+    spell?.rules_version ?? defaultRulesVersion
   );
   rulesVersionSelect.name = 'spell_rules_version';
   rulesVersionField.appendChild(rulesVersionSelect);
-  identitySection.appendChild(buildRow([schoolField, rulesVersionField], 'compact'));
+  const sourceField = buildInput({
+    label: 'Manuale / fonte',
+    name: 'spell_source',
+    placeholder: 'Es. Xanathar\'s Guide to Everything',
+    value: normalizeSpellSource(spell?.source)
+  });
+  identitySection.appendChild(buildRow([schoolField, rulesVersionField, sourceField], 'compact'));
   form.appendChild(identitySection);
   const selectedCasterClasses = new Set(
     Array.isArray(spell?.caster_classes)
@@ -739,6 +782,15 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       <span class="diceov-toggle-track" aria-hidden="true"></span>
     </label>
   `;
+  const savingThrowField = document.createElement('label');
+  savingThrowField.className = 'field modal-quick-property';
+  savingThrowField.innerHTML = '<span>Tiro salvezza</span>';
+  const savingThrowSelect = buildSelect([
+    { value: '', label: 'Nessun tiro salvezza' },
+    ...savingThrowList.map((entry) => ({ value: entry.key, label: entry.label }))
+  ], spell?.saving_throw_ability ?? '');
+  savingThrowSelect.name = 'spell_saving_throw_ability';
+  savingThrowField.appendChild(savingThrowSelect);
   const ritualField = document.createElement('div');
   ritualField.className = 'modal-toggle-field';
   ritualField.innerHTML = `
@@ -748,7 +800,21 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       <span class="diceov-toggle-track" aria-hidden="true"></span>
     </label>
   `;
-  traitsSection.appendChild(buildRow([concentrationField, attackRollField, ritualField, prepStateField], 'compact'));
+  const initialCantripRangeType = ['melee', 'ranged'].includes(spell?.attack_range_type)
+    ? spell.attack_range_type
+    : spell?.range?.trim() ? 'ranged' : 'melee';
+  const cantripRangeField = document.createElement('fieldset');
+  cantripRangeField.className = 'spell-range-flag';
+  cantripRangeField.innerHTML = `
+    <legend>Tipo di attacco del trucchetto</legend>
+    <p>Determina se il trucchetto compare tra gli attacchi in mischia o a distanza.</p>
+    <div class="spell-range-flag__options">
+      <label><input type="radio" name="spell_attack_range_type" value="melee" ${initialCantripRangeType === 'melee' ? 'checked' : ''} /><span>Mischia</span></label>
+      <label><input type="radio" name="spell_attack_range_type" value="ranged" ${initialCantripRangeType === 'ranged' ? 'checked' : ''} /><span>Distanza</span></label>
+    </div>
+  `;
+  traitsSection.appendChild(buildRow([concentrationField, attackRollField, ritualField, savingThrowField, prepStateField], 'compact'));
+  traitsSection.appendChild(cantripRangeField);
   form.appendChild(traitsSection);
   const damageDieField = buildInput({
     label: 'Notazione dado',
@@ -762,6 +828,15 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     type: 'number',
     value: spell?.damage_modifier ?? ''
   });
+  const damageTypeField = document.createElement('label');
+  damageTypeField.className = 'field';
+  damageTypeField.innerHTML = '<span>Tipo di danno</span>';
+  const damageTypeSelect = buildSelect([
+    { value: '', label: 'Nessun tipo' },
+    ...damageTypeList.filter((type) => type.key !== 'all').map((type) => ({ value: type.key, label: type.label }))
+  ], spell?.damage_type ?? '');
+  damageTypeSelect.name = 'spell_damage_type';
+  damageTypeField.appendChild(damageTypeSelect);
   const upcastDamageDieField = buildInput({
     label: 'Dado extra per slot superiore',
     name: 'spell_upcast_damage_die',
@@ -786,8 +861,12 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     upcastStartLevelInput.max = '9';
   }
   const damageSection = buildSection('Danni e upcast', 'Compila solo i campi utili: puoi lasciare vuoto ciò che non serve.');
-  damageSection.appendChild(buildRow([damageDieField, damageModifierField], 'compact'));
-  damageSection.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
+  damageSection.appendChild(buildRow([damageDieField, damageModifierField, damageTypeField], 'compact'));
+  const upcastDetails = document.createElement('details');
+  upcastDetails.className = 'spell-form-advanced';
+  upcastDetails.innerHTML = '<summary>Progressione con slot superiori</summary>';
+  upcastDetails.appendChild(buildRow([upcastDamageDieField, upcastDamageModifierField, upcastStartLevelField], 'compact'));
+  damageSection.appendChild(upcastDetails);
   form.appendChild(damageSection);
 
   const descriptionSection = buildSection('Descrizione');
@@ -820,6 +899,8 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       levelInput.max = '0';
       levelInput.readOnly = true;
       levelInput.disabled = true;
+      cantripRangeField.hidden = false;
+      cantripRangeField.querySelectorAll('input').forEach((input) => { input.disabled = false; });
     } else {
       if (Number(levelInput.value) === 0) {
         levelInput.value = '1';
@@ -828,17 +909,37 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       levelInput.max = '9';
       levelInput.readOnly = false;
       levelInput.disabled = false;
+      cantripRangeField.hidden = true;
+      cantripRangeField.querySelectorAll('input').forEach((input) => { input.disabled = true; });
     }
   };
-  spellKindSelect.addEventListener('change', syncSpellKind);
+  const syncEditorOverview = () => {
+    const level = spellKindSelect.value === 'cantrip' ? 0 : Math.max(1, Number(levelInput?.value) || 1);
+    const kindLabel = level === 0 ? 'Trucchetto' : `Incantesimo di ${level}° livello`;
+    const schoolLabel = schoolSelect.value || 'Scuola non indicata';
+    const modifier = Number(damageModifierField.querySelector('input')?.value) || 0;
+    const notation = damageDieField.querySelector('input')?.value?.trim();
+    editorOverview.querySelector('[data-spell-editor-kicker]').textContent = kindLabel;
+    editorOverview.querySelector('[data-spell-editor-name]').textContent = nameInput?.value?.trim() || 'Incantesimo senza nome';
+    editorOverview.querySelector('[data-spell-editor-school]').textContent = schoolLabel;
+    editorOverview.querySelector('[data-spell-editor-time]').textContent = castTimeSelect.value || '—';
+    editorOverview.querySelector('[data-spell-editor-damage]').textContent = notation
+      ? `${notation}${modifier ? ` ${modifier > 0 ? '+' : ''}${modifier}` : ''}`
+      : '—';
+  };
+  spellKindSelect.addEventListener('change', () => { syncSpellKind(); syncEditorOverview(); });
+  [nameInput, levelInput, schoolSelect, castTimeSelect, damageDieField.querySelector('input'), damageModifierField.querySelector('input')]
+    .filter(Boolean)
+    .forEach((input) => input.addEventListener('input', syncEditorOverview));
   syncSpellKind();
+  syncEditorOverview();
 
   form.querySelectorAll('input[type="number"]').forEach((input) => {
     const field = input.closest('.field');
     enhanceSpellNumericField(field);
   });
 
-  openFormModal({
+  present({
     title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',
     submitLabel: spell ? 'Salva' : 'Aggiungi',
     content: form,
@@ -860,6 +961,7 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     const prepState = canPrepare ? formData.get('spell_prep_state') || 'known' : spell?.prep_state || 'known';
     const nextSpell = {
       id: spell?.id ?? `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      shared_spell_id: spell?.shared_spell_id || null,
       name,
       level,
       kind: selectedKind || (level === 0 ? 'cantrip' : 'spell'),
@@ -867,21 +969,29 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       duration: formData.get('spell_duration')?.trim() || null,
       range: formData.get('spell_range')?.trim() || null,
       components: formData.get('spell_components')?.trim() || null,
+      material: spell?.material || null,
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
+      saving_throw_ability: formData.get('spell_saving_throw_ability')?.toString() || null,
+      attack_range_type: selectedKind === 'cantrip' ? formData.get('spell_attack_range_type')?.toString() || 'melee' : null,
       is_ritual: formData.has('spell_is_ritual'),
       image_url: null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
       damage_modifier: damageModifier,
+      damage_type: formData.get('spell_damage_type')?.toString() || null,
       upcast_damage_die: formData.get('spell_upcast_damage_die')?.trim() || null,
       upcast_damage_modifier: toNumberOrNull(formData.get('spell_upcast_damage_modifier')),
       upcast_start_level: toNumberOrNull(formData.get('spell_upcast_start_level')),
+      upcast_description: spell?.upcast_description || null,
       description: formData.get('spell_description')?.trim() || null,
+      source: normalizeSpellSource(formData.get('spell_source')) || null,
+      source_url: spell?.source_url || null,
+      source_key: spell?.source_key || null,
       school: formData.get('spell_school')?.trim() || null,
       caster_classes: formData.getAll('spell_caster_classes')
         .map((entry) => String(entry).trim().toLowerCase())
         .filter(Boolean),
-      rules_version: (formData.get('spell_rules_version') || '2024').toString().trim(),
+      rules_version: (formData.get('spell_rules_version') || defaultRulesVersion).toString().trim(),
       prep_state: prepState
     };
     if (catalogMode) {
@@ -896,12 +1006,31 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       ...character.data,
       spells: nextSpells
     };
+    if (spell?.shared_spell_id && prepState !== spell.prep_state) {
+      try {
+        const updatedLinks = await updateCharacterSpellAssignment(character.id, spell.shared_spell_id, {
+          prep_state: prepState === 'always' ? 'always_prepared' : prepState
+        });
+        if (!updatedLinks.length) {
+          await assignSharedSpellToCharacter({
+            user_id: character.user_id || getState().user?.id,
+            character_id: character.id,
+            shared_spell_id: spell.shared_spell_id,
+            prep_state: prepState === 'always' ? 'always_prepared' : prepState
+          });
+        }
+      } catch (error) {
+        console.error('Stato preparazione non sincronizzato', error);
+        createToast('Non riesco ad aggiornare lo stato dell’incantesimo', 'error');
+        return;
+      }
+    }
     const message = spell ? 'Incantesimo aggiornato' : 'Incantesimo aggiunto';
     await saveCharacterData(character, nextData, message, () => onSave?.(nextSpell, { isNew: !spell }));
   });
 }
 
-export async function openSpellSourceModal() {
+export async function openSpellSourceModal({ present = openFormModal } = {}) {
   const content = document.createElement('div');
   content.className = 'spell-source-picker';
   content.innerHTML = `
@@ -938,7 +1067,7 @@ export async function openSpellSourceModal() {
       </label>
     </div>
   `;
-  const formData = await openFormModal({
+  const formData = await present({
     title: 'Aggiungi incantesimo',
     submitLabel: 'Continua',
     cancelLabel: 'Annulla',
@@ -951,35 +1080,89 @@ export async function openSpellSourceModal() {
 
 
 
-export function openSpellQuickDetailModal(character, spell, onRender, { onEdit, onDelete } = {}) {
+export function openSpellQuickDetailModal(character, spell, onRender, { present = openFormModal, onEdit, onDelete } = {}) {
   if (!spell) return;
   const level = Math.max(0, Number(spell.level) || 0);
-  const detailChips = [
-    `Range: ${spell.range?.trim() || '-'}`,
-    `Durata: ${spell.duration?.trim() || '-'}`,
-    `Componenti: ${spell.components?.trim() || '-'}`,
-    ...(spell.concentration ? ['Concentrazione: Sì'] : []),
-    ...(spell.is_ritual ? ['Rituale: Sì'] : [])
-  ];
-  const description = spell.description?.trim() || 'Nessuna descrizione disponibile.';
+  const upcastDescription = spell.upcast_description?.trim() || '';
+  const rawDescription = spell.description?.trim() || '';
+  const description = upcastDescription && rawDescription.endsWith(upcastDescription)
+    ? rawDescription.slice(0, -upcastDescription.length).trim()
+    : rawDescription;
+  const effectDescription = description || 'Nessuna descrizione disponibile.';
   const isCastable = Boolean(character) && level > 0;
   const hasDisplayImage = hasUsableDetailImage(spell.image_url);
   const imageUrl = spell.image_url?.trim() || '';
+  const levelLabel = level === 0 ? 'Trucchetto' : `${level}° livello`;
+  const schoolLabel = normalizeSpellSchool(spell.school) || 'Scuola non indicata';
+  const material = spell.material?.trim() || '';
+  const isRitual = Boolean(spell.is_ritual ?? spell.ritual);
+  const sourceLabel = spell.source?.trim() || '';
+  const sourceUrl = sanitizeExternalUrl(spell.source_url || spell.linkSource || spell.detailUrl);
+  const damageNotation = spell.damage_die
+    ? `${spell.damage_die}${Number(spell.damage_modifier) ? ` ${Number(spell.damage_modifier) > 0 ? '+' : ''}${Number(spell.damage_modifier)}` : ''}`
+    : '';
+  const casterClasses = Array.isArray(spell.caster_classes) ? spell.caster_classes.filter(Boolean) : [];
 
   const content = document.createElement('div');
   content.className = 'spell-quick-detail';
   content.innerHTML = `
-    <div class="detail-card detail-card--text spell-quick-detail__card ${hasDisplayImage ? "" : "resource-detail-card--text-only"}">
-      ${hasDisplayImage ? `<img class="resource-detail-image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(spell.name || 'incantesimo')}" />` : ''}
-      <div class="spell-quick-detail__content">
-        <div class="tag-row spell-quick-detail__chips">${detailChips.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}</div>
-        <div class="detail-rich-text spell-quick-detail__description">${renderDetailText(description)}</div>
-      </div>
-    </div>
+    <article class="spell-manual ${hasDisplayImage ? 'spell-manual--illustrated' : ''}">
+      <header class="spell-manual__hero">
+        ${hasDisplayImage ? `<img class="spell-manual__image" src="${escapeHtml(imageUrl)}" alt="Immagine di ${escapeHtml(spell.name || 'incantesimo')}" />` : '<span class="spell-manual__crest" aria-hidden="true">✦</span>'}
+        <div class="spell-manual__heading">
+          <span class="spell-manual__kicker">${escapeHtml(levelLabel)} · ${escapeHtml(schoolLabel)}</span>
+          <h3>${escapeHtml(spell.name || 'Incantesimo')}</h3>
+          ${(spell.concentration || isRitual) ? `<div class="spell-manual__traits">
+            ${spell.concentration ? '<span>Concentrazione</span>' : ''}
+            ${isRitual ? '<span>Rituale</span>' : ''}
+          </div>` : ''}
+        </div>
+      </header>
+      <dl class="spell-manual__facts" aria-label="Regole di lancio">
+        <div><dt>Tempo di lancio</dt><dd>${escapeHtml(spell.cast_time?.trim() || '—')}</dd></div>
+        <div><dt>Gittata</dt><dd>${escapeHtml(spell.range?.trim() || '—')}</dd></div>
+        <div><dt>Componenti</dt><dd>${escapeHtml(spell.components?.trim() || '—')}</dd></div>
+        <div><dt>Durata</dt><dd>${escapeHtml(spell.duration?.trim() || '—')}</dd></div>
+      </dl>
+      ${material ? `
+        <aside class="spell-manual__material" aria-label="Componente materiale">
+          <span class="spell-manual__material-mark" aria-hidden="true">M</span>
+          <div><small>Componente materiale</small><p>${escapeHtml(material)}</p></div>
+        </aside>
+      ` : ''}
+      ${damageNotation ? `
+        <section class="spell-manual__damage" aria-label="Danni dell'incantesimo">
+          <span class="spell-manual__damage-icon" aria-hidden="true">◆</span>
+          <div><small>Danni</small><strong>${escapeHtml(damageNotation)}</strong></div>
+          ${spell.upcast_damage_die && !upcastDescription ? `<p><strong>Slot superiori:</strong> +${escapeHtml(spell.upcast_damage_die)}${spell.upcast_start_level ? ` dal ${escapeHtml(spell.upcast_start_level)}° livello` : ''}.</p>` : ''}
+        </section>
+      ` : ''}
+      <section class="spell-manual__body">
+        <h4>Effetto</h4>
+        <div class="detail-rich-text spell-manual__description">${renderDetailText(effectDescription)}</div>
+      </section>
+      ${upcastDescription ? `
+        <section class="spell-manual__upcast">
+          <span class="spell-manual__upcast-mark" aria-hidden="true">↑</span>
+          <div>
+            <h4>${level === 0 ? 'Potenziamento del trucchetto' : 'Ai livelli superiori'}</h4>
+            <div class="detail-rich-text">${renderDetailText(upcastDescription)}</div>
+          </div>
+        </section>
+      ` : ''}
+      <footer class="spell-manual__reference">
+        <span class="spell-manual__classes">${casterClasses.length ? `Classi: ${escapeHtml(casterClasses.join(', '))}` : 'Classi non specificate'}</span>
+        <span class="spell-manual__reference-meta">
+          ${spell.rules_version ? `<span>Regole ${escapeHtml(spell.rules_version)}</span>` : ''}
+          ${sourceLabel ? `<span>${escapeHtml(sourceLabel)}</span>` : ''}
+          ${sourceUrl ? `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">Apri fonte ↗</a>` : ''}
+        </span>
+      </footer>
+    </article>
   `;
 
-  openFormModal({
-    title: spell.name || 'Incantesimo',
+  present({
+    title: 'Scheda incantesimo',
     submitLabel: isCastable ? 'Lancia' : 'Chiudi',
     cancelLabel: isCastable ? 'Chiudi' : null,
     content,
@@ -1053,195 +1236,163 @@ function escapeHtml(value) {
 }
 
 export function openPreparedSpellsModal(character, onSave) {
+  return openPreparedSpellsModalAsync(character, onSave);
+}
+
+async function openPreparedSpellsModalAsync(character, onSave) {
   if (!character) return;
   const data = character.data || {};
   const spellcasting = data.spellcasting || {};
-  if (!spellcasting.can_prepare) return;
-  const spells = Array.isArray(data.spells) ? sortSpellsByLevel(data.spells) : [];
-  const selectable = spells.filter((entry) => {
-    const prepState = entry.prep_state || 'known';
-    const level = Number(entry.level) || 0;
-    return prepState !== 'always' && level > 0;
-  });
-  if (!selectable.length) {
-    createToast('Nessun incantesimo preparabile.', 'info');
+  if (!data.is_spellcaster && !spellcasting.can_prepare) return;
+  if (!spellcasting.can_prepare) {
+    createToast('Questo personaggio non usa la preparazione degli incantesimi', 'info');
     return;
   }
+  const characterSpells = dedupeCharacterSpells(Array.isArray(data.spells) ? data.spells : []);
+  const casterClasses = inferCharacterCasterClasses(character);
+  const maximumSpellLevel = getCharacterMaxSpellLevel(character);
+  const rulesVersion = getCharacterRulesVersion(character);
+  if (!casterClasses.length) {
+    createToast('Configura almeno una lista di classe nella scheda del personaggio', 'info');
+    return;
+  }
+  if (maximumSpellLevel < 1) {
+    createToast('Configura gli slot incantesimo prima di preparare il grimorio', 'info');
+    return;
+  }
+  let catalogSpells = [];
+
+  try {
+    const catalogRows = [];
+    for (let level = 1; level <= maximumSpellLevel; level += 1) {
+      let page = 1;
+      let result;
+      do {
+        result = await searchSharedSpells({
+          casterClasses,
+          rulesVersion,
+          level,
+          page,
+          pageSize: 50
+        });
+        catalogRows.push(...result.items);
+        page += 1;
+      } while (result.page * result.pageSize < result.total);
+    }
+    catalogSpells = catalogRows
+      .filter((entry) => String(entry.rules_version || '2014') === rulesVersion)
+      .map(mapSharedSpellForPreparation)
+      .filter(Boolean);
+  } catch (error) {
+    createToast('Non riesco a caricare l’archivio centrale degli incantesimi', 'error');
+    return;
+  }
+
+  const catalogSharedIds = new Set(catalogSpells.map((entry) => String(entry.shared_spell_id)));
+  const associatedSharedSpells = characterSpells
+    .filter((entry) => entry.shared_spell_id && (
+      catalogSharedIds.has(String(entry.shared_spell_id)) || ['prepared', 'always'].includes(entry.prep_state)
+    ))
+    .map((entry) => ({ ...entry, preparation_origin: 'archive' }));
+  const archiveSpells = dedupeCharacterSpells([
+    ...associatedSharedSpells,
+    ...catalogSpells.map((entry) => ({ ...entry, preparation_origin: 'archive' }))
+  ]);
+  const customPreparedSpells = dedupeCharacterSpells(characterSpells
+    .filter((entry) => !entry.shared_spell_id && Number(entry.level) > 0 && ['prepared', 'always'].includes(entry.prep_state))
+    .map((entry) => ({ ...entry, preparation_origin: 'custom' })));
+  const spells = sortSpellsByLevel(dedupeCharacterSpells([...archiveSpells, ...customPreparedSpells]));
+  const selectable = spells.filter((entry) => Number(entry.level) > 0);
+  const prepareableIds = new Set(selectable.filter(entry => spellcasting.can_prepare && entry.prep_state !== 'always').map(entry => entry.id));
 
   const deletedIds = new Set();
   const preparedIds = new Set(
     selectable
-      .filter((entry) => (entry.prep_state || 'known') === 'prepared')
+      .filter((entry) => prepareableIds.has(entry.id) && (entry.prep_state || 'known') === 'prepared')
       .map((entry) => entry.id)
   );
-  const levelOrder = Array.from(new Set(selectable.map((entry) => Math.max(1, Number(entry.level) || 1))))
+  const levelOrder = Array.from(new Set(selectable.map((entry) => Math.max(0, Number(entry.level) || 0))))
     .sort((a, b) => a - b);
-  let activeLevel = 'all';
-  let activeStatus = 'all';
+  let activeLevel = '';
+  let activeStatus = '';
 
-  const getLevelLabel = (level) => level === 1 ? '1° livello' : `${level}° livello`;
-  const getSpellDescription = (entry) => String(entry.description || '').trim() || 'Nessuna descrizione disponibile.';
-  const normalizeSearchValue = (value) => String(value || '').trim().toLocaleLowerCase('it');
+  const getLevelLabel = (level) => `${level}° livello`;
 
   const content = document.createElement('div');
   content.className = 'prepared-spells-modal';
   content.innerHTML = `
-    <section class="prepared-spells-modal__intro">
-      <span class="prepared-spells-modal__intro-icon" aria-hidden="true">✦</span>
-      <div class="prepared-spells-modal__intro-copy">
-        <strong>Prepara il tuo grimorio</strong>
-        <p>Cerca, filtra e scegli gli incantesimi disponibili per la giornata. Le modifiche saranno applicate solo al salvataggio.</p>
-      </div>
-      <div class="prepared-spells-modal__summary" aria-live="polite">
-        <span class="prepared-spells-modal__counter"><strong data-prepared-count>${preparedIds.size}</strong><small>preparati</small></span>
-        <span class="prepared-spells-modal__counter prepared-spells-modal__counter--available"><strong data-available-count>${selectable.length}</strong><small>nel grimorio</small></span>
-        <span class="prepared-spells-modal__counter prepared-spells-modal__counter--removed" data-removed-counter hidden><strong data-removed-count>0</strong><small>da eliminare</small></span>
-      </div>
-    </section>
-    <section class="prepared-spells-modal__toolbar" aria-label="Cerca e filtra incantesimi">
-      <label class="field prepared-spells-modal__search">
-        <span>Cerca nel grimorio</span>
-        <span class="prepared-spells-modal__search-control">
-          <span aria-hidden="true">⌕</span>
-          <input type="search" data-prepared-search placeholder="Nome, scuola o descrizione..." autocomplete="off" />
-        </span>
-      </label>
-      <label class="field prepared-spells-modal__status-filter">
-        <span>Stato</span>
-        <select data-prepared-status-filter>
-          <option value="all">Tutti gli incantesimi</option>
-          <option value="prepared">Solo preparati</option>
-          <option value="known">Da preparare</option>
-        </select>
-      </label>
-      <button type="button" class="ghost-button prepared-spells-modal__clear-filters" data-prepared-clear-filters>Azzera filtri</button>
-    </section>
     <div class="prepared-spells-modal__workspace">
+      <div class="prepared-spells-modal__sticky-filters">
+      <div class="prepared-spells-modal__list-context">
+        <span>Liste disponibili</span>
+        <strong>${casterClasses.length ? casterClasses.map((entry) => entry.charAt(0).toUpperCase() + entry.slice(1)).join(' + ') : 'Solo incantesimi associati'}</strong>
+        ${maximumSpellLevel ? `<small>Fino al ${maximumSpellLevel}° livello · Regole ${rulesVersion}</small>` : ''}
+      </div>
       <aside class="prepared-spells-modal__level-rail" aria-label="Filtra per livello">
         <div class="prepared-spells-modal__rail-heading">
           <strong>Livelli</strong>
           <small>Scegli una sezione</small>
         </div>
         <div class="prepared-spells-modal__levels" role="tablist" aria-label="Livelli incantesimo">
-          <button class="prepared-spells-modal__level is-active" type="button" data-prepared-level="all" aria-pressed="true">
-            <span><strong>Tutti</strong><small data-prepared-level-summary="all">Intero grimorio</small></span>
-            <span class="prepared-spells-modal__level-count" data-prepared-level-count="all">${selectable.length}</span>
-          </button>
           ${levelOrder.map((level) => {
-    const entries = selectable.filter((entry) => Math.max(1, Number(entry.level) || 1) === level);
-    const preparedCount = entries.filter((entry) => preparedIds.has(entry.id)).length;
     return `
               <button class="prepared-spells-modal__level" type="button" data-prepared-level="${level}" aria-pressed="false">
-                <span><strong>${getLevelLabel(level)}</strong><small data-prepared-level-summary="${level}">${preparedCount} preparati</small></span>
-                <span class="prepared-spells-modal__level-count" data-prepared-level-count="${level}">${entries.length}</span>
+                <span><strong>${getLevelLabel(level)}</strong></span>
               </button>
             `;
   }).join('')}
         </div>
       </aside>
+      <div class="prepared-spells-modal__status-filters" role="group" aria-label="Filtra per preparazione">
+        <span class="prepared-spells-modal__filter-label">Stato</span>
+        <button type="button" data-prepared-status-filter="prepared" aria-pressed="false">Incantesimi preparati</button>
+        <button type="button" data-prepared-status-filter="known" aria-pressed="false">Da preparare</button>
+        <button type="button" data-prepared-status-filter="always" aria-pressed="false">Sempre pronti</button>
+      </div>
+      <output class="prepared-spells-modal__visible-count" data-prepared-visible-count aria-live="polite"></output>
+      </div>
       <section class="prepared-spells-modal__catalog" aria-label="Incantesimi preparabili">
-        <div class="prepared-spells-modal__catalog-header">
-          <div>
-            <strong data-prepared-results-title>Tutto il grimorio</strong>
-            <small data-prepared-visible-count>${selectable.length} incantesimi visibili</small>
-          </div>
-          <div class="prepared-spells-modal__bulk-actions">
-            <button type="button" class="ghost-button" data-prepare-visible>Prepara visibili</button>
-            <button type="button" class="ghost-button" data-unprepare-visible>Deseleziona visibili</button>
-          </div>
-        </div>
         <div class="prepared-spells-modal__list" data-prepared-list>
           ${selectable.map((entry) => {
-    const level = Math.max(1, Number(entry.level) || 1);
+    const level = Math.max(0, Number(entry.level) || 0);
     const isPrepared = preparedIds.has(entry.id);
-    const range = escapeHtml(entry.range?.trim() || '-');
-    const duration = escapeHtml(entry.duration?.trim() || '-');
-    const components = escapeHtml(entry.components?.trim() || '-');
-    const castTime = escapeHtml(entry.cast_time?.trim() || '-');
-    const school = escapeHtml(entry.school?.trim() || 'Scuola non indicata');
-    const searchText = escapeHtml(normalizeSearchValue(`${entry.name} ${entry.school || ''} ${entry.description || ''}`));
+    const isLocked = !prepareableIds.has(entry.id);
+    const lockedLabel = entry.prep_state === 'always' ? 'Sempre pronto' : 'Conosciuto';
     return `
               <article
-                class="prepared-spells-modal__spell ${isPrepared ? 'is-prepared' : ''}"
+                class="prepared-spells-modal__spell play-card play-card--spell ${isPrepared ? 'is-prepared' : ''}"
                 data-prepared-item="${entry.id}"
                 data-prepared-item-level="${level}"
-                data-prepared-search-text="${searchText}"
+                ${isLocked ? 'data-preparation-locked' : ''}
               >
-                <div class="prepared-spells-modal__spell-main">
-                  <button
-                    class="prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}"
-                    type="button"
-                    data-prepared-toggle="${entry.id}"
-                    aria-pressed="${isPrepared}"
-                    aria-label="${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${escapeHtml(entry.name)}"
-                  >
+                <button class="play-card__surface prepared-spells-modal__detail-surface" type="button" data-prepared-quick-detail="${entry.id}" aria-label="Apri la scheda di ${escapeHtml(entry.name)}">
+                  <header class="play-card__header prepared-spells-modal__spell-heading">
+                    <span class="play-card__eyebrow">${getLevelLabel(level)}${entry.concentration ? ' · Concentrazione' : ''}${entry.is_ritual ? ' · Rituale' : ''}</span>
+                    <h3 class="play-card__title prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</h3>
+                    <span class="prepared-spells-modal__origin prepared-spells-modal__origin--${entry.preparation_origin === 'custom' ? 'custom' : 'archive'}">${entry.preparation_origin === 'custom' ? 'Personalizzato' : 'Archivio'}</span>
+                  </header>
+                </button>
+                <footer class="play-card__footer prepared-spells-modal__card-actions">
+                  <button class="play-card__button play-card__button--primary prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}" type="button" data-prepared-toggle="${entry.id}" ${isLocked ? 'disabled' : ''} aria-pressed="${isPrepared}">
                     <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
-                    <span class="prepared-spells-modal__toggle-copy">
-                      <span class="prepared-spells-modal__toggle-heading">
-                        <span class="prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</span>
-                        <span class="prepared-spells-modal__level-badge">${getLevelLabel(level)}</span>
-                        <span class="prepared-spells-modal__school">${school}</span>
-                      </span>
-                      <span class="prepared-spells-modal__inline-info">
-                        <small class="prepared-spells-modal__status" data-prepared-status>${isPrepared ? 'Preparato' : 'Da preparare'}</small>
-                        ${entry.concentration ? '<small class="prepared-spells-modal__trait" title="Richiede concentrazione">Concentrazione</small>' : ''}
-                        ${entry.is_ritual || entry.ritual ? '<small class="prepared-spells-modal__trait" title="Può essere lanciato come rituale">Rituale</small>' : ''}
-                      </span>
-                    </span>
+                    <span>${isLocked ? lockedLabel : isPrepared ? 'Preparato' : 'Da preparare'}</span>
                   </button>
-                  <div class="prepared-spells-modal__card-actions">
-                    <button
-                      class="resource-action-button resource-icon-button prepared-spells-modal__description-toggle"
-                      type="button"
-                      data-prepared-description-toggle="${entry.id}"
-                      aria-expanded="false"
-                      aria-label="Mostra dettagli ${escapeHtml(entry.name)}"
-                      title="Mostra dettagli"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10l4 4 4-4"></path></svg>
-                    </button>
-                    <button
-                      class="resource-action-button resource-icon-button prepared-spells-modal__delete"
-                      type="button"
-                      data-prepared-delete="${entry.id}"
-                      aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda"
-                      title="Elimina dalla scheda"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="prepared-spells-modal__details" data-prepared-description="${entry.id}" hidden>
-                  <dl class="prepared-spells-modal__meta" aria-label="Dettagli ${escapeHtml(entry.name)}">
-                    <div class="prepared-spells-modal__meta-item"><dt>Tempo di lancio</dt><dd>${castTime}</dd></div>
-                    <div class="prepared-spells-modal__meta-item"><dt>Gittata</dt><dd>${range}</dd></div>
-                    <div class="prepared-spells-modal__meta-item"><dt>Durata</dt><dd>${duration}</dd></div>
-                    <div class="prepared-spells-modal__meta-item"><dt>Componenti</dt><dd>${components}</dd></div>
-                  </dl>
-                  <div class="prepared-spells-modal__description">
-                    <strong class="prepared-spells-modal__description-title">Descrizione</strong>
-                    <div class="detail-rich-text">${renderDetailText(getSpellDescription(entry))}</div>
-                  </div>
-                </div>
+                  ${entry.catalog_only ? '' : `<button class="play-card__button resource-icon-button prepared-spells-modal__delete" type="button" data-prepared-delete="${entry.id}" aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda" title="Elimina dalla scheda">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
+                  </button>`}
+                </footer>
               </article>
             `;
   }).join('')}
           <div class="prepared-spells-modal__empty" data-prepared-empty hidden>
-            <span aria-hidden="true">⌕</span>
-            <strong>Nessun incantesimo corrisponde ai filtri</strong>
-            <small>Prova a cambiare livello, stato oppure testo di ricerca.</small>
-            <button type="button" class="ghost-button" data-prepared-empty-reset>Azzera filtri</button>
+            <span aria-hidden="true">✦</span>
+            <strong>Nessun incantesimo per questo livello</strong>
+            <small>Scegli un altro livello del grimorio.</small>
           </div>
         </div>
       </section>
     </div>
   `;
-
-  const searchInput = content.querySelector('[data-prepared-search]');
-  const statusFilter = content.querySelector('[data-prepared-status-filter]');
-
-  const getVisibleItems = () => Array.from(content.querySelectorAll('[data-prepared-item]'))
-    .filter((item) => !item.hidden);
 
   const syncPreparedState = () => {
     content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
@@ -1253,92 +1404,47 @@ export function openPreparedSpellsModal(character, onSave) {
       const item = button.closest('[data-prepared-item]');
       item?.classList.toggle('is-prepared', isPrepared);
       const spellName = item?.querySelector('.prepared-spells-modal__toggle-name')?.textContent || 'incantesimo';
-      button.setAttribute('aria-label', `${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${spellName}`);
-      const status = button.querySelector('[data-prepared-status]');
-      if (status) status.textContent = isPrepared ? 'Preparato' : 'Da preparare';
-    });
-    const preparedCount = content.querySelector('[data-prepared-count]');
-    if (preparedCount) preparedCount.textContent = String(preparedIds.size);
-    const availableCount = content.querySelector('[data-available-count]');
-    if (availableCount) availableCount.textContent = String(selectable.length - deletedIds.size);
-    const removedCount = content.querySelector('[data-removed-count]');
-    if (removedCount) removedCount.textContent = String(deletedIds.size);
-    const removedCounter = content.querySelector('[data-removed-counter]');
-    if (removedCounter) removedCounter.hidden = deletedIds.size === 0;
-    levelOrder.forEach((level) => {
-      const preparedAtLevel = selectable.filter((entry) => (
-        !deletedIds.has(entry.id)
-        && Math.max(1, Number(entry.level) || 1) === level
-        && preparedIds.has(entry.id)
-      )).length;
-      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
-      if (levelSummary) levelSummary.textContent = `${preparedAtLevel} preparati`;
-    });
-  };
-
-  const matchesActiveStatus = (spellId) => activeStatus === 'all'
-    || (activeStatus === 'prepared' && preparedIds.has(spellId))
-    || (activeStatus === 'known' && !preparedIds.has(spellId));
-
-  const updateLevelCounts = (query) => {
-    const matchingEntries = selectable.filter((entry) => {
-      if (deletedIds.has(entry.id) || !matchesActiveStatus(entry.id)) return false;
-      const searchText = normalizeSearchValue(`${entry.name} ${entry.school || ''} ${entry.description || ''}`);
-      return !query || searchText.includes(query);
-    });
-    const statusLabel = activeStatus === 'prepared'
-      ? 'preparati'
-      : activeStatus === 'known' ? 'da preparare' : 'nel grimorio';
-    const allCount = content.querySelector('[data-prepared-level-count="all"]');
-    if (allCount) allCount.textContent = String(matchingEntries.length);
-    const allSummary = content.querySelector('[data-prepared-level-summary="all"]');
-    if (allSummary) allSummary.textContent = statusLabel === 'nel grimorio' ? 'Intero grimorio' : statusLabel;
-    levelOrder.forEach((level) => {
-      const count = matchingEntries.filter((entry) => Math.max(1, Number(entry.level) || 1) === level).length;
-      const levelCount = content.querySelector(`[data-prepared-level-count="${level}"]`);
-      if (levelCount) levelCount.textContent = String(count);
-      const levelSummary = content.querySelector(`[data-prepared-level-summary="${level}"]`);
-      if (levelSummary) levelSummary.textContent = statusLabel;
+      if (!button.disabled) {
+        button.setAttribute('aria-label', `${isPrepared ? 'Rimuovi dalla preparazione' : 'Prepara'} ${spellName}`);
+        const label = button.querySelector('span:last-child');
+        if (label) label.textContent = isPrepared ? 'Preparato' : 'Da preparare';
+      }
     });
   };
 
   const applyFilters = () => {
-    const query = normalizeSearchValue(searchInput?.value);
-    updateLevelCounts(query);
     let visibleCount = 0;
     content.querySelectorAll('[data-prepared-item]').forEach((item) => {
       const spellId = item.dataset.preparedItem;
-      const matchesLevel = activeLevel === 'all' || item.dataset.preparedItemLevel === activeLevel;
-      const matchesStatus = matchesActiveStatus(spellId);
-      const matchesQuery = !query || item.dataset.preparedSearchText?.includes(query);
-      const isVisible = !deletedIds.has(spellId) && matchesLevel && matchesStatus && matchesQuery;
+      const matchesLevel = !activeLevel || item.dataset.preparedItemLevel === activeLevel;
+      const spell = selectable.find((entry) => entry.id === spellId);
+      const matchesStatus = !activeStatus
+        || (activeStatus === 'prepared' && preparedIds.has(spellId))
+        || (activeStatus === 'known' && prepareableIds.has(spellId) && !preparedIds.has(spellId))
+        || (activeStatus === 'always' && spell?.prep_state === 'always');
+      const isVisible = !deletedIds.has(spellId) && matchesLevel && matchesStatus;
       item.hidden = !isVisible;
       if (isVisible) visibleCount += 1;
     });
-    const visibleCountEl = content.querySelector('[data-prepared-visible-count]');
-    if (visibleCountEl) visibleCountEl.textContent = `${visibleCount} ${visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'}`;
     const emptyState = content.querySelector('[data-prepared-empty]');
     if (emptyState) emptyState.hidden = visibleCount > 0;
-    const title = content.querySelector('[data-prepared-results-title]');
-    if (title) title.textContent = activeLevel === 'all' ? 'Tutto il grimorio' : getLevelLabel(Number(activeLevel));
-    const prepareVisible = content.querySelector('[data-prepare-visible]');
-    const unprepareVisible = content.querySelector('[data-unprepare-visible]');
-    if (prepareVisible) prepareVisible.disabled = visibleCount === 0 || getVisibleItems().every((item) => preparedIds.has(item.dataset.preparedItem));
-    if (unprepareVisible) unprepareVisible.disabled = visibleCount === 0 || getVisibleItems().every((item) => !preparedIds.has(item.dataset.preparedItem));
+    const visibleLabel = content.querySelector('[data-prepared-visible-count]');
+    if (visibleLabel) visibleLabel.textContent = `${visibleCount} ${visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'}`;
   };
 
-  const resetFilters = () => {
-    activeLevel = 'all';
-    activeStatus = 'all';
-    if (searchInput) searchInput.value = '';
-    if (statusFilter) statusFilter.value = 'all';
-    content.querySelectorAll('[data-prepared-level]').forEach((button) => {
-      const isActive = button.dataset.preparedLevel === 'all';
-      button.classList.toggle('is-active', isActive);
-      button.setAttribute('aria-pressed', String(isActive));
+  const markSpellForDeletion = async (spell) => {
+    if (!spell) return;
+    const spellId = spell.id;
+    const shouldDelete = await openConfirmModal({
+      title: 'Elimina incantesimo',
+      message: `Vuoi rimuovere "${spell.name}" dalla scheda? L'eliminazione sarà applicata quando salverai la preparazione.`,
+      confirmLabel: 'Elimina dalla scheda'
     });
+    if (!shouldDelete) return;
+    deletedIds.add(spellId);
+    preparedIds.delete(spellId);
+    syncPreparedState();
     applyFilters();
-    searchInput?.focus();
   };
 
   content.querySelectorAll('[data-prepared-toggle]').forEach((button) => {
@@ -1356,39 +1462,34 @@ export function openPreparedSpellsModal(character, onSave) {
     button.addEventListener('click', async () => {
       const spellId = button.dataset.preparedDelete;
       const spell = selectable.find((entry) => entry.id === spellId);
-      if (!spell) return;
-      const shouldDelete = await openConfirmModal({
-        title: 'Elimina incantesimo',
-        message: `Vuoi rimuovere "${spell.name}" dalla scheda? L'eliminazione sarà applicata quando salverai la preparazione.`,
-        confirmLabel: 'Elimina dalla scheda'
-      });
-      if (!shouldDelete) return;
-      deletedIds.add(spellId);
-      preparedIds.delete(spellId);
-      syncPreparedState();
-      applyFilters();
+      await markSpellForDeletion(spell);
     });
   });
 
-  content.querySelectorAll('[data-prepared-description-toggle]').forEach((button) => {
+  content.querySelectorAll('[data-prepared-quick-detail]').forEach((button) => {
     button.addEventListener('click', () => {
-      const spellId = button.dataset.preparedDescriptionToggle;
+      const spellId = button.dataset.preparedQuickDetail;
       if (!spellId) return;
-      const detail = content.querySelector(`[data-prepared-description="${spellId}"]`);
-      if (!detail) return;
-      const isExpanded = !detail.hidden;
-      detail.hidden = isExpanded;
-      button.setAttribute('aria-expanded', String(!isExpanded));
-      button.setAttribute('title', isExpanded ? 'Mostra dettagli' : 'Nascondi dettagli');
-      button.setAttribute('aria-label', `${isExpanded ? 'Mostra' : 'Nascondi'} dettagli ${button.closest('[data-prepared-item]')?.querySelector('.prepared-spells-modal__toggle-name')?.textContent || 'incantesimo'}`);
+      const spell = selectable.find((entry) => entry.id === spellId);
+      if (spell) openSpellQuickDetailModal(null, spell, null, spell.catalog_only ? {} : {
+        onEdit: () => openSpellDrawer(character, (updatedSpell) => {
+          if (!updatedSpell) return;
+          Object.assign(spell, updatedSpell);
+          const item = content.querySelector(`[data-prepared-item="${spell.id}"]`);
+          const name = item?.querySelector('.prepared-spells-modal__toggle-name');
+          if (name) name.textContent = spell.name;
+        }, spell),
+        onDelete: () => markSpellForDeletion(spell)
+      });
     });
   });
 
   content.querySelectorAll('[data-prepared-level]').forEach((button) => {
     button.addEventListener('click', () => {
-      activeLevel = button.dataset.preparedLevel || 'all';
+      const selectedLevel = button.dataset.preparedLevel || '';
+      activeLevel = activeLevel === selectedLevel ? '' : selectedLevel;
       content.querySelectorAll('[data-prepared-level]').forEach((entry) => {
-        const isActive = entry === button;
+        const isActive = entry.dataset.preparedLevel === activeLevel;
         entry.classList.toggle('is-active', isActive);
         entry.setAttribute('aria-pressed', String(isActive));
       });
@@ -1396,71 +1497,105 @@ export function openPreparedSpellsModal(character, onSave) {
     });
   });
 
-  searchInput?.addEventListener('input', applyFilters);
-  statusFilter?.addEventListener('change', () => {
-    activeStatus = statusFilter.value || 'all';
-    applyFilters();
-  });
-  content.querySelector('[data-prepared-clear-filters]')?.addEventListener('click', resetFilters);
-  content.querySelector('[data-prepared-empty-reset]')?.addEventListener('click', resetFilters);
-  content.querySelector('[data-prepare-visible]')?.addEventListener('click', () => {
-    getVisibleItems().forEach((item) => preparedIds.add(item.dataset.preparedItem));
-    syncPreparedState();
-    applyFilters();
-  });
-  content.querySelector('[data-unprepare-visible]')?.addEventListener('click', () => {
-    getVisibleItems().forEach((item) => preparedIds.delete(item.dataset.preparedItem));
-    syncPreparedState();
-    applyFilters();
+  content.querySelectorAll('[data-prepared-status-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const selectedStatus = button.dataset.preparedStatusFilter || '';
+      activeStatus = activeStatus === selectedStatus ? '' : selectedStatus;
+      content.querySelectorAll('[data-prepared-status-filter]').forEach((entry) => {
+        const isActive = entry.dataset.preparedStatusFilter === activeStatus;
+        entry.classList.toggle('is-active', isActive);
+        entry.setAttribute('aria-pressed', String(isActive));
+      });
+      applyFilters();
+    });
   });
 
   syncPreparedState();
   applyFilters();
 
   openFormModal({
-    title: 'Prepara gli incantesimi',
+    title: character.name ? `Prepara gli incantesimi di ${character.name}` : 'Prepara gli incantesimi',
     submitLabel: 'Salva preparazione',
     cancelLabel: 'Annulla',
     content,
-    cardClass: ['modal-card--form', 'modal-card--prepared-spells'],
-    onOpen: () => searchInput?.focus()
+    cardClass: ['modal-card--form', 'modal-card--prepared-spells']
   }).then(async (formData) => {
     if (!formData) return;
-    if (deletedIds.size) {
-      const deletedSharedIds = new Set(
-        spells
-          .filter((entry) => deletedIds.has(entry.id) && entry.shared_spell_id)
-          .map((entry) => entry.shared_spell_id)
-      );
-      if (deletedSharedIds.size) {
-        try {
-          const linkedRows = await fetchCharacterSpells(character.id);
-          const linksToRemove = linkedRows.filter((row) => deletedSharedIds.has(row.shared_spell_id));
-          await Promise.all(linksToRemove.map((row) => removeCharacterSpell(row.id)));
-        } catch (error) {
-          createToast('Errore rimozione associazione incantesimo', 'error');
-          return;
-        }
-      }
+    let linkedRows = [];
+    let associationReadError = null;
+    try {
+      linkedRows = await fetchCharacterSpells(character.id);
+    } catch (error) {
+      associationReadError = error;
+      console.error('Associazioni incantesimo legacy non leggibili', error);
     }
-    const nextSpells = spells
+    const retainedSpells = spells
+      .filter((entry) => !deletedIds.has(entry.id))
+      .filter((entry) => entry.shared_spell_id && (
+        entry.prep_state === 'always' || preparedIds.has(entry.id)
+      ));
+    const retainedSharedIds = new Set(retainedSpells.map((entry) => String(entry.shared_spell_id)));
+    const seenLinkedIds = new Set();
+    const linksToRemove = linkedRows.filter((row) => {
+      if (!row.shared_spell_id) return false;
+      const sharedId = String(row.shared_spell_id);
+      const duplicate = seenLinkedIds.has(sharedId);
+      seenLinkedIds.add(sharedId);
+      return duplicate || !retainedSharedIds.has(sharedId);
+    });
+    const existingSharedIds = new Set(linkedRows
+      .filter((row) => row.shared_spell_id)
+      .map((row) => String(row.shared_spell_id)));
+    const associationUserId = character.user_id || getState().user?.id;
+    const associationOperations = [
+      ...linksToRemove.map((row) => removeCharacterSpell(row.id)),
+      ...retainedSpells
+        .filter((entry) => existingSharedIds.has(String(entry.shared_spell_id)))
+        .map((entry) => updateCharacterSpellAssignment(character.id, entry.shared_spell_id, {
+          prep_state: entry.prep_state === 'always' ? 'always_prepared' : 'prepared'
+        })),
+      ...retainedSpells
+        .filter((entry) => associationUserId && !existingSharedIds.has(String(entry.shared_spell_id)))
+        .map((entry) => assignSharedSpellToCharacter({
+          user_id: associationUserId,
+          character_id: character.id,
+          shared_spell_id: entry.shared_spell_id,
+          prep_state: entry.prep_state === 'always' ? 'always_prepared' : 'prepared'
+        }))
+    ];
+    const associationResults = await Promise.allSettled(associationOperations);
+    const associationFailures = associationResults.filter((result) => result.status === 'rejected');
+    associationFailures.forEach((result) => console.error('Associazione incantesimo legacy non sincronizzata', result.reason));
+    const hasAssociationWarnings = Boolean(associationReadError) || associationFailures.length > 0;
+
+    const visibleCustomIds = new Set(customPreparedSpells.map((entry) => String(entry.id)));
+    const nextCustomSpells = characterSpells
+      .filter((entry) => !entry.shared_spell_id)
       .filter((entry) => !deletedIds.has(entry.id))
       .map((entry) => {
-        const prepState = entry.prep_state || 'known';
-        if (prepState === 'always') return entry;
-        if (Number(entry.level) === 0) return entry;
-        return {
-          ...entry,
-          prep_state: preparedIds.has(entry.id) ? 'prepared' : 'known'
-        };
+        if (!visibleCustomIds.has(String(entry.id)) || entry.prep_state === 'always') return entry;
+        return { ...entry, prep_state: preparedIds.has(entry.id) ? 'prepared' : 'known' };
       });
+    const preservedCantrips = characterSpells.filter((entry) => entry.shared_spell_id && Number(entry.level) === 0);
+    const nextSpells = dedupeCharacterSpells([...preservedCantrips, ...nextCustomSpells, ...retainedSpells
+      .map((entry) => {
+        const cleanEntry = { ...entry };
+        delete cleanEntry.catalog_only;
+        delete cleanEntry.preparation_origin;
+        if (entry.prep_state === 'always') return cleanEntry;
+        return {
+          ...cleanEntry,
+          prep_state: 'prepared'
+        };
+      })]);
     const nextData = {
       ...character.data,
-      spells: nextSpells
+      spells: nextSpells,
+      spell_preparation_synced: true
     };
-    const message = deletedIds.size
-      ? `${deletedIds.size === 1 ? 'Incantesimo eliminato' : `${deletedIds.size} incantesimi eliminati`} e preparazione aggiornata`
-      : 'Incantesimi preparati aggiornati';
+    const message = hasAssociationWarnings
+      ? 'Preparazione salvata; alcune associazioni legacy saranno ignorate'
+      : 'Preparazione sincronizzata con il personaggio';
     await saveCharacterData(character, nextData, message, onSave);
   });
 }
@@ -1639,6 +1774,24 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     value: resource?.damage_modifier ?? ''
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
+  const resourceSavingThrowField = document.createElement('label');
+  resourceSavingThrowField.className = 'field modal-quick-property';
+  resourceSavingThrowField.innerHTML = '<span>Tiro salvezza</span>';
+  const resourceSavingThrowSelect = buildSelect([
+    { value: '', label: 'Nessun tiro salvezza' },
+    ...savingThrowList.map((entry) => ({ value: entry.key, label: entry.label }))
+  ], resource?.saving_throw_ability ?? '');
+  resourceSavingThrowSelect.name = 'saving_throw_ability';
+  resourceSavingThrowField.appendChild(resourceSavingThrowSelect);
+  const resourceDamageTypeField = document.createElement('label');
+  resourceDamageTypeField.className = 'field modal-quick-property';
+  resourceDamageTypeField.innerHTML = '<span>Tipo di danno</span>';
+  const resourceDamageTypeSelect = buildSelect([
+    { value: '', label: 'Nessun tipo di danno' },
+    ...damageTypeList.filter((entry) => entry.key !== 'all').map((entry) => ({ value: entry.key, label: entry.label }))
+  ], resource?.damage_type ?? '');
+  resourceDamageTypeSelect.name = 'damage_type';
+  resourceDamageTypeField.appendChild(resourceDamageTypeSelect);
 
   const resourceCostField = buildInput({
     label: 'Costo risorsa padre',
@@ -1691,9 +1844,9 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   });
   form.appendChild(childUsageSection);
   form.appendChild(buildSection({
-    title: 'Tiro automatico',
-    description: 'Configura un dado opzionale da lanciare quando usi rapidamente l’abilità.',
-    content: [buildRow([damageDiceNotationField, damageModifierField], 'compact')]
+    title: 'Tiri e CD',
+    description: 'Configura il dado opzionale dell’abilità e l’eventuale caratteristica del tiro salvezza richiesto.',
+    content: [buildRow([damageDiceNotationField, damageModifierField, resourceDamageTypeField, resourceSavingThrowField], 'compact')]
   }));
   form.appendChild(buildSection({
     title: 'Descrizione',
@@ -1769,6 +1922,8 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
       cast_time: formData.get('cast_time') || null,
       damage_dice_notation: formData.get('damage_dice_notation')?.trim() || null,
       damage_modifier: toNumberOrNull(formData.get('damage_modifier')),
+      damage_type: formData.get('damage_type')?.toString() || null,
+      saving_throw_ability: formData.get('saving_throw_ability')?.toString() || null,
       resource_type: resourceType,
       max_uses: isPassive ? 0 : maxUses,
       used: isPassive ? 0 : used,

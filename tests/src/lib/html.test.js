@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, sanitizeImageUrl } from '../../../src/lib/html.js';
+import { escapeHtml, sanitizeExternalUrl, sanitizeImageUrl } from '../../../src/lib/html.js';
 
 describe('safe HTML helpers', () => {
   it('escapes text and attribute delimiters', () => {
@@ -12,5 +12,11 @@ describe('safe HTML helpers', () => {
     expect(sanitizeImageUrl('/icons/avatar.png')).toBe('/icons/avatar.png');
     expect(sanitizeImageUrl('javascript:alert(1)')).toBe('');
     expect(sanitizeImageUrl('data:text/html;base64,PHNjcmlwdD4=')).toBe('');
+  });
+
+  it('allows only absolute HTTP links for external sources', () => {
+    expect(sanitizeExternalUrl('https://5e-spellbook.app/spells/fireball')).toBe('https://5e-spellbook.app/spells/fireball');
+    expect(sanitizeExternalUrl('javascript:alert(1)')).toBe('');
+    expect(sanitizeExternalUrl('/relative/source')).toBe('');
   });
 });

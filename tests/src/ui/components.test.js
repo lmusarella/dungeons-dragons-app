@@ -78,4 +78,12 @@ describe('src/ui/components.js', () => {
     expect(styles).toContain('z-index: 80');
   });
 
+  it('mounts loading and toast feedback inside an open native dialog top layer', () => {
+    const source = readFileSync('src/ui/components.js', 'utf8');
+    expect(source).toContain("document.querySelectorAll('dialog[open]')");
+    expect(source).toContain("overlay.dataset.dialogLoader = ''");
+    expect(source).toContain("container.dataset.dialogToastContainer = ''");
+    expect(source).toContain('openDialog.appendChild(container)');
+  });
+
 });
