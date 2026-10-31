@@ -3,8 +3,17 @@ import { readFileSync } from 'node:fs';
 
 const styles = readFileSync('src/styles/design-system.css', 'utf8');
 const baseStyles = readFileSync('src/styles/base.css', 'utf8');
+const fantasyStyles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
 
 describe('D&D Companion design refinements', () => {
+  it('keeps the tablet game header and footer in explicit shell rows', () => {
+    expect(fantasyStyles).toContain('--game-footer-height: 64px');
+    expect(fantasyStyles).toContain('grid-template-rows: var(--header-height) minmax(0,1fr)');
+    expect(fantasyStyles).toContain('grid-template-rows: minmax(0,1fr) var(--game-footer-height)');
+    expect(fantasyStyles).toContain('height: var(--game-footer-height); min-height: var(--game-footer-height)');
+    expect(fantasyStyles).toContain('min-height: 0; height: 100%; padding: 5px');
+  });
+
   it('uses Inter for UI copy and Fraunces only as the fantasy display accent', () => {
     expect(baseStyles).toContain('family=Fraunces');
     expect(baseStyles).toContain('family=Inter');

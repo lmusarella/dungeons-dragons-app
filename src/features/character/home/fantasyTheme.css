@@ -2839,9 +2839,15 @@ body .sheet-dashboard .character-manual .character-proficiency-section .defense-
 
 /* On the sheet route the chrome never moves: only the central character column scrolls. */
 body:has(.app-shell[data-route='home'] .sheet-dashboard) { height: 100dvh; overflow: hidden; }
-.app-shell[data-route='home'] { height: 100dvh; min-height: 0; overflow: hidden; }
-.app-shell[data-route='home'] > .app-header { position: relative; flex: 0 0 auto; }
-.app-shell[data-route='home'] > .app-main { flex: 1 1 auto; min-height: 0; overflow: hidden; padding-bottom: 0; }
+.app-shell[data-route='home'] {
+  --game-footer-height: 64px;
+  display: grid; height: 100dvh; min-height: 0; overflow: hidden;
+  grid-template-rows: var(--header-height) minmax(0,1fr);
+}
+.app-shell[data-route='home'] > .app-header {
+  position: relative; z-index: 40; grid-row: 1; width: 100%; min-height: 0; height: var(--header-height);
+}
+.app-shell[data-route='home'] > .app-main { grid-row: 2; min-height: 0; overflow: hidden; padding-bottom: 0; }
 .app-shell[data-route='home'] .home-layout.sheet-dashboard {
   width: min(1440px,100%); height: 100%; min-height: 0; margin: 0 auto; overflow: hidden; align-items: stretch;
   grid-template-rows: minmax(0,1fr) auto;
@@ -2934,21 +2940,21 @@ body .modal-card--background .background-modal-description { margin: 0; color: #
 
 /* Final shell structure: the footer is a sibling of the dashboard and therefore spans the app. */
 .app-shell[data-route='home'] > .app-main {
-  display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; min-width: 0; min-height: 0; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) var(--game-footer-height); min-width: 0; min-height: 0; overflow: hidden;
 }
 .app-shell[data-route='home'] > .app-main > .home-layout.sheet-dashboard {
   grid-column: 1; grid-row: 1; width: 100%; max-width: none; height: 100%; min-width: 0; min-height: 0; padding-bottom: 12px; grid-template-rows: minmax(0,1fr);
 }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer {
   position: relative; grid-column: 1 !important; grid-row: 2; bottom: auto; z-index: 32; display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 7px;
-  width: 100%; max-width: none; margin: 0;
-  padding: 8px max(14px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+  width: 100%; max-width: none; height: var(--game-footer-height); min-height: var(--game-footer-height); margin: 0;
+  padding: 6px max(14px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
   border: 0; border-top: 1px solid #b99b69; border-radius: 0;
   background: linear-gradient(90deg,rgba(255,250,241,.98),rgba(245,237,222,.96)),url('/img/sfondo_header_1.webp');
   background-size: auto,contain; box-shadow: 0 -7px 20px rgba(47,28,35,.16); backdrop-filter: blur(14px);
 }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer button {
-  min-height: 54px; padding: 7px 5px; border: 1px solid #ccb081; border-radius: 12px;
+  min-height: 0; height: 100%; padding: 5px; border: 1px solid #ccb081; border-radius: 12px;
   background: #fff9ee; color: #633349; font-size: 11px; font-weight: 800;
 }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer button span { margin-bottom: 2px; color: #76364b; font-size: 17px; }
@@ -2982,7 +2988,6 @@ body dialog[open] > .dialog-loading-overlay { z-index: 2147483646; }
 @media (max-width: 1100px) {
   .app-shell[data-route='home'] > .app-main > .home-layout.sheet-dashboard { padding-bottom: 8px; }
   .app-shell[data-route='home'] > .app-main > .sheet-action-footer { padding-inline: 10px; }
-  .app-shell[data-route='home'] > .app-main > .sheet-action-footer button { min-height: 50px; }
 }
 @media (max-width: 800px) {
   .app-shell[data-route='home'] > .app-main > .sheet-action-footer { grid-template-columns: repeat(4,minmax(0,1fr)); }
