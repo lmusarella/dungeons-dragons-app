@@ -1480,7 +1480,6 @@ body .sheet-dashboard .sheet-spellcasting-stats dd { margin: 0; color: #633349; 
 .app-shell[data-route='home'] .sheet-dashboard .character-sheet-card > .card-header .eyebrow { color: #fff3dc !important; font: 700 15px/1.2 'Fraunces',Georgia,serif; letter-spacing: .08em; }
 .app-shell[data-route='home'] .sheet-dashboard .character-sheet-card > .card-header .icon-button { border-color: #d2aa68; background: #fff4df; color: #71364c; }
 .sheet-dashboard .character-manual { position: relative; gap: 14px; padding: 18px; }
-.sheet-dashboard .character-manual::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: linear-gradient(90deg,#76364b,#b48646 48%,#76364b); }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary { grid-template-columns: 188px minmax(0,1fr); gap: 18px; }
 .sheet-dashboard .character-manual .character-avatar-frame { width: 188px; height: 226px; border-color: #c8a66f; border-radius: 16px; box-shadow: inset 0 0 0 4px #f1dec0, 0 10px 22px rgba(74,45,30,.12); }
 .sheet-dashboard .character-manual .character-name { margin: 0 0 12px; color: #633349 !important; font: 700 clamp(28px,3vw,40px)/1.05 'Fraunces',Georgia,serif; }

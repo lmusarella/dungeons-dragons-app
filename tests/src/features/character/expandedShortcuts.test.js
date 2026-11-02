@@ -124,6 +124,9 @@ describe('expanded shortcut reference',()=>{
   it('uses contextual loaders and integrates the transaction ledger below coins',()=>{
     const inventory=readFileSync('src/features/character/home/inventoryShortcut.js','utf8');
     const views=readFileSync('src/features/character/home/shortcutViews.js','utf8');
+    const inventoryFeature=readFileSync('src/features/inventory/inventory.js','utf8');
+    const familiars=readFileSync('src/features/familiars/familiars.js','utf8');
+    const journal=readFileSync('src/features/journal/journal.js','utf8');
     const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
     expect(inventory).toContain("showShortcutLoader(host, 'Caricamento inventario')");
     expect(views).toContain('export function showShortcutLoader');
@@ -136,6 +139,11 @@ describe('expanded shortcut reference',()=>{
     expect(styles).toContain('.inventory-money-workspace');
     expect(views).toContain("loader.classList.add('is-leaving')");
     expect(styles).toContain('.shortcut-context-loader.is-leaving { opacity: 0; pointer-events: none; }');
+    expect(inventory).toContain("host.dataset.shortcutChanged !== 'true'");
+    expect(views).toContain("host.dataset.shortcutChanged !== 'true'");
+    expect(inventoryFeature).toContain("container.dataset.shortcutChanged = 'true'");
+    expect(familiars).toContain("container.dataset.shortcutChanged = 'true'");
+    expect(journal).toContain("container.dataset.shortcutChanged = 'true'");
   });
   it('keeps preparation scrollable and restores tablet recovery gestures',()=>{
     const detail=readFileSync('src/features/character/home/sheetDetail.js','utf8');

@@ -289,6 +289,7 @@ export async function renderJournal(container) {
   }
 
   async function refresh() {
+    container.dataset.shortcutChanged = 'true';
     await renderJournal(container);
   }
 

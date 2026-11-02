@@ -30,5 +30,9 @@ export function createInventoryShortcut(addPanel, configuration = {}) {
     } finally { hideLoader(); loading = false; }
   };
   shortcut.addEventListener('click',dialog.loadInventory);
-  dialog.addEventListener('close',()=>{ if (loaded) configuration.onRefresh?.(); }, { signal: dialog._sheetEvents.signal });
+  dialog.addEventListener('close',()=>{
+    if (host.dataset.shortcutChanged !== 'true') return;
+    delete host.dataset.shortcutChanged;
+    configuration.onRefresh?.();
+  }, { signal: dialog._sheetEvents.signal });
 }

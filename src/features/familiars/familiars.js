@@ -310,27 +310,27 @@ export async function renderFamiliars(container) {
 
   const selectedCompanionId = companions.find(companion => String(companion.id) === container.dataset.selectedCompanion)?.id || companions[0]?.id;
   container.innerHTML = `
-    <div class="home-layout familiars-layout familiars-layout--refined">
-      <aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
+    <div class="home-layout familiars-layout familiars-layout--refined ${companions.length ? '' : 'is-empty'}">
+      ${companions.length ? `<aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
         <div class="familiars-quick-panel__header">
           <div>
             <p class="eyebrow">Compagni</p>
             <span class="muted">${companions.length} ${companions.length === 1 ? 'scheda' : 'schede'}</span>
           </div>
-          <button class="familiar-add-button" type="button" data-add-companion aria-label="Nuovo famiglio o evocazione"><span aria-hidden="true">+</span><strong>Nuovo</strong></button>
+          <button class="familiar-add-button" type="button" data-add-companion aria-label="Aggiungi famiglio o evocazione"><span aria-hidden="true">+</span><strong>Aggiungi</strong></button>
         </div>
-        ${companions.length ? `
-          <div class="familiars-quick-list">
-            ${companions.map((companion) => buildCompanionQuickButton(companion, companion.id === selectedCompanionId)).join('')}
-          </div>
-        ` : '<p class="muted">Nessuna evocazione o famiglio creato.</p>'}
-      </aside>
+        <div class="familiars-quick-list">
+          ${companions.map((companion) => buildCompanionQuickButton(companion, companion.id === selectedCompanionId)).join('')}
+        </div>
+      </aside>` : ''}
       <main class="familiars-detail-area">
         ${companions.length ? companions.map((companion) => buildCompanionCard(companion, companion.id === selectedCompanionId)).join('') : `
           <section class="card home-card home-section familiar-empty-state">
+            <span class="familiar-empty-state__icon" aria-hidden="true">♞</span>
             <p class="eyebrow">Nessuna scheda</p>
             <h3>Crea il primo famiglio</h3>
             <p class="muted">Aggiungi foto, caratteristiche, punti ferita, velocità, tiri salvezza e attacchi per tirare rapidamente durante la sessione.</p>
+            <button class="familiar-add-button familiar-empty-state__action" type="button" data-add-companion aria-label="Aggiungi il primo famiglio o evocazione"><span aria-hidden="true">+</span><strong>Aggiungi il primo compagno</strong></button>
           </section>
         `}
       </main>
@@ -338,6 +338,10 @@ export async function renderFamiliars(container) {
   `;
 
   container.polishShortcut?.();
+  const refreshAfterMutation = async () => {
+    container.dataset.shortcutChanged = 'true';
+    await renderFamiliars(container);
+  };
   const openCompanionForm = async (companion = null) => {
     const current = normalizeStatBlock(companion?.stat_block);
     let draftAttacks = (current.attacks || []).map((attack) => ({
@@ -733,10 +737,10 @@ export async function renderFamiliars(container) {
 
     if (companion) await updateCompanion(companion.id, payload);
     else await createCompanion(payload);
-    await renderFamiliars(container);
+    await refreshAfterMutation();
   };
 
-  container.querySelector('[data-add-companion]')?.addEventListener('click', () => { void openCompanionForm(); });
+  container.querySelectorAll('[data-add-companion]').forEach((button) => button.addEventListener('click', () => { void openCompanionForm(); }));
   container.querySelectorAll('[data-select-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companionId = btn.dataset.selectCompanion;
     container.dataset.selectedCompanion = companionId;
@@ -813,7 +817,7 @@ export async function renderFamiliars(container) {
         ? `${companion.name} subisce ${amount} danni`
         : (formData.has('temp_hp') ? `PF temporanei +${amount} a ${companion.name}` : `${companion.name} curato di ${amount} PF`);
       createToast(message);
-      await renderFamiliars(container);
+      await refreshAfterMutation();
     } catch {
       createToast('Errore aggiornamento punti ferita', 'error');
     }
@@ -829,7 +833,7 @@ export async function renderFamiliars(container) {
     const shouldDelete = await openConfirmModal({ title: 'Conferma eliminazione', message: `Eliminare ${companion.name}?`, confirmLabel: 'Elimina' });
     if (!shouldDelete) return;
     await deleteCompanion(companion.id);
-    await renderFamiliars(container);
+    await refreshAfterMutation();
   }));
 
   container.querySelectorAll('[data-roll-ability]').forEach((btn) => btn.addEventListener('click', () => {

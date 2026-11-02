@@ -249,12 +249,12 @@ describe('src/features/character/home.js', () => {
     const styles = readFileSync('src/features/character/home/characterSheetPolish.css', 'utf8');
     expect(source).not.toContain('character-sheet-header__crest');
     expect(source).not.toContain('Panoramica di gioco');
-    expect(sections).toContain('character-edit-trigger character-edit-trigger--inline');
+    expect(sections).toContain('character-edit-trigger character-edit-trigger--identity');
     expect(sections).toContain('<span>Modifica personaggio</span>');
-    expect(styles).toContain('.character-edit-trigger--inline');
+    expect(styles).toContain('.character-edit-trigger--identity');
     expect(styles).toContain(".app-shell[data-route='home'] > .app-main");
-    expect(styles).toContain('grid-template-columns: 170px minmax(300px,1fr)');
-    expect(styles).toContain('width: 170px; height: 210px; min-height: 210px; max-height: 210px');
+    expect(styles).toContain('grid-template-columns: 160px minmax(300px,1fr)');
+    expect(styles).toContain('width: 160px; height: 160px; min-height: 160px; max-height: 160px');
     expect(styles).toContain('grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: 54px');
   });
 

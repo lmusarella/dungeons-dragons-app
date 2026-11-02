@@ -225,18 +225,16 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                 <span class="character-identity__kicker character-identity__kicker--background">${escapeHtml(data.background || 'Background non specificato')}</span>
                 <span class="character-identity__kicker character-identity__kicker--alignment">${escapeHtml(data.alignment || 'Allineamento non specificato')}</span>
               </span>
+              ${canEditCharacter ? `
+                <button class="character-edit-trigger character-edit-trigger--identity" type="button" data-edit-character aria-label="Modifica personaggio">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
+                  <span>Modifica personaggio</span>
+                </button>
+              ` : ''}
             </div>
             <div class="character-identity__heading">
               <h3 class="character-name">${character.name}</h3>
-              <span class="character-heading-actions">
-                ${canEditCharacter ? `
-                  <button class="character-edit-trigger character-edit-trigger--inline" type="button" data-edit-character aria-label="Modifica personaggio">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
-                    <span>Modifica personaggio</span>
-                  </button>
-                ` : ''}
-                <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
-              </span>
+              <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
             </div>
           </div>
         </div>

@@ -131,7 +131,7 @@ export function polishFamiliarsShortcut(host) {
     const notes = dashboard.querySelector('.familiar-detail-panel--notes');
     if (!abilities || !vitals || !attacks || !notes) return;
     const overview = document.createElement('div'); overview.className = 'companion-shortcut-overview';
-    overview.append(vitals, abilities);
+    overview.append(abilities, vitals);
     dashboard.replaceChildren(overview, attacks, notes);
     dashboard.dataset.shortcutKind = dashboard.id;
     tabShortcutViews(dashboard, [
@@ -154,6 +154,7 @@ export function createCharacterShortcuts(addPanel, configuration = {}) {
     const dialog = host.closest('dialog'); dialog.classList.add('sheet-detail--catalog', `sheet-detail--${definition.key}`);
     const add = document.createElement('button'); add.type = 'button'; add.className = 'icon-button'; add.textContent = '+'; add.disabled = true;
     add.setAttribute('aria-label', definition.action);
+    if (definition.key === 'familiars') add.hidden = true;
     host.updateShortcutAction = key => {
       add.setAttribute('aria-label', key === 'files' ? 'Carica file sessione' : definition.action);
       add.disabled = Boolean(host.querySelector(key === 'files' ? '[data-upload-session-file]' : definition.selector)?.disabled);
@@ -175,6 +176,10 @@ export function createCharacterShortcuts(addPanel, configuration = {}) {
       finally { hideLoader(); loading = false; }
     };
     shortcut.addEventListener('click', dialog.loadShortcut);
-    dialog.addEventListener('close', () => { if (loaded) configuration.onRefresh?.(); }, { signal: dialog._sheetEvents.signal });
+    dialog.addEventListener('close', () => {
+      if (host.dataset.shortcutChanged !== 'true') return;
+      delete host.dataset.shortcutChanged;
+      configuration.onRefresh?.();
+    }, { signal: dialog._sheetEvents.signal });
   });
 }

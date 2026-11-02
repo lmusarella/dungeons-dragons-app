@@ -134,6 +134,10 @@ export async function renderInventory(container) {
       setGlobalLoading(false);
     }
   };
+  const refreshAfterMutation = async () => {
+    container.dataset.shortcutChanged = 'true';
+    await renderInventory(container);
+  };
 
   let items = state.cache.items;
   let wallet = state.cache.wallet;
@@ -316,7 +320,7 @@ export async function renderInventory(container) {
       }));
       listEl.querySelectorAll('[data-extract-item]').forEach(button => button.addEventListener('click', async () => {
         await runWithGlobalLoader(async () => {
-          try { await updateItem(button.dataset.extractItem, { container_item_id: null }); createToast('Oggetto estratto'); await renderInventory(container); }
+          try { await updateItem(button.dataset.extractItem, { container_item_id: null }); createToast('Oggetto estratto'); await refreshAfterMutation(); }
           catch { createToast('Errore durante l’estrazione', 'error'); }
         });
       }));
@@ -333,7 +337,7 @@ export async function renderInventory(container) {
           try {
             await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id })));
             createToast(`${selectedIds.length} ${selectedIds.length === 1 ? 'oggetto inserito' : 'oggetti inseriti'} in ${containerItem.name}`);
-            renderInventory(container);
+            refreshAfterMutation();
           } catch (error) {
             createToast('Errore durante l’inserimento degli oggetti', 'error');
           }
@@ -344,7 +348,7 @@ export async function renderInventory(container) {
         event.preventDefault();
         event.stopPropagation();
         const item = items.find((entry) => entry.id === btn.dataset.edit);
-        if (item) openItemModal(activeCharacter, item, items, renderInventory.bind(null, container));
+        if (item) openItemModal(activeCharacter, item, items, refreshAfterMutation);
       }));
     listEl.querySelectorAll('[data-item-image]')
       .forEach((image) => image.addEventListener('click', (event) => {
@@ -354,7 +358,7 @@ export async function renderInventory(container) {
         if (item) openEquipmentItemDetail(item, {
           items,
           weightUnit: getWeightUnit(activeCharacter),
-          onEdit: () => openItemModal(activeCharacter, item, items, renderInventory.bind(null, container))
+          onEdit: () => openItemModal(activeCharacter, item, items, refreshAfterMutation)
         });
       }));
     listEl.querySelectorAll('[data-item-preview]')
@@ -365,7 +369,7 @@ export async function renderInventory(container) {
         if (item) openEquipmentItemDetail(item, {
           items,
           weightUnit: getWeightUnit(activeCharacter),
-          onEdit: () => openItemModal(activeCharacter, item, items, renderInventory.bind(null, container))
+          onEdit: () => openItemModal(activeCharacter, item, items, refreshAfterMutation)
         });
       }));
     listEl.querySelectorAll('[data-delete]')
@@ -393,7 +397,7 @@ export async function renderInventory(container) {
             }
             await deleteItem(item.id);
             createToast(isContainer ? 'Contenitore eliminato' : 'Oggetto eliminato');
-            renderInventory(container);
+            refreshAfterMutation();
           } catch (error) {
             createToast('Errore eliminazione', 'error');
           }
@@ -414,7 +418,7 @@ export async function renderInventory(container) {
             const nextQty = Math.max(item.qty - 1, 0);
             await updateItem(item.id, { qty: nextQty });
             createToast('Consumabile usato');
-            renderInventory(container);
+            refreshAfterMutation();
           } catch (error) {
             createToast('Errore utilizzo consumabile', 'error');
           }
@@ -490,7 +494,7 @@ export async function renderInventory(container) {
             updateCache('wallet', saved);
             await cacheSnapshot({ wallet: saved });
             createToast('Wallet aggiornato');
-            renderInventory(container);
+            refreshAfterMutation();
           } catch (error) {
             createToast('Errore aggiornamento denaro', 'error');
           }
@@ -624,7 +628,7 @@ export async function renderInventory(container) {
           updateCache('wallet', saved);
           await cacheSnapshot({ wallet: saved });
           createToast('Scambio completato');
-          renderInventory(container);
+          refreshAfterMutation();
         } catch (error) {
           createToast('Errore scambio monete', 'error');
         }
@@ -697,7 +701,7 @@ export async function renderInventory(container) {
           updateCache('wallet', saved);
           await cacheSnapshot({ wallet: saved });
           createToast('Transazione aggiornata');
-          renderInventory(container);
+          refreshAfterMutation();
         } catch (error) {
           createToast('Errore aggiornamento transazione', 'error');
         }
@@ -721,7 +725,7 @@ export async function renderInventory(container) {
           updateCache('wallet', saved);
           await cacheSnapshot({ wallet: saved });
           createToast('Transazione eliminata');
-          renderInventory(container);
+          refreshAfterMutation();
         } catch (error) {
           createToast('Errore eliminazione transazione', 'error');
         }
@@ -732,7 +736,7 @@ export async function renderInventory(container) {
   container.querySelector('[data-add-item]').addEventListener('click', async () => {
     const source = await openItemSourceModal();
     if (source === 'manual') {
-      openItemModal(activeCharacter, null, items, renderInventory.bind(null, container));
+      openItemModal(activeCharacter, null, items, refreshAfterMutation);
       return;
     }
     if (source !== 'catalog') return;
@@ -759,7 +763,7 @@ export async function renderInventory(container) {
       try {
         await addSharedItemsToInventory(selected, activeCharacter);
         createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} all’inventario`, 'success');
-        await renderInventory(container);
+        await refreshAfterMutation();
       } catch (error) {
         createToast('Errore durante l’aggiunta dall’archivio', 'error');
       }

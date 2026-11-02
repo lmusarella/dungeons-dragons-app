@@ -52,6 +52,7 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('class="familiar-quick-card__health" role="meter"');
     expect(source).toContain('class="familiar-sheet__kicker"');
     expect(source).toContain('class="familiar-add-button"');
+    expect(source).toContain('<span aria-hidden="true">+</span><strong>Aggiungi</strong>');
     expect(source).not.toContain('familiar-sheet__chevron');
     expect(source).not.toContain('familiar-sheet__hp-summary');
   });
