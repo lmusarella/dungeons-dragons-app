@@ -1,8 +1,9 @@
 import { searchSharedItems } from '../library/itemLibraryApi.js';
-import { createToast, openFormModal, setGlobalLoading } from '../../ui/components.js';
+import { createToast, openFormModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { getCategoryLabel } from './utils.js';
 import { createItem, createItems } from './inventoryApi.js';
+import { itemCategories } from './constants.js';
 
 export async function openItemSourceModal({
   title = 'Aggiungi oggetto',
@@ -37,61 +38,164 @@ async function loadAllSharedItems() {
   return items;
 }
 
-export async function openSharedItemPicker({ title = 'Scegli dall’archivio', multiple = true } = {}) {
-  setGlobalLoading(true);
+export async function openSharedItemPicker({
+  title = 'Scegli dall’archivio',
+  multiple = true,
+  allowQuantities = false
+} = {}) {
   let items = [];
-  try {
-    items = await loadAllSharedItems();
-  } catch (error) {
-    createToast('Impossibile caricare l’archivio degli oggetti', 'error');
-    return [];
-  } finally {
-    setGlobalLoading(false);
-  }
-  if (!items.length) {
-    createToast('L’archivio centralizzato non contiene ancora oggetti');
-    return [];
-  }
   const inputType = multiple ? 'checkbox' : 'radio';
   const content = document.createElement('div');
   content.className = 'shared-item-picker';
   content.innerHTML = `
+    <div class="shared-item-picker__category-filter" role="group" aria-label="Filtra per categoria">
+      ${[{ value: '', label: 'Tutti', icon: '◇' }, ...itemCategories.map((category) => ({ ...category, icon: ({ weapon: '⚔', armor: '◈', consumable: '◐', tool: '⚒', container: '▣', jewelry: '✦', loot: '✧', gear: '▤' })[category.value] || '◇' }))]
+    .map((category, index) => `<button class="shared-item-picker__category ${index === 0 ? 'is-active' : ''}" type="button" data-shared-item-category="${category.value}" aria-pressed="${index === 0}"><i aria-hidden="true">${category.icon}</i><span>${escapeHtml(category.label)}</span></button>`).join('')}
+    </div>
     <div class="shared-item-picker__toolbar">
       <label><span aria-hidden="true">⌕</span><input type="search" placeholder="Cerca nell’archivio" data-shared-item-search /></label>
-      <output data-shared-item-count>${items.length} oggetti</output>
+      <output data-shared-item-count aria-live="polite">Caricamento…</output>
     </div>
-    <div class="shared-item-picker__grid">
-      ${items.map((item) => {
-    const image = sanitizeImageUrl(item.image_url);
-    return `<label class="shared-item-picker__card" data-shared-item-option data-search-value="${escapeHtml(`${item.name} ${getCategoryLabel(item.category)}`.toLowerCase())}">
-          <input type="${inputType}" name="shared_item_ids" value="${escapeHtml(item.id)}" />
-          <span class="shared-item-picker__visual">${image ? `<img src="${image}" alt="" />` : '<i aria-hidden="true">◇</i>'}</span>
-          <span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(getCategoryLabel(item.category))}${item.is_magic ? ' · Magico' : ''}</small></span>
-          <b aria-hidden="true">✓</b>
-        </label>`;
-  }).join('')}
+    <div class="shared-item-picker__results" data-shared-item-results>
+      <div class="shared-item-picker__loader" role="status" aria-live="polite">
+        <span class="shared-item-picker__spinner" aria-hidden="true"></span>
+        <strong>Caricamento archivio…</strong>
+        <small>Sto recuperando gli oggetti disponibili.</small>
+      </div>
     </div>`;
   const search = content.querySelector('[data-shared-item-search]');
-  const cards = [...content.querySelectorAll('[data-shared-item-option]')];
   const count = content.querySelector('[data-shared-item-count]');
-  const applySearch = () => {
+  const results = content.querySelector('[data-shared-item-results]');
+  const categoryButtons = [...content.querySelectorAll('[data-shared-item-category]')];
+  let activeCategory = '';
+  let cards = [];
+  let submitButton = null;
+
+  const applyFilters = () => {
     const query = search.value.trim().toLowerCase();
     let visible = 0;
     cards.forEach((card) => {
-      card.hidden = Boolean(query) && !card.dataset.searchValue.includes(query);
+      const matchesSearch = !query || card.dataset.searchValue.includes(query);
+      const matchesCategory = !activeCategory || card.dataset.itemCategory === activeCategory;
+      card.hidden = !(matchesSearch && matchesCategory);
       if (!card.hidden) visible += 1;
     });
     count.textContent = `${visible} ${visible === 1 ? 'oggetto' : 'oggetti'}`;
   };
-  search.addEventListener('input', applySearch);
-  cards.forEach((card) => card.querySelector('input').addEventListener('change', () => card.classList.toggle('is-selected', card.querySelector('input').checked)));
+
+  const syncSubmitState = () => {
+    const selectedCount = cards.filter((card) => card.querySelector('input[name="shared_item_ids"]')?.checked).length;
+    if (!submitButton) return;
+    submitButton.disabled = selectedCount === 0;
+    submitButton.textContent = multiple
+      ? (selectedCount ? `Aggiungi ${selectedCount} ${selectedCount === 1 ? 'oggetto' : 'oggetti'}` : 'Aggiungi selezionati')
+      : 'Aggiungi oggetto';
+  };
+
+  const renderItems = () => {
+    results.innerHTML = `<div class="shared-item-picker__grid">
+      ${items.map((item) => {
+    const image = sanitizeImageUrl(item.image_url);
+    return `<article class="shared-item-picker__card" data-shared-item-option data-item-category="${escapeHtml(item.category || 'gear')}" data-search-value="${escapeHtml(`${item.name} ${getCategoryLabel(item.category)}`.toLowerCase())}">
+        <label class="shared-item-picker__selection">
+          <input type="${inputType}" name="shared_item_ids" value="${escapeHtml(item.id)}" />
+          <span class="shared-item-picker__visual">${image ? `<img src="${image}" alt="" />` : '<i aria-hidden="true">◇</i>'}</span>
+          <span class="shared-item-picker__copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(getCategoryLabel(item.category))}${item.is_magic ? ' · Magico' : ''}</small></span>
+          <b aria-hidden="true">✓</b>
+        </label>
+        ${allowQuantities ? `
+          <div class="shared-item-picker__quantity" data-shared-item-quantity>
+            <span>Quantità</span>
+            <span class="shared-item-picker__stepper">
+              <button type="button" data-quantity-step="-1" aria-label="Riduci quantità di ${escapeHtml(item.name)}">−</button>
+              <input type="number" name="shared_item_qty_${escapeHtml(item.id)}" value="1" min="1" max="999" step="1" aria-label="Quantità di ${escapeHtml(item.name)}" disabled />
+              <button type="button" data-quantity-step="1" aria-label="Aumenta quantità di ${escapeHtml(item.name)}">+</button>
+            </span>
+          </div>` : ''}
+      </article>`;
+  }).join('')}
+    </div>`;
+    cards = [...content.querySelectorAll('[data-shared-item-option]')];
+    cards.forEach((card) => {
+      const selection = card.querySelector('input[name="shared_item_ids"]');
+      const quantityInput = card.querySelector('[data-shared-item-quantity] input');
+      const syncSelection = () => {
+        if (!multiple && selection.checked) {
+          cards.filter((entry) => entry !== card).forEach((entry) => entry.classList.remove('is-selected'));
+        }
+        card.classList.toggle('is-selected', selection.checked);
+        if (quantityInput) quantityInput.disabled = !selection.checked;
+        syncSubmitState();
+      };
+      selection.addEventListener('change', syncSelection);
+      card.querySelectorAll('[data-quantity-step]').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (!selection.checked) {
+            selection.checked = true;
+            selection.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          const direction = Number(button.dataset.quantityStep) || 0;
+          const current = Math.max(1, Number(quantityInput.value) || 1);
+          quantityInput.value = String(Math.min(999, Math.max(1, current + direction)));
+        });
+      });
+      quantityInput?.addEventListener('input', () => {
+        quantityInput.value = String(Math.min(999, Math.max(1, Number(quantityInput.value) || 1)));
+      });
+      syncSelection();
+    });
+    applyFilters();
+    syncSubmitState();
+  };
+
+  search.addEventListener('input', applyFilters);
+  categoryButtons.forEach((button) => button.addEventListener('click', () => {
+    activeCategory = button.dataset.sharedItemCategory || '';
+    categoryButtons.forEach((entry) => {
+      const isActive = entry === button;
+      entry.classList.toggle('is-active', isActive);
+      entry.setAttribute('aria-pressed', String(isActive));
+    });
+    applyFilters();
+  }));
+
   const formData = await openFormModal({
     title, submitLabel: multiple ? 'Aggiungi selezionati' : 'Aggiungi oggetto', cancelLabel: 'Annulla', content,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker']
+    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker'],
+    onOpen: ({ modal }) => {
+      let mounted = true;
+      submitButton = modal?.querySelector('[data-form-submit], .sheet-view-footer button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+      void loadAllSharedItems()
+        .then((loadedItems) => {
+          if (!mounted) return;
+          items = loadedItems;
+          if (!items.length) {
+            results.innerHTML = '<div class="shared-item-picker__empty"><strong>Archivio vuoto</strong><span>Non ci sono ancora oggetti disponibili.</span></div>';
+            count.textContent = '0 oggetti';
+            return;
+          }
+          renderItems();
+        })
+        .catch(() => {
+          if (!mounted) return;
+          results.innerHTML = '<div class="shared-item-picker__empty shared-item-picker__empty--error"><strong>Archivio non disponibile</strong><span>Riprova tra qualche istante.</span></div>';
+          count.textContent = 'Errore';
+          createToast('Impossibile caricare l’archivio degli oggetti', 'error');
+        });
+      return () => { mounted = false; };
+    }
   });
   if (!formData) return [];
   const selected = new Set(formData.getAll('shared_item_ids').map(String));
-  return items.filter((item) => selected.has(String(item.id)));
+  return items
+    .filter((item) => selected.has(String(item.id)))
+    .map((item) => ({
+      ...item,
+      ...(allowQuantities ? {
+        selected_quantity: Math.max(1, Number(formData.get(`shared_item_qty_${item.id}`)) || 1)
+      } : {})
+    }));
 }
 
 export function sharedItemToInventoryPayload(item, character, overrides = {}) {
@@ -150,19 +254,23 @@ export async function addSharedItemsToInventory(sharedItems = [], character) {
   }
 
   const created = [];
+  const getSelectedQuantity = (item) => Math.min(999, Math.max(1, Number(item?.selected_quantity) || 1));
   const loosePayloads = sharedItems
     .filter((item) => !resolvedBundles.has(String(item.id)))
-    .map((item) => sharedItemToInventoryPayload(item, character));
+    .map((item) => sharedItemToInventoryPayload(item, character, { qty: getSelectedQuantity(item) }));
   if (loosePayloads.length) created.push(...await createItems(loosePayloads));
 
   for (const bundle of bundledItems) {
-    const container = await createItem(sharedItemToInventoryPayload(bundle, character, { category: 'container' }));
-    created.push(container);
-    const childPayloads = resolvedBundles.get(String(bundle.id)).map(({ entry, item }) => sharedItemToInventoryPayload(item, character, {
-      qty: Math.max(1, Number(entry.quantity) || 1),
-      container_item_id: container.id
-    }));
-    if (childPayloads.length) created.push(...await createItems(childPayloads));
+    const bundleQuantity = getSelectedQuantity(bundle);
+    for (let copy = 0; copy < bundleQuantity; copy += 1) {
+      const container = await createItem(sharedItemToInventoryPayload(bundle, character, { category: 'container', qty: 1 }));
+      created.push(container);
+      const childPayloads = resolvedBundles.get(String(bundle.id)).map(({ entry, item }) => sharedItemToInventoryPayload(item, character, {
+        qty: Math.max(1, Number(entry.quantity) || 1),
+        container_item_id: container.id
+      }));
+      if (childPayloads.length) created.push(...await createItems(childPayloads));
+    }
   }
   return created;
 }

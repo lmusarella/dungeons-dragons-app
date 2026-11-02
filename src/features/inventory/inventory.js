@@ -20,6 +20,7 @@ import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } 
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
 import { getCategoryLabel, getWeightUnit, normalizeTransactionAmount } from './utils.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
+import { showShortcutLoader } from '../character/home/shortcutViews.js';
 
 
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
@@ -735,9 +736,26 @@ export async function renderInventory(container) {
       return;
     }
     if (source !== 'catalog') return;
-    const selected = await openSharedItemPicker({ title: 'Aggiungi oggetti dall’archivio' });
+    const isShortcut = container.hasAttribute('data-inventory-shortcut');
+    let stopCatalogLoader = null;
+    const selected = await openSharedItemPicker({
+      title: 'Aggiungi oggetti dall’archivio',
+      onLoadingChange: (isLoading) => {
+        if (!isShortcut) {
+          setGlobalLoading(isLoading);
+          return;
+        }
+        if (isLoading) stopCatalogLoader = showShortcutLoader(container, 'Caricamento archivio oggetti');
+        else {
+          stopCatalogLoader?.();
+          stopCatalogLoader = null;
+        }
+      }
+    });
     if (!selected.length) return;
-    await runWithGlobalLoader(async () => {
+    const stopAddingLoader = isShortcut ? showShortcutLoader(container, 'Aggiunta oggetti') : null;
+    if (!isShortcut) setGlobalLoading(true);
+    try {
       try {
         await addSharedItemsToInventory(selected, activeCharacter);
         createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} all’inventario`, 'success');
@@ -745,6 +763,9 @@ export async function renderInventory(container) {
       } catch (error) {
         createToast('Errore durante l’aggiunta dall’archivio', 'error');
       }
-    });
+    } finally {
+      stopAddingLoader?.();
+      if (!isShortcut) setGlobalLoading(false);
+    }
   });
 }

@@ -32,10 +32,24 @@ describe('src/features/inventory/inventory.js', () => {
     expect(source).toContain('categories.filter((category) => category.value)');
     expect(source).toContain('openItemSourceModal');
     expect(source).toContain('openSharedItemPicker');
+    expect(source).toContain("showShortcutLoader(container, 'Caricamento archivio oggetti')");
+    expect(source).toContain('onLoadingChange: (isLoading)');
     expect(source).toContain("sanitizeImageUrl(item.image_url)");
     expect(source).toContain('inventory-insert-picker__visual');
     expect(styles).toContain('.inventory-category-pills button');
     expect(modalStyles).toContain('grid-template-rows: auto minmax(0, 1fr)');
     expect(modalStyles).toContain('.inventory-insert-picker__visual img');
+  });
+
+  it('supports a quantity for every selected quick-loot catalog item', () => {
+    const home = readFileSync('src/features/character/home.js', 'utf8');
+    const picker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
+    const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
+    expect(home).toContain('allowQuantities: true');
+    expect(picker).toContain('selected_quantity: Math.max(1');
+    expect(picker).toContain('shared_item_qty_${item.id}');
+    expect(picker).toContain('qty: getSelectedQuantity(item)');
+    expect(picker).toContain('for (let copy = 0; copy < bundleQuantity; copy += 1)');
+    expect(styles).toContain('.shared-item-picker__stepper');
   });
 });

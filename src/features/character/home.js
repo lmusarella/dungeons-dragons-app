@@ -20,6 +20,7 @@ import {
   buildCharacterOverview,
   buildEquipSection,
   buildEmptyState,
+  buildProficiencyOverview,
   buildResourceSections,
   buildSavingThrowSection,
   buildSkillList,
@@ -87,6 +88,55 @@ function normalizeWildShapeStatBlock(raw) {
     speeds: { walk: null, fly: null, climb: null, burrow: null, ...(source.speeds || {}) },
     attacks: Array.isArray(source.attacks) ? source.attacks : []
   };
+}
+
+function bindProficiencyTabs(root) {
+  root?.querySelectorAll('[data-proficiency-tabs]').forEach((tabGroup) => {
+    const buttons = Array.from(tabGroup.querySelectorAll('[data-proficiency-tab]'));
+    const panels = Array.from(tabGroup.querySelectorAll('[data-proficiency-panel]'));
+    if (!buttons.length || !panels.length) return;
+    const setActiveTab = (tabKey) => {
+      buttons.forEach((button) => {
+        const isActive = button.dataset.proficiencyTab === tabKey;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+      });
+      panels.forEach((panel) => {
+        panel.classList.toggle('is-active', panel.dataset.proficiencyPanel === tabKey);
+      });
+    };
+    buttons.forEach((button) => button.addEventListener('click', () => setActiveTab(button.dataset.proficiencyTab)));
+    setActiveTab(buttons.find((button) => button.classList.contains('is-active'))?.dataset.proficiencyTab ?? buttons[0].dataset.proficiencyTab);
+  });
+}
+
+function buildDeathSaveManagerContent(deathSaves = {}) {
+  const successes = Math.max(0, Math.min(3, Number(deathSaves.successes) || 0));
+  const failures = Math.max(0, Math.min(3, Number(deathSaves.failures) || 0));
+  const track = (group, label, symbol, value) => `
+    <section class="death-save-manager__track death-save-manager__track--${group}">
+      <div><span aria-hidden="true">${symbol}</span><strong>${label}</strong><output data-death-save-output="${group}">${value}/3</output></div>
+      <div class="death-save-manager__dots" role="group" aria-label="${label}">
+        ${Array.from({ length: 3 }, (_, index) => `<button class="death-save-dot ${index < value ? 'is-filled' : ''}" type="button" data-modal-death-save="${group}" data-death-save-index="${index + 1}" aria-label="${label} ${index + 1}"><span aria-hidden="true"></span></button>`).join('')}
+      </div>
+    </section>`;
+  return `
+    <div class="death-save-manager">
+      <div class="death-save-manager__intro">
+        <span aria-hidden="true">†</span>
+        <div><strong>Tiri salvezza contro morte</strong><small>Registra manualmente gli esiti oppure tira un d20.</small></div>
+      </div>
+      <input type="hidden" name="death_save_successes" value="${successes}" />
+      <input type="hidden" name="death_save_failures" value="${failures}" />
+      <div class="death-save-manager__tracks">
+        ${track('successes', 'Successi', '✓', successes)}
+        ${track('failures', 'Fallimenti', '✕', failures)}
+      </div>
+      <div class="death-save-manager__actions">
+        <button class="ghost-button death-save-manager__reset" type="button" data-reset-death-saves><span aria-hidden="true">↺</span> Azzera</button>
+        <button class="primary death-save-manager__roll" type="button" data-modal-roll-death-save><span aria-hidden="true">🎲</span> Tira TS morte</button>
+      </div>
+    </div>`;
 }
 
 function getActiveWildShapeDetails(character, companions = []) {
@@ -291,7 +341,7 @@ function mapCharacterSpellRowToSpell(row) {
   };
 }
 
-export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014' } = {}) {
+export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014', canPrepare = true } = {}) {
   const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
   const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
   const PAGE_SIZE = 50;
@@ -301,12 +351,10 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   content.innerHTML = `
     <section class="shared-spell-picker__filters" aria-label="Filtri incantesimi">
       <div class="shared-spell-picker__search-wrap">
-        <span class="shared-spell-picker__search-icon" aria-hidden="true">⌕</span>
         <label class="field shared-spell-picker__search">
           <span>Cerca per nome</span>
           <input type="search" name="spell_query" placeholder="Scrivi il nome di un incantesimo..." autocomplete="off" />
         </label>
-        <button type="button" class="ghost-button shared-spell-picker__reset" data-reset-spell-filters>Azzera filtri</button>
       </div>
       <div class="shared-spell-picker__filter-toolbar">
         <label class="field">
@@ -329,7 +377,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
           </div>
         </div>
         <div class="shared-spell-picker__property-filter" role="group" aria-label="Proprietà incantesimo">
-          <span class="shared-spell-picker__filter-label">Proprietà</span>
           <div>
             <button type="button" data-picker-property="concentration" aria-pressed="false">Concentrazione</button>
             <button type="button" data-picker-property="ritual" aria-pressed="false">Rituale</button>
@@ -354,7 +401,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
           `).join('')}
         </div>
       </div>
-      <output class="shared-spell-picker__active-filters" data-picker-active-filters>Regole ${initialRulesVersion}</output>
+      <button type="button" class="ghost-button shared-spell-picker__reset" data-reset-spell-filters>Azzera filtri</button>
     </section>
     <div class="shared-spell-picker__workspace">
       <section class="shared-spell-picker__results" aria-label="Risultati ricerca">
@@ -375,13 +422,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
           <button type="button" class="ghost-button" data-next-page aria-label="Pagina successiva">Successiva →</button>
         </div>
       </section>
-      <aside class="shared-spell-picker__preview" data-spell-preview aria-live="polite">
-        <div class="shared-spell-picker__preview-empty">
-          <span aria-hidden="true">✦</span>
-          <strong>Scegli un incantesimo</strong>
-          <p>Qui troverai livello, scuola, classi, tempo di lancio e descrizione.</p>
-        </div>
-      </aside>
     </div>
   `;
 
@@ -391,7 +431,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   const sourceSummary = content.querySelector('[data-picker-source-summary]');
   const resultsEl = content.querySelector('[data-spell-results]');
   const resultsCountEl = content.querySelector('[data-spell-results-count]');
-  const previewEl = content.querySelector('[data-spell-preview]');
   const pagingEl = content.querySelector('[data-spell-paging]');
   const pageLabel = content.querySelector('[data-page-label]');
   const prevBtn = content.querySelector('[data-prev-page]');
@@ -402,7 +441,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   let totalPages = 1;
   let loadSequence = 0;
   let searchTimer = null;
-  let submitButton = null;
+  let submitButtons = [];
   let selectedLevel = '';
   let selectedRulesVersion = initialRulesVersion;
   const selectedProperties = new Set();
@@ -414,91 +453,15 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   const formatSpellLevel = (level) => Number(level) === 0 ? 'Trucchetto' : `Livello ${level}`;
   const setSubmitState = () => {
     const count = selectedSpells.size;
-    if (submitButton) {
-      submitButton.disabled = count === 0;
-      submitButton.textContent = count ? `Aggiungi ${count} ${count === 1 ? 'incantesimo' : 'incantesimi'}` : 'Aggiungi al personaggio';
-    }
+    submitButtons.forEach((button) => { button.disabled = count === 0; });
+    const knownButton = submitButtons.find((button) => button.value === 'known');
+    const alwaysButton = submitButtons.find((button) => button.value === 'always');
+    const countLabel = count ? ` ${count}` : '';
+    if (knownButton) knownButton.textContent = `Aggiungi${countLabel} come ${canPrepare ? 'conosciuti' : 'sempre conosciuti'}`;
+    if (alwaysButton) alwaysButton.textContent = `Aggiungi${countLabel} come sempre pronti`;
     if (selectedCountEl) selectedCountEl.textContent = `${count} ${count === 1 ? 'selezionato' : 'selezionati'}`;
     if (clearSelectionButton) clearSelectionButton.hidden = count === 0;
   };
-  const renderPreview = (spell) => {
-    previewEl.innerHTML = '';
-    if (!spell) {
-      previewEl.innerHTML = `
-        <div class="shared-spell-picker__preview-empty">
-          <span aria-hidden="true">✦</span>
-          <strong>Scegli un incantesimo</strong>
-          <p>Qui troverai livello, scuola, classi, tempo di lancio e descrizione.</p>
-        </div>
-      `;
-      return;
-    }
-    const heading = document.createElement('div');
-    heading.className = 'shared-spell-picker__preview-heading';
-    const eyebrow = document.createElement('span');
-    eyebrow.className = 'shared-spell-picker__preview-eyebrow';
-    eyebrow.textContent = [formatSpellLevel(spell.level), normalizeSpellSchool(spell.school)].filter(Boolean).join(' · ');
-    const title = document.createElement('strong');
-    title.className = 'shared-spell-picker__preview-title';
-    title.textContent = spell.name;
-    heading.append(eyebrow, title);
-
-    const facts = document.createElement('dl');
-    facts.className = 'shared-spell-picker__facts';
-    [
-      ['Lancio', spell.cast_time],
-      ['Gittata', spell.range],
-      ['Durata', spell.duration],
-      ['Componenti', spell.components],
-      ['Materiale', spell.material],
-      ['Fonte', spell.source],
-      ['Tiro salvezza', savingThrowList.find((entry) => entry.key === spell.saving_throw_ability)?.label],
-      ['Danni', spell.damage_die],
-      ['Tipo', damageTypeList.find((type) => type.key === spell.damage_type)?.label || spell.damage_type]
-    ].filter(([, value]) => value).forEach(([label, value]) => {
-      const fact = document.createElement('div');
-      const term = document.createElement('dt');
-      const description = document.createElement('dd');
-      term.textContent = label;
-      description.textContent = value;
-      fact.append(term, description);
-      facts.appendChild(fact);
-    });
-
-    const tags = document.createElement('div');
-    tags.className = 'shared-spell-picker__preview-tags';
-    if (spell.concentration) tags.appendChild(Object.assign(document.createElement('span'), { textContent: 'Concentrazione' }));
-    if (spell.ritual) tags.appendChild(Object.assign(document.createElement('span'), { textContent: 'Rituale' }));
-    if (spell.rules_version) tags.appendChild(Object.assign(document.createElement('span'), { textContent: `Regole ${spell.rules_version}` }));
-
-    const classes = document.createElement('p');
-    classes.className = 'shared-spell-picker__preview-classes';
-    const casterClasses = Array.isArray(spell.caster_classes) ? spell.caster_classes : [];
-    classes.textContent = casterClasses.length ? `Classi: ${casterClasses.join(', ')}` : 'Classi non specificate';
-    const description = document.createElement('p');
-    description.className = 'shared-spell-picker__description';
-    description.textContent = spell.description || 'Nessuna descrizione disponibile.';
-    previewEl.append(heading, facts, tags, classes, description);
-  };
-
-  const syncFilterSummary = () => {
-    const parts = [`Regole ${selectedRulesVersion}`];
-    if (selectedLevel !== '') parts.push(selectedLevel === '0' ? 'Trucchetti' : `${selectedLevel}° livello`);
-    if (schoolSelect.value) parts.push(schoolSelect.value);
-    if (selectedSourceKeys.size === 1) {
-      parts.push(sourceGroups.find((group) => selectedSourceKeys.has(group.key))?.label || '1 manuale');
-    } else if (selectedSourceKeys.size > 1) {
-      parts.push(`${selectedSourceKeys.size} manuali`);
-    }
-    if (selectedProperties.has('concentration')) parts.push('Concentrazione');
-    if (selectedProperties.has('ritual')) parts.push('Rituale');
-    const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked'))
-      .map((entry) => entry.value);
-    if (selectedClasses.length) parts.push(selectedClasses.join(', '));
-    const summary = content.querySelector('[data-picker-active-filters]');
-    if (summary) summary.textContent = parts.join(' · ');
-  };
-
   const loadSourceOptions = async () => {
     const sequence = ++sourceLoadSequence;
     sourceOptions.setAttribute('aria-busy', 'true');
@@ -525,7 +488,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
       sourceSummary.textContent = selectedSourceKeys.size
         ? (selectedSourceKeys.size === 1 ? sourceGroups.find((group) => selectedSourceKeys.has(group.key))?.label || '1' : `${selectedSourceKeys.size} scelti`)
         : 'Tutti';
-      syncFilterSummary();
     }
   };
 
@@ -533,23 +495,23 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     content.querySelectorAll('[data-shared-spell-id]').forEach((card) => {
       const selected = selectedSpells.has(String(card.dataset.sharedSpellId));
       card.classList.toggle('is-selected', selected);
-      card.setAttribute('aria-pressed', String(selected));
+      const toggle = card.querySelector('[data-spell-selection-toggle]');
+      toggle?.classList.toggle('is-active', selected);
+      toggle?.setAttribute('aria-pressed', String(selected));
       const marker = card.querySelector('[data-spell-selection-marker]');
-      if (marker) marker.textContent = selected ? '✓' : '+';
+      if (marker) marker.textContent = selected ? 'Selezionato' : 'Seleziona';
     });
     setSubmitState();
   };
 
   const clearSelection = () => {
     selectedSpells.clear();
-    renderPreview(null);
     syncVisibleSelection();
   };
 
   const selectSpell = (spell, card) => {
     const spellId = String(spell.id);
     selectedSpells.has(spellId) ? selectedSpells.delete(spellId) : selectedSpells.set(spellId, spell);
-    renderPreview(spell);
     syncVisibleSelection();
     card?.focus({ preventScroll: true });
   };
@@ -568,31 +530,38 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
       return;
     }
     items.forEach((spell) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'shared-spell-picker__spell';
+      const card = document.createElement('article');
+      card.className = 'shared-spell-picker__spell prepared-spells-modal__spell play-card play-card--spell';
       card.dataset.sharedSpellId = spell.id;
       const isSelected = selectedSpells.has(String(spell.id));
-      card.setAttribute('aria-pressed', String(isSelected));
       if (isSelected) card.classList.add('is-selected');
-      const main = document.createElement('span');
-      main.className = 'shared-spell-picker__spell-main';
-      const name = document.createElement('strong');
-      name.textContent = spell.name;
-      const meta = document.createElement('small');
+      const surface = document.createElement('button');
+      surface.type = 'button';
+      surface.className = 'play-card__surface shared-spell-picker__detail-surface';
+      surface.setAttribute('aria-label', `Mostra i dettagli di ${spell.name}`);
+      const main = document.createElement('header');
+      main.className = 'play-card__header prepared-spells-modal__spell-heading shared-spell-picker__spell-main';
+      const meta = document.createElement('span');
+      meta.className = 'play-card__eyebrow';
       meta.textContent = [formatSpellLevel(spell.level), normalizeSpellSchool(spell.school) || 'Scuola non indicata'].join(' · ');
-      main.append(name, meta);
-      const badges = document.createElement('span');
-      badges.className = 'shared-spell-picker__spell-badges';
-      if (spell.concentration) badges.appendChild(Object.assign(document.createElement('small'), { textContent: 'C' }));
-      if (spell.ritual) badges.appendChild(Object.assign(document.createElement('small'), { textContent: 'R' }));
-      const arrow = document.createElement('span');
-      arrow.className = 'shared-spell-picker__spell-arrow';
-      arrow.dataset.spellSelectionMarker = '';
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = isSelected ? '✓' : '+';
-      card.append(main, badges, arrow);
-      card.addEventListener('click', () => selectSpell(spell, card));
+      const name = document.createElement('strong');
+      name.className = 'play-card__title';
+      name.textContent = spell.name;
+      main.append(meta, name);
+      surface.append(main);
+      surface.addEventListener('click', () => openSpellQuickDetailModal(null, spell, null, { present }));
+
+      const footer = document.createElement('footer');
+      footer.className = 'play-card__footer prepared-spells-modal__card-actions';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = `play-card__button play-card__button--primary shared-spell-picker__select ${isSelected ? 'is-active' : ''}`;
+      toggle.dataset.spellSelectionToggle = '';
+      toggle.setAttribute('aria-pressed', String(isSelected));
+      toggle.innerHTML = `<span class="prepared-spells-modal__check" aria-hidden="true">✓</span><span data-spell-selection-marker>${isSelected ? 'Selezionato' : 'Seleziona'}</span>`;
+      toggle.addEventListener('click', () => selectSpell(spell, toggle));
+      footer.append(toggle);
+      card.append(surface, footer);
       resultsEl.appendChild(card);
     });
   };
@@ -647,7 +616,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
 
   const refreshFromFirstPage = () => {
     currentPage = 1;
-    syncFilterSummary();
     void loadResults();
   };
   queryInput.addEventListener('input', () => {
@@ -732,22 +700,50 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
 
   const formData = await present({
     title: 'Scegli un incantesimo dalla raccolta',
-    submitLabel: 'Aggiungi al personaggio',
+    submitLabel: canPrepare ? 'Aggiungi come sempre pronti' : 'Aggiungi come sempre conosciuti',
     cancelLabel: 'Annulla',
     content,
     cardClass: ['modal-card--form', 'modal-card--shared-spell-picker'],
-    onOpen: ({ modal }) => {
-      submitButton = modal.querySelector('[data-form-submit]');
+    onOpen: ({ modal, formEl }) => {
+      const primaryButton = modal.querySelector('[data-form-submit]');
+      const actions = primaryButton?.closest('.modal-actions__right') || primaryButton?.parentElement;
+      const knownButton = canPrepare ? document.createElement('button') : primaryButton;
+      if (knownButton) {
+        knownButton.type = 'submit';
+        if (canPrepare) knownButton.classList.add('ghost-button');
+        knownButton.classList.add('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--known');
+        knownButton.name = 'assignment_prep_state';
+        knownButton.value = 'known';
+        if (formEl?.id) knownButton.setAttribute('form', formEl.id);
+      }
+      const alwaysButton = canPrepare ? primaryButton : null;
+      if (alwaysButton) {
+        alwaysButton.name = 'assignment_prep_state';
+        alwaysButton.value = 'always';
+        alwaysButton.classList.add('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--always');
+        actions?.insertBefore(knownButton, alwaysButton);
+      }
+      submitButtons = [knownButton, alwaysButton].filter(Boolean);
       setSubmitState();
-      syncFilterSummary();
       queryInput.focus();
       void loadSourceOptions();
       void loadResults();
-      return () => window.clearTimeout(searchTimer);
+      return () => {
+        window.clearTimeout(searchTimer);
+        if (canPrepare) knownButton?.remove();
+        else knownButton?.classList.remove('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--known');
+        knownButton?.removeAttribute('name');
+        knownButton?.removeAttribute('value');
+        alwaysButton?.removeAttribute('name');
+        alwaysButton?.removeAttribute('value');
+        alwaysButton?.classList.remove('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--always');
+        submitButtons = [];
+      };
     }
   });
   if (!formData) return null;
-  return [...selectedSpells.values()];
+  const assignmentState = formData.get('assignment_prep_state') === 'known' ? 'known' : 'always';
+  return [...selectedSpells.values()].map((spell) => ({ ...spell, assignment_prep_state: assignmentState }));
 }
 
 function getAvailableSpellSlotLevels(character, spellLevel) {
@@ -933,23 +929,21 @@ export async function renderHome(container) {
       </div>
       <div class="home-column home-column--center">
         <section class="card home-card home-section character-sheet-card">
-          <header class="card-header character-sheet-header">
-            <div class="character-sheet-header__title">
-              <span class="character-sheet-header__crest" aria-hidden="true">✦</span>
-              <div>
-                <p class="eyebrow">Personaggio attivo</p>
-                <h2>Panoramica di gioco</h2>
-              </div>
-            </div>
-            <div class="actions">
-              ${activeCharacter && canEditCharacter ? `
-                <button class="character-edit-trigger" data-edit-character aria-label="Modifica scheda personaggio">
+          ${sheetCharacter ? `
+            <header class="character-sheet-titlebar">
+              <span class="character-sheet-titlebar__mark" aria-hidden="true">◆</span>
+              <span class="character-sheet-titlebar__copy">
+                <strong>Scheda personaggio</strong>
+                <small>${escapeHtml(sheetCharacter.name)}</small>
+              </span>
+              ${canEditCharacter ? `
+                <button class="character-edit-trigger character-sheet-titlebar__edit" type="button" data-edit-character aria-label="Modifica scheda personaggio">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
-                  <span>Modifica scheda</span>
+                  <span>Modifica personaggio</span>
                 </button>
               ` : ''}
-            </div>
-          </header>
+            </header>
+          ` : ''}
           ${sheetCharacter ? buildCharacterOverview(sheetCharacter, canEditCharacter, items, companions) : buildEmptyState(canCreateCharacter, offline)}
         </section>
         ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
@@ -1023,6 +1017,11 @@ export async function renderHome(container) {
 
   mountTabletLayout(container, {
     characterName: activeCharacter?.name || '',
+    proficiencyBonus: formatSigned(normalizeNumber(activeCharacter?.data?.proficiency_bonus)),
+    abilityModifiers: Object.fromEntries(['str', 'dex', 'con', 'int', 'wis', 'cha'].map((key) => [
+      key,
+      formatSigned(getAbilityModifier(activeCharacter?.data?.abilities?.[key]))
+    ])),
     onRefresh: () => renderHome(container),
     onAddRoll: container.querySelector('[data-edit-character]') ? kind => openQuickRollEditor(activeCharacter, kind, () => renderHome(container)) : null,
     onOpenAttack: index => openQuickAttackDetail(activeCharacter, index, () => renderHome(container))
@@ -1079,7 +1078,10 @@ export async function renderHome(container) {
         try {
           const preferredRulesVersion = (activeCharacter.data?.spells || [])
             .find((entry) => ['2014', '2024'].includes(String(entry.rules_version)))?.rules_version || '2014';
-          const sharedSpells = await openSharedSpellPicker(presentInShortcut, { defaultRulesVersion: preferredRulesVersion });
+          const sharedSpells = await openSharedSpellPicker(presentInShortcut, {
+            defaultRulesVersion: preferredRulesVersion,
+            canPrepare: Boolean(activeCharacter.data?.spellcasting?.can_prepare)
+          });
           if (!sharedSpells?.length) return;
           const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
           const linkedIds = new Set(currentSpells.map((entry) => String(entry.shared_spell_id || '')).filter(Boolean));
@@ -1090,14 +1092,14 @@ export async function renderHome(container) {
             return;
           }
           const nextSpells = spellsToAdd.map((sharedSpell) => mapSharedSpellToCharacterSpell(sharedSpell, {
-            prepState: Number(sharedSpell.level) > 0 ? 'prepared' : 'known'
+            prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'known'
           }));
           if (activeCharacter.user_id) {
             await Promise.all(spellsToAdd.map((sharedSpell, index) => assignSharedSpellToCharacter({
               user_id: activeCharacter.user_id,
               character_id: activeCharacter.id,
               shared_spell_id: sharedSpell.id,
-              prep_state: nextSpells[index].prep_state
+              prep_state: nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'known'
             })));
           }
           const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, ...nextSpells] };
@@ -1196,6 +1198,23 @@ export async function renderHome(container) {
     });
   }
 
+  const proficienciesButton = container.querySelector('[data-show-proficiencies]');
+  if (proficienciesButton && activeCharacter) {
+    proficienciesButton.addEventListener('click', () => {
+      const content = document.createElement('div');
+      content.className = 'proficiency-modal';
+      content.innerHTML = buildProficiencyOverview(activeCharacter, items, canEditCharacter);
+      void openFormModal({
+        title: `Competenze di ${activeCharacter.name}`,
+        content,
+        submitLabel: 'Chiudi',
+        cancelLabel: null,
+        cardClass: ['modal-card--wide', 'modal-card--proficiencies'],
+        onOpen: ({ fieldsEl }) => bindProficiencyTabs(fieldsEl)
+      });
+    });
+  }
+
   const conditionsButton = container.querySelector('[data-edit-conditions]');
   if (conditionsButton) {
     conditionsButton.addEventListener('click', async () => {
@@ -1209,30 +1228,7 @@ export async function renderHome(container) {
     });
   }
 
-  container.querySelectorAll('[data-proficiency-tabs]')
-    .forEach((tabGroup) => {
-      const buttons = Array.from(tabGroup.querySelectorAll('[data-proficiency-tab]'));
-      const panels = Array.from(tabGroup.querySelectorAll('[data-proficiency-panel]'));
-      if (!buttons.length || !panels.length) return;
-      const setActiveTab = (tabKey) => {
-        buttons.forEach((button) => {
-          const isActive = button.dataset.proficiencyTab === tabKey;
-          button.classList.toggle('is-active', isActive);
-          button.setAttribute('aria-selected', String(isActive));
-        });
-        panels.forEach((panel) => {
-          panel.classList.toggle('is-active', panel.dataset.proficiencyPanel === tabKey);
-        });
-      };
-      buttons.forEach((button) => {
-        button.addEventListener('click', () => {
-          setActiveTab(button.dataset.proficiencyTab);
-        });
-      });
-      const defaultTab = buttons.find((button) => button.classList.contains('is-active'))?.dataset.proficiencyTab
-        ?? buttons[0].dataset.proficiencyTab;
-      if (defaultTab) setActiveTab(defaultTab);
-    });
+  bindProficiencyTabs(container);
 
   const equipmentMannequinButton = container.querySelector('[data-open-equipment-mannequin]');
   if (equipmentMannequinButton && activeCharacter) {
@@ -1834,71 +1830,104 @@ export async function renderHome(container) {
       await deleteResourceWithConfirmation(resource);
     }));
 
-  const deathSaveRollButton = container.querySelector('[data-roll-death-save]');
-  if (deathSaveRollButton && activeCharacter && canEditCharacter) {
-    deathSaveRollButton.addEventListener('click', () => {
-      const currentDeathSaves = activeCharacter.data?.death_saves || {};
-      if ((Number(currentDeathSaves.successes) || 0) >= 3 || (Number(currentDeathSaves.failures) || 0) >= 3) {
-        createToast('Azzera i TS morte prima di effettuare un nuovo tiro', 'error');
-        return;
-      }
-      openDiceOverlay({
-        title: 'Tiro salvezza su morte',
-        mode: 'death-save',
-        keepOpen: true,
-        modifier: 0,
-        rollType: 'TS',
-        characterId: activeCharacter.id,
-        historyLabel: 'TS morte',
-        onRollComplete: async ({ value }) => {
-          const refreshedCharacter = getState().characters.find((character) => (
-            normalizeCharacterId(character.id) === normalizeCharacterId(activeCharacter.id)
-          )) || activeCharacter;
-          const data = refreshedCharacter.data || {};
-          const deathSaves = data.death_saves || {};
-          if ((Number(deathSaves.successes) || 0) >= 3 || (Number(deathSaves.failures) || 0) >= 3) {
-            createToast('I tiri salvezza su morte sono già conclusi', 'error');
-            return;
-          }
-          const result = applyDeathSaveRoll(deathSaves, value);
-          if (!result) return;
-          const messages = {
-            'critical-success': '20 naturale: 2 successi',
-            'critical-failure': '1 naturale: 2 fallimenti',
-            success: 'TS morte superato: 1 successo',
-            failure: 'TS morte fallito: 1 fallimento'
+  const deathSaveManagerButton = container.querySelector('[data-manage-death-saves]');
+  if (deathSaveManagerButton && activeCharacter && canEditCharacter) {
+    deathSaveManagerButton.addEventListener('click', async () => {
+      const initialDeathSaves = activeCharacter.data?.death_saves || {};
+      const content = document.createElement('div');
+      content.innerHTML = buildDeathSaveManagerContent(initialDeathSaves);
+      const values = {
+        successes: Math.max(0, Math.min(3, Number(initialDeathSaves.successes) || 0)),
+        failures: Math.max(0, Math.min(3, Number(initialDeathSaves.failures) || 0))
+      };
+      const syncManager = () => {
+        ['successes', 'failures'].forEach((group) => {
+          const input = content.querySelector(`[name="death_save_${group}"]`);
+          const output = content.querySelector(`[data-death-save-output="${group}"]`);
+          if (input) input.value = String(values[group]);
+          if (output) output.textContent = `${values[group]}/3`;
+          content.querySelectorAll(`[data-modal-death-save="${group}"]`).forEach((dot) => {
+            dot.classList.toggle('is-filled', Number(dot.dataset.deathSaveIndex) <= values[group]);
+          });
+        });
+        const rollButton = content.querySelector('[data-modal-roll-death-save]');
+        if (rollButton) rollButton.disabled = values.successes >= 3 || values.failures >= 3;
+      };
+      const formData = await openFormModal({
+        title: 'Gestisci TS contro morte',
+        content,
+        submitLabel: 'Salva',
+        cancelLabel: 'Annulla',
+        cardClass: 'modal-card--death-saves',
+        onOpen: () => {
+          const dotHandlers = [];
+          content.querySelectorAll('[data-modal-death-save]').forEach((dot) => {
+            const handler = () => {
+              const group = dot.dataset.modalDeathSave;
+              const index = Number(dot.dataset.deathSaveIndex);
+              values[group] = values[group] === index ? index - 1 : index;
+              syncManager();
+            };
+            dot.addEventListener('click', handler);
+            dotHandlers.push([dot, handler]);
+          });
+          const resetButton = content.querySelector('[data-reset-death-saves]');
+          const resetHandler = () => {
+            values.successes = 0;
+            values.failures = 0;
+            syncManager();
           };
-          await saveCharacterData(refreshedCharacter, {
-            ...data,
-            death_saves: {
-              successes: result.successes,
-              failures: result.failures
+          resetButton?.addEventListener('click', resetHandler);
+          const rollButton = content.querySelector('[data-modal-roll-death-save]');
+          const rollHandler = () => {
+            if (values.successes >= 3 || values.failures >= 3) {
+              createToast('Azzera i TS morte prima di effettuare un nuovo tiro', 'error');
+              return;
             }
-          }, messages[result.outcome], () => renderHome(container));
+            openDiceOverlay({
+              title: 'Tiro salvezza su morte',
+              mode: 'death-save',
+              keepOpen: true,
+              modifier: 0,
+              rollType: 'TS',
+              characterId: activeCharacter.id,
+              historyLabel: 'TS morte',
+              onRollComplete: ({ value }) => {
+                const result = applyDeathSaveRoll(values, value);
+                if (!result) return;
+                values.successes = result.successes;
+                values.failures = result.failures;
+                syncManager();
+                const messages = {
+                  'critical-success': '20 naturale: 2 successi',
+                  'critical-failure': '1 naturale: 2 fallimenti',
+                  success: 'TS morte superato: 1 successo',
+                  failure: 'TS morte fallito: 1 fallimento'
+                };
+                createToast(messages[result.outcome], result.outcome.includes('failure') ? 'error' : 'success');
+              }
+            });
+          };
+          rollButton?.addEventListener('click', rollHandler);
+          syncManager();
+          return () => {
+            dotHandlers.forEach(([dot, handler]) => dot.removeEventListener('click', handler));
+            resetButton?.removeEventListener('click', resetHandler);
+            rollButton?.removeEventListener('click', rollHandler);
+          };
         }
       });
-    });
-  }
-
-  container.querySelectorAll('[data-death-save]')
-    .forEach((button) => button.addEventListener('click', async () => {
-      if (!activeCharacter || !canEditCharacter) return;
-      const { deathSave: group, deathSaveIndex } = button.dataset;
-      const index = Number(deathSaveIndex);
-      if (!group || !index) return;
-      const data = activeCharacter.data || {};
-      const deathSaves = data.death_saves || {};
-      const current = Math.max(0, Math.min(3, Number(deathSaves[group]) || 0));
-      const nextValue = index === current ? current - 1 : index;
+      if (!formData) return;
       const nextDeathSaves = {
-        successes: Math.max(0, Math.min(3, group === 'successes' ? nextValue : Number(deathSaves.successes) || 0)),
-        failures: Math.max(0, Math.min(3, group === 'failures' ? nextValue : Number(deathSaves.failures) || 0))
+        successes: Math.max(0, Math.min(3, Number(formData.get('death_save_successes')) || 0)),
+        failures: Math.max(0, Math.min(3, Number(formData.get('death_save_failures')) || 0))
       };
       await saveCharacterData(activeCharacter, {
-        ...data,
+        ...(activeCharacter.data || {}),
         death_saves: nextDeathSaves
       }, 'Tiri salvezza contro morte aggiornati', () => renderHome(container));
-    }));
+    });
+  }
 
   container.querySelectorAll('[data-weakness-level]')
     .forEach((button) => button.addEventListener('click', async () => {
@@ -1918,7 +1947,15 @@ export async function renderHome(container) {
       }, 'Punti indebolimento aggiornati', () => renderHome(container));
     }));
 
-  const avatar = container.querySelector('.character-avatar');
+  const avatarUpload = container.querySelector('[data-upload-avatar]');
+  if (avatarUpload) {
+    avatarUpload.addEventListener('click', (event) => {
+      event.preventDefault();
+      openAvatarModal(activeCharacter, () => renderHome(container));
+    });
+  }
+
+  const avatar = avatarUpload ? null : container.querySelector('.character-avatar');
   if (avatar) {
     avatar.setAttribute('draggable', 'false');
     avatar.addEventListener('click', (event) => {
@@ -2311,12 +2348,16 @@ async function handleLootAction(container) {
     catalogHint: 'Seleziona uno o più oggetti completi dal compendio.'
   });
   if (source === 'catalog') {
-    const selected = await openSharedItemPicker({ title: 'Loot dall’archivio centralizzato' });
+    const selected = await openSharedItemPicker({
+      title: 'Loot dall’archivio centralizzato',
+      allowQuantities: true
+    });
     if (!selected.length) return;
     setGlobalLoading(true);
     try {
       await addSharedItemsToInventory(selected, activeCharacter);
-      createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} al loot`, 'success');
+      const totalQuantity = selected.reduce((total, item) => total + Math.max(1, Number(item.selected_quantity) || 1), 0);
+      createToast(`${totalQuantity} ${totalQuantity === 1 ? 'unità aggiunta' : 'unità aggiunte'} al loot`, 'success');
       if (container) await renderHome(container);
     } catch (error) {
       createToast('Errore durante l’aggiunta del loot dall’archivio', 'error');
@@ -2388,7 +2429,7 @@ async function handleMoneyAction(direction, container) {
     title,
     submitLabel,
     cardClass: 'modal-card--quick-action',
-    content: moneyBundleFields({ direction, wallet }),
+    content: moneyBundleFields({ direction, wallet, showDate: false }),
     onOpen: ({ fieldsEl }) => {
       fieldsEl?.querySelectorAll('.money-bundle__coin input[type="number"]').forEach((input) => {
         attachModalValueStepper(input, { min: 0, max: input.max === '' ? null : Number(input.max) });

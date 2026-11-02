@@ -5,6 +5,9 @@ import { openFormModal } from '../../../ui/components.js';
 export function presentSheetDetail(dialog, options) {
   if (!dialog?.open) return openFormModal(options);
   return new Promise((resolve) => {
+    const detailClasses = (Array.isArray(options.cardClass) ? options.cardClass : [options.cardClass])
+      .flatMap((value) => String(value || '').split(/\s+/))
+      .filter(Boolean);
     const body = dialog.querySelector('.modal-body');
     const header = dialog.querySelector('.modal-header');
     const heading = header.querySelector('.modal-title');
@@ -17,8 +20,8 @@ export function presentSheetDetail(dialog, options) {
         .filter((node) => node !== catalog && !node.classList.contains('sheet-inline-detail'))
         .map((node) => [node, node.hidden]);
     const rootPreparation = catalog.classList.contains('sheet-preparation');
+    const isPreparationView = rootPreparation || detailClasses.includes('modal-card--prepared-spells');
     const wasPreparing = dialog.classList.contains('sheet-detail--preparing');
-    dialog.classList.toggle('sheet-detail--preparing', rootPreparation);
     const previousFooter = dialog.querySelector(':scope > .sheet-view-footer:not([hidden])');
     if (previousFooter) previousFooter.hidden = true;
     const previousResourceId = dialog.dataset.resourceId;
@@ -92,6 +95,7 @@ export function presentSheetDetail(dialog, options) {
     header.querySelector('.sheet-modal-navigation').append(managementMenu);
     body.append(view);
     dialog.insertBefore(footer, previousFooter || null);
+    dialog.classList.toggle('sheet-detail--preparing', isPreparationView);
     body.scrollTop = 0;
     let cleanupHook;
     let settled = false;
@@ -134,7 +138,7 @@ export function presentSheetDetail(dialog, options) {
       if (event.submitter?.name) result.set(event.submitter.name, event.submitter.value);
       finish(result, true);
     });
-    if (options.cardClass) view.classList.add(...(Array.isArray(options.cardClass) ? options.cardClass : [options.cardClass]).flatMap(value => String(value).split(/\s+/)).filter(Boolean));
+    if (detailClasses.length) view.classList.add(...detailClasses);
     cleanupHook = options.onOpen?.({ modal: dialog, formEl: view, fieldsEl: fields });
     if (footer.querySelector('.character-edit-stepper-actions')) back.textContent = 'Annulla';
     footer.querySelectorAll('button[type="submit"]').forEach(control => control.setAttribute('form', view.id));

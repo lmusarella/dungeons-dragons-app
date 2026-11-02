@@ -304,8 +304,9 @@ export function moneyFields({ amount = 0, coin = 'gp', reason = '', occurredOn, 
   `;
 }
 
-export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet = {}, reason = '', occurredOn } = {}) {
-  const resolvedDate = occurredOn || new Date().toISOString().split('T')[0];
+export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet = {}, reason = '', occurredOn, showDate = true } = {}) {
+  const now = new Date();
+  const resolvedDate = occurredOn || new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
   const baseUrl = import.meta.env.BASE_URL;
   const entries = [
     ['pp', 'Platino', `${baseUrl}icons/moneta_platino.png`],
@@ -328,7 +329,9 @@ export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet 
       </div>
       <div class="money-bundle__details">
         <label class="field"><span>Motivo</span><input name="reason" placeholder="Es. ricompensa, locanda, acquisto" value="${escapeHtml(reason)}" /></label>
-        <label class="field"><span>Data</span><input name="occurred_on" type="date" value="${escapeHtml(resolvedDate)}" /></label>
+        ${showDate
+    ? `<label class="field"><span>Data</span><input name="occurred_on" type="date" value="${escapeHtml(resolvedDate)}" /></label>`
+    : `<input name="occurred_on" type="hidden" value="${escapeHtml(resolvedDate)}" />`}
       </div>
     </div>
   `;

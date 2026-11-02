@@ -35,6 +35,16 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('subject?.data?.avatar_url || subject?.stat_block?.image_url');
     expect(source).toContain('alt="Foto di ${subjectName}"');
   });
+  it('uploads and optimizes a custom character image instead of asking for a URL', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const drawer = readFileSync('src/features/character/home/characterDrawer.js', 'utf8');
+    expect(source).toContain('async function prepareAvatarImage(file)');
+    expect(source).toContain("canvas.toDataURL('image/webp', 0.82)");
+    expect(source).toContain('name="avatar_image"');
+    expect(source).toContain('avatar_url: selectedAvatar');
+    expect(drawer).not.toContain("label: 'Foto (URL)'");
+    expect(drawer).toContain('avatar_url: characterData.avatar_url ?? null');
+  });
   it('uses a compact pool consumption modal without repeating the resource detail', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const compactModal = source.slice(
@@ -109,6 +119,9 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__catalog\s*\{[^}]*overflow-y:\s*auto;/s);
     expect(styles).toMatch(/:is\(\.sheet-detail,\.modal-card--prepared-spells\) \.prepared-spells-modal\s*\{[^}]*height:\s*100%;/s);
     expect(styles).toContain('.sheet-detail--preparing > .modal-body > .sheet-inline-detail.modal-card--prepared-spells');
+    expect(preparedModal).toContain('const preparationView = openFormModal({');
+    expect(preparedModal).toContain('void preparationView.then(async (formData) => {');
+    expect(preparedModal).toContain('await new Promise((resolve) => nextPaint(() => nextPaint(resolve)))');
   });
 
   it('renders a structured parent overview and linked ability cards', () => {
@@ -254,7 +267,7 @@ describe('src/features/character/home/modals.js', () => {
 
     expect(preparedModal).not.toContain('prepared-spells-modal__intro');
     expect(preparedModal).toContain('prepared-spells-modal__workspace');
-    expect(preparedModal).toContain('const selectable = spells.filter((entry) => Number(entry.level) > 0)');
+    expect(preparedModal).toContain("const selectable = spells.filter((entry) => Number(entry.level) > 0 && entry.prep_state !== 'always')");
     expect(preparedModal).toContain('dedupeCharacterSpells([...archiveSpells, ...customPreparedSpells])');
     expect(preparedModal).not.toContain('data-prepared-search');
     expect(preparedModal).not.toContain('data-prepared-level="all"');
@@ -266,11 +279,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).not.toContain('data-always-count');
     expect(preparedModal).not.toContain('data-removed-count');
     expect(preparedModal).not.toContain('data-prepared-cast-time');
-    expect(preparedModal).toContain('data-prepared-status-filter="prepared"');
-    expect(preparedModal).toContain('data-prepared-status-filter="known"');
-    expect(preparedModal).toContain('data-prepared-status-filter="always"');
-    expect(preparedModal).toContain("activeStatus === 'known' && prepareableIds.has(spellId) && !preparedIds.has(spellId)");
-    expect(preparedModal).toContain("activeStatus === selectedStatus ? '' : selectedStatus");
+    expect(preparedModal).not.toContain('data-prepared-status-filter');
+    expect(preparedModal).not.toContain('activeStatus');
     expect(preparedModal).not.toContain('prepared-spells-modal__inline-info');
     expect(preparedModal).not.toContain('prepared-spells-modal__quick-facts');
     expect(preparedModal).not.toContain('prepared-spells-modal__facts');

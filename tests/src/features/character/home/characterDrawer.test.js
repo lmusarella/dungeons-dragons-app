@@ -59,7 +59,7 @@ describe('src/features/character/home/characterDrawer.js', () => {
     expect(styles).toContain('grid-template-columns: minmax(0,1fr) auto minmax(0,1fr)');
   });
 
-  it('groups related character data into five compact steps', () => {
+  it('groups related character data and restores the roll-adjustment step after defenses', () => {
     const source = readFileSync('src/features/character/home/characterDrawer.js', 'utf8');
     const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
     expect(source).toContain("title: 'Identità & Background'");
@@ -67,13 +67,15 @@ describe('src/features/character/home/characterDrawer.js', () => {
     expect(source).toContain("title: 'Abilità & Competenze'");
     expect(source).toContain("title: 'Combattimento e magia'");
     expect(source).toContain("title: 'Resistenze & Immunità'");
-    expect(source).not.toContain("title: 'Vantaggi & Svantaggi'");
+    expect(source).toContain("title: 'Vantaggi & Svantaggi'");
+    expect(source.indexOf("title: 'Vantaggi & Svantaggi'")).toBeGreaterThan(source.indexOf("title: 'Resistenze & Immunità'"));
     expect(source).not.toContain("title: 'Background'");
     expect(source).not.toContain("title: 'Vita e CA'");
     expect(source).toContain("layoutClass: 'character-edit-group--core-stats'");
     expect(source).toContain("layoutClass: 'character-edit-group--skills-proficiencies'");
     expect(source).toContain("layoutClass: 'character-edit-group--combat-magic'");
-    expect(source).toContain('const nextRollAdjustments = characterData.roll_adjustments');
+    expect(source).toContain('const nextRollAdjustments = { attack_rolls: {}, saving_throws: {}, skills: {} }');
+    expect(source).toContain("mode === 'advantage' || mode === 'disadvantage'");
     expect(styles).toContain('.character-vitals-grid');
     expect(styles).toContain('grid-template-columns: repeat(6,minmax(0,1fr))');
     expect(source).toContain('class="defense-type-grid"');

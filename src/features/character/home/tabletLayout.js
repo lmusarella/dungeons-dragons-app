@@ -1,15 +1,58 @@
 import { createInventoryShortcut } from './inventoryShortcut.js';
 import { createCharacterShortcuts } from './shortcutViews.js';
 import { polishEquipmentCards } from './itemDetail.js';
-import { installSkillRankFilters, mergeSkillRolls } from './skillGroups.js';
+import { installSavingThrowFilters, installSkillRankFilters, mergeSkillRolls } from './skillGroups.js';
 import { installResourceFilters } from './resourceFilters.js';
 import { buildPlayCards } from './playCards.js';
 import { optimizeCatalog, polishCatalogCards } from './catalogLayout.js';
 import { presentSheetDetail } from './sheetDetail.js';
 import './tabletLayout.css?v=roll-grid';
 import './fantasyTheme.css?v=power-footer7';
+import './characterSheetPolish.css?v=sheet-polish10';
 
 const retainedDialogs = new WeakMap();
+
+function installTabletPullToRefresh(scroller) {
+  if (!scroller) return;
+  const indicator = document.createElement('div');
+  indicator.className = 'sheet-pull-refresh';
+  indicator.setAttribute('aria-hidden', 'true');
+  indicator.innerHTML = '<span>↻</span><strong>Trascina per aggiornare</strong>';
+  scroller.prepend(indicator);
+  let startY = null;
+  let pullDistance = 0;
+  const isAtPageStart = () => scroller.scrollTop <= 0
+    && window.scrollY <= 0
+    && document.documentElement.scrollTop <= 0;
+  const reset = () => {
+    startY = null;
+    pullDistance = 0;
+    scroller.style.removeProperty('--sheet-pull-distance');
+    indicator.classList.remove('is-visible', 'is-ready');
+  };
+  scroller.addEventListener('touchstart', (event) => {
+    const diceOverlay = document.querySelector('#dice-overlay:not([hidden])');
+    if (event.touches.length !== 1 || !isAtPageStart() || diceOverlay || document.querySelector('dialog[open]')) {
+      reset();
+      return;
+    }
+    startY = event.touches[0].clientY;
+  }, { passive: true });
+  scroller.addEventListener('touchmove', (event) => {
+    if (startY === null || event.touches.length !== 1 || !isAtPageStart()) return;
+    pullDistance = Math.max(0, event.touches[0].clientY - startY);
+    const visualDistance = Math.min(72, pullDistance * .45);
+    scroller.style.setProperty('--sheet-pull-distance', `${visualDistance}px`);
+    indicator.classList.toggle('is-visible', pullDistance > 12);
+    indicator.classList.toggle('is-ready', pullDistance >= 96);
+  }, { passive: true });
+  scroller.addEventListener('touchend', () => {
+    const shouldRefresh = pullDistance >= 96 && isAtPageStart();
+    reset();
+    if (shouldRefresh) window.location.reload();
+  }, { passive: true });
+  scroller.addEventListener('touchcancel', reset, { passive: true });
+}
 
 export function retainOpenSheetPanel(container) {
   if (!document.body.moveBefore) return;
@@ -29,7 +72,7 @@ export function mountTabletLayout(container, configuration = {}) {
   shortcuts.setAttribute('aria-label', 'Azioni della scheda');
   const panels = [
     ['attacks', '⚔', 'Attacchi', 'Armi e danni'],
-    ['spells', '✦', 'Lancia incantesimi', 'Magie e slot'],
+    ['spells', '✦', 'Lista incantesimi', 'Incantesimi e preparazione'],
     ['skills', '◇', 'Tiri Abilità', 'Prove e modificatori'],
     ['saves', '◈', 'Tiri salvezza', 'Resisti agli effetti'],
     ['resources', '◉', 'Abilità & Poteri', 'Poteri e utilizzi'],
@@ -41,8 +84,9 @@ export function mountTabletLayout(container, configuration = {}) {
     button.type = 'button';
     button.className = 'sheet-shortcut';
     button.innerHTML = `<span aria-hidden="true">${icon}</span><strong>${title}</strong><small>${hint}</small>`;
+    const panelIdentifier = node.matches('.home-feature-panel--spells') ? 'Lancia incantesimi' : title;
     const retained = retainedDialogs.get(container);
-    const dialog = retained?.dataset.sheetPanel === title ? retained : document.createElement('dialog');
+    const dialog = retained?.dataset.sheetPanel === panelIdentifier ? retained : document.createElement('dialog');
     const characterName = String(configuration.characterName || '').trim();
     const dialogTitle = characterName ? `${title} di ${characterName}` : title;
     const dice = dialog.querySelector('#dice-overlay');
@@ -52,7 +96,7 @@ export function mountTabletLayout(container, configuration = {}) {
     dialog.replaceChildren();
     dialog.className = 'modal-card modal-card--wide sheet-detail';
     dialog.setAttribute('aria-label', dialogTitle);
-    dialog.dataset.sheetPanel = title;
+    dialog.dataset.sheetPanel = panelIdentifier;
     dialog.presentForm = options => presentSheetDetail(dialog, options);
     if (node.matches('.home-feature-panel--skills, .home-feature-panel--saves, .home-feature-panel--special-skills')) {
       dialog.classList.add('sheet-detail--rolls');
@@ -117,7 +161,8 @@ export function mountTabletLayout(container, configuration = {}) {
     }));
     polishEquipmentCards(node);
     installResourceFilters(dialog);
-    if (title === 'Tiri Abilità') installSkillRankFilters(node);
+    if (title === 'Tiri Abilità') installSkillRankFilters(node, configuration.proficiencyBonus, configuration.abilityModifiers);
+    if (title === 'Tiri salvezza') installSavingThrowFilters(node, configuration.proficiencyBonus, configuration.abilityModifiers);
     if (dialog.parentElement && layout.moveBefore) layout.moveBefore(dialog, null);
     else layout.append(dialog);
     if (dice) dialog.append(dice);
@@ -130,31 +175,20 @@ export function mountTabletLayout(container, configuration = {}) {
   }
   panels.forEach(([key, icon, title, hint]) => addPanel(layout.querySelector(`.home-feature-panel--${key}`), icon, title, hint));
   layout.querySelector('[data-open-spell-catalog]')?.addEventListener('click', () => {
-    [...layout.querySelectorAll('.sheet-shortcut')].find(button => button.querySelector('strong')?.textContent === 'Lancia incantesimi')?.click();
+    [...layout.querySelectorAll('.sheet-shortcut')].find(button => button.querySelector('strong')?.textContent === 'Lista incantesimi')?.click();
   });
   const spellPanel = layout.querySelector('.home-feature-panel--spells');
-  const prepareControl = spellPanel?.closest('dialog')?.querySelector('[data-open-prepared-spells]');
+  const spellDialog = spellPanel?.closest('dialog');
+  const addSpellControl = spellDialog?.querySelector('[data-add-spell]');
+  const prepareControl = spellDialog?.querySelector('[data-open-prepared-spells]');
+  if (addSpellControl) {
+    addSpellControl.classList.add('sheet-spell-action', 'sheet-spell-action--add');
+    addSpellControl.setAttribute('aria-label', 'Aggiungi incantesimi');
+    addSpellControl.innerHTML = '<span aria-hidden="true">+</span><span>Aggiungi incantesimi</span>';
+  }
   if (prepareControl) {
-    const preparation = document.createElement('section');
-    preparation.className = 'sheet-preparation';
-    const addSpell = spellPanel.closest('dialog').querySelector('[data-add-spell]');
-    if (addSpell) {
-      const launchActions = spellPanel.closest('dialog').querySelector('.sheet-modal-actions');
-      const launchAdd = document.createElement('button');
-      launchAdd.type = 'button';
-      launchAdd.className = 'icon-button icon-button--add icon-button--section-add';
-      launchAdd.setAttribute('aria-label', 'Aggiungi incantesimo');
-      launchAdd.textContent = '+';
-      launchAdd.addEventListener('click', () => addSpell.click());
-      launchActions?.append(launchAdd);
-      const header = document.createElement('header'); header.className = 'card-header';
-      const actions = document.createElement('div'); actions.className = 'actions'; actions.append(addSpell);
-      header.append(actions); preparation.append(header);
-    }
-    preparation.append(prepareControl);
-    prepareControl.hidden = true;
-    const prepareShortcut = addPanel(preparation, '☷', 'Prepara incantesimi', 'Organizza il grimorio');
-    prepareShortcut.addEventListener('click', () => prepareControl.click());
+    prepareControl.classList.add('sheet-spell-action', 'sheet-spell-action--prepare');
+    prepareControl.innerHTML = '<span aria-hidden="true">📖</span><span>Prepara incantesimi</span>';
   }
   addPanel(layout.querySelector('.home-column--center > :nth-child(2)'), '♙', 'Equipaggiamento', 'Oggetti e dotazioni');
   createInventoryShortcut(addPanel, configuration);
@@ -168,24 +202,26 @@ export function mountTabletLayout(container, configuration = {}) {
   leftRail.setAttribute('aria-label', 'Scorciatoie della scheda');
   [...shortcuts.children].forEach((button) => leftRail.append(button));
   layout.prepend(leftRail);
+  installTabletPullToRefresh(layout);
   const toolbar = document.createElement('footer');
   toolbar.className = 'sheet-quickbar sheet-action-footer';
   toolbar.dataset.sheetActionFooter = '';
   toolbar.setAttribute('aria-label', 'Azioni rapide di gioco');
   const actions = [
-    ['−', 'Danno', 'hpAction', 'damage'],
-    ['+', 'Cura', 'hpAction', 'heal'],
-    ['◆', 'Dadi', 'openDice', 'roller'],
-    ['◐', 'Riposo breve', 'rest', 'short_rest'],
-    ['☾', 'Riposo lungo', 'rest', 'long_rest'],
-    ['↑', 'Paga', 'moneyAction', 'pay'],
-    ['↓', 'Ricevi', 'moneyAction', 'receive'],
-    ['◇', 'Loot rapido', 'addLoot', ''],
+    ['−', 'Danno', 'hpAction', 'damage', 'damage'],
+    ['+', 'Cura', 'hpAction', 'heal', 'heal'],
+    ['◆', 'Dadi', 'openDice', 'roller', 'dice'],
+    ['◐', 'Riposo breve', 'rest', 'short_rest', 'short-rest'],
+    ['☾', 'Riposo lungo', 'rest', 'long_rest', 'long-rest'],
+    ['↑', 'Paga', 'moneyAction', 'pay', 'pay'],
+    ['↓', 'Ricevi', 'moneyAction', 'receive', 'receive'],
+    ['◇', 'Loot rapido', 'addLoot', '', 'loot'],
   ];
-  actions.forEach(([icon, label, dataKey, dataValue]) => {
+  actions.forEach(([icon, label, dataKey, dataValue, tone]) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.innerHTML = `<span aria-hidden="true">${icon}</span> ${label}`;
+    button.className = `sheet-action-footer__button sheet-action-footer__button--${tone}`;
+    button.innerHTML = `<span class="sheet-action-footer__icon" aria-hidden="true">${icon}</span><strong>${label}</strong>`;
     button.dataset.gameAction = '';
     button.dataset[dataKey] = dataValue;
     toolbar.append(button);
@@ -248,6 +284,5 @@ export function restoreSheetPanel(container, context) {
     .find(entry => entry.dataset.resourceCard === context.resourceId);
   // Deleted resources return to the refreshed list.
   resource?.click();
-  if (context.panel === 'Prepara incantesimi') dialog.querySelector('[data-open-prepared-spells]')?.click();
   dialog.querySelector('.modal-body').scrollTop = context.scroll;
 }

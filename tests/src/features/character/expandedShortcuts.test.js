@@ -32,6 +32,17 @@ describe('expanded shortcut reference',()=>{
     expect(buildAttackSection(character,[item])).toContain('data-attack-item-image');
     expect(buildAttackSection(character,[{...item,image_url:'javascript:alert(1)'}])).not.toContain('data-attack-item-image');
   });
+  it('keeps the attack count clean and renames the spell shortcut',()=>{
+    const character={data:{extra_attacks:2,abilities:{str:16}}};
+    const html=buildAttackSection(character,[]);
+    const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');
+    const sections=readFileSync('src/features/character/home/sections.js','utf8');
+    expect(html).toContain('<strong>3</strong>');
+    expect(html).not.toContain('Attacco Extra');
+    expect(layout).toContain("['spells', '✦', 'Lista incantesimi'");
+    expect(layout).not.toContain("'Lancia incantesimi', 'Magie e slot'");
+    expect(sections).not.toContain('buildCompactSpellSlots(character)');
+  });
   it('keeps parent ability cards option-first and exposes the eight-action footer',()=>{
     const cards=readFileSync('src/features/character/home/playCards.js','utf8');
     const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');
@@ -102,8 +113,9 @@ describe('expanded shortcut reference',()=>{
     const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
     expect(layout).not.toContain("'Competenze', 'Lingue e competenze extra'");
     expect(layout).not.toContain('proficiencyShortcut');
-    expect(sections).toContain('character-proficiency-section');
-    expect(styles).toContain('.character-proficiency-section .proficiency-tab-bar');
+    expect(sections).not.toContain('character-proficiency-section');
+    expect(sections).toContain('data-show-proficiencies');
+    expect(styles).toContain('.modal-card--proficiencies .proficiency-tab-bar');
     expect(styles).toContain(".home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right)");
     expect(styles).toContain('background: rgba(251,244,230,.96)');
     expect(styles).toContain('border-radius: 20px');
@@ -118,7 +130,27 @@ describe('expanded shortcut reference',()=>{
     expect(views).toContain("moneyPage.append(wallet, transactions)");
     expect(views).not.toContain("{ key: 'transactions', label: 'Transazioni'");
     expect(styles).toContain('.shortcut-context-loader__spinner');
+    expect(styles).toContain('grid-auto-flow: row; place-items: center; align-content: center; justify-content: center');
+    expect(styles).toContain('.shortcut-context-loader > span:last-child { display: grid; justify-items: center;');
     expect(styles).toContain('.inventory-money-workspace');
+    expect(views).toContain("loader.classList.add('is-leaving')");
+    expect(styles).toContain('.shortcut-context-loader.is-leaving { opacity: 0; pointer-events: none; }');
+  });
+  it('keeps preparation scrollable and restores tablet recovery gestures',()=>{
+    const detail=readFileSync('src/features/character/home/sheetDetail.js','utf8');
+    const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');
+    const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
+    const diceStyles=readFileSync('src/features/dice-roller/styles.css','utf8');
+    expect(detail).toContain("detailClasses.includes('modal-card--prepared-spells')");
+    expect(detail).toContain("dialog.classList.toggle('sheet-detail--preparing', isPreparationView)");
+    expect(styles).toContain(".sheet-detail--preparing .sheet-modal-actions > [data-add-spell] { display: none !important; }");
+    expect(styles).toContain('.sheet-detail--preparing .prepared-spells-modal__catalog');
+    expect(styles).toContain('touch-action: pan-y; -webkit-overflow-scrolling: touch;');
+    expect(layout).toContain('function installTabletPullToRefresh(scroller)');
+    expect(layout).toContain('pullDistance >= 96');
+    expect(layout).toContain('window.location.reload()');
+    expect(layout).toContain("document.querySelector('#dice-overlay:not([hidden])')");
+    expect(diceStyles).toMatch(/#dice-overlay #diceRoller,[\s\S]*#dice-overlay #canvas \{[\s\S]*touch-action: none;/);
   });
   it('keeps spell slot charges circular and easy to scan',()=>{
     const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
@@ -140,10 +172,24 @@ describe('expanded shortcut reference',()=>{
     expect(groups).toContain("activeAbility = activeAbility === value ? '' : value");
     expect(groups).toContain("buildDivisionHeader('Tiri speciali'");
     expect(groups).not.toContain("button.setAttribute('role','tab')");
-    expect(layout).toContain("if (title === 'Tiri Abilità') installSkillRankFilters(node)");
+    expect(layout).toContain("if (title === 'Tiri Abilità') installSkillRankFilters(node, configuration.proficiencyBonus, configuration.abilityModifiers)");
     expect(layout).not.toContain('Scegli una prova per aprire il tiro. Il bonus è già calcolato.');
     expect(styles).toContain('.skill-filter-toolbar');
     expect(styles).toContain('.skill-card.is-filtered-out');
     expect(styles).toContain('flex-direction: column; align-items: center; justify-content: center');
+  });
+  it('orders the roll filters and keeps rank cards free of numeric counters',()=>{
+    const groups=readFileSync('src/features/character/home/skillGroups.js','utf8');
+    const proficiency=groups.indexOf("filters.append(createProficiencyCard(proficiencyBonus))");
+    const ability=groups.indexOf("filters.append(buildFilterGroup('Caratteristica', 'ability', ABILITY_FILTER_OPTIONS))");
+    const general=groups.indexOf('filters.append(generalModifier)', ability);
+    const rank=groups.indexOf("filters.append(buildFilterGroup('Grado', 'rank', rankOptions))");
+    expect(proficiency).toBeGreaterThan(-1);
+    expect(proficiency).toBeLessThan(ability);
+    expect(ability).toBeLessThan(general);
+    expect(general).toBeLessThan(rank);
+    expect(groups).toContain("button.innerHTML = kind === 'ability'");
+    expect(groups).not.toContain("kind === 'ability' ? (abilityModifiers[value] ?? '—') : count");
+    expect(groups).toContain('card.innerHTML = `<small>Bonus competenza</small><strong>${proficiencyBonus}</strong>`');
   });
 });

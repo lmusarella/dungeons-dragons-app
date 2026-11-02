@@ -1,5 +1,4 @@
 import { sanitizeImageUrl } from '../../../lib/html.js';
-import { buildCompactSpellSlots } from './slotOverview.js';
 import {
   abilityShortLabel,
   conditionList,
@@ -123,6 +122,15 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const hasInspiration = Boolean(data.inspiration);
   const hasConcentration = Boolean(data.concentration_active);
   const characterInitiative = data.initiative ?? getAbilityModifier(abilities.dex);
+  const configuredSpecialSkills = Array.isArray(data.special_skill_rolls) ? data.special_skill_rolls : [];
+  const configuredInitiativeIndex = configuredSpecialSkills.findIndex((skill) => {
+    const id = String(skill?.id ?? '').toLowerCase();
+    const name = String(skill?.name ?? '').trim().toLowerCase();
+    return id === 'initiative' || id === 'default_initiative' || name === 'iniziativa';
+  });
+  const initiativeRollKey = configuredInitiativeIndex >= 0
+    ? String(configuredSpecialSkills[configuredInitiativeIndex]?.id ?? configuredInitiativeIndex)
+    : 'default_initiative';
   const wildShapeInitiative = activeWildShape
     ? (normalizeNumber(activeWildShape.statBlock.initiative) ?? getAbilityModifier(activeWildShape.statBlock.abilities.dex))
     : null;
@@ -181,25 +189,58 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
     { key: 'wis', label: abilityShortLabel.wis, value: abilities.wis },
     { key: 'cha', label: abilityShortLabel.cha, value: abilities.cha }
   ];
+  const damageDefenses = data.damage_defenses || {};
+  const resistanceKeys = Array.isArray(damageDefenses.resistances) ? damageDefenses.resistances : [];
+  const immunityKeys = Array.isArray(damageDefenses.immunities) ? damageDefenses.immunities : [];
+  const formatDefenseList = (keys) => keys
+    .map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key)
+    .filter(Boolean)
+    .join(', ');
+  const resistanceLabels = resistanceKeys.map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key).filter(Boolean);
+  const immunityLabels = immunityKeys.map((key) => damageTypeList.find((damageType) => damageType.key === key)?.label || key).filter(Boolean);
+  const defenseTitle = [
+    resistanceKeys.length ? `Resistenze: ${formatDefenseList(resistanceKeys)}` : '',
+    immunityKeys.length ? `Immunità: ${formatDefenseList(immunityKeys)}` : ''
+  ].filter(Boolean).join(' · ') || 'Nessuna resistenza o immunità';
+  const avatarUrl = sanitizeImageUrl(data.avatar_url);
+  const hasAvatarSlot = Boolean(avatarUrl || canEditCharacter);
+  const avatarContent = avatarUrl
+    ? `<img class="character-avatar" src="${avatarUrl}" alt="Ritratto di ${escapeHtml(character.name)}" />`
+    : '<span class="character-avatar-placeholder"><strong>+</strong><small>Carica ritratto</small></span>';
+  const avatarMarkup = hasAvatarSlot
+    ? (canEditCharacter
+      ? `<button class="character-avatar-frame character-avatar-frame--editable" type="button" data-upload-avatar aria-label="Carica o modifica il ritratto di ${escapeHtml(character.name)}">${avatarContent}<span class="character-avatar-edit-hint" aria-hidden="true">Cambia immagine</span></button>`
+      : `<div class="character-avatar-frame">${avatarContent}</div>`)
+    : '';
   return `
     <div class="character-overview character-manual">
-      <div class="character-summary ${data.avatar_url ? '' : 'character-summary--no-avatar'}">
-        ${data.avatar_url ? `<div class="character-avatar-frame"><img class="character-avatar" src="${data.avatar_url}" alt="Ritratto di ${character.name}" /></div>` : ''}
+      <div class="character-summary ${hasAvatarSlot ? '' : 'character-summary--no-avatar'}">
+        ${avatarMarkup}
         <div class="character-profile-body">
           <div class="character-identity">
-            <span class="character-identity__kicker">${escapeHtml([data.class_name ?? data.class_archetype, data.archetype].filter(Boolean).join(' · ') || 'Avventuriero')}</span>
+            <div class="character-identity__toolbar">
+              <span class="character-identity__traits">
+                <span class="character-identity__kicker">${escapeHtml([data.class_name ?? data.class_archetype, data.archetype].filter(Boolean).join(' · ') || 'Avventuriero')}</span>
+                <span class="character-identity__kicker character-identity__kicker--race">${escapeHtml(data.race || 'Razza non specificata')}</span>
+                <span class="character-identity__kicker character-identity__kicker--background">${escapeHtml(data.background || 'Background non specificato')}</span>
+                <span class="character-identity__kicker character-identity__kicker--alignment">${escapeHtml(data.alignment || 'Allineamento non specificato')}</span>
+              </span>
+            </div>
             <div class="character-identity__heading">
               <h3 class="character-name">${character.name}</h3>
               <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
             </div>
-            <p class="character-lineage">${escapeHtml([data.race, data.background].filter(Boolean).join(' · ') || 'Origini non specificate')}</p>
-            <div class="character-meta">
-              <span class="meta-tag meta-tag--level"><small>Bonus Competenza</small><strong>${formatSigned(proficiencyBonus)}</strong></span>
-              <span class="meta-tag"><small>Allineamento</small><strong>${data.alignment ?? '-'}</strong></span>
-            </div>
           </div>
         </div>
         <div class="character-summary-actions" aria-label="Stato del personaggio">
+          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background title="${escapeHtml(data.background ?? 'Apri dettagli background')}">
+            <span class="profile-status-card__label">Storia Personaggio</span>
+            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="profile-status-card profile-status-card--proficiencies background-button" type="button" data-show-proficiencies title="Apri competenze, maestrie e stili di combattimento">
+            <span class="profile-status-card__label">Competenze Personaggio</span>
+            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
+          </button>
           <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
             <span class="profile-status-card__text">
               <span class="profile-status-card__label">Ispirazione</span>
@@ -232,15 +273,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
             </button>
           </div>
-          <button
-            class="profile-status-card profile-status-card--background background-button"
-            type="button"
-            data-show-background
-            title="${escapeHtml(data.background ?? 'Apri dettagli background')}"
-          >
-            <span class="profile-status-card__label">Storia Personaggio</span>
-            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
-          </button>
         </div>
       </div>
       <div class="stat-panel">     
@@ -253,10 +285,50 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span>${ability.label}${ability.wild ? ' <small>forma</small>' : ''}</span>
               <strong>${score ?? '-'}</strong>
               <span class="stat-card__modifier" aria-label="Modificatore ${ability.label}">${modifier}</span>
-              <span class="stat-card__roll" aria-hidden="true">d20</span>
             </button>
           `;
   }).join('')}
+        </div>
+      </div>
+      <div class="character-quick-stats" aria-label="Statistiche rapide del personaggio">
+        <div class="combat-stat combat-stat--proficiency" title="Bonus competenza" aria-label="Bonus competenza ${formatSigned(proficiencyBonus)}">
+          <span class="combat-stat__icon" aria-hidden="true">◆</span>
+          <span class="combat-stat__label">Bonus competenza</span>
+          <strong>${formatSigned(proficiencyBonus)}</strong>
+        </div>
+        <button class="combat-stat combat-stat--initiative combat-stat--interactive" type="button" data-special-skill-card="${escapeHtml(initiativeRollKey)}" title="Tira iniziativa" aria-label="Tira iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
+          <span class="combat-stat__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
+          </span>
+          <span class="combat-stat__label">Iniziativa</span>
+          <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
+          <span class="combat-stat__roll" aria-hidden="true">d20</span>
+        </button>
+        <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
+          <span class="combat-stat__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
+          </span>
+          <span class="combat-stat__label">Velocità</span>
+          <strong>${effectiveSpeed}<small>m</small></strong>
+        </div>
+        <div class="combat-stat combat-stat--sense combat-stat--perception" title="Percezione passiva" aria-label="Percezione passiva ${passivePerception ?? '-'}">
+          <span class="combat-stat__icon" aria-hidden="true">◉</span>
+          <span class="combat-stat__label">Percezione passiva</span>
+          <strong>${passivePerception ?? '-'}</strong>
+        </div>
+        <div class="combat-stat combat-stat--sense combat-stat--darkvision" title="Scurovisione" aria-label="Scurovisione ${darkvisionLabel}">
+          <span class="combat-stat__icon" aria-hidden="true">◐</span>
+          <span class="combat-stat__label">Scurovisione</span>
+          <strong>${hasDarkvision ? `${darkvisionRange ?? 18}<small>m</small>` : 'No'}</strong>
+        </div>
+        <div class="combat-stat combat-stat--defenses" title="${escapeHtml(defenseTitle)}" aria-label="${escapeHtml(defenseTitle)}">
+          <span class="combat-stat__icon" aria-hidden="true">◈</span>
+          <span class="combat-stat__label">Resistenze / immunità</span>
+          <span class="combat-stat__defense-chips">
+            ${resistanceLabels.map((label) => `<span class="combat-stat__defense-chip combat-stat__defense-chip--resistance"><small>R</small>${escapeHtml(label)}</span>`).join('')}
+            ${immunityLabels.map((label) => `<span class="combat-stat__defense-chip combat-stat__defense-chip--immunity"><small>I</small>${escapeHtml(label)}</span>`).join('')}
+            ${resistanceLabels.length || immunityLabels.length ? '' : '<span class="combat-stat__defense-chip">Nessuna</span>'}
+          </span>
         </div>
       </div>
       <section class="hp-panel" aria-label="Statistiche di combattimento">
@@ -268,25 +340,20 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <span class="combat-stat__label">Classe armatura</span>
             <strong>${effectiveArmorClass ?? '-'}</strong>
           </div>
-          <button class="combat-stat combat-stat--initiative combat-stat--interactive" type="button" data-special-skill-card="default_initiative" title="Tira iniziativa" aria-label="Tira iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
-            <span class="combat-stat__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
-            </span>
-            <span class="combat-stat__label">Iniziativa</span>
-            <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
-            <span class="combat-stat__roll" aria-hidden="true">d20</span>
-          </button>
-          <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
-            <span class="combat-stat__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
-            </span>
-            <span class="combat-stat__label">Velocità</span>
-            <strong>${effectiveSpeed}<small>m</small></strong>
-          </div>
           <div class="hp-vitals-card">
             <div class="hp-bar-label">
               <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
               <span class="hp-bar-label__title">Punti ferita</span>
+              <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
+                <div class="hp-bar" style="flex: ${hpTrackFlex};">
+                  <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
+                </div>
+                ${hasTempHp ? `
+                <div class="hp-bar hp-bar--temp is-active" style="flex: ${tempTrackFlex};">
+                  <div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div>
+                </div>
+                ` : ''}
+              </div>
               <strong class="hp-bar-label__value">${hpLabel}</strong>
               <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
               ${hasTempHp ? `
@@ -294,34 +361,6 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                 <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
               </span>
               ` : ''}
-            </div>
-            <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
-              <div class="hp-bar" style="flex: ${hpTrackFlex};">
-                <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
-              </div>
-              ${hasTempHp ? `
-              <div class="hp-bar hp-bar--temp is-active" style="flex: ${tempTrackFlex};">
-                <div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div>
-              </div>
-              ` : ''}
-            </div>
-            <div class="hp-vitals-card__footer">
-              <div class="hp-panel-hit-dice" title="Dadi vita disponibili">
-                <span>Dadi vita</span>
-                <strong>${formatHitDice(hitDice)}</strong>
-                <button
-                  class="icon-button icon-button--dice hp-panel-hit-dice__roll"
-                  type="button"
-                  data-roll-hit-dice
-                  aria-label="Lancia dado vita per curare PF"
-                  title="Lancia dado vita"
-                  ${canEditCharacter ? '' : 'disabled'}
-                ><span aria-hidden="true">🎲</span></button>
-              </div>
-              <div class="hp-panel-insights" aria-label="Sensi e percezione">
-                <span class="vital-mini-chip"><span>Percezione passiva</span><strong>${passivePerception ?? '-'}</strong></span>
-                <span class="vital-mini-chip"><span>Scurovisione</span><strong>${darkvisionLabel}</strong></span>
-              </div>
             </div>
             ${activeWildShape ? `
             <div class="wild-shape-vitals">
@@ -350,6 +389,12 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </div>
             ` : ''}
           </div>
+          <button class="combat-stat combat-stat--hit-dice combat-stat--interactive" type="button" data-roll-hit-dice ${canEditCharacter ? '' : 'disabled'} title="Usa un dado vita" aria-label="Dadi vita disponibili ${formatHitDice(hitDice)}">
+            <span class="combat-stat__icon" aria-hidden="true">◆</span>
+            <span class="combat-stat__label">Dadi vita</span>
+            <strong>${formatHitDice(hitDice)}</strong>
+            <span class="combat-stat__roll" aria-hidden="true">usa</span>
+          </button>
         </div>
         <div class="hp-panel-status-row" aria-label="Stati rapidi del personaggio">
           <button class="combat-status-card status-launch-card status-launch-card--weakness" type="button" data-edit-weakness ${canEditCharacter ? '' : 'disabled'}>
@@ -370,52 +415,16 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </span>
             <span class="status-launch-card__arrow" aria-hidden="true">›</span>
           </button>
-          <div class="combat-status-card death-saves">
-            <div class="combat-status-card__header death-saves__heading">
-              <div class="track-label-row">
-                <span class="combat-status-card__icon combat-status-card__icon--death" aria-hidden="true">†</span>
-                <span class="death-saves__label">TS morte</span>
-              </div>
-              <button
-                class="icon-button icon-button--dice death-saves__roll"
-                type="button"
-                data-roll-death-save
-                aria-label="Tira il tiro salvezza su morte"
-                title="Tira TS morte"
-                ${canEditCharacter ? '' : 'disabled'}
-              ><span aria-hidden="true">🎲</span></button>
-            </div>
-            <div class="death-saves__tracks">
-              <div class="death-saves__group" aria-label="Successi">
-                <span class="death-saves__tag death-saves__tag--success">✓</span>
-                ${Array.from({ length: 3 }, (_, index) => {
-    const value = index + 1;
-    const isFilled = value <= deathSaveSuccesses;
-    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="successes" data-death-save-index="${value}" aria-label="Successi ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
-  }).join('')}
-              </div>
-              <div class="death-saves__group" aria-label="Fallimenti">
-                <span class="death-saves__tag death-saves__tag--failure">✕</span>
-                ${Array.from({ length: 3 }, (_, index) => {
-    const value = index + 1;
-    const isFilled = value <= deathSaveFailures;
-    return `<button class="death-save-dot ${isFilled ? 'is-filled' : ''}" type="button" data-death-save="failures" data-death-save-index="${value}" aria-label="Fallimenti ${value}" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true"></span></button>`;
-  }).join('')}
-              </div>
-            </div>
-          </div>
+          <button class="combat-status-card status-launch-card status-launch-card--death" type="button" data-manage-death-saves ${canEditCharacter ? '' : 'disabled'}>
+            <span class="status-launch-card__icon" aria-hidden="true">†</span>
+            <span class="status-launch-card__copy">
+              <span>TS contro morte</span>
+              <strong>${deathSaveSuccesses} ✓ <small>·</small> ${deathSaveFailures} ✕</strong>
+              <small>${deathSaveSuccesses >= 3 || deathSaveFailures >= 3 ? 'Esito raggiunto · apri per gestire' : 'Apri, modifica o tira il dado'}</small>
+            </span>
+            <span class="status-launch-card__arrow" aria-hidden="true">›</span>
+          </button>
         </div>
-      </section>
-      ${buildCompactSpellSlots(character)}
-      <section class="character-proficiency-section character-manual-section" aria-label="Competenze del personaggio">
-        <header class="character-manual-section__header">
-          <span class="character-manual-section__icon" aria-hidden="true">⌘</span>
-          <div>
-            <strong>Competenze</strong>
-            <small>Equipaggiamento, maestrie, strumenti, lingue e difese</small>
-          </div>
-        </header>
-        ${buildProficiencyOverview(character, items, canEditCharacter)}
       </section>
     </div>
   `;
@@ -450,7 +459,7 @@ export function buildSkillList(character, canEditCharacter = false) {
               <span class="skill-card__name">${skill.label}</span>
               <span class="skill-card__status">${mastery ? 'Maestria' : proficient ? 'Competenza' : 'Prova base'}</span>
             </span>
-            <span class="modifier-value skill-card__modifier"><small>Bonus</small>${formatSigned(total)}</span>
+            <span class="modifier-value skill-card__modifier">${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -508,7 +517,7 @@ export function buildSpecialSkillList(character) {
               <span class="skill-card__name">${skillLabel}</span>
               <span class="skill-card__status">${mastery ? 'Maestria' : proficient ? 'Competenza' : extraBonus ? `Bonus ${formatSigned(extraBonus)}` : 'Tiro speciale'}</span>
             </span>
-            <span class="modifier-value skill-card__modifier"><small>Totale</small>${formatSigned(total)}</span>
+            <span class="modifier-value skill-card__modifier">${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -543,7 +552,7 @@ export function buildSavingThrowSection(character, canEditCharacter = false) {
               <span class="saving-throw-card__name">${save.label}</span>
               <span class="saving-throw-card__status">${proficient ? 'Competente' : 'Base'}</span>
             </span>
-            <span class="modifier-value saving-throw-card__modifier"><small>TS</small>${formatSigned(total)}</span>
+            <span class="modifier-value saving-throw-card__modifier">${formatSigned(total)}</span>
           </button>
         `;
   }).join('')}
@@ -571,6 +580,7 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
   const explicitLanguages = parseProficiencyNotes(languageNotes);
   const talentNotes = data.talents || '';
   const talents = parseProficiencyNotes(talentNotes);
+  const fightingStyles = parseProficiencyNotes(data.fighting_styles || '');
   const damageDefenses = data.damage_defenses || {};
   const combinedLanguages = [...explicitLanguages, ...legacyLanguages];
   const languages = combinedLanguages.reduce((acc, entry) => {
@@ -608,6 +618,9 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="talents">
             <span>Talenti</span><small>${talents.length}</small>
           </button>
+          <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="fighting-styles">
+            <span>Stili di combattimento</span><small>${fightingStyles.length}</small>
+          </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="defenses">
             <span>Difese</span><small>${(damageDefenses.resistances?.length || 0) + (damageDefenses.immunities?.length || 0)}</small>
           </button>
@@ -636,6 +649,11 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
           ${talents.length
     ? `<div class="tag-row proficiency-chip-list">${talents.map((label) => `<span class="chip proficiency-chip proficiency-chip--talent">${label}</span>`).join('')}</div>`
     : '<p class="muted">Aggiungi talenti nel profilo.</p>'}
+        </div>
+        <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="fighting-styles">
+          ${fightingStyles.length
+    ? `<div class="tag-row proficiency-chip-list">${fightingStyles.map((label) => `<span class="chip proficiency-chip proficiency-chip--fighting-style">${escapeHtml(label)}</span>`).join('')}</div>`
+    : '<p class="muted">Nessuno stile di combattimento configurato.</p>'}
         </div>
         <div class="detail-card detail-card--text tab-panel proficiency-panel" role="tabpanel" data-proficiency-panel="defenses">
           <div class="proficiency-defense-list">
@@ -725,6 +743,7 @@ export function buildEquipSection(character, items = [], canEditCharacter = fals
 
 export function buildAttackSection(character, items = [], companions = [], canEditCharacter = false) {
   const data = character.data || {};
+  const characterProficiencyBonus = normalizeNumber(data.proficiency_bonus);
   const attackBonusMelee = Number(data.attack_bonus_melee ?? data.attack_bonus) || 0;
   const attackBonusRanged = Number(data.attack_bonus_ranged ?? data.attack_bonus) || 0;
   const damageBonusMelee = Number(data.damage_bonus_melee ?? data.damage_bonus) || 0;
@@ -738,10 +757,13 @@ export function buildAttackSection(character, items = [], companions = [], canEd
   return `
     <section class="attack-turn-summary" aria-label="Riepilogo combattimento">
       ${canEditCharacter ? '<button class="attack-turn-summary__edit" type="button" data-edit-general-modifier="damage" aria-label="Modifica bonus generali ai danni" title="Modifica bonus danni">✎</button>' : ''}
+      <div class="attack-turn-summary__proficiency">
+        <small>Bonus competenza</small>
+        <strong>${formatSigned(characterProficiencyBonus)}</strong>
+      </div>
       <div class="attack-turn-summary__primary">
         <span class="attack-turn-summary__icon" aria-hidden="true">⚔</span>
         <span><small>Attacchi per azione</small><strong>${attacksPerAction}</strong></span>
-        ${extraAttacks > 0 ? `<em>Attacco Extra ×${extraAttacks}</em>` : ''}
       </div>
       <div class="attack-turn-summary__bonuses">
         <span><small>Mischia</small><strong>${formatSigned(attackBonusMelee)} <i>/</i> ${formatSigned(damageBonusMelee)}</strong><em>colpire / danni</em></span>
@@ -871,7 +893,7 @@ export function buildAttackSection(character, items = [], companions = [], canEd
     const damageTypeLabel = damageType ? (damageTypeList.find((type) => type.key === damageType)?.label || damageType) : '';
     const rollDamageKey = `weapon:${weaponKey}:${selectedMode.id}`;
     return `
-          <div class="modifier-card attack-card attack-card--weapon" data-attack-range="${weaponRange}" data-attack-range-label="${escapeHtml(rangeText)}" data-attack-ammo-label="${escapeHtml(ammoLabel)}" data-attack-ammo-value="${ammoRemaining ?? ''}" data-attack-grip-label="${escapeHtml(selectedMode.label || '')}" data-roll-attack="weapon:${weapon.id ?? weapon.name}" data-attack-item-id="${escapeHtml(weapon.id ?? '')}" data-attack-origin="Arma" data-attack-magic="${Boolean(weapon.is_magic)}" data-attack-damage-type="${escapeHtml(damageTypeLabel)}" data-attack-melee-bonus="${formatSigned(meleeAttackTotal)}" data-attack-ranged-bonus="${formatSigned(rangedAttackTotal)}" data-attack-melee-damage="${escapeHtml(meleeDamageText)}" data-attack-ranged-damage="${escapeHtml(rangedDamageText)}">
+          <div class="modifier-card attack-card attack-card--weapon" data-attack-range="${weaponRange}" data-attack-range-label="${escapeHtml(rangeText)}" data-attack-ammo-label="${escapeHtml(ammoLabel)}" data-attack-ammo-value="${ammoRemaining ?? ''}" data-attack-grip-label="${escapeHtml(damageModes.length > 1 ? (selectedMode.label || '') : '')}" data-roll-attack="weapon:${weapon.id ?? weapon.name}" data-attack-item-id="${escapeHtml(weapon.id ?? '')}" data-attack-origin="Arma" data-attack-magic="${Boolean(weapon.is_magic)}" data-attack-damage-type="${escapeHtml(damageTypeLabel)}" data-attack-melee-bonus="${formatSigned(meleeAttackTotal)}" data-attack-ranged-bonus="${formatSigned(rangedAttackTotal)}" data-attack-melee-damage="${escapeHtml(meleeDamageText)}" data-attack-ranged-damage="${escapeHtml(rangedDamageText)}">
             ${sanitizeImageUrl(weapon.image_url) ? `<img class="attack-item-thumbnail" data-attack-item-image src="${sanitizeImageUrl(weapon.image_url)}" alt="" loading="lazy" />` : ''}
             <div class="attack-card__body">
               <span class="spell-card__sigil attack-card__sigil" aria-label="Tiro per colpire ${formatSigned(attackTotal)}, caratteristica ${abilityLabel}">
@@ -937,6 +959,8 @@ function buildSpellStatsRow(data, { includeAttack = true } = {}) {
 
 function renderSpellQuickItem(spell, spellAttackBonus = '—') {
   const level = Number(spell.level) || 0;
+  const preparationState = spell.prep_state === 'prepared' ? 'prepared' : 'always';
+  const preparationLabel = preparationState === 'prepared' ? 'Preparato' : 'Sempre conosciuto';
   const castTimeLabel = normalizeCastTimeLabel(spell.cast_time);
   const castTimeClass = getResourceCastTimeClass(castTimeLabel);
   const damageOverlay = buildSpellDamageOverlayConfig(spell, level);
@@ -949,6 +973,8 @@ function renderSpellQuickItem(spell, spellAttackBonus = '—') {
   return `
     <div class="modifier-card attack-card resource-card spell-prepared-list__card"
       data-spell-level="${level}"
+      data-spell-preparation-state="${preparationState}"
+      data-spell-preparation-label="${preparationLabel}"
       data-spell-ritual="${Boolean(spell.is_ritual)}"
       data-spell-concentration="${Boolean(spell.concentration)}"
       data-spell-attack-roll="${Boolean(spell.attack_roll)}"

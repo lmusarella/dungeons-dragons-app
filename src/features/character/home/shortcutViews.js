@@ -51,8 +51,13 @@ export function showShortcutLoader(host, label = 'Caricamento contenuti') {
   loadingSurface.classList.add('is-context-loading');
   loadingSurface.append(loader);
   return () => {
-    loader.remove();
-    loadingSurface.classList.remove('is-context-loading');
+    loader.classList.add('is-leaving');
+    window.setTimeout(() => {
+      loader.remove();
+      if (!loadingSurface.querySelector(':scope > .shortcut-context-loader')) {
+        loadingSurface.classList.remove('is-context-loading');
+      }
+    }, 140);
   };
 }
 

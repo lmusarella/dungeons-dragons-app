@@ -774,6 +774,13 @@ header {
   z-index: 1;
 }
 
+/* A swipe on the dice surface is a throw, never a scroll gesture. */
+#dice-overlay #diceRoller,
+#dice-overlay #canvas {
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
 /* (opzionale) se hai messo z-index altissimi altrove */
 #dice-overlay .diceov-backdrop { z-index: 0; }
 

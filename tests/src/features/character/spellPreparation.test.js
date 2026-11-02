@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   dedupeCharacterSpells,
   getCharacterMaxSpellLevel,
@@ -7,6 +8,61 @@ import {
 } from '../../../../src/features/character/spellPreparation.js';
 
 describe('spell preparation helpers', () => {
+  it('keeps always-ready spells out of the preparation catalog and relies on level filters only', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    expect(source).toContain("Number(entry.level) > 0 && entry.prep_state !== 'always'");
+    expect(source).not.toContain('data-prepared-status-filter');
+  });
+
+  it('asks how selected catalog spells are assigned and reuses preparation card styling', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).not.toContain('data-spell-assignment-state');
+    expect(source).toContain("knownButton.name = 'assignment_prep_state'");
+    expect(source).toContain("knownButton.value = 'known'");
+    expect(source).toContain("alwaysButton.value = 'always'");
+    expect(source).toContain("formData.get('assignment_prep_state') === 'known' ? 'known' : 'always'");
+    expect(source).toContain('submitButtons.forEach((button) => { button.disabled = count === 0; })');
+    expect(source).toContain("prepared-spells-modal__spell play-card play-card--spell");
+    expect(source).toContain("selected ? 'Selezionato' : 'Seleziona'");
+    expect(source).toContain('openSpellQuickDetailModal(null, spell, null, { present })');
+    expect(source).not.toContain('data-spell-preview');
+    expect(source).not.toContain('shared-spell-picker__active-filters');
+    expect(source).not.toContain('shared-spell-picker__search-icon');
+    expect(source).not.toContain('shared-spell-picker__spell-badges');
+    expect(source).toContain("submitLabel: canPrepare ? 'Aggiungi come sempre pronti' : 'Aggiungi come sempre conosciuti'");
+    expect(source).toContain('const knownButton = canPrepare ? document.createElement(\'button\') : primaryButton');
+  });
+
+  it('keeps the acquisition picker compact and makes selected cards legible', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+
+    expect(source).toContain('class="shared-spell-picker__property-filter" role="group" aria-label="Proprietà incantesimo"');
+    expect(source).not.toContain('<span class="shared-spell-picker__filter-label">Proprietà</span>');
+    expect(styles).toContain("'levels levels levels levels levels levels levels levels levels levels levels levels'");
+    expect(styles).toContain("'classes classes classes classes classes classes classes classes classes classes classes reset'");
+    expect(styles).toContain('.shared-spell-picker__spell-main .play-card__title {\n  grid-row: 2;');
+    expect(styles).toContain('padding: 12px 12px 9px !important');
+    expect(styles).toContain('.shared-spell-picker__select.is-active {\n  border-color: #76364b !important; background: #76364b !important; color: #fff8e9 !important;');
+    expect(styles).toContain('background: #fff8e9 !important; color: #76364b !important; opacity: 1;');
+    expect(styles).toContain('.shared-spell-picker__state {\n  grid-column: 1 / -1; width: 100%; min-height: 260px;');
+    expect(styles).toContain('.shared-spell-picker__state--loading {\n  position: absolute; inset: 0; z-index: 2; min-height: 0; place-content: center;');
+  });
+
+  it('integrates preparation into the spell launch shortcut only for prepared casters', () => {
+    const home = readFileSync('src/features/character/home.js', 'utf8');
+    const layout = readFileSync('src/features/character/home/tabletLayout.js', 'utf8');
+    const baseStyles = readFileSync('src/styles/base.css', 'utf8');
+
+    expect(home).toContain("activeCharacter?.data?.spellcasting?.can_prepare ? `");
+    expect(layout).toContain("prepareControl.classList.add('sheet-spell-action', 'sheet-spell-action--prepare')");
+    expect(layout).toContain("addSpellControl.classList.add('sheet-spell-action', 'sheet-spell-action--add')");
+    expect(layout).toContain('<span aria-hidden="true">+</span><span>Aggiungi incantesimi</span>');
+    expect(layout).not.toContain('const prepareShortcut = addPanel');
+    expect(layout).not.toContain("preparation.className = 'sheet-preparation'");
+    expect(baseStyles).not.toContain('.shared-spell-picker__spell-badges');
+  });
+
   it('hydrates a missing base die from the updated shared spell snapshot', () => {
     const spells = dedupeCharacterSpells([
       { id: 'local', shared_spell_id: 'cure-wounds-2024', name: 'Cura Ferite', level: 1, damage_die: null, prep_state: 'prepared' },

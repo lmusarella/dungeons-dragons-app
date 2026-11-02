@@ -12,9 +12,10 @@ function extractNamedExports(source) {
 }
 
 describe('src/features/character/home.js', () => {
-  it('makes spells added from the launch shortcut immediately available', () => {
+  it('adds catalog spells with the assignment state explicitly chosen by the user', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
-    expect(source).toContain("prepState: Number(sharedSpell.level) > 0 ? 'prepared' : 'known'");
+    expect(source).toContain("prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'known'");
+    expect(source).toContain("nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'known'");
     expect(source).toContain("const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known')");
   });
 
@@ -49,7 +50,7 @@ describe('src/features/character/home.js', () => {
     expect(adjustedCharacter).not.toContain('Math.max');
   });
 
-  it('offers a large, searchable shared spell picker with filters and previews', () => {
+  it('offers a large, searchable shared spell picker with filters and card details', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
     const picker = source.slice(
@@ -73,11 +74,12 @@ describe('src/features/character/home.js', () => {
     expect(picker).toContain('fetchSharedSpellSources({ rulesVersion: selectedRulesVersion })');
     expect(picker).toContain('sources: expandSpellSourceSelection(sourceGroups, selectedSourceKeys)');
     expect(picker).toContain('const selectedSourceKeys = new Set()');
-    expect(picker).toContain('data-spell-preview');
+    expect(picker).not.toContain('data-spell-preview');
+    expect(picker).toContain('openSpellQuickDetailModal(null, spell, null, { present })');
     expect(picker).toContain("pageSize: PAGE_SIZE");
     expect(picker).toContain("cardClass: ['modal-card--form', 'modal-card--shared-spell-picker']");
     expect(picker).toContain('const selectedSpells = new Map()');
-    expect(picker).toContain('submitButton.disabled = count === 0');
+    expect(picker).toContain('submitButtons.forEach((button) => { button.disabled = count === 0; })');
     expect(picker).toContain('return [...selectedSpells.values()]');
     expect(picker).toContain('data-clear-spell-selection');
     expect(picker).toContain('if (nextRulesVersion !== selectedRulesVersion)');
@@ -98,7 +100,9 @@ describe('src/features/character/home.js', () => {
     );
     expect(addFlow).toContain('const presentInShortcut = (modalOptions) => presentSheetDetail(spellDialog, modalOptions)');
     expect(addFlow).toContain('openSpellSourceModal({ present: presentInShortcut })');
-    expect(addFlow).toContain('openSharedSpellPicker(presentInShortcut, { defaultRulesVersion: preferredRulesVersion })');
+    expect(addFlow).toContain('openSharedSpellPicker(presentInShortcut, {');
+    expect(addFlow).toContain('defaultRulesVersion: preferredRulesVersion');
+    expect(addFlow).toContain('canPrepare: Boolean(activeCharacter.data?.spellcasting?.can_prepare)');
     expect(addFlow).toContain('const spellsToAdd = sharedSpells.filter');
     expect(addFlow).toContain('await Promise.all(spellsToAdd.map');
     expect(addFlow).toContain('spells: [...currentSpells, ...nextSpells]');
@@ -141,10 +145,11 @@ describe('src/features/character/home.js', () => {
   it('keeps the death save dice modal open after a roll', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const deathSaveHandler = source.slice(
-      source.indexOf("const deathSaveRollButton = container.querySelector('[data-roll-death-save]')"),
-      source.indexOf("container.querySelectorAll('[data-death-save]')")
+      source.indexOf("const deathSaveManagerButton = container.querySelector('[data-manage-death-saves]')"),
+      source.indexOf("container.querySelectorAll('[data-weakness-level]')")
     );
     expect(deathSaveHandler).toContain('keepOpen: true');
+    expect(deathSaveHandler).toContain("cardClass: 'modal-card--death-saves'");
   });
 
   it('consumes the selected slot and opens configured spell damage dice', () => {
@@ -238,15 +243,19 @@ describe('src/features/character/home.js', () => {
     expect(styles).toContain('.modal-card--quick-action .modal-actions');
   });
 
-  it('uses a compact character sheet header with an explicit edit action', () => {
+  it('removes the redundant character header and keeps editing inside the wide profile card', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
-    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
-    expect(source).toContain('character-sheet-header__crest');
-    expect(source).toContain('Panoramica di gioco');
-    expect(source).toContain('class="character-edit-trigger"');
-    expect(source).toContain('<span>Modifica scheda</span>');
-    expect(styles).toContain('.character-edit-trigger');
-    expect(styles).toContain('grid-template-columns: minmax(0,1.75fr) repeat(3,minmax(100px,.68fr))');
+    const sections = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/characterSheetPolish.css', 'utf8');
+    expect(source).not.toContain('character-sheet-header__crest');
+    expect(source).not.toContain('Panoramica di gioco');
+    expect(source).toContain('character-edit-trigger character-sheet-titlebar__edit');
+    expect(source).toContain('<span>Modifica personaggio</span>');
+    expect(styles).toContain('.character-sheet-titlebar__edit');
+    expect(styles).toContain(".app-shell[data-route='home'] > .app-main");
+    expect(styles).toContain('grid-template-columns: 205px minmax(300px,1fr)');
+    expect(styles).toContain('width: 205px; height: 250px; min-height: 250px; max-height: 250px');
+    expect(styles).toContain('grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,54px)');
   });
 
   it('edits shortcut modifiers in place and includes them in actual rolls', () => {

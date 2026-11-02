@@ -15668,23 +15668,6 @@ button:focus-visible,
   font-size: 0.66rem;
 }
 
-.shared-spell-picker__spell-badges {
-  display: flex;
-  gap: 4px;
-}
-
-.shared-spell-picker__spell-badges small {
-  display: grid;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  border-radius: 999px;
-  background: #e8ded0;
-  color: #715a40;
-  font-size: 0.62rem;
-  font-weight: 900;
-}
-
 .shared-spell-picker__spell-arrow {
   color: #718886;
   font-size: 1.3rem;

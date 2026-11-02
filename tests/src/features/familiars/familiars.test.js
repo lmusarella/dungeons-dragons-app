@@ -49,6 +49,9 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain("{ value: 'animal', label: 'Animale' }");
     expect(source).toContain('<span>${escapeHtml(formatKind(companion.kind))}</span>');
     expect(source).toContain('<small><b>${hpCurrent}/${hpMax}</b> PF · <b>${armorClass}</b> CA</small>');
+    expect(source).toContain('class="familiar-quick-card__health" role="meter"');
+    expect(source).toContain('class="familiar-sheet__kicker"');
+    expect(source).toContain('class="familiar-add-button"');
     expect(source).not.toContain('familiar-sheet__chevron');
     expect(source).not.toContain('familiar-sheet__hp-summary');
   });
@@ -62,6 +65,8 @@ describe('src/features/familiars/familiars.js', () => {
     expect(shortcut).toContain("identity.className = 'familiar-sheet__identity'");
     expect(styles).toContain("grid-template-areas: 'quick' 'detail'");
     expect(styles).toContain('.companion-sheet-hero');
+    expect(source).toContain("const usesContextualLoader = container.hasAttribute('data-shortcut-kind')");
+    expect(source).toContain('if (!usesContextualLoader) setGlobalLoading(true)');
   });
 
   it('renders softly contrasted familiar panels and a compact damage action', () => {

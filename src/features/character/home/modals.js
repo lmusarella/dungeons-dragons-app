@@ -24,7 +24,7 @@ import {
   mapSharedSpellForPreparation
 } from '../spellPreparation.js';
 import { attachUnifiedDetailActions } from './detailManagement.js';
-import { sanitizeExternalUrl } from '../../../lib/html.js';
+import { sanitizeExternalUrl, sanitizeImageUrl } from '../../../lib/html.js';
 import { normalizeSpellSchool, spellSchoolLabels } from '../spellSchools.js';
 import { normalizeSpellSource } from '../spellSources.js';
 
@@ -483,7 +483,7 @@ export function openResourceDetail(resource, {
     </article>
   `;
 
-  present({
+  return present({
     title: 'Scheda abilità',
     submitLabel: hasAction
       ? (isExhausted ? 'Ripristina' : (isPool ? 'Consuma' : 'Usa'))
@@ -1302,8 +1302,8 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     .filter((entry) => !entry.shared_spell_id && Number(entry.level) > 0 && ['prepared', 'always'].includes(entry.prep_state))
     .map((entry) => ({ ...entry, preparation_origin: 'custom' })));
   const spells = sortSpellsByLevel(dedupeCharacterSpells([...archiveSpells, ...customPreparedSpells]));
-  const selectable = spells.filter((entry) => Number(entry.level) > 0);
-  const prepareableIds = new Set(selectable.filter(entry => spellcasting.can_prepare && entry.prep_state !== 'always').map(entry => entry.id));
+  const selectable = spells.filter((entry) => Number(entry.level) > 0 && entry.prep_state !== 'always');
+  const prepareableIds = new Set(selectable.filter(() => spellcasting.can_prepare).map(entry => entry.id));
 
   const deletedIds = new Set();
   const preparedIds = new Set(
@@ -1314,7 +1314,6 @@ async function openPreparedSpellsModalAsync(character, onSave) {
   const levelOrder = Array.from(new Set(selectable.map((entry) => Math.max(0, Number(entry.level) || 0))))
     .sort((a, b) => a - b);
   let activeLevel = '';
-  let activeStatus = '';
 
   const getLevelLabel = (level) => `${level}° livello`;
 
@@ -1343,12 +1342,6 @@ async function openPreparedSpellsModalAsync(character, onSave) {
   }).join('')}
         </div>
       </aside>
-      <div class="prepared-spells-modal__status-filters" role="group" aria-label="Filtra per preparazione">
-        <span class="prepared-spells-modal__filter-label">Stato</span>
-        <button type="button" data-prepared-status-filter="prepared" aria-pressed="false">Incantesimi preparati</button>
-        <button type="button" data-prepared-status-filter="known" aria-pressed="false">Da preparare</button>
-        <button type="button" data-prepared-status-filter="always" aria-pressed="false">Sempre pronti</button>
-      </div>
       <output class="prepared-spells-modal__visible-count" data-prepared-visible-count aria-live="polite"></output>
       </div>
       <section class="prepared-spells-modal__catalog" aria-label="Incantesimi preparabili">
@@ -1357,7 +1350,6 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     const level = Math.max(0, Number(entry.level) || 0);
     const isPrepared = preparedIds.has(entry.id);
     const isLocked = !prepareableIds.has(entry.id);
-    const lockedLabel = entry.prep_state === 'always' ? 'Sempre pronto' : 'Conosciuto';
     return `
               <article
                 class="prepared-spells-modal__spell play-card play-card--spell ${isPrepared ? 'is-prepared' : ''}"
@@ -1375,7 +1367,7 @@ async function openPreparedSpellsModalAsync(character, onSave) {
                 <footer class="play-card__footer prepared-spells-modal__card-actions">
                   <button class="play-card__button play-card__button--primary prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}" type="button" data-prepared-toggle="${entry.id}" ${isLocked ? 'disabled' : ''} aria-pressed="${isPrepared}">
                     <span class="prepared-spells-modal__check" aria-hidden="true">✓</span>
-                    <span>${isLocked ? lockedLabel : isPrepared ? 'Preparato' : 'Da preparare'}</span>
+                    <span>${isPrepared ? 'Preparato' : 'Da preparare'}</span>
                   </button>
                   ${entry.catalog_only ? '' : `<button class="play-card__button resource-icon-button prepared-spells-modal__delete" type="button" data-prepared-delete="${entry.id}" aria-label="Elimina ${escapeHtml(entry.name)} dalla scheda" title="Elimina dalla scheda">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
@@ -1417,12 +1409,7 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     content.querySelectorAll('[data-prepared-item]').forEach((item) => {
       const spellId = item.dataset.preparedItem;
       const matchesLevel = !activeLevel || item.dataset.preparedItemLevel === activeLevel;
-      const spell = selectable.find((entry) => entry.id === spellId);
-      const matchesStatus = !activeStatus
-        || (activeStatus === 'prepared' && preparedIds.has(spellId))
-        || (activeStatus === 'known' && prepareableIds.has(spellId) && !preparedIds.has(spellId))
-        || (activeStatus === 'always' && spell?.prep_state === 'always');
-      const isVisible = !deletedIds.has(spellId) && matchesLevel && matchesStatus;
+      const isVisible = !deletedIds.has(spellId) && matchesLevel;
       item.hidden = !isVisible;
       if (isVisible) visibleCount += 1;
     });
@@ -1497,29 +1484,17 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     });
   });
 
-  content.querySelectorAll('[data-prepared-status-filter]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const selectedStatus = button.dataset.preparedStatusFilter || '';
-      activeStatus = activeStatus === selectedStatus ? '' : selectedStatus;
-      content.querySelectorAll('[data-prepared-status-filter]').forEach((entry) => {
-        const isActive = entry.dataset.preparedStatusFilter === activeStatus;
-        entry.classList.toggle('is-active', isActive);
-        entry.setAttribute('aria-pressed', String(isActive));
-      });
-      applyFilters();
-    });
-  });
-
   syncPreparedState();
   applyFilters();
 
-  openFormModal({
+  const preparationView = openFormModal({
     title: character.name ? `Prepara gli incantesimi di ${character.name}` : 'Prepara gli incantesimi',
     submitLabel: 'Salva preparazione',
     cancelLabel: 'Annulla',
     content,
     cardClass: ['modal-card--form', 'modal-card--prepared-spells']
-  }).then(async (formData) => {
+  });
+  void preparationView.then(async (formData) => {
     if (!formData) return;
     let linkedRows = [];
     let associationReadError = null;
@@ -1598,9 +1573,136 @@ async function openPreparedSpellsModalAsync(character, onSave) {
       : 'Preparazione sincronizzata con il personaggio';
     await saveCharacterData(character, nextData, message, onSave);
   });
+  const nextPaint = window.requestAnimationFrame
+    ? (callback) => window.requestAnimationFrame(callback)
+    : (callback) => window.setTimeout(callback, 0);
+  await new Promise((resolve) => nextPaint(() => nextPaint(resolve)));
 }
 
-export function openAvatarModal(subject) {
+function readAvatarFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result || '')));
+    reader.addEventListener('error', () => reject(new Error('Impossibile leggere il file selezionato.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadAvatarImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', () => reject(new Error('Il file selezionato non è un’immagine valida.')));
+    image.src = source;
+  });
+}
+
+async function prepareAvatarImage(file) {
+  if (!/^image\/(?:png|jpe?g|gif|webp)$/i.test(file?.type || '')) {
+    throw new Error('Scegli un’immagine PNG, JPG, GIF o WebP.');
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('L’immagine non può superare 10 MB.');
+  }
+  const source = await readAvatarFile(file);
+  const image = await loadAvatarImage(source);
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight, 1);
+  const scale = Math.min(1, 900 / longestSide);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Impossibile elaborare l’immagine su questo dispositivo.');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/webp', 0.82);
+}
+
+async function openAvatarUploadModal(subject, onSave) {
+  const currentAvatarValue = String(subject?.data?.avatar_url || '').trim();
+  const currentAvatar = sanitizeImageUrl(currentAvatarValue) ? currentAvatarValue : '';
+  let selectedAvatar = currentAvatar || null;
+  const content = document.createElement('div');
+  content.className = 'avatar-upload';
+  const preview = document.createElement('div');
+  preview.className = 'avatar-upload__preview';
+  const renderPreview = () => {
+    preview.innerHTML = '';
+    if (selectedAvatar) {
+      const image = document.createElement('img');
+      image.src = selectedAvatar;
+      image.alt = `Anteprima ritratto di ${subject?.name || 'personaggio'}`;
+      preview.appendChild(image);
+      return;
+    }
+    const empty = document.createElement('span');
+    empty.className = 'avatar-upload__empty';
+    empty.innerHTML = '<strong>+</strong><small>Nessun ritratto</small>';
+    preview.appendChild(empty);
+  };
+  renderPreview();
+  const controls = document.createElement('div');
+  controls.className = 'avatar-upload__controls';
+  controls.innerHTML = `
+    <label class="avatar-upload__picker">
+      <span>Scegli un’immagine dal dispositivo</span>
+      <input type="file" name="avatar_image" accept="image/png,image/jpeg,image/gif,image/webp" />
+      <small>PNG, JPG, GIF o WebP · massimo 10 MB. L’immagine viene ottimizzata prima del salvataggio.</small>
+    </label>
+    <button class="secondary avatar-upload__remove" type="button" data-remove-avatar ${currentAvatar ? '' : 'hidden'}>Rimuovi immagine</button>
+  `;
+  content.append(preview, controls);
+  let processing = false;
+  const formData = await openFormModal({
+    title: 'Immagine del personaggio',
+    content,
+    submitLabel: 'Salva immagine',
+    cardClass: 'modal-card--avatar-upload',
+    onOpen: ({ modal }) => {
+      const input = content.querySelector('input[type="file"]');
+      const removeButton = content.querySelector('[data-remove-avatar]');
+      const submitButton = modal.querySelector('[data-form-submit]');
+      const handleSelection = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        processing = true;
+        if (submitButton) submitButton.disabled = true;
+        try {
+          selectedAvatar = await prepareAvatarImage(file);
+          removeButton.hidden = false;
+          renderPreview();
+        } catch (error) {
+          input.value = '';
+          createToast(error.message || 'Impossibile elaborare l’immagine', 'error');
+        } finally {
+          processing = false;
+          if (submitButton) submitButton.disabled = false;
+        }
+      };
+      const handleRemove = () => {
+        selectedAvatar = null;
+        input.value = '';
+        removeButton.hidden = true;
+        renderPreview();
+      };
+      input.addEventListener('change', handleSelection);
+      removeButton.addEventListener('click', handleRemove);
+      return () => {
+        input.removeEventListener('change', handleSelection);
+        removeButton.removeEventListener('click', handleRemove);
+      };
+    }
+  });
+  if (!formData || processing) return;
+  await saveCharacterData(subject, {
+    ...(subject.data || {}),
+    avatar_url: selectedAvatar
+  }, selectedAvatar ? 'Immagine del personaggio aggiornata' : 'Immagine del personaggio rimossa', onSave);
+}
+
+export function openAvatarModal(subject, onSave = null) {
+  if (typeof onSave === 'function' && subject?.data) {
+    return openAvatarUploadModal(subject, onSave);
+  }
   const avatarUrl = subject?.data?.avatar_url || subject?.stat_block?.image_url;
   if (!avatarUrl) return;
   const subjectName = subject?.name || 'soggetto';

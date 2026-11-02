@@ -94,6 +94,7 @@ function buildCompanionQuickButton(companion, isSelected = false) {
   const statBlock = normalizeStatBlock(companion.stat_block);
   const hpCurrent = Number(statBlock.hp.current) || 0;
   const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
+  const hpPercent = Math.min(Math.max((hpCurrent / hpMax) * 100, 0), 100);
   const armorClass = statBlock.armor_class ?? (10 + (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0));
   const imageUrl = statBlock.image_url?.trim();
   const avatar = imageUrl
@@ -107,6 +108,7 @@ function buildCompanionQuickButton(companion, isSelected = false) {
         <strong>${escapeHtml(companion.name)}</strong>
         <span>${escapeHtml(formatKind(companion.kind))}</span>
         <small><b>${hpCurrent}/${hpMax}</b> PF · <b>${armorClass}</b> CA</small>
+        <span class="familiar-quick-card__health" role="meter" aria-label="Punti ferita ${hpCurrent} su ${hpMax}" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}"><i style="width:${hpPercent}%"></i></span>
       </span>
     </button>
   `;
@@ -185,17 +187,18 @@ function buildCompanionCard(companion, isSelected = false) {
           aria-controls="familiar-content-${escapeHtml(companion.id)}"
         >
           <span class="familiar-sheet__title">
+            <span class="familiar-sheet__kicker">Compagno attivo · ${escapeHtml(formatKind(companion.kind))}</span>
             <strong>${escapeHtml(companion.name)}</strong>
             <span class="character-meta">
-              <span class="meta-tag"><small>Tipo</small><strong>${escapeHtml(formatKind(companion.kind))}</strong></span>
               <span class="meta-tag"><small>PF</small><strong>${hpCurrent}/${hpMax}</strong></span>
               <span class="meta-tag"><small>CA</small><strong>${armorClass}</strong></span>
+              <span class="meta-tag"><small>Iniziativa</small><strong>${formatSigned(initiative)}</strong></span>
             </span>
           </span>
         </button>
         <div class="button-row familiar-sheet__actions">
-          <button class="icon-button" data-edit-companion="${escapeHtml(companion.id)}" type="button" aria-label="Modifica ${escapeHtml(companion.name)}">✏️</button>
-          <button class="icon-button" data-delete-companion="${escapeHtml(companion.id)}" type="button" aria-label="Elimina ${escapeHtml(companion.name)}">🗑️</button>
+          <button class="ghost-button familiar-sheet__action familiar-sheet__action--edit" data-edit-companion="${escapeHtml(companion.id)}" type="button" aria-label="Modifica ${escapeHtml(companion.name)}"><span aria-hidden="true">✎</span> Modifica</button>
+          <button class="ghost-button familiar-sheet__action familiar-sheet__action--delete" data-delete-companion="${escapeHtml(companion.id)}" type="button" aria-label="Elimina ${escapeHtml(companion.name)}"><span aria-hidden="true">×</span></button>
         </div>
       </header>
       <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
@@ -294,14 +297,15 @@ export async function renderFamiliars(container) {
     return;
   }
 
-  setGlobalLoading(true);
+  const usesContextualLoader = container.hasAttribute('data-shortcut-kind');
+  if (!usesContextualLoader) setGlobalLoading(true);
   let companions = [];
   try {
     companions = state.offline ? [] : await fetchCompanions(activeCharacter.id);
   } catch {
     createToast('Errore caricamento famigli', 'error');
   } finally {
-    setGlobalLoading(false);
+    if (!usesContextualLoader) setGlobalLoading(false);
   }
 
   const selectedCompanionId = companions.find(companion => String(companion.id) === container.dataset.selectedCompanion)?.id || companions[0]?.id;
@@ -310,10 +314,10 @@ export async function renderFamiliars(container) {
       <aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
         <div class="familiars-quick-panel__header">
           <div>
-            <p class="eyebrow">Famigli & Evocazioni</p>
-            <span class="muted">Selezione rapida</span>
+            <p class="eyebrow">Compagni</p>
+            <span class="muted">${companions.length} ${companions.length === 1 ? 'scheda' : 'schede'}</span>
           </div>
-          <button class="icon-button icon-button--add" type="button" data-add-companion aria-label="Nuova scheda"><span aria-hidden="true">+</span></button>
+          <button class="familiar-add-button" type="button" data-add-companion aria-label="Nuovo famiglio o evocazione"><span aria-hidden="true">+</span><strong>Nuovo</strong></button>
         </div>
         ${companions.length ? `
           <div class="familiars-quick-list">

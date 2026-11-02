@@ -6,20 +6,14 @@
  *  @version 0.1
  */
 
-window.onkeydown = function(e) {
-  
-    if(e.code === "Enter" || e.code === "Escape") {
-        main.setInput(); //closes numPad
-    }
-}
-
  var main = (function() {
     var that = {}; 
     var elem = {}; 
     var vars = {
         numpadShowing: false,
         lastVal: '',
-        userTyping: false
+        userTyping: false,
+        keydownBound: false
     }
     var box = null;
 
@@ -32,6 +26,16 @@ window.onkeydown = function(e) {
         elem.instructions = $t.id('instructions');
         elem.center_div = $t.id('center_div');
         elem.diceLimit = $t.id('diceLimit');
+
+        if (!vars.keydownBound) {
+            var keyScope = document.getElementById('dice-overlay') || elem.container;
+            keyScope.addEventListener('keydown', function(e) {
+                if (e.code === "Enter" || e.code === "Escape") {
+                    that.setInput();
+                }
+            });
+            vars.keydownBound = true;
+        }
 
         box = new DICE.dice_box(elem.container);
         box.bind_swipe(elem.container, before_roll, after_roll);
@@ -74,24 +78,6 @@ window.onkeydown = function(e) {
             return;
         }
         let inputVal = elem.textInput.value;
-        //check for d100 and add tens place die
-        if(inputVal.includes('d100')) {
-            let dIdx = inputVal.indexOf('d100');
-            let numD100 = '';
-            for(let i = dIdx - 1; i >= 0; i--) {
-                let digit = inputVal[i];
-                if(!isNaN(digit)) {
-                    numD100 = digit + numD100;
-                } else {
-                    break;
-                }                
-            }
-            if(numD100 === '') numD100 = '1';
-            //console.log('num d100s: ' + numD100);
-            for(let i = 0; i < numD100; i++) {
-                inputVal += '+d9';
-            }
-        }
         //check for too many dice
         let d = DICE.parse_notation(inputVal);
         let numDice = d.set.length;

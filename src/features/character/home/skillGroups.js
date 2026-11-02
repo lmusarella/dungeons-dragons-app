@@ -1,3 +1,14 @@
+const ABILITY_FILTER_OPTIONS = [
+  ['str', 'FOR'], ['dex', 'DES'], ['con', 'COS'], ['int', 'INT'], ['wis', 'SAG'], ['cha', 'CAR']
+];
+
+function createProficiencyCard(proficiencyBonus) {
+  const card = document.createElement('div');
+  card.className = 'skill-filter-proficiency';
+  card.innerHTML = `<small>Bonus competenza</small><strong>${proficiencyBonus}</strong>`;
+  return card;
+}
+
 export function mergeSkillRolls(layout) {
   const skills = layout.querySelector('.home-feature-panel--skills');
   const special = layout.querySelector('.home-feature-panel--special-skills');
@@ -21,7 +32,7 @@ export function mergeSkillRolls(layout) {
   special.remove();
 }
 
-export function installSkillRankFilters(root) {
+export function installSkillRankFilters(root, proficiencyBonus = '', abilityModifiers = {}) {
   const cards = [...(root?.querySelectorAll('[data-skill-rank][data-skill-ability]') || [])];
   if (!root || !cards.length || root.querySelector('[data-skill-rank-filters]')) return;
 
@@ -32,14 +43,6 @@ export function installSkillRankFilters(root) {
   const rankOptions = [
     ['proficiency', 'Competenza'],
     ['mastery', 'Maestria']
-  ];
-  const abilityOptions = [
-    ['str', 'FOR'],
-    ['dex', 'DES'],
-    ['con', 'COS'],
-    ['int', 'INT'],
-    ['wis', 'SAG'],
-    ['cha', 'CAR']
   ];
   let activeRank = '';
   let activeAbility = '';
@@ -73,14 +76,16 @@ export function installSkillRankFilters(root) {
     const controls = document.createElement('div');
     controls.className = 'skill-filter-group__controls';
     options.forEach(([value, optionLabel]) => {
-      const count = cards.filter((card) => card.dataset[kind === 'rank' ? 'skillRank' : 'skillAbility'] === value).length;
+      const summary = kind === 'ability' ? (abilityModifiers[value] ?? '—') : '';
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `skill-filter skill-filter--${kind} skill-filter--${value}`;
       button.dataset.skillFilter = value;
       button.dataset.skillFilterKind = kind;
       button.setAttribute('aria-pressed', 'false');
-      button.innerHTML = `<span>${optionLabel}</span><small>${count}</small>`;
+      button.innerHTML = kind === 'ability'
+        ? `<span>${optionLabel}</span><small>${summary}</small>`
+        : `<span>${optionLabel}</span>`;
       button.addEventListener('click', () => {
         if (kind === 'rank') activeRank = activeRank === value ? '' : value;
         else activeAbility = activeAbility === value ? '' : value;
@@ -92,10 +97,58 @@ export function installSkillRankFilters(root) {
     return group;
   };
 
-  filters.append(
-    buildFilterGroup('Grado', 'rank', rankOptions),
-    buildFilterGroup('Caratteristica', 'ability', abilityOptions)
-  );
+  if (proficiencyBonus) filters.append(createProficiencyCard(proficiencyBonus));
+  filters.append(buildFilterGroup('Caratteristica', 'ability', ABILITY_FILTER_OPTIONS));
+  const generalModifier = root.querySelector('.roll-general-modifier');
+  if (generalModifier) {
+    generalModifier.classList.add('skill-filter-general');
+    filters.append(generalModifier);
+  }
+  filters.append(buildFilterGroup('Grado', 'rank', rankOptions));
   root.prepend(filters);
   applyFilter();
+}
+
+export function installSavingThrowFilters(root, proficiencyBonus = '', abilityModifiers = {}) {
+  const cards = [...(root?.querySelectorAll('[data-saving-throw-card]') || [])];
+  if (!root || !cards.length || root.querySelector('[data-saving-throw-filters]')) return;
+  let activeAbility = '';
+  const filters = document.createElement('div');
+  filters.className = 'skill-filter-toolbar saving-filter-toolbar';
+  filters.dataset.savingThrowFilters = '';
+  filters.setAttribute('aria-label', 'Filtra i tiri salvezza');
+  if (proficiencyBonus) filters.append(createProficiencyCard(proficiencyBonus));
+  const group = document.createElement('div');
+  group.className = 'skill-filter-group skill-filter-group--ability';
+  const heading = document.createElement('span');
+  heading.className = 'skill-filter-group__label';
+  heading.textContent = 'Caratteristica';
+  const controls = document.createElement('div');
+  controls.className = 'skill-filter-group__controls';
+  ABILITY_FILTER_OPTIONS.forEach(([value, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `skill-filter skill-filter--ability skill-filter--${value}`;
+    button.dataset.savingAbilityFilter = value;
+    button.setAttribute('aria-pressed', 'false');
+    button.innerHTML = `<span>${label}</span><small>${abilityModifiers[value] ?? '—'}</small>`;
+    button.addEventListener('click', () => {
+      activeAbility = activeAbility === value ? '' : value;
+      cards.forEach((card) => card.classList.toggle('is-filtered-out', Boolean(activeAbility && card.dataset.savingThrowCard !== activeAbility)));
+      controls.querySelectorAll('[data-saving-ability-filter]').forEach((control) => {
+        const active = control.dataset.savingAbilityFilter === activeAbility;
+        control.classList.toggle('is-active', active);
+        control.setAttribute('aria-pressed', String(active));
+      });
+    });
+    controls.append(button);
+  });
+  group.append(heading, controls);
+  filters.append(group);
+  const generalModifier = root.querySelector('.roll-general-modifier');
+  if (generalModifier) {
+    generalModifier.classList.add('skill-filter-general');
+    filters.append(generalModifier);
+  }
+  root.prepend(filters);
 }

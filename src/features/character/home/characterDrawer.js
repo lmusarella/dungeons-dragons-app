@@ -91,6 +91,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const selectedWeaponMasteries = Array.isArray(characterData.weapon_masteries) ? characterData.weapon_masteries : [];
   const hasWeaponMasteryFeature = Boolean(characterData.weapon_mastery_enabled) || selectedWeaponMasteries.length > 0;
   const damageDefenses = characterData.damage_defenses || {};
+  const rollAdjustments = characterData.roll_adjustments || { attack_rolls: {}, saving_throws: {}, skills: {} };
   const acAbilityModifiers = characterData.ac_ability_modifiers || {};
   const spellcasting = characterData.spellcasting || {};
   const characterRulesVersion = getCharacterRulesVersion(character || characterData);
@@ -165,12 +166,6 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   characterSystemField.appendChild(characterSystemSelect);
   mainGrid.appendChild(characterSystemField);
   mainSection.appendChild(mainGrid);
-  mainSection.appendChild(buildInput({
-    label: 'Foto (URL)',
-    name: 'avatar_url',
-    placeholder: 'https://.../ritratto.png',
-    value: characterData.avatar_url ?? ''
-  }));
   const backgroundSection = document.createElement('div');
   backgroundSection.className = 'character-edit-section character-edit-section--background';
   const backgroundGrid = document.createElement('div');
@@ -595,6 +590,86 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     </div>
   `;
 
+  const adjustmentModeOptions = [
+    { value: '', label: 'Nessuno' },
+    { value: 'advantage', label: 'Vantaggio' },
+    { value: 'disadvantage', label: 'Svantaggio' }
+  ];
+  const adjustmentSourceOptions = [
+    { value: '', label: 'Seleziona fonte' },
+    { value: 'situational', label: 'Situazionale' },
+    { value: 'effect', label: 'Effetto temporaneo' },
+    { value: 'condition', label: 'Condizione' },
+    { value: 'armor', label: 'Armatura' },
+    { value: 'racial', label: 'Abilità razziale' },
+    { value: 'class', label: 'Privilegio di classe' },
+    { value: 'spell', label: 'Incantesimo' },
+    { value: 'item', label: 'Oggetto o equipaggiamento' },
+    { value: 'other', label: 'Altro' }
+  ];
+  const attackAdjustmentLabels = new Map();
+  const cachedItems = Array.isArray(getState().cache?.items) ? getState().cache.items : [];
+  cachedItems
+    .filter((item) => item.category === 'weapon'
+      && item.equipable
+      && (!character?.id || !item.character_id || String(item.character_id) === String(character.id))
+      && (item.equip_slot || (Array.isArray(item.equip_slots) && item.equip_slots.length)))
+    .forEach((item) => attackAdjustmentLabels.set(`weapon:${item.id ?? item.name}`, item.name || 'Arma'));
+  (Array.isArray(characterData.spells) ? characterData.spells : [])
+    .filter((spell) => (spell.kind === 'cantrip' || Number(spell.level) === 0) && spell.attack_roll && spell.damage_die)
+    .forEach((spell) => attackAdjustmentLabels.set(`spell:${spell.id}`, spell.name || 'Incantesimo'));
+  if (spellcasting.ability && normalizeNumber(characterData.proficiency_bonus) !== null) {
+    attackAdjustmentLabels.set('spell-attack', 'Incantesimi');
+  }
+  Object.keys(rollAdjustments.attack_rolls || {}).forEach((key) => {
+    if (!attackAdjustmentLabels.has(key)) attackAdjustmentLabels.set(key, key.replace(/^(weapon|spell):/, ''));
+  });
+  const adjustmentEntriesByScope = {
+    attack_rolls: [...attackAdjustmentLabels].map(([key, label]) => ({ key, label })),
+    saving_throws: savingThrowList.map((entry) => ({ key: entry.key, label: entry.label })),
+    skills: skillList.map((entry) => ({ key: entry.key, label: entry.label }))
+  };
+  const rollAdjustmentSection = document.createElement('div');
+  rollAdjustmentSection.className = 'character-edit-section character-edit-section--roll-adjustments compact-character-section';
+  rollAdjustmentSection.innerHTML = `
+    <div class="roll-adjustment-editor__intro">
+      <h4>Vantaggi e svantaggi</h4>
+      <p class="muted">Configura soltanto gli effetti manuali persistenti. Condizioni e altri effetti automatici continuano ad applicarsi durante il tiro.</p>
+    </div>
+  `;
+  const buildAdjustmentGroup = (title, scope, entries) => {
+    const section = document.createElement('section');
+    section.className = 'roll-adjustment-editor__group';
+    section.innerHTML = `<h5>${title}</h5>`;
+    const grid = document.createElement('div');
+    grid.className = 'roll-adjustment-editor__grid';
+    if (!entries.length) {
+      grid.innerHTML = '<p class="muted roll-adjustment-editor__empty">Nessun tiro configurato in questa categoria.</p>';
+    }
+    entries.forEach((entry) => {
+      const current = rollAdjustments[scope]?.[entry.key] || {};
+      const row = document.createElement('div');
+      row.className = 'roll-adjustment-editor__row';
+      const name = document.createElement('strong');
+      name.textContent = entry.label;
+      const mode = buildSelect(adjustmentModeOptions, current.mode || '');
+      mode.name = `roll_${scope}_${entry.key}_mode`;
+      mode.setAttribute('aria-label', `Modalità per ${entry.label}`);
+      const source = buildSelect(adjustmentSourceOptions, current.source || '');
+      source.name = `roll_${scope}_${entry.key}_source`;
+      source.setAttribute('aria-label', `Fonte per ${entry.label}`);
+      row.append(name, mode, source);
+      grid.appendChild(row);
+    });
+    section.appendChild(grid);
+    return section;
+  };
+  rollAdjustmentSection.append(
+    buildAdjustmentGroup('Tiri per colpire', 'attack_rolls', adjustmentEntriesByScope.attack_rolls),
+    buildAdjustmentGroup('Tiri salvezza', 'saving_throws', adjustmentEntriesByScope.saving_throws),
+    buildAdjustmentGroup('Abilità', 'skills', adjustmentEntriesByScope.skills)
+  );
+
   const proficiencyNotesSection = document.createElement('div');
   proficiencyNotesSection.className = 'character-edit-section character-edit-section--proficiency-notes compact-character-section';
   proficiencyNotesSection.innerHTML = '<h4>Note e talenti</h4>';
@@ -706,6 +781,15 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       content: buildEditGroup('Resistenze & Immunità', [damageDefenseSection], {
         icon: '🛡️',
         description: 'Seleziona difese e immunità in modo compatto, raggruppate per famiglia di danno.'
+      })
+    },
+    {
+      title: 'Vantaggi & Svantaggi',
+      icon: '⚖️',
+      description: 'Effetti manuali persistenti sui tiri. ',
+      content: buildEditGroup('Vantaggi & Svantaggi', [rollAdjustmentSection], {
+        icon: '⚖️',
+        description: 'Imposta vantaggi e svantaggi situazionali dopo aver configurato resistenze e immunità.'
       })
     }
   ];
@@ -924,9 +1008,16 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   equipmentProficiencyList.forEach((prof) => {
     nextProficiencies[prof.key] = formData.has(`prof_${prof.key}`);
   });
-  // The legacy manual advantage/disadvantage editor is no longer part of this
-  // workflow. Keep any existing data intact instead of silently erasing it.
-  const nextRollAdjustments = characterData.roll_adjustments || { attack_rolls: {}, saving_throws: {}, skills: {} };
+  const nextRollAdjustments = { attack_rolls: {}, saving_throws: {}, skills: {} };
+  Object.entries(adjustmentEntriesByScope).forEach(([scope, entries]) => {
+    entries.forEach((entry) => {
+      const mode = String(formData.get(`roll_${scope}_${entry.key}_mode`) || '');
+      const source = String(formData.get(`roll_${scope}_${entry.key}_source`) || '').trim();
+      if (mode === 'advantage' || mode === 'disadvantage') {
+        nextRollAdjustments[scope][entry.key] = { mode, source: source || 'situational' };
+      }
+    });
+  });
   const nextDamageDefenses = {
     resistances: damageTypeList.filter((type) => formData.has(`damage_resistance_${type.key}`)).map((type) => type.key),
     immunities: damageTypeList.filter((type) => formData.has(`damage_immunity_${type.key}`)).map((type) => type.key)
@@ -979,7 +1070,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     : [];
   const nextData = {
     ...characterData,
-    avatar_url: formData.get('avatar_url')?.trim() || null,
+    avatar_url: characterData.avatar_url ?? null,
     description: formData.get('description')?.trim() || null,
     hp: {
       current: toNumberOrNull(formData.get('hp_current')),

@@ -22,11 +22,11 @@ describe('src/features/character/home/sections.js', () => {
       expect(source).toContain(name);
     });
   });
-  it('renders the death save dice action and the redesigned profile status cards', () => {
+  it('renders focused proficiency and death-save actions in the profile overview', () => {
     const source = readFileSync('src/features/character/home/sections.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
-    expect(source).toContain('data-roll-death-save');
-    expect(source).not.toContain('profile-status-card--proficiency');
+    expect(source).toContain('data-manage-death-saves');
+    expect(source).toContain('profile-status-card--proficiencies');
     expect(source).toContain('profile-status-card--background');
     expect(source).toContain('character-profile-body');
     expect(styles).toContain('container-type: inline-size');
@@ -34,13 +34,16 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('profile-status-card__label">Concentrazione');
     expect(source).toContain('class="character-identity__kicker"');
     expect(source).toContain('class="character-level-seal"');
-    expect(source).toContain('class="character-lineage"');
-    expect(source).toContain('<small>Bonus Competenza</small><strong>${formatSigned(proficiencyBonus)}</strong>');
-    expect(source).toContain("[data.race, data.background].filter(Boolean).join(' · ')");
+    expect(source).toContain('character-identity__kicker--background');
+    expect(source).toContain('character-identity__kicker--alignment');
+    expect(source).toContain('combat-stat combat-stat--proficiency');
+    expect(source).toContain('<span class="combat-stat__label">Bonus competenza</span>');
+    expect(source).toContain('character-identity__kicker character-identity__kicker--race');
     expect(source).not.toContain("<small>Background</small><strong>${data.background ?? '-'}</strong>");
     expect(source).not.toContain("<small>Razza</small><strong>${data.race ?? '-'}</strong>");
     expect(source).not.toContain('meta-tag--background');
     expect(source).toContain('profile-status-card__label">Storia Personaggio');
+    expect(source).toContain('profile-status-card__label">Competenze Personaggio');
     expect(source).toContain("profile-status-card__state\">${hasInspiration ? 'Attiva' : 'Non attiva'}");
     expect(source).toContain("profile-status-card__state\">${hasConcentration ? 'Attiva' : 'Non attiva'}");
     expect(styles).toMatch(/\.character-meta\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s);
@@ -50,8 +53,22 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('aria-label="Stati rapidi del personaggio"');
     expect(source).toContain('status-launch-card--conditions');
     expect(source).toContain('status-launch-card--weakness');
-    expect(source).toContain('character-proficiency-section');
+    expect(source).not.toContain('character-proficiency-section');
+    expect(source).toContain('data-proficiency-tab="fighting-styles"');
     expect(source).toContain('const currentWeakness = weakPoints > 0');
+    expect(source).toContain('data-upload-avatar');
+    expect(source).toContain('const initiativeRollKey = configuredInitiativeIndex >= 0');
+    expect(source).toContain('data-special-skill-card="${escapeHtml(initiativeRollKey)}"');
+  });
+
+  it('renders proficiency summaries without decorative diamonds', () => {
+    const source = readFileSync('src/features/character/home/sections.js', 'utf8');
+    const attackSummary = source.slice(
+      source.indexOf('<section class="attack-turn-summary"'),
+      source.indexOf('<div class="attack-turn-summary__primary"')
+    );
+    expect(attackSummary).toContain('<small>Bonus competenza</small>');
+    expect(attackSummary).not.toContain('◆');
   });
 
   it('renders the combat vitals panel with readable stats and preserved controls', () => {
@@ -62,7 +79,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('class="combat-stat combat-stat--armor"');
     expect(source).toContain('data-roll-hit-dice');
     expect(source).toContain('data-edit-weakness');
-    expect(source).toContain('data-death-save');
+    expect(source).toContain('data-manage-death-saves');
     expect(source).toContain('role="meter"');
     expect(source).toContain('data-edit-conditions');
     expect(source).toContain('weaknessLevelList.filter');

@@ -166,6 +166,9 @@ export function buildPlayCards(dialog) {
       card.dataset.resourceAction = badges.find(label => ['Azione','Azione Bonus','Reazione','Azione Gratuita'].includes(label)) || '';
       const spellLevel = card.querySelector('.spell-card__sigil')?.textContent.trim();
       header.querySelector('.play-card__eyebrow').textContent = (spellLevel && spellLevel !== '✦' ? spellLevel + ' livello' : 'Trucchetto') + (badges.includes('C') ? ' · Concentrazione' : '') + (badges.includes('R') ? ' · Rituale' : '');
+      const preparationState = card.dataset.spellPreparationState || 'always';
+      const preparationLabel = card.dataset.spellPreparationLabel || 'Sempre conosciuto';
+      header.append(textElement('span', `play-card__spell-state play-card__spell-state--${preparationState}`, preparationLabel));
       const facts = card.querySelector('.catalog-spell-facts');
       if (facts) {
         facts.className = 'play-card__facts';
