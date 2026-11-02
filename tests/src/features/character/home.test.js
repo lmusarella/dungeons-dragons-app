@@ -249,13 +249,13 @@ describe('src/features/character/home.js', () => {
     const styles = readFileSync('src/features/character/home/characterSheetPolish.css', 'utf8');
     expect(source).not.toContain('character-sheet-header__crest');
     expect(source).not.toContain('Panoramica di gioco');
-    expect(source).toContain('character-edit-trigger character-sheet-titlebar__edit');
-    expect(source).toContain('<span>Modifica personaggio</span>');
-    expect(styles).toContain('.character-sheet-titlebar__edit');
+    expect(sections).toContain('character-edit-trigger character-edit-trigger--inline');
+    expect(sections).toContain('<span>Modifica personaggio</span>');
+    expect(styles).toContain('.character-edit-trigger--inline');
     expect(styles).toContain(".app-shell[data-route='home'] > .app-main");
-    expect(styles).toContain('grid-template-columns: 205px minmax(300px,1fr)');
-    expect(styles).toContain('width: 205px; height: 250px; min-height: 250px; max-height: 250px');
-    expect(styles).toContain('grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,54px)');
+    expect(styles).toContain('grid-template-columns: 170px minmax(300px,1fr)');
+    expect(styles).toContain('width: 170px; height: 210px; min-height: 210px; max-height: 210px');
+    expect(styles).toContain('grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: 54px');
   });
 
   it('edits shortcut modifiers in place and includes them in actual rolls', () => {

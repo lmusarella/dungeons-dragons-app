@@ -390,12 +390,10 @@ body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-fo
 .item-source-picker__options input:checked + span { border-color: #76364b; background: #ead9df; box-shadow: inset 0 0 0 1px #76364b; }
 .item-source-picker__options input:focus-visible + span { outline: 2px solid #b88845; outline-offset: 2px; }
 .shared-item-picker { display: grid; gap: 12px; min-height: 0; }
-.shared-item-picker__category-filter { display: grid; grid-template-columns: repeat(9,minmax(72px,1fr)); gap: 7px; }
-.shared-item-picker__category { display: grid; min-width: 0; min-height: 58px; place-items: center; align-content: center; gap: 4px; padding: 7px 5px; border: 1px solid #d5bd98; border-radius: 12px; background: #fffaf0; color: #765848; cursor: pointer; }
-.shared-item-picker__category i { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 8px; background: #eee1cc; color: #875f3f; font-style: normal; font-size: 14px; }
-.shared-item-picker__category span { overflow: hidden; max-width: 100%; font-size: .58rem; font-weight: 800; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.shared-item-picker__category-filter { display: grid; grid-template-columns: repeat(8,minmax(80px,1fr)); gap: 7px; }
+.shared-item-picker__category { display: grid; min-width: 0; min-height: 38px; place-items: center; align-content: center; padding: 7px 9px; border: 1px solid #d5bd98; border-radius: 11px; background: #fffaf0; color: #765848; cursor: pointer; }
+.shared-item-picker__category span { overflow: hidden; max-width: 100%; font-size: .62rem; font-weight: 800; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .shared-item-picker__category:is(:hover,.is-active) { border-color: #76364b; background: #ead9df; color: #633349; box-shadow: inset 0 0 0 1px rgba(118,54,75,.32); }
-.shared-item-picker__category.is-active i { background: #76364b; color: #fff8e9; }
 .shared-item-picker__category:focus-visible { outline: 3px solid #b88845; outline-offset: 2px; }
 .shared-item-picker__toolbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 7px; border: 1px solid #d5bd98; border-radius: 13px; background: rgba(251,244,230,.96); backdrop-filter: blur(8px); }
 .shared-item-picker__toolbar label { display: flex; min-width: 0; flex: 1; align-items: center; gap: 8px; }

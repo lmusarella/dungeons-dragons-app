@@ -42,8 +42,8 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).not.toContain("<small>Background</small><strong>${data.background ?? '-'}</strong>");
     expect(source).not.toContain("<small>Razza</small><strong>${data.race ?? '-'}</strong>");
     expect(source).not.toContain('meta-tag--background');
-    expect(source).toContain('profile-status-card__label">Storia Personaggio');
-    expect(source).toContain('profile-status-card__label">Competenze Personaggio');
+    expect(source).toContain('profile-status-card__label">Background');
+    expect(source).toContain('profile-status-card__label">Competenze');
     expect(source).toContain("profile-status-card__state\">${hasInspiration ? 'Attiva' : 'Non attiva'}");
     expect(source).toContain("profile-status-card__state\">${hasConcentration ? 'Attiva' : 'Non attiva'}");
     expect(styles).toMatch(/\.character-meta\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s);

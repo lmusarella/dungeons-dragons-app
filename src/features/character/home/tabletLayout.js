@@ -208,9 +208,9 @@ export function mountTabletLayout(container, configuration = {}) {
   toolbar.dataset.sheetActionFooter = '';
   toolbar.setAttribute('aria-label', 'Azioni rapide di gioco');
   const actions = [
+    ['◆', 'Dadi', 'openDice', 'roller', 'dice'],
     ['−', 'Danno', 'hpAction', 'damage', 'damage'],
     ['+', 'Cura', 'hpAction', 'heal', 'heal'],
-    ['◆', 'Dadi', 'openDice', 'roller', 'dice'],
     ['◐', 'Riposo breve', 'rest', 'short_rest', 'short-rest'],
     ['☾', 'Riposo lungo', 'rest', 'long_rest', 'long-rest'],
     ['↑', 'Paga', 'moneyAction', 'pay', 'pay'],

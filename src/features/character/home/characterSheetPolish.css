@@ -41,8 +41,8 @@
   display: grid; width: 100%; height: auto; min-height: 0; gap: 12px; padding: 0; overflow: visible;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary {
-  display: grid; grid-template-columns: 205px minmax(300px,1fr); grid-template-rows: minmax(0,1fr) auto; align-items: start;
-  gap: 13px clamp(18px,2.2vw,30px); width: 100%; min-height: 270px; padding: 15px;
+  display: grid; grid-template-columns: 170px minmax(300px,1fr); grid-template-rows: minmax(0,1fr) auto; align-items: start;
+  gap: 12px clamp(16px,2vw,26px); width: 100%; min-height: 230px; padding: 14px;
   border: 1px solid #d5bc91; border-radius: 17px; background: rgba(255,249,237,.58); box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar {
@@ -50,7 +50,7 @@
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame {
   position: relative; display: block; overflow: hidden; appearance: none; cursor: default;
-  grid-column: 1; grid-row: 1 / 3; width: 205px; height: 250px; min-height: 250px; max-height: 250px; padding: 5px;
+  grid-column: 1; grid-row: 1 / 3; width: 170px; height: 210px; min-height: 210px; max-height: 210px; padding: 5px;
   border: 1px solid #b78b54; border-radius: 15px; background: #ead6b7;
   box-shadow: inset 0 0 0 3px #f8ead1,0 8px 20px rgba(81,48,32,.16);
 }
@@ -75,7 +75,7 @@
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar {
   width: 100%; height: 100%; border-radius: 10px; object-fit: cover; object-position: center 22%;
 }
-.sheet-dashboard .character-manual .character-profile-body { position: relative; grid-column: 2; grid-row: 1; min-width: 0; padding: 2px 72px 2px 0; align-self: stretch; }
+.sheet-dashboard .character-manual .character-profile-body { position: relative; grid-column: 2; grid-row: 1; min-width: 0; padding: 2px 0; align-self: stretch; }
 .sheet-dashboard .character-manual .character-identity { height: 100%; }
 .sheet-dashboard .character-manual .character-identity__toolbar {
   display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 12px;
@@ -86,15 +86,18 @@
   padding-left: 7px; border-left: 1px solid #c8a979;
 }
 .sheet-dashboard .character-manual .character-edit-trigger--inline {
-  position: static; flex: 0 0 auto; min-height: 32px; padding: 6px 10px; border-radius: 10px;
-  background: rgba(255,249,239,.82); box-shadow: none;
+  position: static; display: inline-flex; flex: 0 0 auto; min-height: 42px; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 11px;
+  border: 1px solid #b98f61; background: linear-gradient(145deg,#fffaf0,#eddbc0); color: #653449; box-shadow: 0 3px 9px rgba(83,47,44,.1);
 }
+.sheet-dashboard .character-manual .character-edit-trigger--inline svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.sheet-dashboard .character-manual .character-edit-trigger--inline span { font-size: 9px; font-weight: 850; white-space: nowrap; }
+.sheet-dashboard .character-manual .character-heading-actions { display: inline-flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 5px; margin-left: auto; }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-name {
   margin: 7px 0 3px; font-size: clamp(30px,3.2vw,46px); line-height: 1; letter-spacing: -.025em;
 }
 .sheet-dashboard .character-manual .character-lineage { margin: 3px 0 13px; font-size: 12px; }
 .sheet-dashboard .character-manual .character-level-seal { min-width: 58px; padding: 6px 9px; }
-.sheet-dashboard .character-manual .character-level-seal { position: absolute; top: 0; right: 0; z-index: 1; }
+.sheet-dashboard .character-manual .character-level-seal { position: static; z-index: 1; }
 .sheet-dashboard .character-manual .character-level-seal strong { font-size: 21px; }
 .sheet-dashboard .character-manual .character-meta {
   grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 0;
@@ -103,7 +106,7 @@
 .sheet-dashboard .character-manual .meta-tag small { font-size: 7px; }
 .sheet-dashboard .character-manual .meta-tag strong { font-size: 11px; }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions {
-  grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,54px); align-content: start; gap: 8px;
+  grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: 54px; align-content: start; gap: 8px;
   margin: 0; padding: 0; overflow: visible;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card {
@@ -213,28 +216,29 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-
 
 /* Shortcut rail: large targets, readable descriptions and a restrained color code. */
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left {
-  display: grid; height: 100%; padding: 10px; gap: 7px; align-content: stretch;
-  grid-auto-rows: minmax(62px,1fr); border: 1px solid rgba(193,157,105,.8); border-radius: 20px;
+  display: grid; height: 100%; padding: 9px; gap: 6px; align-content: stretch;
+  grid-auto-rows: minmax(46px,1fr); border: 1px solid rgba(193,157,105,.8); border-radius: 20px;
   background: linear-gradient(180deg,rgba(255,250,240,.98),rgba(244,233,216,.97));
-  box-shadow: 0 16px 36px rgba(24,14,27,.2); overflow-y: auto;
+  box-shadow: 0 16px 36px rgba(24,14,27,.2); overflow: hidden; scrollbar-width: none;
 }
+.app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left::-webkit-scrollbar { display: none; }
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut:not(.sheet-shortcut--inline) {
   --shortcut-accent: #76506a; --shortcut-tint: #f2e4ea;
-  display: grid; grid-template-columns: 40px minmax(0,1fr); grid-template-rows: auto auto; min-height: 62px;
-  align-content: center; column-gap: 10px; row-gap: 2px; padding: 9px 10px;
+  display: grid; grid-template-columns: 34px minmax(0,1fr); grid-template-rows: auto auto; min-height: 46px; height: 100%;
+  align-content: center; column-gap: 9px; row-gap: 1px; padding: 6px 9px;
   border: 1px solid color-mix(in srgb,var(--shortcut-accent) 24%,#d8c7ae); border-radius: 13px;
   background: linear-gradient(100deg,var(--shortcut-tint),#fffaf1 68%); color: #46333b;
   box-shadow: 0 2px 7px rgba(70,46,48,.07); transition: transform .16s ease,border-color .16s ease,box-shadow .16s ease;
 }
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut > span {
-  grid-column: 1; grid-row: 1 / 3; display: grid; width: 40px; height: 40px; place-items: center; align-self: center;
-  border-radius: 11px; background: var(--shortcut-accent); color: #fffaf2; font-size: 19px; box-shadow: 0 3px 8px color-mix(in srgb,var(--shortcut-accent) 22%,transparent);
+  grid-column: 1; grid-row: 1 / 3; display: grid; width: 34px; height: 34px; place-items: center; align-self: center;
+  border-radius: 10px; background: var(--shortcut-accent); color: #fffaf2; font-size: 16px; box-shadow: 0 3px 8px color-mix(in srgb,var(--shortcut-accent) 22%,transparent);
 }
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut strong {
-  grid-column: 2; align-self: end; overflow: visible; color: #49343d; font: 750 13px/1.15 'Segoe UI',Arial,sans-serif; white-space: normal;
+  grid-column: 2; align-self: end; overflow: visible; color: #49343d; font: 800 12px/1.1 'Segoe UI',Arial,sans-serif; white-space: normal;
 }
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut small {
-  display: block; grid-column: 2; align-self: start; overflow: hidden; color: #79656b; font-size: 9.5px; font-weight: 600; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap;
+  display: block; grid-column: 2; align-self: start; overflow: hidden; color: #79656b; font-size: 8.5px; font-weight: 650; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap;
 }
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut:hover,
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut:focus-visible {
@@ -402,29 +406,31 @@ body .character-edit-form--guided .roll-adjustment-editor__row select { min-widt
 body .character-edit-form--guided .roll-adjustment-editor__empty { grid-column: 1 / -1; margin: 0; padding: 12px; border: 1px dashed #d8c09a; border-radius: 10px; text-align: center; }
 
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button {
-  --footer-tone: #76364b; --footer-soft: #f1e1e6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  min-width: 0; padding: 5px 7px; border-color: color-mix(in srgb,var(--footer-tone) 34%,#d8c6a8); border-radius: 12px;
-  background: linear-gradient(180deg,#fffdf9,var(--footer-soft)); color: var(--footer-tone); box-shadow: 0 2px 7px rgba(58,38,40,.08); transition: transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+  --footer-tone: #76364b; --footer-soft: #9b5a70; display: grid; grid-template-columns: 31px minmax(0,1fr); align-items: center; justify-content: center; gap: 7px;
+  min-width: 0; padding: 6px 9px; border: 1px solid color-mix(in srgb,var(--footer-tone) 74%,#fff) !important; border-radius: 13px;
+  background: linear-gradient(145deg,var(--footer-soft),var(--footer-tone)) !important; color: #fff !important;
+  box-shadow: 0 5px 12px color-mix(in srgb,var(--footer-tone) 25%,transparent),inset 0 1px 0 rgba(255,255,255,.2);
+  transition: transform .16s ease,box-shadow .16s ease,filter .16s ease;
 }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button:hover { transform: translateY(-1px); border-color: var(--footer-tone); box-shadow: 0 6px 14px rgba(58,38,40,.14); }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button:hover { transform: translateY(-2px); filter: saturate(1.08) brightness(1.04); box-shadow: 0 8px 17px color-mix(in srgb,var(--footer-tone) 34%,transparent); }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button:active { transform: translateY(0); }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__icon {
-  display: grid; width: 27px; height: 27px; place-items: center; margin: 0 !important; border-radius: 50%; background: var(--footer-tone); color: #fff !important; font-size: 14px;
+  display: grid; width: 31px; height: 31px; place-items: center; margin: 0 !important; border: 1px solid rgba(255,255,255,.3); border-radius: 10px; background: rgba(255,255,255,.16); color: #fff !important; font-size: 15px;
 }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button strong { width: 100%; overflow: hidden; font-size: 9.5px; line-height: 1.15; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button strong { width: 100%; overflow: hidden; color: #fff !important; font-size: 10.5px; line-height: 1.15; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button[data-open-dice] {
-  border-color: color-mix(in srgb,var(--footer-tone) 34%,#d8c6a8) !important;
-  background: linear-gradient(180deg,#fffdf9,var(--footer-soft)) !important;
-  color: var(--footer-tone) !important;
+  border-color: color-mix(in srgb,var(--footer-tone) 74%,#fff) !important;
+  background: linear-gradient(145deg,var(--footer-soft),var(--footer-tone)) !important;
+  color: #fff !important;
 }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--damage { --footer-tone: #a23e45; --footer-soft: #f7e0df; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--heal { --footer-tone: #347456; --footer-soft: #dfeee5; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--dice { --footer-tone: #6e477d; --footer-soft: #ebe0ef; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--short-rest { --footer-tone: #47758b; --footer-soft: #deebf0; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--long-rest { --footer-tone: #4c5687; --footer-soft: #e1e4f1; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--pay { --footer-tone: #9a6a25; --footer-soft: #f4e6c9; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--receive { --footer-tone: #33756f; --footer-soft: #dcece9; }
-.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--loot { --footer-tone: #895538; --footer-soft: #efe0d1; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--damage { --footer-tone: #8f303b; --footer-soft: #bd5960; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--heal { --footer-tone: #28654b; --footer-soft: #4b8b6b; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--dice { --footer-tone: #5c3b75; --footer-soft: #8662a0; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--short-rest { --footer-tone: #35667b; --footer-soft: #56889d; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--long-rest { --footer-tone: #414d7c; --footer-soft: #6673a1; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--pay { --footer-tone: #82551d; --footer-soft: #ad7b35; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--receive { --footer-tone: #286760; --footer-soft: #4c8b83; }
+.app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--loot { --footer-tone: #75452e; --footer-soft: #9f684a; }
 
 body dialog.sheet-detail .play-card--spell .play-card__header { position: relative; padding-right: 108px; }
 body dialog.sheet-detail .play-card--spell .play-card__spell-state {
@@ -469,25 +475,27 @@ body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button.is-active 
 @media (max-width: 1050px) {
   .app-shell[data-route='home'] .home-layout.sheet-dashboard { grid-template-columns: 190px minmax(0,1fr); gap: 12px; padding-inline: 12px; }
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary {
-    grid-template-columns: 170px minmax(250px,1fr); min-height: 250px;
+    grid-template-columns: 150px minmax(250px,1fr); min-height: 210px;
   }
-  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame { width: 170px; height: 220px; min-height: 220px; max-height: 220px; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame { width: 150px; height: 190px; min-height: 190px; max-height: 190px; }
   .app-shell[data-route='home'] .sheet-dashboard .hp-panel-status-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid { grid-template-columns: minmax(96px,1.2fr) minmax(0,4.8fr) minmax(135px,2fr); }
 }
 @media (max-width: 760px) {
+  .app-shell[data-route='home'] { --game-footer-height: 118px; }
+  .app-shell[data-route='home'] > .app-main > .sheet-action-footer { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-auto-rows: minmax(46px,1fr); }
   body .avatar-upload { grid-template-columns: 1fr; }
   body .avatar-upload__preview { min-height: 220px; max-height: 300px; }
   body .character-edit-form--guided .roll-adjustment-editor__grid { grid-template-columns: 1fr; }
   body .character-edit-form--guided .roll-adjustment-editor__row { grid-template-columns: minmax(95px,1fr) minmax(100px,.8fr) minmax(125px,1fr); }
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary,
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar {
-    grid-template-columns: 140px minmax(0,1fr) !important; min-height: 0; padding: 11px;
+    grid-template-columns: 125px minmax(0,1fr) !important; min-height: 0; padding: 11px;
   }
-  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame { width: 140px; height: 210px; min-height: 210px; max-height: 210px; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame { width: 125px; height: 180px; min-height: 180px; max-height: 180px; }
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions {
-    grid-column: 2; grid-row: 2; grid-template-columns: repeat(2,minmax(0,1fr));
+    grid-column: 2; grid-row: 2; grid-template-columns: repeat(4,minmax(0,1fr));
   }
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -500,4 +508,9 @@ body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button.is-active 
   body .sheet-detail[data-sheet-panel='Tiri salvezza'] .detail-grid--compact { grid-template-columns: repeat(2,minmax(0,1fr)); }
   body .sheet-detail[data-sheet-panel='Attacchi'] .attack-turn-summary { display: grid !important; grid-template-columns: 1fr !important; }
   body .sheet-detail[data-sheet-panel='Attacchi'] .attack-turn-summary > * { min-width: 0; }
+}
+@media (max-width: 580px) {
+  .app-shell[data-route='home'] { --game-footer-height: 214px; }
+  .app-shell[data-route='home'] > .app-main > .sheet-action-footer { grid-template-columns: repeat(2,minmax(0,1fr)) !important; grid-auto-rows: minmax(46px,1fr); }
+  .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left { height: auto; overflow: visible; }
 }

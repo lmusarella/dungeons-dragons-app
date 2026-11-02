@@ -929,21 +929,6 @@ export async function renderHome(container) {
       </div>
       <div class="home-column home-column--center">
         <section class="card home-card home-section character-sheet-card">
-          ${sheetCharacter ? `
-            <header class="character-sheet-titlebar">
-              <span class="character-sheet-titlebar__mark" aria-hidden="true">◆</span>
-              <span class="character-sheet-titlebar__copy">
-                <strong>Scheda personaggio</strong>
-                <small>${escapeHtml(sheetCharacter.name)}</small>
-              </span>
-              ${canEditCharacter ? `
-                <button class="character-edit-trigger character-sheet-titlebar__edit" type="button" data-edit-character aria-label="Modifica scheda personaggio">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
-                  <span>Modifica personaggio</span>
-                </button>
-              ` : ''}
-            </header>
-          ` : ''}
           ${sheetCharacter ? buildCharacterOverview(sheetCharacter, canEditCharacter, items, companions) : buildEmptyState(canCreateCharacter, offline)}
         </section>
         ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}

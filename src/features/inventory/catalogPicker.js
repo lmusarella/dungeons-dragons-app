@@ -49,8 +49,7 @@ export async function openSharedItemPicker({
   content.className = 'shared-item-picker';
   content.innerHTML = `
     <div class="shared-item-picker__category-filter" role="group" aria-label="Filtra per categoria">
-      ${[{ value: '', label: 'Tutti', icon: '◇' }, ...itemCategories.map((category) => ({ ...category, icon: ({ weapon: '⚔', armor: '◈', consumable: '◐', tool: '⚒', container: '▣', jewelry: '✦', loot: '✧', gear: '▤' })[category.value] || '◇' }))]
-    .map((category, index) => `<button class="shared-item-picker__category ${index === 0 ? 'is-active' : ''}" type="button" data-shared-item-category="${category.value}" aria-pressed="${index === 0}"><i aria-hidden="true">${category.icon}</i><span>${escapeHtml(category.label)}</span></button>`).join('')}
+      ${itemCategories.map((category) => `<button class="shared-item-picker__category" type="button" data-shared-item-category="${category.value}" aria-pressed="false"><span>${escapeHtml(category.label)}</span></button>`).join('')}
     </div>
     <div class="shared-item-picker__toolbar">
       <label><span aria-hidden="true">⌕</span><input type="search" placeholder="Cerca nell’archivio" data-shared-item-search /></label>
@@ -67,7 +66,7 @@ export async function openSharedItemPicker({
   const count = content.querySelector('[data-shared-item-count]');
   const results = content.querySelector('[data-shared-item-results]');
   const categoryButtons = [...content.querySelectorAll('[data-shared-item-category]')];
-  let activeCategory = '';
+  const selectedCategories = new Set();
   let cards = [];
   let submitButton = null;
 
@@ -76,7 +75,7 @@ export async function openSharedItemPicker({
     let visible = 0;
     cards.forEach((card) => {
       const matchesSearch = !query || card.dataset.searchValue.includes(query);
-      const matchesCategory = !activeCategory || card.dataset.itemCategory === activeCategory;
+      const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(card.dataset.itemCategory);
       card.hidden = !(matchesSearch && matchesCategory);
       if (!card.hidden) visible += 1;
     });
@@ -150,12 +149,12 @@ export async function openSharedItemPicker({
 
   search.addEventListener('input', applyFilters);
   categoryButtons.forEach((button) => button.addEventListener('click', () => {
-    activeCategory = button.dataset.sharedItemCategory || '';
-    categoryButtons.forEach((entry) => {
-      const isActive = entry === button;
-      entry.classList.toggle('is-active', isActive);
-      entry.setAttribute('aria-pressed', String(isActive));
-    });
+    const category = button.dataset.sharedItemCategory;
+    if (selectedCategories.has(category)) selectedCategories.delete(category);
+    else selectedCategories.add(category);
+    const isActive = selectedCategories.has(category);
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
     applyFilters();
   }));
 

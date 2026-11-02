@@ -228,19 +228,19 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </div>
             <div class="character-identity__heading">
               <h3 class="character-name">${character.name}</h3>
-              <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              <span class="character-heading-actions">
+                ${canEditCharacter ? `
+                  <button class="character-edit-trigger character-edit-trigger--inline" type="button" data-edit-character aria-label="Modifica personaggio">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l10.6-10.6a2.1 2.1 0 0 0-3-3L4 16Z"/><path d="m13.8 8.2 3 3"/></svg>
+                    <span>Modifica personaggio</span>
+                  </button>
+                ` : ''}
+                <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              </span>
             </div>
           </div>
         </div>
         <div class="character-summary-actions" aria-label="Stato del personaggio">
-          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background title="${escapeHtml(data.background ?? 'Apri dettagli background')}">
-            <span class="profile-status-card__label">Storia Personaggio</span>
-            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
-          </button>
-          <button class="profile-status-card profile-status-card--proficiencies background-button" type="button" data-show-proficiencies title="Apri competenze, maestrie e stili di combattimento">
-            <span class="profile-status-card__label">Competenze Personaggio</span>
-            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
-          </button>
           <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
             <span class="profile-status-card__text">
               <span class="profile-status-card__label">Ispirazione</span>
@@ -273,6 +273,14 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
               <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
             </button>
           </div>
+          <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background title="${escapeHtml(data.background ?? 'Apri dettagli background')}">
+            <span class="profile-status-card__label">Background</span>
+            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="profile-status-card profile-status-card--proficiencies background-button" type="button" data-show-proficiencies title="Apri competenze, maestrie e stili di combattimento">
+            <span class="profile-status-card__label">Competenze</span>
+            <span class="profile-status-card__arrow" aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
       <div class="stat-panel">     
