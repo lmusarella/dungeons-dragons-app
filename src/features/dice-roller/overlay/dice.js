@@ -9,7 +9,26 @@ let legacyDiceInitialized = false;
 
 function buildDiceMarkup() {
   return `
-    <div id="diceRoller"></div>
+    <section class="diceov-tabletop" aria-label="Tavolo di lancio tridimensionale">
+      <header class="diceov-tabletop__header">
+        <span aria-hidden="true">🎲</span>
+        <span><strong>Tavolo di lancio</strong><small>Trascina sul tavolo per lanciare i dadi</small></span>
+      </header>
+      <div id="diceRoller"></div>
+      <div class="diceov-tabletop-empty" data-tabletop-empty hidden>
+        <span aria-hidden="true">🎲</span>
+        <strong>Scegli almeno un dado</strong>
+        <small>Usa “Aggiungi dadi” prima di fare swipe sul tavolo.</small>
+      </div>
+      <div class="diceov-tabletop-feedback" aria-live="polite">
+        <div class="diceov-result diceov-result--final">
+          <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
+          <p class="diceov-result-label">Totale</p>
+          <p class="diceov-result-detail" data-dice-detail>Lancia per vedere i dettagli.</p>
+          <p class="diceov-result-value" data-dice-result>—</p>
+        </div>
+      </div>
+    </section>
     <main id="diceRollerUI">
       <div class="top_field" hidden>
         <input type="text" id="textInput" spellcheck="false" inputmode="none" virtualkeyboardpolicy="manual"
@@ -36,11 +55,14 @@ function buildOverlayMarkup() {
   return `
   <div class="diceov-backdrop" data-close></div>
   <div class="diceov-stage" role="dialog" aria-modal="true" aria-label="Lancio dadi">
-    <button class="diceov-close" data-close aria-label="Chiudi" hidden>×</button>
     <section class="diceov-panel">
       <header class="diceov-header">
-        <div>      
-          <p class="diceov-eyebrow" data-dice-title>Lancia dadi</h3>
+        <div class="diceov-header__identity">
+          <span class="diceov-header__icon" aria-hidden="true">◆</span>
+          <div>
+            <p class="diceov-eyebrow" data-dice-title>Lancia dadi</p>
+            <small>Configura il tiro, poi trascina sul tavolo.</small>
+          </div>
         </div>
         <button class="diceov-history-icon-button" type="button" data-history-toggle aria-expanded="false" aria-label="Apri storico tiri" title="Storico tiri">
           <span aria-hidden="true">🕘</span>
@@ -48,44 +70,38 @@ function buildOverlayMarkup() {
       </header>
       <div class="diceov-controls">   
         <div class="diceov-control diceov-control--row" data-modifier-home>
-         <div class="diceov-control" data-dice-control="d20">
-          <label class="diceov-label" for="dice-roll-mode">Modalità</label>
-          <select id="dice-roll-mode" name="dice-roll-mode">
+         <div class="diceov-control diceov-roll-mode-control" data-dice-control="d20">
+          <span class="diceov-label" id="dice-roll-mode-label">Modalità</span>
+          <select id="dice-roll-mode" class="diceov-native-roll-mode" name="dice-roll-mode" aria-labelledby="dice-roll-mode-label" tabindex="-1">
             <option value="normal" selected>Normale</option>
             <option value="advantage">Vantaggio</option>
             <option value="disadvantage">Svantaggio</option>
           </select>
+          <div class="diceov-mode-cards" role="group" aria-labelledby="dice-roll-mode-label">
+            <button class="diceov-mode-card" type="button" data-roll-mode-option="advantage" aria-pressed="false">
+              <strong>Vantaggio</strong><small>Tieni il migliore</small>
+            </button>
+            <button class="diceov-mode-card" type="button" data-roll-mode-option="disadvantage" aria-pressed="false">
+              <strong>Svantaggio</strong><small>Tieni il peggiore</small>
+            </button>
+          </div>
         </div>
-          <div class="diceov-control" data-dice-select hidden>
+          <div class="diceov-control diceov-selection-control" data-dice-select hidden>
             <label class="diceov-label" for="dice-roll-select" data-dice-select-label>Seleziona</label>
             <select id="dice-roll-select" name="dice-roll-select"></select>
           </div>
-          <div class="diceov-field diceov-field--modifier">
-            <label class="diceov-label" for="dice-modifier">Mod</label>
-            <input id="dice-modifier" type="number" name="dice-modifier" value="0" step="1" />
-          </div>
-          <div class="diceov-control" data-dice-buff="d20" hidden>
-            <label class="diceov-label" for="dice-buff-d20">Buff/Debuff</label>
-            <select id="dice-buff-d20" name="dice-buff-d20">
-              <option value="none" selected>Nessuno</option>
-              <option value="plus-d4">+d4</option>
-              <option value="plus-d6">+d6</option>
-              <option value="minus-d4">-d4</option>
-              <option value="minus-d6">-d6</option>
-            </select>
-          </div>
-           <div class="diceov-control" data-dice-control="d20">
-          <div class="diceov-inspiration" data-dice-inspiration>
-            <span class="diceov-label">Ispirazione</span>
-            <label class="diceov-toggle">
-              <input id="dice-inspiration" type="checkbox" name="dice-inspiration" />
-              <span class="diceov-toggle-track" aria-hidden="true"></span>
-            </label>
-          </div>
-        </div>
-         <p class="diceov-warning" data-inspiration-warning hidden>
+          <div class="diceov-control diceov-inspiration-row" data-dice-control="d20">
+            <div class="diceov-inspiration" data-dice-inspiration>
+              <span class="diceov-label">Ispirazione</span>
+              <label class="diceov-toggle">
+                <input id="dice-inspiration" type="checkbox" name="dice-inspiration" />
+                <span class="diceov-toggle-track" aria-hidden="true"></span>
+              </label>
+            </div>
+            <p class="diceov-warning" data-inspiration-warning hidden>
               Attenzione: userai il punto ispirazione su questo tiro.
             </p>
+          </div>
          <p class="diceov-warning" data-weakness-warning hidden></p>
          <p class="diceov-warning" data-rollmode-warning hidden></p>
          <p class="diceov-warning" data-autofail-warning hidden></p>
@@ -93,24 +109,6 @@ function buildOverlayMarkup() {
        
         <div class="diceov-control" data-dice-control="generic">       
           <div class="diceov-generic-row">
-            <div class="diceov-field">
-              <label class="diceov-label" for="dice-notation">Notazione</label>
-              <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="1d20" spellcheck="false" />
-            </div>
-            <div class="diceov-field diceov-field--modifier">
-              <label class="diceov-label" for="dice-modifier-generic">Mod</label>
-              <input id="dice-modifier-generic" type="number" name="dice-modifier-generic" value="0" step="1" />
-            </div>
-            <div class="diceov-field" data-dice-buff="damage" hidden>
-              <label class="diceov-label" for="dice-buff-damage">Buff/Debuff</label>
-              <select id="dice-buff-damage" name="dice-buff-damage">
-                <option value="none" selected>Nessuno</option>
-                <option value="plus-d4">+d4</option>
-                <option value="plus-d6">+d6</option>
-                <option value="minus-d4">-d4</option>
-                <option value="minus-d6">-d6</option>
-              </select>
-            </div>
             <div class="diceov-control" data-critical-damage-field hidden>
               <span class="diceov-label">Critico</span>
               <label class="diceov-toggle">
@@ -128,6 +126,20 @@ function buildOverlayMarkup() {
           </div>
           <p class="diceov-warning" data-dice-limit-warning hidden>Puoi lanciare al massimo 20 dadi alla volta.</p>
         </div>
+        <div class="diceov-quick-config diceov-roll-config">
+          <label class="diceov-quick-notation" for="dice-notation">
+            <span>Notazione</span>
+            <input id="dice-notation" class="diceov-generic-notation" type="text" name="dice-notation" value="" placeholder="Nessun dado selezionato" spellcheck="false" />
+          </label>
+          <div class="diceov-field diceov-field--modifier diceov-primary-modifier" data-quick-modifier="d20">
+            <label class="diceov-label" for="dice-modifier">Modificatore</label>
+            <input id="dice-modifier" type="number" name="dice-modifier" value="0" step="1" />
+          </div>
+          <div class="diceov-field diceov-field--modifier" data-quick-modifier="generic">
+            <label class="diceov-label" for="dice-modifier-generic">Modificatore</label>
+            <input id="dice-modifier-generic" type="number" name="dice-modifier-generic" value="0" step="1" />
+          </div>
+        </div>
       </div>
       <p class="diceov-warning diceov-warning--custom" data-custom-warning hidden></p>
       <div class="diceov-results">
@@ -138,7 +150,6 @@ function buildOverlayMarkup() {
               <span>Aggiungi dadi</span>
             </button>
             <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
-              <p class="diceov-hint">Puoi combinare dadi diversi (es. 2d6+1d4).</p>
               <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
                 ${[4, 6, 8, 10, 12, 20, 100].map((die) => `
                   <div class="diceov-quick-die">
@@ -161,24 +172,24 @@ function buildOverlayMarkup() {
             </div>
           </div>
         </div>
-        <div class="diceov-result diceov-result--final">
-          <p class="diceov-result-label">Totale</p>
-          <p class="diceov-result-detail" data-dice-detail>Lancia per vedere i dettagli.</p>
-          <p class="diceov-result-value" data-dice-result>—</p>
-        </div>
-        <p class="diceov-critical-banner" data-dice-critical-banner hidden></p>
       </div>
+      <section class="diceov-history-accordion" data-history-accordion hidden>
+        <div class="diceov-history-panel" data-dice-history-panel hidden>
+          <div class="diceov-history-popover-header">
+            <strong>Storico tiri</strong>
+            <button class="diceov-history-popover-close" type="button" data-history-close aria-label="Chiudi storico">×</button>
+          </div>
+          <div class="diceov-history-list" data-dice-history></div>
+        </div>
+      </section>
+      <footer class="diceov-exit-bar">
+        <button class="diceov-exit-button" type="button" data-dice-exit data-close>
+          <span aria-hidden="true" data-dice-exit-icon>×</span>
+          <span data-dice-exit-label>Chiudi</span>
+        </button>
+      </footer>
     </section>
     ${buildDiceMarkup()}
-    <section class="diceov-history-accordion" data-history-accordion hidden>
-      <div class="diceov-history-panel" data-dice-history-panel hidden>
-        <div class="diceov-history-popover-header">
-          <strong>Storico tiri</strong>
-          <button class="diceov-history-popover-close" type="button" data-history-close aria-label="Chiudi storico">×</button>
-        </div>
-        <div class="diceov-history-list" data-dice-history></div>
-      </div>
-    </section>
   </div>`;
 }
 
@@ -528,7 +539,7 @@ function stringifyEditableDiceNotation({ counts, constant }) {
   if (constant) {
     parts.push(String(constant));
   }
-  return parts.join('+').replace(/\+\-/g, '-') || '1d20';
+  return parts.join('+').replace(/\+\-/g, '-');
 }
 
 
@@ -608,6 +619,14 @@ export function openDiceOverlay({
   const shortcutHost = document.querySelector('dialog.sheet-detail[open]');
   const overlayParent = shortcutHost || document.body;
   if (overlayEl.parentElement !== overlayParent) overlayParent.appendChild(overlayEl);
+  const shortcutPanel = shortcutHost?.dataset?.sheetPanel || '';
+  const returnsToRollShortcut = ['Attacchi', 'Tiri Abilità', 'Tiri salvezza'].includes(shortcutPanel);
+  const exitLabel = overlayEl.querySelector('[data-dice-exit-label]');
+  const exitIcon = overlayEl.querySelector('[data-dice-exit-icon]');
+  const exitButton = overlayEl.querySelector('[data-dice-exit]');
+  if (exitLabel) exitLabel.textContent = returnsToRollShortcut ? 'Indietro' : 'Chiudi';
+  if (exitIcon) exitIcon.textContent = returnsToRollShortcut ? '←' : '×';
+  if (exitButton) exitButton.setAttribute('aria-label', returnsToRollShortcut ? 'Torna alla shortcut' : 'Chiudi il lancia dadi');
   resetLegacyDiceScene();
 
 
@@ -621,17 +640,22 @@ export function openDiceOverlay({
   overlayEl.querySelector('[data-dice-title]')?.replaceChildren(document.createTextNode(title));
   const overlayMode = mode === 'generic' ? 'generic' : 'd20';
   setOverlayMode(overlayEl, overlayMode);
+  overlayEl.querySelector('[data-modifier-home]')?.toggleAttribute('hidden', overlayMode === 'generic');
 
   const inspirationInput = overlayEl.querySelector('input[name="dice-inspiration"]');
   const inspirationField = overlayEl.querySelector('[data-dice-inspiration]');
+  const inspirationRow = inspirationField?.closest('.diceov-inspiration-row');
   const inspirationWarning = overlayEl.querySelector('[data-inspiration-warning]');
   const weaknessWarning = overlayEl.querySelector('[data-weakness-warning]');
   const rollModeWarning = overlayEl.querySelector('[data-rollmode-warning]');
   const autoFailWarning = overlayEl.querySelector('[data-autofail-warning]');
   const rollModeInput = overlayEl.querySelector('select[name="dice-roll-mode"]');
+  const rollModeButtons = [...overlayEl.querySelectorAll('[data-roll-mode-option]')];
   const modifierInput = overlayEl.querySelector('input[name="dice-modifier"]');
   const modifierField = modifierInput?.closest('.diceov-field--modifier');
   const genericModifierInput = overlayEl.querySelector('input[name="dice-modifier-generic"]');
+  const genericModifierField = genericModifierInput?.closest('.diceov-field--modifier');
+  const genericOptions = overlayEl.querySelector('[data-dice-control="generic"]');
   const notationInput = overlayEl.querySelector('input[name="dice-notation"]');
   const selectWrapper = overlayEl.querySelector('[data-dice-select]');
   const selectLabel = overlayEl.querySelector('[data-dice-select-label]');
@@ -643,6 +667,7 @@ export function openDiceOverlay({
   const buffSelectD20 = overlayEl.querySelector('select[name="dice-buff-d20"]');
   const buffWrapperDamage = overlayEl.querySelector('[data-dice-buff="damage"]');
   const buffSelectDamage = overlayEl.querySelector('select[name="dice-buff-damage"]');
+  const tabletopEmpty = overlayEl.querySelector('[data-tabletop-empty]');
   const stage = overlayEl.querySelector('.diceov-stage');
   const historyAccordion = overlayEl.querySelector('[data-history-accordion]');
   const historyToggle = overlayEl.querySelector('[data-history-toggle]');
@@ -697,12 +722,34 @@ export function openDiceOverlay({
     history: loadHistory(characterId),
     selectionRollMode: null,
     selectionRollModeReason: null,
+    extraDiceCounts: new Map(),
     quickDiceOpen: false,
     rerollOpen: false,
     lastCriticalSignature: null,
     rerollHint: null,
     pendingReroll: null
   };
+
+  function syncRollModeCards() {
+    const activeMode = rollModeInput?.value || 'normal';
+    const disabled = Boolean(rollModeInput?.disabled);
+    rollModeButtons.forEach((button) => {
+      const active = button.dataset.rollModeOption === activeMode;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+      button.disabled = disabled;
+    });
+  }
+
+  rollModeButtons.forEach((button) => {
+    button.onclick = () => {
+      if (!rollModeInput || rollModeInput.disabled) return;
+      const requestedMode = button.dataset.rollModeOption || 'normal';
+      rollModeInput.value = rollModeInput.value === requestedMode ? 'normal' : requestedMode;
+      rollModeInput.dispatchEvent(new Event('change', { bubbles: true }));
+      syncRollModeCards();
+    };
+  });
 
   resetResult();
   state.lastCriticalSignature = null;
@@ -744,9 +791,9 @@ export function openDiceOverlay({
   }
 
   function setModifierVisibility() {
-    if (!modifierField) return;
     const hidePrimaryModifier = mode === 'generic';
-    modifierField.toggleAttribute('hidden', hidePrimaryModifier);
+    modifierField?.toggleAttribute('hidden', hidePrimaryModifier);
+    genericModifierField?.toggleAttribute('hidden', !hidePrimaryModifier);
   }
 
   function clearCriticalBanner() {
@@ -881,6 +928,7 @@ export function openDiceOverlay({
       applyDefaultRollMode();
     }
     rollModeInput.disabled = inspired;
+    syncRollModeCards();
     if (inspirationWarning) inspirationWarning.toggleAttribute('hidden', !inspired);
     updateWeaknessWarning();
     updateRollModeWarning();
@@ -888,6 +936,7 @@ export function openDiceOverlay({
 
   function setInspirationAvailability(available) {
     state.inspirationAvailable = Boolean(available);
+    if (inspirationRow) inspirationRow.toggleAttribute('hidden', !state.inspirationAvailable);
     if (inspirationField) inspirationField.toggleAttribute('hidden', !state.inspirationAvailable);
     if (inspirationInput) {
       inspirationInput.checked = false;
@@ -896,6 +945,7 @@ export function openDiceOverlay({
     if (!state.inspirationAvailable && rollModeInput) {
       rollModeInput.disabled = false;
     }
+    syncRollModeCards();
     if (!state.inspirationAvailable && inspirationWarning) {
       inspirationWarning.setAttribute('hidden', '');
     }
@@ -928,6 +978,7 @@ export function openDiceOverlay({
     state.selectionRollMode = selected?.disabled ? null : (selected?.rollMode || null);
     state.selectionRollModeReason = selected?.disabled ? null : (selected?.rollModeReason || null);
     if (selectInput) selectInput.disabled = availableOptions.length === 0;
+    if (['TC', 'TA', 'TS'].includes(rollType)) selectWrapper.setAttribute('hidden', '');
     updateAutoFailWarning();
   }
 
@@ -971,6 +1022,7 @@ export function openDiceOverlay({
     if (!rollModeInput) return;
     const defaults = getDefaultRollModeState();
     rollModeInput.value = defaults.mode;
+    syncRollModeCards();
     updateWeaknessWarning();
     updateRollModeWarning();
     updateNotationFromMode();
@@ -1012,14 +1064,8 @@ export function openDiceOverlay({
     const rollMode = getRollMode(overlayEl);
     const baseCount = rollMode === 'normal' ? 1 : 2;
     const baseRolls = rolls.slice(0, baseCount);
-    const buffConfig = getBuffConfig();
-    let buff = null;
-    if (buffConfig && rolls.length > baseCount) {
-      const buffRoll = rolls[baseCount];
-      if (typeof buffRoll === 'number') {
-        buff = { ...buffConfig, roll: buffRoll, delta: buffConfig.sign * buffRoll };
-      }
-    }
+    const extraRolls = rolls.slice(baseCount);
+    const extraDiceTotal = extraRolls.reduce((sum, value) => sum + (Number(value) || 0), 0);
     const picked = baseRolls.length
       ? rollMode === 'advantage'
         ? Math.max(...baseRolls)
@@ -1027,7 +1073,7 @@ export function openDiceOverlay({
           ? Math.min(...baseRolls)
           : baseRolls[0]
       : null;
-    return { rollMode, baseRolls, picked, buff };
+    return { rollMode, baseRolls, picked, extraRolls, extraDiceTotal, buff: null };
   }
 
   function getGenericRollInfo(notation) {
@@ -1055,9 +1101,10 @@ export function openDiceOverlay({
     stage?.classList.toggle('diceov-stage--history-open', open);
     if (open) {
       const header = overlayEl.querySelector('.diceov-header');
-      if (header && stage) {
+      const historyHost = historyAccordion.closest('.diceov-panel');
+      if (header && historyHost) {
         const offset = Math.max(
-          header.getBoundingClientRect().bottom - stage.getBoundingClientRect().top,
+          header.getBoundingClientRect().bottom - historyHost.getBoundingClientRect().top,
           0
         );
         historyAccordion.style.setProperty('--diceov-history-offset', `${offset}px`);
@@ -1079,6 +1126,12 @@ export function openDiceOverlay({
     quickDiceContent?.toggleAttribute('hidden', !state.quickDiceOpen);
   }
 
+  function syncTabletopEmptyState(value = '') {
+    const isEmpty = mode === 'generic' && !String(value).trim();
+    tabletopEmpty?.toggleAttribute('hidden', !isEmpty);
+    overlayEl.querySelector('.diceov-tabletop')?.classList.toggle('is-empty', isEmpty);
+  }
+
   function getSelectionLabel() {
     if (!selectInput) return null;
     const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
@@ -1091,9 +1144,11 @@ export function openDiceOverlay({
     if (mode !== 'generic') {
       const rollMode = getRollMode(overlayEl);
       const diceCount = rollMode === 'normal' ? 1 : 2;
-      const buffConfig = getBuffConfig();
-      const buffNotation = buffConfig ? `+1d${buffConfig.sides}` : '';
-      updateDiceInput(overlayEl, `${diceCount}d${sides}${buffNotation}`);
+      const extraNotation = stringifyEditableDiceNotation({ counts: state.extraDiceCounts, constant: 0 });
+      const fullNotation = `${diceCount}d${sides}${extraNotation ? `+${extraNotation}` : ''}`;
+      if (notationInput) notationInput.value = fullNotation;
+      updateDiceInput(overlayEl, fullNotation);
+      syncTabletopEmptyState('d20');
       syncDiceLimitWarning();
       resetResult();
     }
@@ -1104,14 +1159,12 @@ export function openDiceOverlay({
     const sneakDice = String(sneakAttackDice || '').trim();
     const isDamageRoll = rollType === 'DMG' && mode === 'generic';
     const addSneak = isDamageRoll && sneakAttackInput?.checked && sneakDice;
-    const baseRaw = notation || buildGenericNotation(overlayEl);
+    const baseRaw = notation;
     const combinedBase = addSneak ? `${baseRaw}${sneakDice.startsWith('-') ? '' : '+'}${sneakDice}` : baseRaw;
     const baseValue = isDamageRoll && criticalDamageInput?.checked ? scaleDiceNotation(combinedBase, 2) : combinedBase;
-    const buffConfig = getBuffConfig();
-    const value = buffConfig
-      ? `${baseValue}${buffConfig.sign < 0 ? '-' : '+'}1d${buffConfig.sides}`
-      : baseValue;
+    const value = baseValue;
     updateDiceInput(overlayEl, value);
+    syncTabletopEmptyState(value);
     syncDiceLimitWarning();
     resetResult();
   }
@@ -1249,8 +1302,7 @@ export function openDiceOverlay({
         ? `${rollType || 'GEN'}:${criticalTier}:${info.rollMode}:${info.baseRolls.join(',')}:${info.picked}`
         : null;
       showCriticalBanner(criticalTier, { playAudio: playCriticalSound, signature: criticalSignature });
-      const buffDelta = info.buff?.delta || 0;
-      const total = (info.picked ?? 0) + modifier + buffDelta;
+      const total = (info.picked ?? 0) + modifier + info.extraDiceTotal;
       const rollLabel = info.rollMode === 'advantage'
         ? 'Vantaggio'
         : info.rollMode === 'disadvantage'
@@ -1261,12 +1313,8 @@ export function openDiceOverlay({
       if (resultDetail) {
         const selection = info.baseRolls.length > 1 ? ` (selezionato ${info.picked})` : '';
         const pieces = [`${rollLabel}: ${rollsLabel}${selection}`, `Modificatore ${formatModifier(modifier)}`];
-        if (info.buff) {
-          pieces.push(
-            `${info.buff.label} (d${info.buff.sides}: ${info.buff.roll})`
-          );
-        }
-        resultDetail.textContent = `${pieces.join(' · ')} =`;
+        if (info.extraRolls.length) pieces.push(`Dadi aggiunti: ${formatDiceValues(info.extraRolls)}`);
+        resultDetail.textContent = pieces.join(' · ');
       }
       renderRerollTray(notation);
       return;
@@ -1293,7 +1341,7 @@ export function openDiceOverlay({
           `${info.buff.label} ${formatModifier(info.buff.delta)} (d${info.buff.sides}: ${info.buff.roll})`
         );
       }
-      resultDetail.textContent = `${pieces.join(' · ')} =`;
+      resultDetail.textContent = pieces.join(' · ');
     }
     renderRerollTray(notation);
   }
@@ -1305,8 +1353,7 @@ export function openDiceOverlay({
       const info = getD20RollInfo(notation);
       state.lastBuff = info.buff;
       if (!info.baseRolls.length) return null;
-      const buffDelta = info.buff?.delta || 0;
-      return { value: info.picked, total: (info.picked ?? 0) + modifier + buffDelta };
+      return { value: info.picked, total: (info.picked ?? 0) + modifier + info.extraDiceTotal };
     }
     const info = getGenericRollInfo(notation);
     state.lastBuff = info.buff;
@@ -1338,6 +1385,7 @@ export function openDiceOverlay({
   }
   if (rollModeInput) {
     rollModeInput.onchange = () => {
+      syncRollModeCards();
       updateWeaknessWarning();
       updateRollModeWarning();
       updateNotationFromMode();
@@ -1345,7 +1393,18 @@ export function openDiceOverlay({
   }
   if (modifierInput) modifierInput.oninput = updateModifier;
   if (genericModifierInput) genericModifierInput.oninput = updateModifier;
-  if (notationInput) notationInput.oninput = updateNotationFromGeneric;
+  if (notationInput) notationInput.oninput = () => {
+    if (mode === 'generic') {
+      updateNotationFromGeneric();
+      return;
+    }
+    const parsed = parseEditableDiceNotation(notationInput.value);
+    const baseDiceCount = getRollMode(overlayEl) === 'normal' ? 1 : 2;
+    const enteredBaseCount = Number(parsed.counts.get(Number(sides))) || 0;
+    parsed.counts.set(Number(sides), Math.max(enteredBaseCount - baseDiceCount, 0));
+    state.extraDiceCounts = parsed.counts;
+    updateNotationFromMode();
+  };
   if (criticalDamageInput) criticalDamageInput.onchange = updateNotationFromGeneric;
   if (sneakAttackInput) sneakAttackInput.onchange = updateNotationFromGeneric;
   if (selectInput) {
@@ -1386,11 +1445,19 @@ export function openDiceOverlay({
   if (quickDiceControls) {
     quickDiceControls.onclick = (event) => {
       const button = event.target.closest('[data-quick-die]');
-      if (!button || !notationInput) return;
+      if (!button) return;
       const die = Number(button.dataset.quickDie);
       if (!QUICK_DICE_SIDES.includes(die)) return;
       const action = button.dataset.quickDieAction;
-      const parsed = parseEditableDiceNotation(notationInput.value || buildGenericNotation(overlayEl));
+      if (mode !== 'generic') {
+        const current = Number(state.extraDiceCounts.get(die)) || 0;
+        const next = action === 'decrement' ? Math.max(current - 1, 0) : current + 1;
+        state.extraDiceCounts.set(die, next);
+        updateNotationFromMode();
+        return;
+      }
+      if (!notationInput) return;
+      const parsed = parseEditableDiceNotation(notationInput.value);
       const current = Number(parsed.counts.get(die)) || 0;
       const next = action === 'decrement' ? Math.max(current - 1, 0) : current + 1;
       parsed.counts.set(die, next);
@@ -1427,11 +1494,12 @@ export function openDiceOverlay({
 
   setSelectionOptions();
   setBuffVisibility();
-  const showQuickDice = mode === 'generic';
+  const showQuickDice = mode === 'generic' || ['TC', 'TA', 'TS'].includes(rollType);
   const showReroll = isRerollSupported();
   if (quickDiceControls) quickDiceControls.toggleAttribute('hidden', !showQuickDice);
   if (rerollCard) rerollCard.toggleAttribute('hidden', !showReroll);
-  setQuickDiceOpen(false);
+  const quickDiceInitiallyOpen = mode === 'generic' && rollType !== 'DMG';
+  setQuickDiceOpen(quickDiceInitiallyOpen);
   setRerollOpen(false);
   accordionRow?.toggleAttribute('hidden', !(showQuickDice || showReroll));
   accordionRow?.classList.toggle('diceov-accordion-row--single', !(showQuickDice && showReroll));
@@ -1440,6 +1508,7 @@ export function openDiceOverlay({
   const hasSneakAttack = Boolean(String(sneakAttackDice || '').trim());
   if (sneakAttackField) sneakAttackField.toggleAttribute('hidden', !(isDamageGenericRoll && hasSneakAttack));
   if (sneakAttackInput) sneakAttackInput.checked = false;
+  if (genericOptions) genericOptions.toggleAttribute('hidden', !(isDamageGenericRoll));
   setInspirationAvailability(state.inspirationAvailable);
   applyDefaultRollMode();
   updateInspiration();
@@ -1462,6 +1531,10 @@ export function openDiceOverlay({
   if (activeModifierInput && hasExplicitModifier && Number.isFinite(Number(modifier))) {
     activeModifierInput.value = Number(modifier);
   }
+  if (notationInput) {
+    notationInput.value = '';
+    notationInput.placeholder = mode === 'generic' ? 'Nessun dado selezionato' : '1d20';
+  }
 
   if (mode === 'generic') {
     const diceCountInput = overlayEl.querySelector('[name="dice-count"]');
@@ -1475,7 +1548,6 @@ export function openDiceOverlay({
       }
     }
     if (diceTypeInput) diceTypeInput.value = 'd20';
-    if (notationInput) notationInput.value = '1d20';
     if (genericModifierInput && !hasExplicitModifier) {
       genericModifierInput.value = '0';
     }
@@ -1483,7 +1555,6 @@ export function openDiceOverlay({
       notationInput.value = String(notation).trim();
       syncGenericInputsFromNotation(overlayEl, notationInput.value);
     }
-    if (notationInput && !notationInput.value) notationInput.value = buildGenericNotation(overlayEl);
     updateNotationFromGeneric();
   } else {
     updateNotationFromMode();

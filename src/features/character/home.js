@@ -3069,7 +3069,7 @@ function handleDiceAction(type) {
         ? { label: 'Incantesimi', options: buildSpellAttackRollOptions(activeCharacter) }
         : null
     },
-    roller: { title: 'Lancia Dadi generico', mode: 'generic', rollType: 'GEN' }
+    roller: { title: 'Lancia Dadi Generico', mode: 'generic', rollType: 'GEN' }
   };
   const config = configs[type] ?? { title: 'Lancia dadi', mode: 'generic' };
   if (type === 'spell-attack' && (!config.selection?.options?.length)) {

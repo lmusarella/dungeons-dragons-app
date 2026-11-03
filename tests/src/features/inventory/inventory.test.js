@@ -51,5 +51,7 @@ describe('src/features/inventory/inventory.js', () => {
     expect(picker).toContain('qty: getSelectedQuantity(item)');
     expect(picker).toContain('for (let copy = 0; copy < bundleQuantity; copy += 1)');
     expect(styles).toContain('.shared-item-picker__stepper');
+    expect(picker).toContain('const syncCategoryButtons = () =>');
+    expect(picker).toContain('button.blur()');
   });
 });

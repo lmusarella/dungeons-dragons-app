@@ -168,10 +168,12 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-st
 }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat__defense-chip small {
   display: grid; min-width: 18px; height: 18px; place-items: center; border-radius: 50%;
-  background: currentColor; color: #fffdf7; font-size: 8px; font-weight: 900;
+  background: #654b42; color: #fffdf7 !important; font-size: 8px; font-weight: 900;
 }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat__defense-chip--resistance { border-color: #a9c7b3; background: #e3eee6; color: #386148; }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat__defense-chip--immunity { border-color: #c3a8c9; background: #eee3f0; color: #674c70; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat__defense-chip--resistance small { background: #386148; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat__defense-chip--immunity small { background: #674c70; }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid {
   grid-template-columns: minmax(108px,1.2fr) minmax(0,4.8fr) minmax(150px,2fr); gap: 8px;
 }
@@ -227,7 +229,7 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-
 .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left .sheet-shortcut:not(.sheet-shortcut--inline) {
   --shortcut-accent: #76506a; --shortcut-tint: #f2e4ea;
   display: grid; grid-template-columns: 34px minmax(0,1fr); grid-template-rows: auto auto; min-height: 46px; height: 100%;
-  align-content: center; column-gap: 9px; row-gap: 1px; padding: 6px 9px;
+  align-content: center; column-gap: 9px; row-gap: 4px; padding: 6px 9px;
   border: 1px solid color-mix(in srgb,var(--shortcut-accent) 24%,#d8c7ae); border-radius: 13px;
   background: linear-gradient(100deg,var(--shortcut-tint),#fffaf1 68%); color: #46333b;
   box-shadow: 0 2px 7px rgba(70,46,48,.07); transition: transform .16s ease,border-color .16s ease,box-shadow .16s ease;
@@ -456,6 +458,28 @@ body .sheet-dashboard .sheet-detail > .modal-header .modal-title { grid-column: 
 body .sheet-dashboard .sheet-detail > .modal-header .sheet-modal-actions { grid-column: 3; justify-self: end; }
 body .modal-card.sheet-detail > .sheet-view-footer { padding: 16px 22px 20px; }
 body .modal-card.sheet-detail > .sheet-view-footer > .modal-actions { width: 100%; margin: 0; }
+body .modal-card.sheet-detail > .sheet-view-footer > .sheet-detail-close {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  border: 1px solid #c7a980;
+  border-radius: 11px;
+  background: #fffaf1;
+  color: #67384b;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(73,43,37,.08);
+}
+body .modal-card.sheet-detail > .sheet-view-footer > .sheet-detail-close::before {
+  content: '×';
+  font-size: 18px;
+  line-height: 1;
+}
+body .modal-card.sheet-detail > .sheet-view-footer > .sheet-detail-close:is(:hover,:focus-visible) {
+  border-color: #71364c;
+  background: #ead9df;
+}
 
 body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button { color: #633349 !important; font-weight: 800; }
 body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button small { color: #633349 !important; }

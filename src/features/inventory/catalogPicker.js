@@ -70,6 +70,14 @@ export async function openSharedItemPicker({
   let cards = [];
   let submitButton = null;
 
+  const syncCategoryButtons = () => {
+    categoryButtons.forEach((button) => {
+      const isActive = selectedCategories.has(button.dataset.sharedItemCategory);
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+  };
+
   const applyFilters = () => {
     const query = search.value.trim().toLowerCase();
     let visible = 0;
@@ -152,10 +160,9 @@ export async function openSharedItemPicker({
     const category = button.dataset.sharedItemCategory;
     if (selectedCategories.has(category)) selectedCategories.delete(category);
     else selectedCategories.add(category);
-    const isActive = selectedCategories.has(category);
-    button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', String(isActive));
+    syncCategoryButtons();
     applyFilters();
+    button.blur();
   }));
 
   const formData = await openFormModal({
