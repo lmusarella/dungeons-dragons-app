@@ -1391,6 +1391,45 @@ body {
   margin: 0;
 }
 
+.container-breadcrumb--prominent {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0 0 12px; padding: 8px;
+  border: 1px solid rgba(113,54,75,.2); border-radius: 13px; background: rgba(255,250,243,.84);
+}
+.container-breadcrumb--prominent button {
+  min-height: 32px; padding: 6px 11px; border: 1px solid rgba(113,54,75,.2); border-radius: 9px;
+  background: #fff; color: #71364b; font-size: 12px; font-weight: 750; cursor: pointer;
+}
+.container-breadcrumb--prominent button:hover { border-color: rgba(113,54,75,.48); background: #f8ebec; }
+.container-breadcrumb--prominent button[aria-current="page"] { border-color: #71364b; background: #71364b; color: #fff; }
+.container-breadcrumb--prominent > span { color: #9a7c86; font-weight: 850; }
+.container-heading-detail { padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.container-heading-detail h3 { margin: 0; text-decoration: underline; text-decoration-color: rgba(113,54,75,.3); text-underline-offset: 3px; }
+.container-heading-detail:hover h3 { text-decoration-color: currentColor; }
+.container-content-heading__title { display: grid; align-content: center; justify-items: start; gap: 3px; min-width: 0; }
+.container-content-heading__title > h3,
+.container-content-heading__title .container-heading-detail,
+.container-content-heading__title small { display: block; margin: 0; }
+.compact-item-name__copy { display: grid; justify-items: start; gap: 2px; min-width: 0; }
+.compact-item-contained-count { color: #8b725a; font-size: 9px; font-weight: 650; line-height: 1.15; white-space: nowrap; }
+.inventory-equipped-tools { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.inventory-equipment-action { min-height: 34px; white-space: nowrap; }
+.inventory-equipment-action--equip { border-color: rgba(113,54,75,.32); background: #f3e4e6; color: #71364b; }
+.inventory-shortcut-add-action,.inventory-add-items-action { white-space: nowrap; }
+
+.container-delete-choice__options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.container-delete-choice .container-delete-choice__card {
+  position: relative; display: grid; grid-template-columns: 36px minmax(0,1fr); align-content: start; align-items: start;
+  gap: 9px; min-height: 138px; padding: 14px; border-radius: 14px; cursor: pointer;
+}
+.container-delete-choice__card > input { position: absolute; top: 11px; right: 11px; width: 17px; height: 17px; accent-color: #3b5d60; }
+.container-delete-choice__icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #e5efed; color: #3b5d60; font-size: 18px; font-weight: 850; }
+.container-delete-choice__card .condition-modal__item-label { display: grid; gap: 5px; padding-right: 18px; }
+.container-delete-choice__card .condition-modal__item-label strong { white-space: normal; overflow: visible; color: #4c4140; font-size: 13px; }
+.container-delete-choice__card .condition-modal__item-label small { color: #75645d; font-size: 10px; line-height: 1.45; }
+.container-delete-choice__card--danger .container-delete-choice__icon { background: #f3dddd; color: #9a3f47; }
+.container-delete-choice__card--danger > input { accent-color: #9a3f47; }
+.container-delete-choice__card--danger.is-selected { border-color: rgba(154,63,71,.56); background: #f8e7e5; box-shadow: inset 3px 0 0 #9a3f47; }
+
 .inventory-insert-picker__list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1454,6 +1493,8 @@ body {
 
 @media (max-width: 650px) {
   .inventory-insert-picker__list { grid-template-columns: 1fr; }
+  .inventory-equipped-tools { align-items: stretch; flex-direction: column; }
+  .inventory-equipment-action { width: 100%; }
 }
 
 @media (max-width: 820px) {

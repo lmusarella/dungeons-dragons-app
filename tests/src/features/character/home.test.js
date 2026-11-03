@@ -14,6 +14,7 @@ function extractNamedExports(source) {
 describe('src/features/character/home.js', () => {
   it('adds catalog spells with the assignment state explicitly chosen by the user', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
+    const catalogPicker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
     expect(source).toContain("prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'known'");
     expect(source).toContain("nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'known'");
     expect(source).toContain("const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known')");
@@ -223,22 +224,25 @@ describe('src/features/character/home.js', () => {
     expect(source).toContain('calculateUnarmedAttackBonuses(data, attack)');
   });
 
-  it('keeps equipment assignment inside the mannequin workflow without quick creation', () => {
+  it('keeps equipment assignment in inventory instead of a duplicate home shortcut', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
-    expect(source).toContain('canEditCharacter ? openEquipmentPicker : openEquipmentMannequin');
-    expect(source).toContain('onEquip: canEditCharacter ? equipFromMannequin : null');
-    expect(source).toContain('onUnequip: canEditCharacter ? async (item) =>');
-    expect(source).toContain('weightUnit: getWeightUnit(activeCharacter)');
-    expect(source).not.toContain('onCreateItem: canEditCharacter');
-    expect(source).not.toContain("container.querySelector('[data-add-equip]')");
+    const inventory = readFileSync('src/features/inventory/inventory.js', 'utf8');
+    expect(source).not.toContain('data-open-equipment-mannequin');
+    expect(source).not.toContain('buildEquipSection');
+    expect(inventory).toContain('openEquipmentPicker({');
+    expect(inventory).toContain('onEquip: (item, equipSlots, currentItems)');
+    expect(inventory).toContain("listEl.querySelectorAll('[data-unequip-item]')");
   });
 
   it('routes footer game actions directly and uses aligned compact dialogs', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
+    const catalogPicker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
     const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
     expect(source).toContain("event.target.closest('[data-game-action]')");
     expect(source).not.toContain("event.target.closest('[data-actions-fab]')");
-    expect(source.match(/cardClass: 'modal-card--quick-action'/g)?.length).toBeGreaterThanOrEqual(3);
+    const quickActionUses = (source.match(/modal-card--quick-action/g)?.length || 0)
+      + (catalogPicker.match(/modal-card--quick-action/g)?.length || 0);
+    expect(quickActionUses).toBeGreaterThanOrEqual(3);
     expect(styles).toContain('.modal-card--quick-action .modal-footer');
     expect(styles).toContain('.modal-card--quick-action .modal-actions');
   });

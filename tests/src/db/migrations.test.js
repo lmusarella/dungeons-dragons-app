@@ -12,6 +12,15 @@ describe('database migrations', () => {
     expect(fullMigration).toContain('add column if not exists alternate_attack_modifier numeric not null default 0');
     expect(fullMigration).toContain('attack_modifier, damage_type');
   });
+  it('persists and restores weapon properties for inventory and attack details', () => {
+    const migration = readFileSync('db/add_weapon_properties.sql', 'utf8');
+    const fullMigration = readFileSync('db/items_ammunition_weapon_modes.sql', 'utf8');
+    expect(migration).toContain("add column if not exists weapon_properties jsonb not null default '[]'::jsonb");
+    expect(migration).toContain('add column if not exists grip_type text');
+    expect(migration).toContain("shared_item.item_data -> 'weapon_properties'");
+    expect(migration).toContain("notify pgrst, 'reload schema'");
+    expect(fullMigration).toContain('weapon_properties jsonb');
+  });
   it('adds linked resource configuration to new and already migrated databases', () => {
     const fullMigration = readFileSync('db/add_resource_parent.sql', 'utf8');
     const patchMigration = readFileSync('db/update_resource_linked_options.sql', 'utf8');
@@ -48,6 +57,13 @@ describe('database migrations', () => {
   it('keeps compatible equipment destinations separate from occupied slots', () => {
     const migration = readFileSync('db/add_compatible_equip_slots.sql', 'utf8');
     expect(migration).toContain("add column if not exists compatible_equip_slots jsonb not null default '[]'::jsonb");
+    expect(migration).toContain("notify pgrst, 'reload schema'");
+  });
+
+  it('adds optional inventory places for top-level grouping', () => {
+    const migration = readFileSync('db/add_item_inventory_location.sql', 'utf8');
+    expect(migration).toContain('add column if not exists inventory_location text');
+    expect(migration).toContain('items_character_inventory_location_idx');
     expect(migration).toContain("notify pgrst, 'reload schema'");
   });
 

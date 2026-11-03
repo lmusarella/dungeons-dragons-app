@@ -761,6 +761,60 @@ button:focus-visible,
   margin-bottom: 0;
 }
 
+.inventory-filter-card {
+  position: relative;
+  display: block;
+  min-width: 104px;
+  cursor: pointer;
+}
+
+.inventory-filter-card > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.inventory-filter-card > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid #d8cab6;
+  border-radius: 11px;
+  background: #fffefa;
+  color: #735064;
+  font-size: .7rem;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.inventory-filter-card > input:checked + span {
+  border-color: #76364b;
+  background: #76364b;
+  color: #fff8e9;
+  box-shadow: 0 2px 7px rgba(73,43,64,.2);
+}
+
+.inventory-filter-card > input:checked + span::before {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.inventory-filter-card > input:focus-visible + span {
+  outline: 2px solid rgba(118,54,75,.35);
+  outline-offset: 2px;
+}
+
 .equip-slot-field {
   border: 1px solid #eadfc9;
   border-radius: 14px;
@@ -6362,6 +6416,33 @@ button:focus-visible,
   margin-bottom: 0;
   border-radius: 14px;
   background: rgba(255, 250, 241, 0.72);
+}
+
+.weapon-properties-field {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(59, 93, 96, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 250, 241, 0.72);
+}
+.weapon-properties-field > legend { padding: 0 6px; color: #2f4d50; font-size: .78rem; font-weight: 850; }
+.weapon-properties-field > p { margin: 0 0 10px; font-size: .7rem; }
+.weapon-properties-field__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.weapon-property-option { position: relative; min-width: 0; cursor: pointer; }
+.weapon-property-option > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.weapon-property-option > span {
+  display: grid; min-height: 74px; align-content: start; gap: 4px; padding: 9px 10px;
+  border: 1px solid #ddc8a8; border-radius: 11px; background: #fffaf0; color: #654857;
+}
+.weapon-property-option strong { font-size: .72rem; }
+.weapon-property-option small { color: #846e5e; font-size: .59rem; line-height: 1.35; }
+.weapon-property-option > input:checked + span { border-color: #71364b; background: #ead9df; box-shadow: inset 0 0 0 1px #71364b; }
+.weapon-property-option > input:focus-visible + span { outline: 2px solid #b88845; outline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .weapon-properties-field__grid { grid-template-columns: 1fr; }
+  .weapon-property-option > span { min-height: 0; }
 }
 
 .item-editor-form .equip-slot-list {

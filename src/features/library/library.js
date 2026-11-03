@@ -5,8 +5,7 @@ import {
   searchSharedSpells,
   updateSharedSpell
 } from '../character/spellbookApi.js';
-import { itemCategories, damageTypeLabels } from '../inventory/constants.js';
-import { addSharedItemsToInventory } from '../inventory/catalogPicker.js';
+import { itemCategories } from '../inventory/constants.js';
 import { getCategoryLabel } from '../inventory/utils.js';
 import { openItemModal } from '../inventory/modals.js';
 import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
@@ -141,12 +140,10 @@ function spellCard(spell) {
     </article>`;
 }
 
-function itemCard(item, character, canManageCatalog = false) {
+function itemCard(item) {
   const id = escapeHtml(item.id);
   const name = escapeHtml(item.name || 'Oggetto senza nome');
   const image = sanitizeImageUrl(item.image_url);
-  const weight = Number(item.weight) || 0;
-  const damage = item.damage_die ? `${item.damage_die}${item.damage_type ? ` · ${damageTypeLabels.get(item.damage_type) || item.damage_type}` : ''}` : '';
   return `
     <article class="library-entry-card library-item-card" data-library-view-item="${id}" tabindex="0" role="button" aria-label="Apri ${name}">
       <div class="library-entry-card__body library-item-card__body">
@@ -161,25 +158,8 @@ function itemCard(item, character, canManageCatalog = false) {
             </div>
             ${item.is_magic ? '<span class="library-entry-card__edition is-magic">Magico</span>' : ''}
           </header>
-          <div class="library-entry-card__facts">
-            <span><small>Peso</small><strong>${weight || '—'} kg</strong></span>
-            <span><small>Quantità</small><strong>${Number(item.qty) || 1}</strong></span>
-            ${damage ? `<span><small>Danni</small><strong>${escapeHtml(damage)}</strong></span>` : ''}
-            ${item.armor_class ? `<span><small>CA</small><strong>${escapeHtml(item.armor_class)}</strong></span>` : ''}
-          </div>
-          <div class="library-entry-card__meta">
-            <span>${item.equipable ? 'Equipaggiabile' : 'Oggetto di inventario'}</span>
-            ${item.attunement_active ? '<span class="library-entry-card__traits"><i>Sintonia</i></span>' : ''}
-          </div>
         </div>
       </div>
-      <footer class="library-entry-card__footer">
-        <button type="button" class="library-item-copy" data-library-copy-item="${id}" ${character ? '' : 'disabled'}>${character ? `Aggiungi a ${escapeHtml(character.name)}` : 'Seleziona un personaggio'}</button>
-        ${canManageCatalog ? `<div>
-          <button type="button" data-library-edit-item="${id}" aria-label="Modifica ${name}" title="Modifica">✎</button>
-          <button type="button" class="is-danger" data-library-delete-item="${id}" aria-label="Elimina ${name}" title="Elimina">⌫</button>
-        </div>` : ''}
-      </footer>
     </article>`;
 }
 
@@ -433,17 +413,6 @@ export async function renderLibrary(container) {
     }
   };
 
-  const copyItem = async (item) => {
-    const character = activeCharacter();
-    if (!character) return;
-    try {
-      await addSharedItemsToInventory([item], character);
-      createToast(`${item.name} aggiunto all’inventario di ${character.name}`, 'success');
-    } catch (error) {
-      createToast("Errore durante l'aggiunta all'inventario", 'error');
-    }
-  };
-
   const renderItems = () => {
     const query = container.querySelector('[data-item-query]')?.value.trim().toLocaleLowerCase('it') || '';
     const filtered = state.items
@@ -457,7 +426,7 @@ export async function renderLibrary(container) {
     const visible = filtered.slice((state.itemPage - 1) * PAGE_SIZE, state.itemPage * PAGE_SIZE);
     const character = activeCharacter();
     container.querySelector('[data-item-results-heading]').innerHTML = `<div><span class="library-results-heading__eyebrow">Catalogo oggetti</span><strong>${filtered.length} ${filtered.length === 1 ? 'oggetto' : 'oggetti'}</strong></div><span>${character ? `Personaggio attivo: ${escapeHtml(character.name)}` : 'Seleziona un personaggio per copiare gli oggetti'}</span>`;
-    itemList.innerHTML = visible.length ? visible.map((item) => itemCard(item, character, canManageCatalog)).join('') : '<div class="library-empty-state"><strong>Nessun oggetto trovato</strong><span>Modifica i filtri o crea il primo oggetto condiviso.</span></div>';
+    itemList.innerHTML = visible.length ? visible.map(itemCard).join('') : '<div class="library-empty-state"><strong>Nessun oggetto trovato</strong><span>Modifica i filtri o crea il primo oggetto condiviso.</span></div>';
     renderPagination(container.querySelector('[data-item-pagination]'), state.itemPage, pages, 'items');
 
     itemList.querySelectorAll('[data-library-view-item]').forEach((card) => {
@@ -465,23 +434,12 @@ export async function renderLibrary(container) {
       if (!item) return;
       bindOpenableCard(card, () => openEquipmentItemDetail(item, {
         weightUnit: 'kg',
+        catalogMode: true,
         onEdit: canManageCatalog ? () => editItem(item) : null,
         onRemove: canManageCatalog ? () => deleteItem(item) : null,
         removeLabel: 'Elimina'
       }));
     });
-    itemList.querySelectorAll('[data-library-edit-item]').forEach((button) => button.addEventListener('click', () => {
-      const item = state.items.find((entry) => String(entry.id) === button.dataset.libraryEditItem);
-      if (item) void editItem(item);
-    }));
-    itemList.querySelectorAll('[data-library-delete-item]').forEach((button) => button.addEventListener('click', () => {
-      const item = state.items.find((entry) => String(entry.id) === button.dataset.libraryDeleteItem);
-      if (item) void deleteItem(item);
-    }));
-    itemList.querySelectorAll('[data-library-copy-item]').forEach((button) => button.addEventListener('click', () => {
-      const item = state.items.find((entry) => String(entry.id) === button.dataset.libraryCopyItem);
-      if (item) void copyItem(item);
-    }));
   };
 
   container.querySelectorAll('[data-library-tab]').forEach((button) => button.addEventListener('click', () => {

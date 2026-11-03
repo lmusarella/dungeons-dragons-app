@@ -1,11 +1,10 @@
-import { openEquipmentPicker } from './home/equipmentPicker.js';
 import { openEquipmentItemDetail } from './home/itemDetail.js';
 import { openQuickAttackDetail, openQuickRollEditor } from './home/quickRollEditor.js';
 import { weaponForAttackRange } from './home/attackRanges.js';
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
-import { createItem, fetchItems, updateItem } from '../inventory/inventoryApi.js';
+import { fetchItems, updateItem } from '../inventory/inventoryApi.js';
 import { getState, normalizeCharacterId, setActiveCharacter, setState, updateCache } from '../../app/state.js';
-import { buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading, attachNumberSteppers } from '../../ui/components.js';
+import { buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { escapeHtml } from '../../lib/html.js';
 import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
@@ -14,11 +13,9 @@ import { presentSheetDetail } from './home/sheetDetail.js';
 import { openGeneralModifierEditor } from './home/generalModifiers.js';
 import { mountTabletLayout, captureSheetPanel, restoreSheetPanel, retainOpenSheetPanel } from './home/tabletLayout.js';
 import { showShortcutLoader } from './home/shortcutViews.js';
-import { openEquipmentMannequin } from './home/equipmentMannequin.js';
 import {
   buildAttackSection,
   buildCharacterOverview,
-  buildEquipSection,
   buildEmptyState,
   buildProficiencyOverview,
   buildResourceSections,
@@ -27,9 +24,9 @@ import {
   buildSpecialSkillList,
   buildSpellSection
 } from './home/sections.js';
-import { buildLootFields, moneyBundleFields } from '../inventory/render.js';
+import { moneyBundleFields } from '../inventory/render.js';
 import { openItemModal } from '../inventory/modals.js';
-import { addSharedItemsToInventory, openSharedItemPicker } from '../inventory/catalogPicker.js';
+import { addSharedItemsToInventory, openQuickLootItemModal, openSharedItemPicker } from '../inventory/catalogPicker.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { ammunitionTypeLabels, itemCategories } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
@@ -931,7 +928,6 @@ export async function renderHome(container) {
         <section class="card home-card home-section character-sheet-card">
           ${sheetCharacter ? buildCharacterOverview(sheetCharacter, canEditCharacter, items, companions) : buildEmptyState(canCreateCharacter, offline)}
         </section>
-        ${activeCharacter ? buildEquipSection(activeCharacter, items, canEditCharacter) : ''}
       </div>
       <div class="home-column home-column--right">
         <section class="card home-card home-section home-scroll-panel home-feature-panel home-feature-panel--attacks">
@@ -1214,97 +1210,6 @@ export async function renderHome(container) {
   }
 
   bindProficiencyTabs(container);
-
-  const equipmentMannequinButton = container.querySelector('[data-open-equipment-mannequin]');
-  if (equipmentMannequinButton && activeCharacter) {
-    equipmentMannequinButton.addEventListener('click', async () => {
-      const equipFromMannequin = async (item, equipSlots, currentItems = items || []) => {
-        const proficiencies = activeCharacter.data?.proficiencies || {};
-        if (item.category === 'weapon') {
-          if (!item.weapon_type) {
-            createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
-            return false;
-          }
-          const proficient = item.weapon_type === 'simple'
-            ? Boolean(proficiencies.weapon_simple)
-            : Boolean(proficiencies.weapon_martial);
-          if (!proficient) {
-            createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-            return false;
-          }
-        }
-        if (item.category === 'armor') {
-          if (item.is_shield) {
-            if (!proficiencies.shield) {
-              createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-              return false;
-            }
-          } else if (!item.armor_type) {
-            createToast('Definisci il tipo di armatura prima di equipaggiarla', 'error');
-            return false;
-          } else {
-            const proficient = item.armor_type === 'light'
-              ? Boolean(proficiencies.armor_light)
-              : item.armor_type === 'medium'
-                ? Boolean(proficiencies.armor_medium)
-                : Boolean(proficiencies.armor_heavy);
-            if (!proficient) {
-              createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
-              return false;
-            }
-          }
-        }
-        if (!item.sovrapponibile) {
-          const conflicting = currentItems
-            .filter((entry) => entry.id !== item.id)
-            .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
-          if (conflicting.length) {
-            createToast('Lo slot selezionato è già occupato', 'error');
-            return false;
-          }
-        }
-        try {
-          const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
-          createToast('Equipaggiamento aggiornato');
-          return updated;
-        } catch (error) {
-          createToast('Errore aggiornamento equip', 'error');
-          return false;
-        }
-      };
-
-      const result = await (canEditCharacter ? openEquipmentPicker : openEquipmentMannequin)({
-        items: items || [],
-        weightUnit: getWeightUnit(activeCharacter),
-        canEdit: canEditCharacter,
-        onEquip: canEditCharacter ? equipFromMannequin : null,
-        onUnequip: canEditCharacter ? async (item) => {
-          try {
-            const updated = await updateItem(item.id, { equip_slot: null, equip_slots: [] });
-            createToast('Equipaggiamento rimosso');
-            return updated;
-          } catch (error) {
-            createToast('Errore rimozione equipaggiamento', 'error');
-            return false;
-          }
-        } : null
-      });
-      if (result?.changed) renderHome(container);
-    });
-  }
-
-  container.querySelectorAll('[data-unequip]')
-    .forEach((btn) => btn.addEventListener('click', async () => {
-      const item = (items || []).find((entry) => entry.id === btn.dataset.unequip);
-      if (!item) return;
-      try {
-        await updateItem(item.id, { equip_slot: null, equip_slots: [] });
-        createToast('Equipaggiamento rimosso');
-        renderHome(container);
-      } catch (error) {
-        createToast('Errore aggiornamento equip', 'error');
-      }
-    }));
 
   const inspirationButton = container.querySelector('[data-toggle-inspiration]');
   if (inspirationButton && activeCharacter && canEditCharacter) {
@@ -2327,10 +2232,11 @@ async function handleLootAction(container) {
   }
   let manualRequested = false;
   const selected = await openSharedItemPicker({
-    title: 'Loot dall’archivio',
+    title: 'Loot rapido',
     allowQuantities: true,
     headerActionLabel: 'Aggiungi oggetto',
-    onHeaderAction: () => { manualRequested = true; }
+    onHeaderAction: () => { manualRequested = true; },
+    shortcutSize: true
   });
   if (!manualRequested && selected.length) {
     setGlobalLoading(true);
@@ -2347,36 +2253,9 @@ async function handleLootAction(container) {
     return;
   }
   if (!manualRequested) return;
-  const formData = await openFormModal({
-    title: 'Aggiungi oggetto manualmente',
-    submitLabel: 'Aggiungi',
-    cardClass: 'modal-card--quick-action',
-    content: buildLootFields(),
-    onOpen: ({ fieldsEl }) => {
-      attachNumberSteppers(fieldsEl);
-    }
-  });
-  if (!formData) return;
   try {
-    const category = formData.get('category')?.toString() || 'loot';
-    const categoryDefinition = itemCategories.find((entry) => entry.value === category);
-    await createItem({
-      user_id: activeCharacter.user_id,
-      character_id: activeCharacter.id,
-      name: formData.get('name'),
-      qty: Number(formData.get('qty')),
-      weight: 0,
-      volume: 0,
-      value_cp: 0,
-      category,
-      equipable: Boolean(categoryDefinition?.equipable),
-      equip_slot: null,
-      equip_slots: [],
-      sovrapponibile: false,
-      is_magic: false,
-      max_volume: null
-    });
-    createToast('Loot aggiunto');
+    const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
+    if (created) createToast('Loot aggiunto');
   } catch (error) {
     createToast('Errore loot', 'error');
   }

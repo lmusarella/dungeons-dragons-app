@@ -48,7 +48,17 @@ describe('src/features/inventory/render.js', () => {
     expect(markup).toContain('data-insert-container="bag-1"');
     expect(markup).toContain('Inserisci oggetti sfusi in Zaino');
     expect(markup).toContain('<span>Inserisci</span>');
+    expect(markup).not.toContain('data-edit=');
     expect(markup).toContain('Oggetti Sfusi');
+  });
+
+  it('offers Equipaggia for equipable loose items and keeps editing in the detail', () => {
+    const markup = buildInventoryTree([{
+      id: 'sword-1', name: 'Spada', category: 'weapon', qty: 1, weight: 1, equipable: true
+    }]);
+    expect(markup).toContain('data-equip-item="sword-1"');
+    expect(markup).toContain('data-item-preview="sword-1"');
+    expect(markup).not.toContain('data-edit="sword-1"');
   });
 
   it('renders the refined inventory item hierarchy and empty state', () => {
@@ -99,6 +109,7 @@ describe('src/features/inventory/render.js', () => {
     expect(loot).not.toContain('name="value_cp"');
     expect(loot).not.toContain('name="weight"');
     expect(loot).toContain('name="category"');
+    expect(loot).toContain('name="inventory_location"');
     expect(loot).toContain('type="radio"');
     expect(loot).toContain('value="loot" checked');
   });

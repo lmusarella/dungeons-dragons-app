@@ -5,6 +5,8 @@ alter table public.items
   add column if not exists ammunition_type text,
   add column if not exists required_ammunition_type text,
   add column if not exists consumes_ammunition boolean not null default false,
+  add column if not exists weapon_properties jsonb not null default '[]'::jsonb,
+  add column if not exists grip_type text,
   add column if not exists damage_type text,
   add column if not exists has_alternate_damage_mode boolean not null default false,
   add column if not exists weapon_damage_modes jsonb not null default '[]'::jsonb,
@@ -18,6 +20,8 @@ alter table public.items
 comment on column public.items.ammunition_type is 'Tipo munizione rappresentato dall''oggetto: arrow, bolt, bullet.';
 comment on column public.items.required_ammunition_type is 'Tipo munizione consumata dall''arma: arrow, bolt, bullet.';
 comment on column public.items.consumes_ammunition is 'Se true, l''arma consuma una munizione compatibile quando viene effettuato un tiro per colpire.';
+comment on column public.items.weapon_properties is 'Proprietà regolistiche dell''arma, ad esempio accurata, lancio, pesante o versatile.';
+comment on column public.items.grip_type is 'Tipo di impugnatura dell''arma: one_handed, two_handed o versatile.';
 comment on column public.items.damage_type is 'Tipo di danno base dell''arma.';
 comment on column public.items.has_alternate_damage_mode is 'Abilita una o più modalità danno alternative, ad esempio impugnature diverse.';
 comment on column public.items.weapon_damage_modes is 'Elenco JSONB di modalità aggiuntive dell''arma: label, damage_die, damage_modifier, attack_modifier, damage_type.';

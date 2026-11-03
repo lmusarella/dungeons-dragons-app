@@ -1,9 +1,10 @@
 import { searchSharedItems } from '../library/itemLibraryApi.js';
-import { createToast, openFormModal } from '../../ui/components.js';
+import { attachNumberSteppers, createToast, openFormModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { getCategoryLabel } from './utils.js';
 import { createItem, createItems } from './inventoryApi.js';
 import { itemCategories } from './constants.js';
+import { buildLootFields } from './render.js';
 
 export async function openItemSourceModal({
   title = 'Aggiungi oggetto',
@@ -43,7 +44,9 @@ export async function openSharedItemPicker({
   multiple = true,
   allowQuantities = false,
   headerActionLabel = '',
-  onHeaderAction = null
+  onHeaderAction = null,
+  shortcutSize = false,
+  onLoadingChange = null
 } = {}) {
   let items = [];
   const inputType = multiple ? 'checkbox' : 'radio';
@@ -169,7 +172,7 @@ export async function openSharedItemPicker({
 
   const formData = await openFormModal({
     title, submitLabel: multiple ? 'Aggiungi selezionati' : 'Aggiungi oggetto', cancelLabel: 'Annulla', content,
-    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker'],
+    cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker', shortcutSize ? 'modal-card--shortcut-size' : ''],
     onOpen: ({ modal }) => {
       let mounted = true;
       let headerActionButton = null;
@@ -192,6 +195,7 @@ export async function openSharedItemPicker({
           headerActions.prepend(headerActionButton);
         }
       }
+      onLoadingChange?.(true);
       void loadAllSharedItems()
         .then((loadedItems) => {
           if (!mounted) return;
@@ -208,10 +212,12 @@ export async function openSharedItemPicker({
           results.innerHTML = '<div class="shared-item-picker__empty shared-item-picker__empty--error"><strong>Archivio non disponibile</strong><span>Riprova tra qualche istante.</span></div>';
           count.textContent = 'Errore';
           createToast('Impossibile caricare l’archivio degli oggetti', 'error');
-        });
+        })
+        .finally(() => onLoadingChange?.(false));
       return () => {
         mounted = false;
         headerActionButton?.remove();
+        onLoadingChange?.(false);
       };
     }
   });
@@ -227,6 +233,37 @@ export async function openSharedItemPicker({
     }));
 }
 
+export async function openQuickLootItemModal(character, { title = 'Aggiungi oggetto manualmente', shortcutSize = false } = {}) {
+  if (!character) return null;
+  const formData = await openFormModal({
+    title,
+    submitLabel: 'Aggiungi',
+    cardClass: ['modal-card--quick-action', shortcutSize ? 'modal-card--shortcut-size' : ''],
+    content: buildLootFields(),
+    onOpen: ({ fieldsEl }) => attachNumberSteppers(fieldsEl)
+  });
+  if (!formData) return null;
+  const category = formData.get('category')?.toString() || 'loot';
+  const categoryDefinition = itemCategories.find((entry) => entry.value === category);
+  return createItem({
+    user_id: character.user_id,
+    character_id: character.id,
+    name: formData.get('name'),
+    qty: Number(formData.get('qty')),
+    weight: 0,
+    volume: 0,
+    value_cp: 0,
+    category,
+    inventory_location: formData.get('inventory_location')?.toString().trim() || null,
+    equipable: Boolean(categoryDefinition?.equipable),
+    equip_slot: null,
+    equip_slots: [],
+    sovrapponibile: false,
+    is_magic: false,
+    max_volume: null
+  });
+}
+
 export function sharedItemToInventoryPayload(item, character, overrides = {}) {
   const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item || {};
   const payload = {
@@ -239,6 +276,7 @@ export function sharedItemToInventoryPayload(item, character, overrides = {}) {
     category: item.category || template.category || 'gear',
     qty: Math.max(1, Number(template.qty) || 1),
     container_item_id: null,
+    inventory_location: null,
     equip_slot: null,
     equip_slots: [],
     ...overrides
@@ -246,7 +284,7 @@ export function sharedItemToInventoryPayload(item, character, overrides = {}) {
   [
     'id', 'created_at', 'updated_at', 'created_by', 'rules_version', 'item_data', 'description',
     'original_name', 'source_id', 'source_label', 'source_edition', 'source_url', 'source_kind',
-    'original_category', 'cost', 'weapon_properties', 'grip_type', 'armor_uses_dexterity',
+    'original_category', 'cost', 'armor_uses_dexterity',
     'armor_dexterity_cap', 'minimum_strength', 'stealth_disadvantage', 'tool_subcategory',
     'gear_category', 'bundle_contents'
   ].forEach((key) => delete payload[key]);

@@ -155,11 +155,8 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).not.toContain('#6542a6');
     expect(source).toContain('class="detail-section proficiency-overview"');
     expect(source).toContain('class="tab-bar proficiency-tab-bar"');
-    expect(source).toContain('class="card home-card home-section home-scroll-panel equipment-management"');
-    expect(source).toContain('class="modifier-card attack-card resource-card inventory-item-card equipped-item-card"');
-    expect(source).toContain('class="equipment-empty-state"');
-    expect(source).toContain('data-open-equipment-mannequin');
-    expect(source).toContain('Visualizza manichino 3D');
+    expect(source).not.toContain('equipment-management');
+    expect(source).not.toContain('data-open-equipment-mannequin');
     expect(source).not.toContain('data-add-equip');
     expect(styles).toContain('.proficiency-tab-bar .tab-bar__button.is-active');
     expect(styles).toContain('.equipped-item-card.resource-card');
@@ -190,7 +187,6 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('inset 3px 0 0 rgba(59, 93, 96, 0.68)');
     expect(styles).toContain('.home-feature-panel--resources .resource-card');
     expect(styles).toContain('inset 3px 0 0 rgba(97, 116, 59, 0.68)');
-    expect(styles).toContain('.equipment-management .equipped-item-card.resource-card');
     expect(styles).toContain('background: #f6ead8');
     expect(source).not.toContain('data-add-equip');
     expect(styles).toContain('.attack-card.modifier-card:not(.resource-card) .attack-card__title');

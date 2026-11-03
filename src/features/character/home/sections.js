@@ -29,9 +29,6 @@ import {
   sortSpellsByLevel
 } from './utils.js';
 import { normalizeSpellSchool } from '../spellSchools.js';
-import { calcItemWeight, calcSelectionWeight } from '../../../lib/calc.js';
-import { formatWeight } from '../../../lib/format.js';
-import { getBodyPartLabels, getCategoryLabel, getItemStatusLabels, getWeightUnit } from '../../inventory/utils.js';
 import { ammunitionTypeLabels } from '../../inventory/constants.js';
 
 const DAMAGE_ACTION_ICON = `
@@ -675,75 +672,6 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
         </div>
       </div>
     </div>
-  `;
-}
-
-export function buildEquipSection(character, items = [], canEditCharacter = false) {
-  const equippedItems = (items || []).filter((item) => getEquipSlots(item).length);
-  const attunedCount = equippedItems.filter((item) => item.attunement_active).length;
-  const equippedWeight = calcSelectionWeight(equippedItems, items || []);
-  const weightUnit = getWeightUnit(character);
-  return `
-    <section class="card home-card home-section home-scroll-panel equipment-management">
-      <header class="card-header equipment-management__header">
-        <div>
-          <p class="eyebrow">Gestione Equipaggiamento</p>
-          <dl class="equipment-summary" aria-label="Riepilogo equipaggiamento">
-            <div class="equipment-summary__item equipment-summary__item--count"><dt>Equipaggiati</dt><dd>${equippedItems.length}</dd></div>
-            <div class="equipment-summary__item equipment-summary__item--equipped-weight"><dt>Peso equipaggiato</dt><dd>${formatWeight(equippedWeight, weightUnit)}</dd></div>
-            <div class="equipment-summary__item equipment-summary__item--attunement" data-filter-equipped-attunement role="button" tabindex="${attunedCount ? '0' : '-1'}" aria-pressed="false" ${attunedCount ? '' : 'aria-disabled="true"'}><dt>In sintonia</dt><dd>${attunedCount}</dd></div>
-          </dl>
-        </div>
-        <div class="actions">
-          <button class="icon-button equipment-mannequin-trigger" type="button" data-open-equipment-mannequin aria-label="${canEditCharacter ? 'Equipaggia oggetto' : 'Visualizza manichino 3D'}" title="${canEditCharacter ? 'Equipaggia oggetto' : 'Visualizza manichino 3D'}">
-            ${canEditCharacter ? '+' : `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
-              <circle cx="12" cy="12" r="2.6"></circle>
-            </svg>`}
-          </button>
-        </div>
-      </header>
-      ${equippedItems.length
-    ? `
-          <ul class="inventory-list resource-list resource-list--compact">
-            ${equippedItems.map((item) => {
-    const statusLabels = getItemStatusLabels(item);
-    const itemWeight = calcItemWeight(item, items || []);
-    return `
-              <li class="modifier-card attack-card resource-card inventory-item-card equipped-item-card"
-                data-equipped-location="${escapeHtml(getBodyPartLabels(getEquipSlots(item)))}"
-                data-equipped-weight="${escapeHtml(formatWeight(itemWeight, weightUnit))}"
-                data-equipped-attunement="${item.attunement_active ? 'Attiva' : 'No'}"
-                data-equipped-attuned="${String(Boolean(item.attunement_active))}">
-                <div class="resource-card__badges equipped-item-card__badges">
-                  ${item.is_magic ? `<span class="resource-chip resource-chip--floating resource-chip--magic">${statusLabels.magic}</span>` : ''}
-                  ${item.attunement_active ? `<span class="resource-chip resource-chip--floating resource-chip--attunement">${statusLabels.attunement}</span>` : ''}
-                </div>
-                <div class="attack-card__body resource-card__body">
-                  <div class="resource-card__title item-info equipped-item-card__info">
-                    ${item.image_url ? `<img class="item-avatar equipped-item-card__image" src="${item.image_url}" alt="Foto di ${item.name}" data-item-image="${item.id}" />` : '<span class="equipped-item-card__placeholder" aria-hidden="true">◇</span>'}
-                    <div class="item-info-body">
-                      <div class="item-info-line">
-                        <button class="item-name-button attack-card__name-button" type="button" data-item-preview="${item.id}" aria-label="Apri anteprima ${item.name}">${item.name}</button>
-                        <span class="muted item-meta equipped-item-card__meta">
-                          <span>${getCategoryLabel(item.category)}</span><span>${getBodyPartLabels(getEquipSlots(item))}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                ${canEditCharacter ? `
-                  <div class="resource-card-actions">
-                    <button class="resource-action-button equipped-item-card__remove" type="button" data-unequip="${item.id}">Rimuovi</button>
-                  </div>
-                ` : ''}
-              </li>
-            `;
-  }).join('')}
-          </ul>
-        `
-    : '<div class="equipment-empty-state"><span aria-hidden="true">◇</span><div><strong>Nessun oggetto equipaggiato</strong><small>Gli oggetti assegnati agli slot compariranno qui.</small></div></div>'}
-    </section>
   `;
 }
 

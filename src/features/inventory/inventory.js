@@ -2,6 +2,8 @@ import { getContainerView, buildContainerCatalog } from './containerCatalog.js';
 import { buildCompactTransactionList } from './compactTables.js';
 import { buildCoinBundleMovement, buildCoinExchange, isCoinExchange } from '../wallet/coinMovements.js';
 import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
+import { openEquipmentPicker } from '../character/home/equipmentPicker.js';
+import { openEquipmentMannequin } from '../character/home/equipmentMannequin.js';
 import { fetchItems, updateItem, deleteItem } from './inventoryApi.js';
 import { getState, normalizeCharacterId, updateCache } from '../../app/state.js';
 import { cacheSnapshot } from '../../lib/offline/cache.js';
@@ -16,15 +18,67 @@ import {
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories } from './constants.js';
 import { openItemModal } from './modals.js';
-import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from './catalogPicker.js';
+import { addSharedItemsToInventory, openItemSourceModal, openQuickLootItemModal, openSharedItemPicker } from './catalogPicker.js';
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
-import { getCategoryLabel, getWeightUnit, normalizeTransactionAmount } from './utils.js';
+import { getCategoryLabel, getEquipSlots, getWeightUnit, normalizeTransactionAmount } from './utils.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { showShortcutLoader } from '../character/home/shortcutViews.js';
 
 
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
 const COIN_LABELS = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
+
+export function getContainerDescendants(items = [], containerId) {
+  const descendants = [];
+  const visited = new Set([String(containerId)]);
+  const visit = (parentId) => {
+    items
+      .filter((item) => String(item.container_item_id ?? '') === String(parentId))
+      .forEach((item) => {
+        const itemId = String(item.id);
+        if (visited.has(itemId)) return;
+        visited.add(itemId);
+        visit(item.id);
+        descendants.push(item);
+      });
+  };
+  visit(containerId);
+  return descendants;
+}
+
+async function chooseContainerDeleteMode(containerItem, containedItems) {
+  const content = document.createElement('div');
+  content.className = 'condition-modal__section container-delete-choice';
+  content.innerHTML = `
+    <p class="muted">Il contenitore “${escapeHtml(containerItem.name)}” contiene ${containedItems.length} ${containedItems.length === 1 ? 'oggetto' : 'oggetti'}, inclusi quelli negli eventuali sotto-contenitori.</p>
+    <div class="container-delete-choice__options">
+      <label class="condition-modal__item container-delete-choice__card is-selected">
+        <input type="radio" name="container_delete_mode" value="keep" checked />
+        <span class="container-delete-choice__icon" aria-hidden="true">↗</span>
+        <span class="condition-modal__item-label"><strong>Conserva il contenuto</strong><small>Gli oggetti resteranno nell’inventario; quelli al primo livello diventeranno sfusi.</small></span>
+      </label>
+      <label class="condition-modal__item container-delete-choice__card container-delete-choice__card--danger">
+        <input type="radio" name="container_delete_mode" value="delete" />
+        <span class="container-delete-choice__icon" aria-hidden="true">×</span>
+        <span class="condition-modal__item-label"><strong>Elimina anche il contenuto</strong><small>Elimina definitivamente tutti gli oggetti e i sotto-contenitori presenti.</small></span>
+      </label>
+    </div>`;
+  const formData = await openFormModal({
+    title: 'Elimina contenitore',
+    content,
+    submitLabel: 'Elimina contenitore',
+    cancelLabel: 'Annulla',
+    cardClass: 'modal-card--quick-action',
+    onOpen: ({ fieldsEl }) => {
+      const syncSelection = () => fieldsEl?.querySelectorAll('.condition-modal__item').forEach((label) => {
+        label.classList.toggle('is-selected', Boolean(label.querySelector('input')?.checked));
+      });
+      fieldsEl?.querySelectorAll('input[name="container_delete_mode"]').forEach((input) => input.addEventListener('change', syncSelection));
+      syncSelection();
+    }
+  });
+  return formData?.get('container_delete_mode')?.toString() || null;
+}
 
 async function openLooseItemsPicker(containerItem, items) {
   const looseItems = items.filter((item) => !item.container_item_id && item.category !== 'container');
@@ -66,6 +120,61 @@ async function openLooseItemsPicker(containerItem, items) {
     cardClass: 'modal-card--inventory-insert'
   });
   return formData ? formData.getAll('item_ids') : [];
+}
+
+async function equipInventoryItem(character, item, equipSlots, currentItems) {
+  const proficiencies = character.data?.proficiencies || {};
+  if (item.category === 'weapon') {
+    if (!item.weapon_type) {
+      createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
+      return false;
+    }
+    const proficient = item.weapon_type === 'simple'
+      ? Boolean(proficiencies.weapon_simple)
+      : Boolean(proficiencies.weapon_martial);
+    if (!proficient) {
+      createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+      return false;
+    }
+  }
+  if (item.category === 'armor') {
+    if (item.is_shield && !proficiencies.shield) {
+      createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+      return false;
+    }
+    if (!item.is_shield && !item.armor_type) {
+      createToast('Definisci il tipo di armatura prima di equipaggiarla', 'error');
+      return false;
+    }
+    if (!item.is_shield) {
+      const proficient = item.armor_type === 'light'
+        ? Boolean(proficiencies.armor_light)
+        : item.armor_type === 'medium'
+          ? Boolean(proficiencies.armor_medium)
+          : Boolean(proficiencies.armor_heavy);
+      if (!proficient) {
+        createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
+        return false;
+      }
+    }
+  }
+  if (!item.sovrapponibile) {
+    const conflicting = currentItems
+      .filter((entry) => String(entry.id) !== String(item.id))
+      .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+    if (conflicting.length) {
+      createToast('Lo slot selezionato è già occupato', 'error');
+      return false;
+    }
+  }
+  try {
+    const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
+    createToast('Oggetto equipaggiato');
+    return updated;
+  } catch (error) {
+    createToast('Errore aggiornamento equipaggiamento', 'error');
+    return false;
+  }
 }
 
 function ensureWallet(wallet, character) {
@@ -175,29 +284,24 @@ export async function renderInventory(container) {
             <span class="inventory-panel__subtitle">${items.length} ${items.length === 1 ? 'oggetto registrato' : 'oggetti registrati'}</span>
           </div>
           <div class="button-row">
-            <button class="icon-button icon-button--add" type="button" data-add-item aria-label="Nuovo oggetto">
-              <span aria-hidden="true">+</span>
-            </button>
+            <button class="ghost-button inventory-add-items-action" type="button" data-add-item aria-label="Aggiungi oggetti">+ Aggiungi oggetti</button>
           </div>
         </header>
         <div class="filters inventory-toolbar ${container.hasAttribute('data-inventory-shortcut') ? 'inventory-toolbar--shortcut' : ''}">
-          <label class="inventory-search">
-            <span aria-hidden="true">⌕</span>
-            <input type="search" placeholder="Cerca" aria-label="Cerca oggetto" data-search />
-          </label>
           ${container.hasAttribute('data-inventory-shortcut') ? `
             <div class="inventory-category-pills" role="group" aria-label="Filtra per categoria">
               ${categories.filter((category) => category.value).map((category) => `<button type="button" data-category-option="${escapeHtml(category.value)}" aria-pressed="false">${escapeHtml(category.label)}</button>`).join('')}
             </div>
           ` : '<label class="inventory-category-filter"><span>Categoria</span><select data-category></select></label>'}
-          <label class="toggle-pill filter-toggle">
+          <label class="inventory-filter-card">
             <input type="checkbox" data-equipable-filter />
-            <span>Equipaggiabili</span>
+            <span><i aria-hidden="true">♙</i><strong>Equipaggiabili</strong></span>
           </label>
-          <label class="toggle-pill filter-toggle">
+          <label class="inventory-filter-card">
             <input type="checkbox" data-magic-filter />
-            <span>Magici</span>
+            <span><i aria-hidden="true">✦</i><strong>Magici</strong></span>
           </label>
+          <button type="button" class="ghost-button inventory-filter-reset" data-reset-filters disabled>Reimposta</button>
         </div>
         <div class="inventory-list-scroll" data-inventory-list></div>
       </section>
@@ -227,11 +331,30 @@ export async function renderInventory(container) {
 
   container.polishShortcut?.({ offline: state.offline, wallet });
   const listEl = container.querySelector('[data-inventory-list]');
-  const searchInput = container.querySelector('[data-search]');
   const categorySelect = container.querySelector('[data-category]');
   const categoryButtons = [...container.querySelectorAll('[data-category-option]')];
   const equipableFilter = container.querySelector('[data-equipable-filter]');
   const magicFilter = container.querySelector('[data-magic-filter]');
+  const resetFiltersButton = container.querySelector('[data-reset-filters]');
+  const openInventoryEquipmentPicker = async () => {
+    const result = await openEquipmentPicker({
+      items,
+      weightUnit,
+      canEdit: true,
+      onEquip: (item, equipSlots, currentItems) => equipInventoryItem(activeCharacter, item, equipSlots, currentItems),
+      onUnequip: async (item) => {
+        try {
+          const updated = await updateItem(item.id, { equip_slot: null, equip_slots: [] });
+          createToast('Oggetto disequipaggiato');
+          return updated;
+        } catch (error) {
+          createToast('Errore durante il disequipaggiamento', 'error');
+          return false;
+        }
+      }
+    });
+    if (result?.changed) await refreshAfterMutation();
+  };
   categories.forEach((cat) => {
     if (!categorySelect) return;
     const option = document.createElement('option');
@@ -241,24 +364,31 @@ export async function renderInventory(container) {
   });
 
   const previousFilters = container.inventoryFilters || {};
-  let activeCategory = previousFilters.category || '';
-  searchInput.value = previousFilters.term || '';
+  const activeCategories = new Set(Array.isArray(previousFilters.categories)
+    ? previousFilters.categories
+    : (previousFilters.category ? [previousFilters.category] : []));
   if (categorySelect) categorySelect.value = previousFilters.category || '';
   const syncCategoryButtons = () => categoryButtons.forEach((button) => {
-    button.setAttribute('aria-pressed', String(button.dataset.categoryOption === activeCategory));
+    button.setAttribute('aria-pressed', String(activeCategories.has(button.dataset.categoryOption)));
   });
   syncCategoryButtons();
   if (equipableFilter) equipableFilter.checked = Boolean(previousFilters.equipableOnly);
   if (magicFilter) magicFilter.checked = Boolean(previousFilters.magicOnly);
   function renderList() {
-    const term = searchInput.value.toLowerCase();
-    const category = categorySelect?.value ?? activeCategory;
+    const term = '';
+    const category = categorySelect?.value || '';
+    const selectedCategories = categorySelect
+      ? (category ? [category] : [])
+      : [...activeCategories];
     const equipableOnly = equipableFilter?.checked ?? false;
     const magicOnly = magicFilter?.checked ?? false;
-    container.inventoryFilters = { term, category, equipableOnly, magicOnly };
+    container.inventoryFilters = { term, category, categories: selectedCategories, equipableOnly, magicOnly };
+    if (resetFiltersButton) {
+      resetFiltersButton.disabled = !(term || selectedCategories.length || equipableOnly || magicOnly);
+    }
     const directlyMatched = items.filter((item) => {
       const matchesTerm = item.name.toLowerCase().includes(term);
-      const matchesCategory = !category || item.category === category;
+      const matchesCategory = !selectedCategories.length || selectedCategories.includes(item.category);
       const matchesEquipable = !equipableOnly || item.equipable;
       const matchesMagic = !magicOnly || item.is_magic;
       return matchesTerm && matchesCategory && matchesEquipable && matchesMagic;
@@ -324,7 +454,45 @@ export async function renderInventory(container) {
           catch { createToast('Errore durante l’estrazione', 'error'); }
         });
       }));
+      listEl.querySelector('[data-equip-container]')?.addEventListener('click', openInventoryEquipmentPicker);
     } else listEl.innerHTML = buildInventoryTree(filtered, weightUnit);
+    listEl.querySelectorAll('[data-equip-item]').forEach((button) => button.addEventListener('click', async () => {
+        const item = items.find((entry) => String(entry.id) === String(button.dataset.equipItem));
+        if (!item) return;
+        const result = await openEquipmentMannequin({
+          items,
+          weightUnit,
+          canEdit: true,
+          initialItemId: item.id,
+          singleItem: true,
+          title: `Equipaggia · ${item.name}`,
+          onEquip: (selectedItem, equipSlots, currentItems) => equipInventoryItem(activeCharacter, selectedItem, equipSlots, currentItems),
+          onUnequip: async (selectedItem) => {
+            try {
+              const updated = await updateItem(selectedItem.id, { equip_slot: null, equip_slots: [] });
+              createToast('Oggetto disequipaggiato');
+              return updated;
+            } catch (error) {
+              createToast('Errore durante il disequipaggiamento', 'error');
+              return false;
+            }
+          }
+        });
+        if (result?.changed) await refreshAfterMutation();
+    }));
+    if (container.hasAttribute('data-inventory-shortcut')) {
+      listEl.querySelectorAll('[data-unequip-item]').forEach((button) => button.addEventListener('click', async () => {
+        await runWithGlobalLoader(async () => {
+          try {
+            await updateItem(button.dataset.unequipItem, { equip_slot: null, equip_slots: [] });
+            createToast('Oggetto disequipaggiato');
+            await refreshAfterMutation();
+          } catch (error) {
+            createToast('Errore durante il disequipaggiamento', 'error');
+          }
+        });
+      }));
+    }
     listEl.querySelectorAll('[data-insert-container]')
       .forEach((button) => button.addEventListener('click', async (event) => {
         event.preventDefault();
@@ -335,7 +503,7 @@ export async function renderInventory(container) {
         if (!selectedIds.length) return;
         await runWithGlobalLoader(async () => {
           try {
-            await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id })));
+            await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id, inventory_location: null })));
             createToast(`${selectedIds.length} ${selectedIds.length === 1 ? 'oggetto inserito' : 'oggetti inseriti'} in ${containerItem.name}`);
             refreshAfterMutation();
           } catch (error) {
@@ -379,24 +547,36 @@ export async function renderInventory(container) {
         const item = items.find((entry) => entry.id === btn.dataset.delete);
         if (!item) return;
         const isContainer = item.category === 'container';
-        const containedItems = isContainer
-          ? items.filter((entry) => entry.container_item_id === item.id)
-          : [];
-        const shouldDelete = await openConfirmModal({
-          title: 'Conferma eliminazione oggetto',
-          message: isContainer
-            ? `Stai per eliminare il contenitore "${item.name}". Gli oggetti al suo interno resteranno nell'inventario senza contenitore. Questa azione non può essere annullata.`
-            : `Stai per eliminare l'oggetto "${item.name}" dall'inventario. Questa azione non può essere annullata.`,
-          confirmLabel: 'Elimina'
-        });
-        if (!shouldDelete) return;
+        const containedItems = isContainer ? getContainerDescendants(items, item.id) : [];
+        let containerDeleteMode = 'keep';
+        if (isContainer && containedItems.length) {
+          containerDeleteMode = await chooseContainerDeleteMode(item, containedItems);
+          if (!containerDeleteMode) return;
+        } else {
+          const shouldDelete = await openConfirmModal({
+            title: 'Conferma eliminazione oggetto',
+            message: isContainer
+              ? `Stai per eliminare il contenitore vuoto "${item.name}". Questa azione non può essere annullata.`
+              : `Stai per eliminare l'oggetto "${item.name}" dall'inventario. Questa azione non può essere annullata.`,
+            confirmLabel: 'Elimina'
+          });
+          if (!shouldDelete) return;
+        }
         await runWithGlobalLoader(async () => {
           try {
-            if (containedItems.length) {
-              await Promise.all(containedItems.map((entry) => updateItem(entry.id, { container_item_id: null })));
+            if (containedItems.length && containerDeleteMode === 'delete') {
+              for (const entry of containedItems) await deleteItem(entry.id);
+            } else if (containedItems.length) {
+              const directItems = containedItems.filter((entry) => String(entry.container_item_id) === String(item.id));
+              await Promise.all(directItems.map((entry) => updateItem(entry.id, {
+                container_item_id: null,
+                inventory_location: item.inventory_location || null
+              })));
             }
             await deleteItem(item.id);
-            createToast(isContainer ? 'Contenitore eliminato' : 'Oggetto eliminato');
+            createToast(isContainer && containerDeleteMode === 'delete'
+              ? 'Contenitore e contenuto eliminati'
+              : (isContainer ? 'Contenitore eliminato; contenuto conservato' : 'Oggetto eliminato'));
             refreshAfterMutation();
           } catch (error) {
             createToast('Errore eliminazione', 'error');
@@ -427,16 +607,24 @@ export async function renderInventory(container) {
   }
 
   renderList();
-  searchInput.addEventListener('input', renderList);
   categorySelect?.addEventListener('change', renderList);
   categoryButtons.forEach((button) => button.addEventListener('click', () => {
     const nextCategory = button.dataset.categoryOption || '';
-    activeCategory = nextCategory === activeCategory && nextCategory !== '' ? '' : nextCategory;
+    if (activeCategories.has(nextCategory)) activeCategories.delete(nextCategory);
+    else activeCategories.add(nextCategory);
     syncCategoryButtons();
     renderList();
   }));
   equipableFilter?.addEventListener('change', renderList);
   magicFilter?.addEventListener('change', renderList);
+  resetFiltersButton?.addEventListener('click', () => {
+    if (categorySelect) categorySelect.value = '';
+    activeCategories.clear();
+    if (equipableFilter) equipableFilter.checked = false;
+    if (magicFilter) magicFilter.checked = false;
+    syncCategoryButtons();
+    renderList();
+  });
 
   document.querySelectorAll('[data-money-action]')
     .forEach((button) => {
@@ -734,14 +922,56 @@ export async function renderInventory(container) {
 
 
   container.querySelector('[data-add-item]').addEventListener('click', async () => {
+    const isShortcut = container.hasAttribute('data-inventory-shortcut');
+    let stopCatalogLoader = null;
+    if (isShortcut) {
+      let manualRequested = false;
+      const selected = await openSharedItemPicker({
+        title: 'Loot rapido',
+        allowQuantities: true,
+        headerActionLabel: 'Aggiungi oggetto',
+        onHeaderAction: () => { manualRequested = true; },
+        shortcutSize: true,
+        onLoadingChange: (isLoading) => {
+          if (isLoading) stopCatalogLoader = showShortcutLoader(container, 'Caricamento archivio oggetti');
+          else {
+            stopCatalogLoader?.();
+            stopCatalogLoader = null;
+          }
+        }
+      });
+      if (manualRequested) {
+        try {
+          const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
+          if (created) {
+            createToast('Oggetto aggiunto', 'success');
+            await refreshAfterMutation();
+          }
+        } catch (error) {
+          createToast('Errore durante l’aggiunta dell’oggetto', 'error');
+        }
+        return;
+      }
+      if (!selected.length) return;
+      const stopAddingLoader = showShortcutLoader(container, 'Aggiunta oggetti');
+      try {
+        await addSharedItemsToInventory(selected, activeCharacter);
+        const totalQuantity = selected.reduce((total, item) => total + Math.max(1, Number(item.selected_quantity) || 1), 0);
+        createToast(`${totalQuantity} ${totalQuantity === 1 ? 'unità aggiunta' : 'unità aggiunte'} all’inventario`, 'success');
+        await refreshAfterMutation();
+      } catch (error) {
+        createToast('Errore durante l’aggiunta dall’archivio', 'error');
+      } finally {
+        stopAddingLoader();
+      }
+      return;
+    }
     const source = await openItemSourceModal();
     if (source === 'manual') {
       openItemModal(activeCharacter, null, items, refreshAfterMutation);
       return;
     }
     if (source !== 'catalog') return;
-    const isShortcut = container.hasAttribute('data-inventory-shortcut');
-    let stopCatalogLoader = null;
     const selected = await openSharedItemPicker({
       title: 'Aggiungi oggetti dall’archivio',
       onLoadingChange: (isLoading) => {

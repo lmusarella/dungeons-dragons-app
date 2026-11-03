@@ -750,7 +750,6 @@ body .sheet-detail .sheet-inventory-host .inventory-layout { display: grid; grid
 body .sheet-detail .sheet-inventory-host .inventory-main { width: 100%; min-width: 0; margin: 0; padding: 0; border: 0 !important; box-shadow: none; background: transparent; }
 body .sheet-detail .sheet-inventory-host .inventory-panel__header { display: none; }
 body .sheet-detail .sheet-inventory-host .inventory-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
-body .sheet-detail .sheet-inventory-host .inventory-search { flex: 1 1 220px; }
 body .sheet-detail .sheet-inventory-host .inventory-side { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 body .sheet-detail .sheet-inventory-host .inventory-side-card { margin: 0; padding: 14px; border: 1px solid #d7c1a0; border-radius: 18px; background: #fffaf0; }
 body .sheet-detail .sheet-inventory-host .inventory-list-scroll { max-height: none; overflow: visible; }
@@ -960,6 +959,8 @@ body .sheet-detail .inventory-container-card strong { display: block; font: 650 
 body .sheet-detail .inventory-container-card small { display: block; font-size: 12px; color: #8b725a; margin-top: 5px; }
 body .sheet-detail .container-card-symbol, body .sheet-detail .inventory-container-card img { display: grid; place-items: center; width: 42px; height: 48px; object-fit: contain; background: #efe1c9; border-radius: 10px; font-size: 28px; color: #9b793f; flex-shrink: 0; }
 body .sheet-detail .inventory-container-card:hover, body .sheet-detail .inventory-container-card:focus-visible { border-color: #9a6379; background: #f7eced; }
+body .sheet-detail .inventory-container-card--location { border-color: #c9b78f; background: #fbf4df; }
+body .sheet-detail .inventory-container-card--location .container-card-symbol { background: #e8dfbf; color: #75612f; }
 body .sheet-detail .container-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 body .sheet-detail .container-breadcrumb button { border: 0; background: transparent; padding: 5px 0; font-size: 13px; color: #876773; cursor: pointer; }
 body .sheet-detail .container-breadcrumb button[aria-current] { font-weight: 650; color: #633349; }
@@ -1896,6 +1897,7 @@ body .modal-card--equipment-item-detail { width: min(940px,calc(100vw - 32px)); 
 body .modal-card--equipment-item-detail .equipment-item-detail {
   display: grid; grid-template-columns: minmax(0,1.08fr) minmax(270px,.82fr); align-items: start; gap: 16px;
 }
+body .modal-card--equipment-item-detail .equipment-item-detail:not(:has(.equipment-item-detail__body)) { grid-template-columns: 1fr; }
 body .modal-card--equipment-item-detail .equipment-item-detail__image {
   float: left; width: 190px; height: 190px; margin: 0 16px 12px 0; object-fit: contain;
   border: 1px solid #dcc5a4; border-radius: 13px; background: #fffaf0;
@@ -1908,6 +1910,34 @@ body .modal-card--equipment-item-detail .power-detail-facts > div {
 }
 body .modal-card--equipment-item-detail .power-detail-facts dt { margin: 0 0 2px; color: #927455; font-size: 8px; font-weight: 750; text-transform: uppercase; }
 body .modal-card--equipment-item-detail .power-detail-facts dd { margin: 0; color: #633349; font-size: 12px; font-weight: 650; }
+body .modal-card--equipment-item-detail .equipment-item-cost {
+  display: grid; grid-template-columns: minmax(0,1fr); align-content: start; gap: 4px;
+}
+body .modal-card--equipment-item-detail .equipment-item-cost > dt { grid-column: 1 / -1; }
+body .modal-card--equipment-item-detail .power-detail-facts .equipment-item-cost__value {
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 7px;
+  width: 100%; min-width: 0; margin: 0; padding: 0; text-align: left;
+}
+body .modal-card--equipment-item-detail .equipment-item-cost__value .coin-avatar {
+  width: 30px; height: 30px; flex: 0 0 30px; margin: 0; align-self: center;
+}
+body .modal-card--equipment-item-detail .equipment-item-cost__value .coin-avatar img { width: 100%; height: 100%; }
+body .modal-card--equipment-item-detail .equipment-item-cost__value > span:last-child {
+  display: grid; justify-items: start; min-width: 0; margin: 0; text-align: left;
+}
+body .modal-card--equipment-item-detail .equipment-item-cost__value strong { display: block; color: #633349; font-size: 14px; line-height: 1; text-align: left; }
+body .modal-card--equipment-item-detail .equipment-item-cost__value span span { display: block; color: #765b4e; font-size: 9px; text-align: left; }
+body .modal-card--equipment-item-detail .equipment-rule-card {
+  display: grid; clear: both; gap: 4px; margin-top: 12px; padding: 11px 13px;
+  border: 1px solid #cdb178; border-radius: 12px; background: linear-gradient(135deg,#fff8e7,#f1e4c9);
+}
+body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94703b; font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 14px/1.2 'Fraunces',Georgia,serif; }
+body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 10px; line-height: 1.45; }
+body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 9px; font-weight: 750; }
+body .modal-card--equipment-item-detail .equipment-weapon-properties { clear: both; padding-top: 12px; }
+body .modal-card--equipment-item-detail .equipment-weapon-properties__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+body .modal-card--equipment-item-detail .equipment-weapon-property { margin-top: 0; }
 body .modal-card--equipment-item-detail .equipment-item-lore { clear: both; padding-top: 8px; }
 body .modal-card--equipment-item-detail .equipment-item-lore h3 { margin: 0 0 5px; color: #633349; font: 700 15px/1.2 'Fraunces',Georgia,serif; }
 body .modal-card--equipment-item-detail .equipment-item-detail__description { margin: 0; color: #59453d; font-size: 13px; line-height: 1.5; }
@@ -2873,12 +2903,12 @@ body .sheet-detail .shortcut-context-loader__spinner {
 
 /* Inventory shortcut: one compact item toolbar and one financial workspace. */
 body .sheet-detail .sheet-inventory-host .inventory-toolbar {
-  display: grid !important; grid-template-columns: minmax(120px,180px) minmax(0,1fr) auto auto; align-items: stretch; gap: 7px;
+  display: grid !important; grid-template-columns: minmax(0,1fr) auto auto auto; align-items: stretch; gap: 7px;
+  grid-auto-flow: column; white-space: nowrap;
 }
-body .sheet-detail .sheet-inventory-host .inventory-toolbar .inventory-search { min-width: 0; }
-body .sheet-detail .sheet-inventory-host .inventory-toolbar .filter-toggle { min-width: 112px; }
+body .sheet-detail .sheet-inventory-host .inventory-toolbar .inventory-filter-card { align-self: stretch; }
 body .sheet-detail .inventory-category-pills {
-  display: flex; align-items: center; gap: 4px; min-width: 0; padding: 4px;
+  display: flex; align-items: center; justify-self: start; width: fit-content; max-width: 100%; gap: 4px; min-width: 0; padding: 4px;
   overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none;
   border: 1px solid #dbc5a4; border-radius: 12px; background: #efe3d0;
 }
@@ -2890,6 +2920,9 @@ body .sheet-detail .inventory-category-pills button {
 body .sheet-detail .inventory-category-pills button[aria-pressed='true'] {
   border-color: #76364b; background: #76364b; color: #fff8e9; box-shadow: 0 2px 6px rgba(73,43,64,.18);
 }
+body .sheet-detail .inventory-category-pills button[aria-pressed='true']::before { content: '✓ '; font-weight: 900; }
+body .sheet-detail .inventory-filter-reset { align-self: stretch; min-width: 76px; min-height: 44px; padding: 6px 9px; font-size: 10px; }
+body .sheet-detail .inventory-filter-reset:disabled { opacity: .4; cursor: default; }
 body .sheet-detail .sheet-inline-detail.modal-card--inventory-insert {
   display: flex; width: 100% !important; height: 100% !important; min-height: 0; max-height: none;
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
@@ -2925,8 +2958,8 @@ body .sheet-detail .equipment-summary__item--attunement[aria-pressed='true'] { b
 body .sheet-detail .equipment-filter-empty { padding: 24px; text-align: center; }
 
 @media (max-width: 760px) {
-  body .sheet-detail .sheet-inventory-host .inventory-toolbar { grid-template-columns: minmax(110px,.55fr) minmax(0,1.45fr) auto auto; }
-  body .sheet-detail .sheet-inventory-host .inventory-toolbar .filter-toggle { min-width: 0; }
+  body .sheet-detail .sheet-inventory-host .inventory-toolbar { grid-template-columns: minmax(0,1fr) auto auto auto; }
+  body .sheet-detail .sheet-inventory-host .inventory-toolbar .inventory-filter-card { min-width: 0; }
   body .sheet-detail .inventory-money-workspace .wallet-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 

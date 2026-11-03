@@ -4,6 +4,7 @@ import { formatWeight } from '../../lib/format.js';
 import { calcItemWeight } from '../../lib/calc.js';
 import {
   getCategoryLabel,
+  getEquipSlots,
   getItemStatusLabels,
   normalizeTransactionAmount
 } from './utils.js';
@@ -155,7 +156,7 @@ export function buildInventoryTree(items, weightUnit = 'kg', { compact = false }
           <div class="inventory-table__cell inventory-table__cell--item">
             <span class="inventory-container-accordion__icon" aria-hidden="true">▾</span>
             <div class="item-info-body">
-              <strong>${escapeHtml(container.name)}</strong>
+              <button class="item-name-button" type="button" data-item-preview="${escapeHtml(container.id)}" aria-label="Apri dettaglio ${escapeHtml(container.name)}">${escapeHtml(container.name)}</button>
               ${volumeLabel ? `<span class="muted">${escapeHtml(volumeLabel)}</span>` : ''}
             </div>
           </div>
@@ -167,9 +168,6 @@ export function buildInventoryTree(items, weightUnit = 'kg', { compact = false }
             <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${escapeHtml(container.id)}" aria-label="Inserisci oggetti sfusi in ${escapeHtml(container.name)}">
               <span aria-hidden="true">＋</span>
               <span>Inserisci</span>
-            </button>
-            <button class="resource-action-button icon-button" type="button" data-edit="${escapeHtml(container.id)}" aria-label="Modifica" title="Modifica">
-              <span aria-hidden="true">✏️</span>
             </button>
             <button class="resource-action-button icon-button" type="button" data-delete="${escapeHtml(container.id)}" aria-label="Elimina" title="Elimina">
               <span aria-hidden="true">🗑️</span>
@@ -193,13 +191,13 @@ export function buildInventoryTree(items, weightUnit = 'kg', { compact = false }
         <span class="inventory-loose-accordion__count">${topLevel.length} ${topLevel.length === 1 ? 'oggetto' : 'oggetti'}</span>
       </summary>
       <div class="inventory-group__children inventory-group__children--loose">
-        ${renderItems(topLevel, weightUnit, { allItems: items })}
+        ${renderItems(topLevel, weightUnit, { allowEquip: true, allItems: items })}
       </div>
     </details>
   `;
 }
 
-export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyLabel = 'Nessun oggetto.', allItems = items } = {}) {
+export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyLabel = 'Nessun oggetto.', allowEquip = false, allItems = items } = {}) {
   if (!items.length) {
     return `<div class="inventory-empty-state"><span aria-hidden="true">◇</span><div><strong>${escapeHtml(emptyLabel)}</strong><small>Aggiungi o sposta qui un oggetto per visualizzarlo.</small></div></div>`;
   }
@@ -242,9 +240,7 @@ export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyL
             <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${escapeHtml(volumeValue)}</strong></div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${safeId}">Consuma</button>` : ''}
-              <button class="resource-action-button icon-button" data-edit="${safeId}" aria-label="Modifica" title="Modifica">
-                <span aria-hidden="true">✏️</span>
-              </button>
+              ${allowEquip && item.equipable && !getEquipSlots(item).length ? `<button class="resource-action-button" data-equip-item="${safeId}">Equipaggia</button>` : ''}
               <button class="resource-action-button icon-button" data-delete="${safeId}" aria-label="Elimina" title="Elimina">
                 <span aria-hidden="true">🗑️</span>
               </button>
@@ -440,6 +436,10 @@ export function buildLootFields() {
       <label class="field">
         <span>Quantità</span>
         <input name="qty" type="number" value="1" min="0" step="1" />
+      </label>
+      <label class="field">
+        <span>Luogo</span>
+        <input name="inventory_location" placeholder="Es. Casa o deposito" />
       </label>
     </div>
     <fieldset class="quick-loot-categories">

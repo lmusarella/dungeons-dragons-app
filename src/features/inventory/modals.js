@@ -4,6 +4,7 @@ import { ammunitionTypes, armorTypes, damageTypeOptions, itemCategories, weaponA
 import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMasteries.js';
 import { getCompatibleEquipSlots, getEquipSlots } from './utils.js';
 import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
+import { normalizeWeaponProperties, weaponPropertyOptions } from './weaponProperties.js';
 
 export async function openItemModal(character, item, items = [], onSave, options = {}) {
   const catalogMode = Boolean(options.catalogMode);
@@ -135,6 +136,18 @@ export async function openItemModal(character, item, items = [], onSave, options
   containerField.className = 'field';
   containerField.innerHTML = '<span>Contenitore</span>';
   containerField.appendChild(containerSelect);
+  const locationField = catalogMode ? null : buildInput({
+    label: 'Luogo',
+    name: 'inventory_location',
+    placeholder: 'Es. Casa, carro o deposito',
+    value: item?.inventory_location ?? ''
+  });
+  const locationInput = locationField?.querySelector('input');
+  const syncPlacementFields = () => {
+    if (locationInput) locationInput.disabled = Boolean(containerSelect.value);
+  };
+  containerSelect.addEventListener('change', syncPlacementFields);
+  syncPlacementFields();
   const maxVolumeField = buildInput({
     label: 'Volume massimo contenitore',
     name: 'max_volume',
@@ -172,7 +185,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     return optionLabel.querySelector('input');
   });
   categoryKindField.appendChild(categoryKindList);
-  const categoryRow = buildRow([categoryField, containerField, maxVolumeField, ammunitionTypeField], 'compact');
+  const categoryRow = buildRow([categoryField, containerField, locationField, maxVolumeField, ammunitionTypeField], 'compact');
   categoryRow.classList.add('item-modal-row--classification');
   const classificationSection = buildSection(
     'Categoria e collocazione',
@@ -243,7 +256,7 @@ export async function openItemModal(character, item, items = [], onSave, options
   weaponTypeField.appendChild(weaponTypeSelect);
   const weaponRangeField = document.createElement('label');
   weaponRangeField.className = 'field';
-  weaponRangeField.innerHTML = '<span>Proprietà arma</span>';
+  weaponRangeField.innerHTML = '<span>Uso dell’arma</span>';
   const weaponRangeSelect = buildSelect(weaponRanges, item?.weapon_range ?? '');
   weaponRangeSelect.name = 'weapon_range';
   weaponRangeField.appendChild(weaponRangeSelect);
@@ -303,6 +316,23 @@ export async function openItemModal(character, item, items = [], onSave, options
   const weaponAmmoTypeSelect = buildSelect(ammunitionTypes, item?.required_ammunition_type ?? item?.ammunition_type ?? '');
   weaponAmmoTypeSelect.name = 'required_ammunition_type';
   weaponAmmoTypeField.appendChild(weaponAmmoTypeSelect);
+  const selectedWeaponProperties = new Set(normalizeWeaponProperties(item));
+  if (selectedWeaponProperties.has('munizioni') && consumesAmmoInput) consumesAmmoInput.checked = true;
+  const weaponPropertiesField = document.createElement('fieldset');
+  weaponPropertiesField.className = 'weapon-properties-field';
+  weaponPropertiesField.innerHTML = `
+    <legend>Proprietà delle armi</legend>
+    <p class="muted">Seleziona tutte le regole speciali applicabili all’arma.</p>
+    <div class="weapon-properties-field__grid">
+      ${weaponPropertyOptions.map((property) => `
+        <label class="weapon-property-option">
+          <input type="checkbox" name="weapon_properties" value="${property.value}" ${selectedWeaponProperties.has(property.value) ? 'checked' : ''} />
+          <span><strong>${property.label}</strong><small>${property.description}</small></span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  const weaponPropertyInputs = [...weaponPropertiesField.querySelectorAll('input[name="weapon_properties"]')];
   const parseWeaponDamageModes = (sourceItem) => {
     const rawModes = sourceItem?.weapon_damage_modes;
     let parsedModes = [];
@@ -408,6 +438,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     label: 'Proprietà lancio',
     checked: item?.is_thrown ?? false
   });
+  if (selectedWeaponProperties.has('lancio') && thrownInput) thrownInput.checked = true;
   const rangeGrid = buildRow([], 'compact');
   rangeGrid.classList.add('item-modal-row--weapon-range');
   const meleeRangeField = buildInput({
@@ -478,6 +509,7 @@ export async function openItemModal(character, item, items = [], onSave, options
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(rangeGrid);
   proficiencySection.appendChild(weaponAmmoRow);
+  proficiencySection.appendChild(weaponPropertiesField);
   proficiencySection.appendChild(weaponDamageModesField);
   proficiencySection.appendChild(armorPrimaryRow);
   proficiencySection.appendChild(armorShieldRow);
@@ -562,6 +594,7 @@ export async function openItemModal(character, item, items = [], onSave, options
       consumesAmmoInput.closest('.condition-modal__item')?.classList.toggle('is-selected', consumesAmmoInput.checked);
     }
     weaponAmmoTypeSelect.disabled = !isWeapon || !(consumesAmmoInput?.checked ?? false);
+    weaponPropertyInputs.forEach((input) => { input.disabled = !isWeapon; });
     weaponDamageModesField.querySelectorAll('input, select, button').forEach((field) => {
       field.disabled = !isWeapon;
     });
@@ -599,6 +632,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     toggleFieldVisibility(weaponDamageRow, showWeaponFields);
     toggleFieldVisibility(rangeGrid, showWeaponFields);
     toggleFieldVisibility(weaponAmmoRow, showWeaponFields);
+    toggleFieldVisibility(weaponPropertiesField, showWeaponFields);
     toggleFieldVisibility(weaponDamageModesField, showWeaponFields);
     toggleFieldVisibility(armorPrimaryRow, showArmorFields);
     toggleFieldVisibility(armorShieldRow, showArmorFields);
@@ -621,6 +655,22 @@ export async function openItemModal(character, item, items = [], onSave, options
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
   consumesAmmoInput?.addEventListener('change', updateEquipmentFields);
+  weaponPropertyInputs.forEach((input) => input.addEventListener('change', () => {
+    if (input.checked && ['due_mani', 'versatile'].includes(input.value)) {
+      weaponPropertyInputs
+        .filter((propertyInput) => propertyInput !== input && ['due_mani', 'versatile'].includes(propertyInput.value))
+        .forEach((propertyInput) => { propertyInput.checked = false; });
+    }
+    if (input.value === 'lancio' && thrownInput) {
+      thrownInput.checked = input.checked;
+      thrownInput.closest('.condition-modal__item')?.classList.toggle('is-selected', thrownInput.checked);
+    }
+    if (input.value === 'munizioni' && consumesAmmoInput) {
+      consumesAmmoInput.checked = input.checked;
+      consumesAmmoInput.closest('.condition-modal__item')?.classList.toggle('is-selected', consumesAmmoInput.checked);
+    }
+    updateEquipmentFields();
+  }));
   syncKindWithCategory();
   updateEquipmentFields();
 
@@ -659,6 +709,10 @@ export async function openItemModal(character, item, items = [], onSave, options
     attack_modifier: Number(modeAttackModifiers[index]) || 0,
     damage_type: modeTypes[index] || null
   })).filter((mode) => mode.damage_die);
+  const weaponPropertySet = new Set(formData.getAll('weapon_properties').map(String));
+  if (formData.get('consumes_ammunition') === 'on') weaponPropertySet.add('munizioni');
+  if (formData.get('is_thrown') === 'on') weaponPropertySet.add('lancio');
+  const weaponProperties = [...weaponPropertySet];
 
   const payload = {
     ...(catalogMode ? {} : {
@@ -673,6 +727,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     value_cp: Number(formData.get('value_cp')),
     category,
     container_item_id: catalogMode ? null : (formData.get('container_item_id') || null),
+    ...(catalogMode ? {} : { inventory_location: formData.get('inventory_location')?.trim() || null }),
     max_volume: formData.get('max_volume') === '' ? null : Number(formData.get('max_volume')),
     equipable: equipableEnabled,
     equip_slot: equipSlot,
@@ -688,7 +743,11 @@ export async function openItemModal(character, item, items = [], onSave, options
     weapon_mastery: formData.get('weapon_mastery') || null,
     ammunition_type: formData.get('ammunition_type') || null,
     required_ammunition_type: formData.get('required_ammunition_type') || null,
-    consumes_ammunition: formData.get('consumes_ammunition') === 'on',
+    consumes_ammunition: formData.get('consumes_ammunition') === 'on' || weaponProperties.includes('munizioni'),
+    weapon_properties: weaponProperties,
+    grip_type: weaponProperties.includes('due_mani')
+      ? 'two_handed'
+      : (weaponProperties.includes('versatile') ? 'versatile' : 'one_handed'),
     damage_die: formData.get('damage_die')?.trim() || null,
     damage_type: formData.get('damage_type') || null,
     attack_modifier: Number(formData.get('attack_modifier')) || 0,
@@ -700,7 +759,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     alternate_damage_modifier: Number(weaponDamageModes[0]?.damage_modifier) || 0,
     alternate_attack_modifier: Number(weaponDamageModes[0]?.attack_modifier) || 0,
     alternate_damage_type: weaponDamageModes[0]?.damage_type || null,
-    is_thrown: formData.get('is_thrown') === 'on',
+    is_thrown: formData.get('is_thrown') === 'on' || weaponProperties.includes('lancio'),
     melee_range: (() => {
       const meleeRange = String(formData.get('melee_range') ?? '').trim().replace(',', '.');
       if (!meleeRange) return null;

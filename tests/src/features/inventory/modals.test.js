@@ -26,7 +26,9 @@ describe('src/features/inventory/modals.js', () => {
   it('groups item editor fields in the requested rows', () => {
     const source = readFileSync('src/features/inventory/modals.js', 'utf8');
 
-    expect(source).toContain("buildRow([categoryField, containerField, maxVolumeField, ammunitionTypeField], 'compact')");
+    expect(source).toContain("buildRow([categoryField, containerField, locationField, maxVolumeField, ammunitionTypeField], 'compact')");
+    expect(source).toContain("name: 'inventory_location'");
+    expect(source).toContain("inventory_location: formData.get('inventory_location')?.trim() || null");
     expect(source).toContain("buildRow([weaponTypeField, weaponRangeField, weaponAbilityField, weaponMasteryField], 'compact')");
     expect(source).toContain('rangeGrid.append(thrownField, meleeRangeField, rangeNormalField, rangeDisadvantageField)');
     expect(source.indexOf('proficiencySection.appendChild(rangeGrid)'))
@@ -36,6 +38,10 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain("const isConsumable = categorySelect.value === 'consumable'");
     expect(source).toContain('toggleFieldVisibility(ammunitionTypeField, isConsumable)');
     expect(source).toContain('ammunitionTypeSelect.disabled = !isConsumable');
+    expect(source).toContain("formData.getAll('weapon_properties')");
+    expect(source).toContain('weapon_properties: weaponProperties');
+    expect(source).toContain("weaponProperties.includes('due_mani')");
+    expect(source).toContain('weaponPropertyOptions.map');
     expect(source).not.toContain('const ammunitionTypeRow');
     expect(source).toContain('toggleFieldVisibility(armorShieldRow, showArmorFields)');
     expect(source).not.toContain('toggleFieldVisibility(weaponMasteryRow');

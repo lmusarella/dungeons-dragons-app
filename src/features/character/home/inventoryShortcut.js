@@ -7,9 +7,9 @@ export function createInventoryShortcut(addPanel, configuration = {}) {
   const dialog = host.closest('dialog');
   dialog.classList.add('sheet-detail--inventory','sheet-detail--catalog');
   const add = document.createElement('button');
-  add.type = 'button'; add.className = 'icon-button';
+  add.type = 'button'; add.className = 'ghost-button inventory-shortcut-add-action';
   add.disabled = true;
-  add.textContent = '+'; add.setAttribute('aria-label','Nuovo oggetto');
+  add.textContent = '+ Aggiungi oggetti'; add.setAttribute('aria-label','Aggiungi oggetti');
   host.polishShortcut = options => polishInventoryShortcut(host, options);
   host.updateShortcutAction = key => { add.hidden = key !== 'items'; };
   add.addEventListener('click',()=>host.querySelector('[data-add-item]')?.click());

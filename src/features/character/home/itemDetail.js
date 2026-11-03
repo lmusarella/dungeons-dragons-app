@@ -4,8 +4,40 @@ import { getEquipSlots, getBodyPartLabels, getCategoryLabel } from '../../invent
 import { mountEquipmentMannequin } from './equipmentMannequin.js';
 import { getWeaponDamageModes } from './utils.js';
 import { attachUnifiedDetailActions } from './detailManagement.js';
-import { damageTypeLabels } from '../../inventory/constants.js';
-export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null } = {}) {
+import { ammunitionTypeLabels, damageTypeLabels } from '../../inventory/constants.js';
+import { normalizeWeaponProperties, weaponPropertyOptions } from '../../inventory/weaponProperties.js';
+import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
+
+const COIN_DENOMINATIONS = [
+  { key: 'gp', factor: 100, name: 'oro', icon: 'moneta_oro.png' },
+  { key: 'sp', factor: 10, name: 'argento', icon: 'moneta_argento.png' },
+  { key: 'cp', factor: 1, name: 'rame', icon: 'moneta_rame.png' }
+];
+
+export function getItemCostDisplay(valueCp) {
+  const copper = Math.max(0, Math.round(Number(valueCp) || 0));
+  const denomination = COIN_DENOMINATIONS.find((coin) => copper > 0 && copper % coin.factor === 0)
+    || COIN_DENOMINATIONS[COIN_DENOMINATIONS.length - 1];
+  const amount = copper / denomination.factor;
+  const noun = amount === 1 ? 'moneta' : 'monete';
+  const preposition = denomination.name === 'oro' || denomination.name === 'argento' ? "d'" : 'di ';
+  return {
+    ...denomination,
+    amount,
+    copper,
+    label: `${amount} ${noun} ${preposition}${denomination.name}`
+  };
+}
+
+function getItemValueCp(item) {
+  const directValue = Number(item?.value_cp);
+  if (Number.isFinite(directValue)) return Math.max(0, directValue);
+  const legacyFactors = { mr: 1, cp: 1, ma: 10, sp: 10, mo: 100, gp: 100, mp: 1000, pp: 1000 };
+  const quantity = Number(item?.cost?.quantita ?? item?.cost?.quantity);
+  const factor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
+  return Number.isFinite(quantity) && factor ? quantity * factor : 0;
+}
+export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false } = {}) {
   if (!item) return;
   const slots = getEquipSlots(item);
   const content = document.createElement('div');
@@ -13,21 +45,77 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
   const image = sanitizeImageUrl(item.image_url);
   const damageModes = item.category === 'weapon' ? getWeaponDamageModes(item).filter(mode => mode.damageDie) : [];
   const selectedModeId = item.selected_damage_mode || damageModes[0]?.id;
+  const cost = getItemCostDisplay(getItemValueCp(item));
+  const costIcon = `${import.meta.env.BASE_URL}icons/${cost.icon}`;
+  const propertyDefinitions = new Map(weaponPropertyOptions.map((property) => [property.value, property]));
+  const weaponProperties = item.category === 'weapon'
+    ? normalizeWeaponProperties(item).map((value) => propertyDefinitions.get(value)).filter(Boolean)
+    : [];
+  const description = String(item.description || item.notes || '').trim();
+  const masteryLabel = item.category === 'weapon' && item.weapon_mastery
+    ? getWeaponMasteryLabel(item.weapon_mastery)
+    : '';
+  const masterySummary = masteryLabel ? getWeaponMasterySummary(item.weapon_mastery) : '';
+  const hasThrownOrRange = item.category === 'weapon' && (
+    weaponProperties.some((property) => ['lancio', 'gittata'].includes(property.value))
+    || item.range_normal != null
+    || item.range_disadvantage != null
+  );
+  const rangeValue = hasThrownOrRange
+    ? [item.range_normal, item.range_disadvantage]
+      .map((value) => value != null && value !== '' ? `${value} m` : '—')
+      .join(' / ')
+    : null;
   const facts = [
     ['Categoria',getCategoryLabel(item.category)],
+    ['Luogo',item.inventory_location],
     ['Quantità',item.qty ?? 1],
     ['Peso',item.weight != null ? item.weight + ' ' + weightUnit : null],
-    ['Equipaggiato',slots.length ? getBodyPartLabels(slots) : 'Non equipaggiato'],
+    ['Equipaggiato',catalogMode ? null : (slots.length ? getBodyPartLabels(slots) : 'Non equipaggiato')],
     ['Sintonia',item.attunement_active ? 'Attiva' : null],
     ['Classe armatura',item.armor_class ?? item.ac],
     ['Danni',item.damage_die ? `${item.damage_die}${item.damage_type ? ` · ${damageTypeLabels.get(item.damage_type) || item.damage_type}` : ''}` : item.damage],
+    ['Gittata',rangeValue],
   ].filter(([,value]) => value != null && value !== '');
+  const costMarkup = `
+    <div class="equipment-item-cost" aria-label="Costo dell’oggetto">
+      <dt>Costo</dt>
+      <dd class="equipment-item-cost__value">
+        <span class="coin-avatar coin-avatar--${cost.key}" aria-hidden="true"><img src="${costIcon}" alt="" /></span>
+        <span><strong>${escapeHtml(cost.amount)}</strong><span>${escapeHtml(cost.amount === 1 ? `Moneta ${cost.name === 'oro' || cost.name === 'argento' ? "d'" : 'di '}${cost.name}` : `Monete ${cost.name === 'oro' || cost.name === 'argento' ? "d'" : 'di '}${cost.name}`)}</span></span>
+      </dd>
+    </div>`;
+  const masteryMarkup = masteryLabel ? `
+    <section class="equipment-weapon-mastery equipment-rule-card">
+      <span>Maestria dell’arma · 2024</span>
+      <strong>${escapeHtml(masteryLabel)}</strong>
+      ${masterySummary ? `<p>${escapeHtml(masterySummary)}</p>` : ''}
+    </section>` : '';
+  const propertiesMarkup = weaponProperties.length ? `
+    <section class="equipment-weapon-properties">
+      <div class="equipment-weapon-properties__list">
+        ${weaponProperties.map((property) => `
+          <article class="equipment-weapon-property equipment-rule-card">
+            <span>Proprietà dell’arma</span>
+            <strong>${escapeHtml(property.label)}</strong>
+            <p>${escapeHtml(property.description)}</p>
+            ${property.value === 'gittata' && (item.range_normal || item.range_disadvantage)
+              ? `<small>${escapeHtml(item.range_normal || '—')} / ${escapeHtml(item.range_disadvantage || '—')} m (normale / lunga)</small>`
+              : ''}
+            ${property.value === 'munizioni' && item.required_ammunition_type
+              ? `<small>Munizione: ${escapeHtml(ammunitionTypeLabels.get(item.required_ammunition_type) || item.required_ammunition_type)}</small>`
+              : ''}
+          </article>`).join('')}
+      </div>
+    </section>` : '';
   content.innerHTML = '<section class="equipment-item-detail__info">' +
     (image ? '<img class="equipment-item-detail__image" src="'+image+'" alt="'+escapeHtml(item.name)+'" />' : '') +
-    '<dl class="power-detail-facts">' + facts.map(([label,value])=>'<div><dt>'+escapeHtml(label)+'</dt><dd>'+escapeHtml(value)+'</dd></div>').join('') + '</dl>' +
+    '<dl class="power-detail-facts">' + facts.map(([label,value])=>'<div><dt>'+escapeHtml(label)+'</dt><dd>'+escapeHtml(value)+'</dd></div>').join('') + costMarkup + '</dl>' +
     (damageModes.length > 1 && onModeChange ? '<section class="weapon-grip-picker"><span class="eyebrow">Impugnatura</span><div class="weapon-grip-picker__options">' + damageModes.map(mode => '<button type="button" data-weapon-mode="'+escapeHtml(mode.id)+'" aria-pressed="'+String(mode.id === selectedModeId)+'"><strong>'+escapeHtml(mode.label)+'</strong><small>'+escapeHtml(mode.damageDie)+'</small></button>').join('') + '</div><p>Seleziona la modalità usata per calcolare tiro per colpire e danni.</p></section>' : '') +
-    '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(item.description || item.notes || 'Nessuna descrizione disponibile.')+'</p></section></section>' +
-    (slots.length ? '<aside class="equipment-item-detail__body"><header class="equipment-position-header"><div><span class="eyebrow">Equipaggiamento</span><h3>'+escapeHtml(getBodyPartLabels(slots))+'</h3></div></header><div data-item-body-view></div><p class="equipment-position-hint">La parte lampeggiante indica la posizione dell’oggetto.</p></aside>' : '');
+    masteryMarkup +
+    propertiesMarkup +
+    (description ? '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(description)+'</p></section>' : '') + '</section>' +
+    (slots.length && !catalogMode ? '<aside class="equipment-item-detail__body"><header class="equipment-position-header"><div><span class="eyebrow">Equipaggiamento</span><h3>'+escapeHtml(getBodyPartLabels(slots))+'</h3></div></header><div data-item-body-view></div><p class="equipment-position-hint">La parte lampeggiante indica la posizione dell’oggetto.</p></aside>' : '');
   return openFormModal({
     title: item.name || 'Oggetto',
     content, submitLabel: 'Chiudi', cancelLabel: null, showFooter: false,

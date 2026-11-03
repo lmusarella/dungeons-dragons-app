@@ -30,10 +30,15 @@ describe('src/features/library/library.js', () => {
     expect(source).toContain('Catalogo in consultazione');
     expect(source).not.toContain("container.querySelector('[data-library-import]')?.addEventListener");
     expect(source).toContain('canManageCatalog ? { onEdit: () => editSpell(spell), onDelete: () => deleteSpell(spell) } : {}');
-    expect(source).toContain('itemCard(item, character, canManageCatalog)');
+    expect(source).toContain('visible.map(itemCard)');
+    expect(source).not.toContain('data-library-copy-item');
+    expect(source).not.toContain('data-library-edit-item');
+    expect(source).not.toContain('data-library-delete-item');
     expect(source).not.toContain('data-library-edit-spell=');
+    expect(source).toContain('catalogMode: true');
     expect(styles).toContain('.library-shell--refined');
     expect(styles).toContain('.library-spell-card:focus-visible');
+    expect(styles).toContain('.library-item-card { min-height: 0; }');
   });
 
   it('preserves imported spell metadata when editing or assigning catalog entries', () => {

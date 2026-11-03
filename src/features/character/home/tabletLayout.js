@@ -102,7 +102,7 @@ export function mountTabletLayout(container, configuration = {}) {
       dialog.classList.add('sheet-detail--rolls');
       node.classList.add('sheet-roll-options');
     }
-    if (node.matches('.home-feature-panel--attacks, .home-feature-panel--resources, .equipment-management, .sheet-preparation, .home-feature-panel--spells')) {
+    if (node.matches('.home-feature-panel--attacks, .home-feature-panel--resources, .sheet-preparation, .home-feature-panel--spells')) {
       dialog.classList.add('sheet-detail--catalog');
     }
     const close = document.createElement('button');
