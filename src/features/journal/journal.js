@@ -30,6 +30,7 @@ import {
   openFormModal,
   setGlobalLoading
 } from '../../ui/components.js';
+import { attachUnifiedDetailActions } from '../character/home/detailManagement.js';
 
 export async function renderJournal(container) {
   const state = getState();
@@ -165,53 +166,18 @@ export async function renderJournal(container) {
       ? buildEntryList(filteredEntries, entryTagMap, tagMap)
       : '<div class="journal-empty-state"><strong>Nessuna voce trovata</strong><span>Prova una ricerca diversa o crea una nuova voce.</span></div>';
 
-    listEl.querySelectorAll('[data-edit]')
-      .forEach((btn) => btn.addEventListener('click', async (event) => {
-        event.stopPropagation();
-        const entry = entries.find((item) => item.id === btn.dataset.edit);
-        if (entry) {
-          await openEntryModal(activeCharacter, entry, tags, entryTagMap[entry.id] ?? [], refresh);
-        }
-      }));
-
-    listEl.querySelectorAll('[data-delete]')
-      .forEach((btn) => btn.addEventListener('click', async (event) => {
-        event.stopPropagation();
-        const entry = entries.find((item) => item.id === btn.dataset.delete);
+    listEl.querySelectorAll('[data-open-entry-detail]')
+      .forEach((button) => button.addEventListener('click', async () => {
+        const entry = entries.find((item) => String(item.id) === button.dataset.openEntryDetail);
         if (!entry) return;
-        const shouldDelete = await openConfirmModal({
-          title: 'Conferma eliminazione voce',
-          message: `Stai per eliminare la voce "${entry.title || 'Senza titolo'}" dal diario. Questa azione non può essere annullata.`,
-          confirmLabel: 'Elimina'
+        await openEntryDetailModal({
+          character: activeCharacter,
+          entry,
+          tags,
+          selectedTags: entryTagMap[entry.id] ?? [],
+          tagMap,
+          onRefresh: refresh
         });
-        if (!shouldDelete) return;
-
-        setGlobalLoading(true);
-        try {
-          await deleteEntry(entry.id);
-          createToast('Voce eliminata');
-          await refresh();
-        } catch (error) {
-          createToast('Errore eliminazione', 'error');
-        } finally {
-          setGlobalLoading(false);
-        }
-      }));
-
-    listEl.querySelectorAll('[data-entry-card]')
-      .forEach((card) => card.addEventListener('click', () => {
-        const content = card.querySelector('[data-entry-content]');
-        if (!content) return;
-        const isOpen = card.classList.toggle('is-open');
-        content.hidden = !isOpen;
-      }));
-
-    listEl.querySelectorAll('[data-quick-append]')
-      .forEach((button) => button.addEventListener('click', async (event) => {
-        event.stopPropagation();
-        const entry = entries.find((item) => item.id === button.dataset.quickAppend);
-        if (!entry) return;
-        await openQuickAppendModal(entry, refresh);
       }));
   }
 
@@ -394,10 +360,9 @@ function buildEntryList(entries, entryTagMap, tagMap) {
     <ul class="journal-entry-list">
       ${sortedEntries.map((entry) => {
     const tagIds = entryTagMap[entry.id] ?? [];
-    const formattedContent = renderPrettyContent(entry.content || '');
     const preview = getContentPreview(entry.content || '');
     return `
-          <li class="journal-entry-card journal-entry-card--entry ${entry.is_pinned ? 'is-pinned' : ''}" data-entry-card>
+          <li class="journal-entry-card journal-entry-card--entry ${entry.is_pinned ? 'is-pinned' : ''}">
             <span class="journal-entry-card__marker" aria-hidden="true">${entry.is_pinned ? '◆' : '◇'}</span>
             <div class="journal-entry-card__header">
               <div class="journal-entry-card__summary">
@@ -408,25 +373,14 @@ function buildEntryList(entries, entryTagMap, tagMap) {
                 <p class="muted">${entry.entry_date || ''} · Sessione ${entry.session_no ?? '-'}</p>
                 ${preview ? `<p class="journal-entry-card__preview">${preview}</p>` : ''}
               </div>
-              <div class="actions journal-entry-card__actions">
-                <button class="icon-button" data-quick-append="${entry.id}" aria-label="Aggiunta rapida" title="Aggiunta rapida testo">
-                  <span aria-hidden="true">➕</span>
-                </button>
-                <button class="icon-button" data-edit="${entry.id}" aria-label="Modifica voce" title="Modifica">
-                  <span aria-hidden="true">✏️</span>
-                </button>
-                <button class="icon-button icon-button--danger" data-delete="${entry.id}" aria-label="Elimina voce" title="Elimina">
-                  <span aria-hidden="true">🗑️</span>
-                </button>
-              </div>
+              <button type="button" class="journal-entry-card__open" data-open-entry-detail="${entry.id}">
+                <span>Apri dettaglio</span><b aria-hidden="true">›</b>
+              </button>
             </div>
             ${tagIds.length ? `
             <div class="tag-row journal-entry-card__tags">
               ${tagIds.map((id) => `<span class="chip">${tagMap.get(id)?.name ?? ''}</span>`).join('')}
             </div>` : ''}
-            <div class="journal-entry-card__content" data-entry-content hidden>
-              ${formattedContent || '<p class="muted">Nessun contenuto.</p>'}
-            </div>
           </li>
         `;
   }).join('')}
@@ -496,16 +450,10 @@ function buildFileList(files) {
             </div>
             ${file.notes ? `<p class="journal-file-card__notes">${file.notes}</p>` : ''}
           </div>
-          <div class="actions">
-            <button class="icon-button" data-preview-file="${file.id}" aria-label="Visualizza file" title="Visualizza">
-              <span aria-hidden="true">👁️</span>
-            </button>
-            <button class="icon-button" data-download-file="${file.id}" aria-label="Scarica file" title="Scarica">
-              <span aria-hidden="true">⬇️</span>
-            </button>
-            <button class="icon-button icon-button--danger" data-delete-file="${file.id}" aria-label="Elimina file" title="Elimina file">
-              <span aria-hidden="true">🗑️</span>
-            </button>
+          <div class="journal-file-card__actions">
+            <button type="button" class="journal-file-card__cta" data-preview-file="${file.id}">Apri</button>
+            <button type="button" class="journal-file-card__cta" data-download-file="${file.id}">Scarica</button>
+            <button type="button" class="journal-file-card__cta journal-file-card__cta--danger" data-delete-file="${file.id}">Elimina</button>
           </div>
         </li>
       `).join('')}
@@ -531,6 +479,74 @@ function formatDate(value) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+async function openEntryDetailModal({ character, entry, tags, selectedTags, tagMap, onRefresh }) {
+  const tagNames = selectedTags
+    .map((id) => tagMap.get(id)?.name)
+    .filter(Boolean);
+  const content = document.createElement('article');
+  content.className = 'journal-entry-detail';
+  content.innerHTML = `
+    <header class="journal-entry-detail__hero">
+      <div>
+        <p class="eyebrow">Sessione ${entry.session_no ?? '—'}</p>
+        <h3>${escapeHtml(String(entry.title || 'Senza titolo'))}</h3>
+        <p class="journal-entry-detail__date">${escapeHtml(String(entry.entry_date || 'Data non indicata'))}</p>
+      </div>
+      ${entry.is_pinned ? '<span class="journal-entry-card__pin">In evidenza</span>' : ''}
+    </header>
+    ${tagNames.length ? `<div class="tag-row journal-entry-detail__tags">${tagNames.map((name) => `<span class="chip">${escapeHtml(String(name))}</span>`).join('')}</div>` : ''}
+    <section class="journal-entry-detail__content">
+      ${renderPrettyContent(entry.content || '') || '<p class="muted">Nessun contenuto per questa sessione.</p>'}
+    </section>
+    <div class="journal-entry-detail__actions">
+      <button type="submit" class="ghost-button journal-entry-detail__append" name="detail_action" value="append">Aggiungi nota</button>
+    </div>`;
+
+  const formData = await openFormModal({
+    title: `Dettaglio sessione ${entry.session_no ?? '—'}`,
+    submitLabel: 'Chiudi',
+    cancelLabel: 'Indietro',
+    content,
+    cardClass: ['modal-card--wide', 'modal-card--journal-detail'],
+    onOpen: ({ modal, formEl }) => attachUnifiedDetailActions(modal, formEl, {
+      onEdit: true,
+      onDelete: true,
+      actionName: 'detail_action',
+      editLabel: 'Modifica sessione',
+      deleteLabel: 'Elimina sessione'
+    })
+  });
+
+  const action = formData?.get('detail_action');
+  if (action === 'append') {
+    await openQuickAppendModal(entry, onRefresh);
+  } else if (action === 'edit') {
+    await openEntryModal(character, entry, tags, selectedTags, onRefresh);
+  } else if (action === 'delete') {
+    await deleteJournalEntry(entry, onRefresh);
+  }
+}
+
+async function deleteJournalEntry(entry, onRefresh) {
+  const shouldDelete = await openConfirmModal({
+    title: 'Conferma eliminazione sessione',
+    message: `Stai per eliminare "${entry.title || 'Senza titolo'}" dal diario. Questa azione non può essere annullata.`,
+    confirmLabel: 'Elimina'
+  });
+  if (!shouldDelete) return;
+
+  setGlobalLoading(true);
+  try {
+    await deleteEntry(entry.id);
+    createToast('Sessione eliminata');
+    await onRefresh();
+  } catch (error) {
+    createToast('Errore eliminazione', 'error');
+  } finally {
+    setGlobalLoading(false);
+  }
 }
 
 async function triggerFileDownload(url, fileName) {

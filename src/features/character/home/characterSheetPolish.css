@@ -675,3 +675,60 @@ body .sheet-detail--familiars .familiar-combat-vitals-grid > .familiar-hp-card {
   .app-shell[data-route='home'] > .app-main > .sheet-action-footer { grid-template-columns: repeat(2,minmax(0,1fr)) !important; grid-auto-rows: minmax(46px,1fr); }
   .app-shell[data-route='home'] .sheet-dashboard .sheet-shortcuts--left { height: auto; overflow: visible; }
 }
+
+/* Compact modal chrome: reserve vertical space for the actual workflow. */
+body [data-form-modal] .modal-card > .modal-header { min-height: 50px; padding: 9px 18px !important; }
+body [data-form-modal] .modal-card > .modal-header .modal-header__top { min-height: 30px; }
+body [data-form-modal] .modal-card .modal-footer { min-height: 54px; padding: 8px 18px 10px !important; }
+body .modal-card.sheet-detail > .modal-header { min-height: 50px; gap: 10px; padding: 9px 18px !important; }
+body .modal-card.sheet-detail > .sheet-view-footer { min-height: 52px; padding: 7px 18px 9px !important; }
+body .modal-card.sheet-detail > .sheet-view-footer > .sheet-detail-close,
+body .modal-card.sheet-detail > .sheet-view-footer .sheet-detail-back { min-height: 36px; padding-block: 6px; }
+
+body .shared-item-picker__header-action {
+  display: inline-flex; min-height: 34px; align-items: center; gap: 5px; padding: 6px 10px;
+  border: 1px solid #e7cbb0; border-radius: 9px; background: #fff7e9; color: #67384b;
+  font-size: 10px; white-space: nowrap;
+}
+body .shared-item-picker__header-action strong { color: inherit; }
+
+body .journal-entry-card__open {
+  display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: 8px; align-self: center;
+  padding: 6px 10px; border: 1px solid #cdb590; border-radius: 9px; background: #fffaf1;
+  color: #67384b; font-size: 10px; font-weight: 800; white-space: nowrap; cursor: pointer;
+}
+body .journal-entry-card__open:hover { border-color: #76364b; background: #f2e3df; }
+body .journal-entry-card__open b { font-size: 18px; line-height: 1; }
+
+body .journal-entry-detail { display: grid; gap: 14px; }
+body .journal-entry-detail__hero {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px;
+  border: 1px solid #d9c39f; border-radius: 14px; background: linear-gradient(135deg,#f2e3ce,#fff9ef);
+}
+body .journal-entry-detail__hero :is(p,h3) { margin: 0; }
+body .journal-entry-detail__hero h3 { margin-top: 4px; color: #5d3043; font: 750 24px/1.15 'Fraunces',Georgia,serif; }
+body .journal-entry-detail__date { margin-top: 5px !important; color: #7b675b; font-size: 11px; }
+body .journal-entry-detail__content {
+  min-height: 180px; padding: 18px; border: 1px solid #dfcfb7; border-radius: 14px;
+  background: #fffdf8; color: #493b35; line-height: 1.55;
+}
+body .journal-entry-detail__content > :first-child { margin-top: 0; }
+body .journal-entry-detail__content > :last-child { margin-bottom: 0; }
+body .journal-entry-detail__actions { display: flex; justify-content: flex-end; }
+body .journal-entry-detail__append { min-height: 36px; font-weight: 800; }
+
+body .journal-file-card__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+body .journal-file-card__cta {
+  min-height: 32px; padding: 6px 10px; border: 1px solid #cdb590; border-radius: 8px;
+  background: #fffaf1; color: #67384b; font-size: 10px; font-weight: 800; cursor: pointer;
+}
+body .journal-file-card__cta:hover { border-color: #76364b; background: #f2e3df; }
+body .journal-file-card__cta--danger { border-color: #d9aaa3; background: #faece8; color: #8a3c3c; }
+
+/* Keep the active familiar card readable regardless of theme import order. */
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active {
+  border-color: #71364c !important; background: linear-gradient(135deg,#71364c,#8c4b62) !important;
+  color: #fff8ec !important; box-shadow: inset 3px 0 0 #f0ca72,0 5px 14px rgba(78,37,54,.18) !important;
+}
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body > :is(strong,span,small),
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body small b { color: #fff8ec !important; }

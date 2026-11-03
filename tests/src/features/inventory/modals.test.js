@@ -55,4 +55,10 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain('const equippedSlots = equipableEnabled && item ? getEquipSlots(item) : []');
     expect(source).toContain('compatible_equip_slots: compatibleEquipSlots');
   });
+
+  it('accepts arbitrary decimal weights in the item editor', () => {
+    const source = readFileSync('src/features/inventory/modals.js', 'utf8');
+    expect(source).toContain("weightInput.step = 'any'");
+    expect(source).not.toContain("weightInput.step = unit === 'kg' ? '0.1' : '1'");
+  });
 });

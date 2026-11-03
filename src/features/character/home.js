@@ -29,7 +29,7 @@ import {
 } from './home/sections.js';
 import { buildLootFields, moneyBundleFields } from '../inventory/render.js';
 import { openItemModal } from '../inventory/modals.js';
-import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from '../inventory/catalogPicker.js';
+import { addSharedItemsToInventory, openSharedItemPicker } from '../inventory/catalogPicker.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { ammunitionTypeLabels, itemCategories } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
@@ -2325,19 +2325,14 @@ async function handleLootAction(container) {
     createToast('Loot disponibile solo online.', 'error');
     return;
   }
-  const source = await openItemSourceModal({
-    title: 'Aggiungi loot rapido',
-    manualLabel: 'Inserimento rapido',
-    manualHint: 'Inserisci nome, quantità e tipologia in pochi secondi.',
-    catalogLabel: 'Scegli dall’archivio',
-    catalogHint: 'Seleziona uno o più oggetti completi dal compendio.'
+  let manualRequested = false;
+  const selected = await openSharedItemPicker({
+    title: 'Loot dall’archivio',
+    allowQuantities: true,
+    headerActionLabel: 'Aggiungi oggetto',
+    onHeaderAction: () => { manualRequested = true; }
   });
-  if (source === 'catalog') {
-    const selected = await openSharedItemPicker({
-      title: 'Loot dall’archivio centralizzato',
-      allowQuantities: true
-    });
-    if (!selected.length) return;
+  if (!manualRequested && selected.length) {
     setGlobalLoading(true);
     try {
       await addSharedItemsToInventory(selected, activeCharacter);
@@ -2351,9 +2346,9 @@ async function handleLootAction(container) {
     }
     return;
   }
-  if (source !== 'manual') return;
+  if (!manualRequested) return;
   const formData = await openFormModal({
-    title: 'Aggiungi loot rapido',
+    title: 'Aggiungi oggetto manualmente',
     submitLabel: 'Aggiungi',
     cardClass: 'modal-card--quick-action',
     content: buildLootFields(),

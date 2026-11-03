@@ -41,7 +41,9 @@ async function loadAllSharedItems() {
 export async function openSharedItemPicker({
   title = 'Scegli dall’archivio',
   multiple = true,
-  allowQuantities = false
+  allowQuantities = false,
+  headerActionLabel = '',
+  onHeaderAction = null
 } = {}) {
   let items = [];
   const inputType = multiple ? 'checkbox' : 'radio';
@@ -170,8 +172,26 @@ export async function openSharedItemPicker({
     cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker'],
     onOpen: ({ modal }) => {
       let mounted = true;
+      let headerActionButton = null;
       submitButton = modal?.querySelector('[data-form-submit], .sheet-view-footer button[type="submit"]');
       if (submitButton) submitButton.disabled = true;
+      if (headerActionLabel && typeof onHeaderAction === 'function') {
+        const sheetActions = modal?.querySelector(':scope > .modal-header .sheet-modal-actions');
+        const headerActions = sheetActions || modal?.querySelector('[data-form-header-actions]');
+        if (headerActions) {
+          headerActionButton = document.createElement('button');
+          headerActionButton.type = 'button';
+          headerActionButton.className = 'resource-action-button shared-item-picker__header-action';
+          headerActionButton.innerHTML = `<span aria-hidden="true">＋</span><strong>${escapeHtml(headerActionLabel)}</strong>`;
+          headerActionButton.addEventListener('click', () => {
+            onHeaderAction();
+            const backButton = modal.querySelector('.sheet-view-footer .sheet-detail-back');
+            const cancelButton = modal.querySelector('[data-form-cancel]');
+            (backButton || cancelButton)?.click();
+          });
+          headerActions.prepend(headerActionButton);
+        }
+      }
       void loadAllSharedItems()
         .then((loadedItems) => {
           if (!mounted) return;
@@ -189,7 +209,10 @@ export async function openSharedItemPicker({
           count.textContent = 'Errore';
           createToast('Impossibile caricare l’archivio degli oggetti', 'error');
         });
-      return () => { mounted = false; };
+      return () => {
+        mounted = false;
+        headerActionButton?.remove();
+      };
     }
   });
   if (!formData) return [];

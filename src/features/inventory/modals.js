@@ -2,7 +2,7 @@ import { createItem, updateItem } from './inventoryApi.js';
 import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { ammunitionTypes, armorTypes, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
 import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMasteries.js';
-import { getCompatibleEquipSlots, getEquipSlots, getWeightUnit } from './utils.js';
+import { getCompatibleEquipSlots, getEquipSlots } from './utils.js';
 import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
 
 export async function openItemModal(character, item, items = [], onSave, options = {}) {
@@ -93,9 +93,8 @@ export async function openItemModal(character, item, items = [], onSave, options
   const weightField = buildInput({ label: 'Peso', name: 'weight', type: 'number', value: item?.weight ?? 0 });
   const weightInput = weightField.querySelector('input');
   if (weightInput) {
-    const unit = getWeightUnit(character);
     weightInput.min = '0';
-    weightInput.step = unit === 'kg' ? '0.1' : '1';
+    weightInput.step = 'any';
   }
   const volumeField = buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 });
   const volumeInput = volumeField.querySelector('input');
