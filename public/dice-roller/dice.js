@@ -289,7 +289,11 @@ const DICE = (function() {
         function roll(request_results) {
             box.clear();
             box.roll(vectors, request_results || notation.result, function(result) {
-                notation.result = result;
+                notation.invalidRoll = result.some(function(value) { return value < 0; });
+                notation.result = result.map(function(value, index) {
+                    return value * (notation.signs[index] || 1);
+                });
+                result = notation.result;
                 var res = result.join(' ');
                 if (notation.constant) {
                     if (notation.constant > 0) res += ' +' + notation.constant;
@@ -484,10 +488,11 @@ const DICE = (function() {
     //notation should be in format "1d4+2d6"
     that.parse_notation = function(notation) {
         var no = notation.split('@');
-        var dr0 = /\s*(\d*)([a-z]+)(\d+)(\s*(\+|\-)\s*(\d+)){0,1}\s*(\+|$)/gi;
+        var dr0 = /([+-]?)(?:(\d*)d(\d+)|(\d+))/gi;
         var dr1 = /(\b)*(\d+)(\b)*/gi;
         var ret = { 
             set: [], //set of dice to roll
+            signs: [], //whether each die contributes positively or negatively
             constant: 0, //modifier to add to result
             result: [], //array of results of each die
             resultTotal: 0, //dice results + constant
@@ -497,16 +502,18 @@ const DICE = (function() {
         var res;
         //looks at each peice of the notation and adds dice and constants to results
         while (res = dr0.exec(no[0])) {
-            var command = res[2];
-            if (command != 'd') { ret.error = true; continue; }
-            var count = parseInt(res[1]);
-            if (res[1] == '') count = 1;
-            var type = 'd' + res[3];
-            if (CONSTS.known_types.indexOf(type) == -1) { ret.error = true; continue; }
-            while (count--) ret.set.push(type);
-            if (res[5] && res[6]) {
-                if (res[5] == '+') ret.constant += parseInt(res[6]);
-                else ret.constant -= parseInt(res[6]);
+            var sign = res[1] == '-' ? -1 : 1;
+            if (res[3]) {
+                var count = parseInt(res[2]);
+                if (res[2] == '') count = 1;
+                var type = 'd' + res[3];
+                if (CONSTS.known_types.indexOf(type) == -1) { ret.error = true; continue; }
+                while (count--) {
+                    ret.set.push(type);
+                    ret.signs.push(sign);
+                }
+            } else if (res[4]) {
+                ret.constant += sign * parseInt(res[4]);
             }
         }
         while (res = dr1.exec(no[1])) {

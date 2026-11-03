@@ -102,6 +102,7 @@ function buildOverlayMarkup() {
               Attenzione: userai il punto ispirazione su questo tiro.
             </p>
           </div>
+         <p class="diceov-warning diceov-warning--custom" data-custom-warning hidden></p>
          <p class="diceov-warning" data-weakness-warning hidden></p>
          <p class="diceov-warning" data-rollmode-warning hidden></p>
          <p class="diceov-warning" data-autofail-warning hidden></p>
@@ -141,14 +142,16 @@ function buildOverlayMarkup() {
           </div>
         </div>
       </div>
-      <p class="diceov-warning diceov-warning--custom" data-custom-warning hidden></p>
       <div class="diceov-results">
         <div class="diceov-accordion-row" data-dice-accordion-row>
           <div class="diceov-quick-dice" data-quick-dice>
-            <button class="diceov-section-title diceov-section-title--button" type="button" data-quick-dice-toggle aria-expanded="false">
-              <span aria-hidden="true">🎲</span>
-              <span>Aggiungi dadi</span>
-            </button>
+            <div class="diceov-section-heading">
+              <button class="diceov-section-title diceov-section-title--button" type="button" data-quick-dice-toggle aria-expanded="false">
+                <span aria-hidden="true">🎲</span>
+                <span>Aggiungi dadi</span>
+              </button>
+              <button class="diceov-quick-reset" type="button" data-dice-reset aria-label="Ripristina i valori iniziali" title="Ripristina i valori iniziali">↺</button>
+            </div>
             <div class="diceov-quick-dice-content" data-quick-dice-content hidden>
               <div class="diceov-quick-dice-controls" data-quick-dice-controls aria-label="Modifica rapida notazione dadi">
                 ${[4, 6, 8, 10, 12, 20, 100].map((die) => `
@@ -194,8 +197,7 @@ function buildOverlayMarkup() {
 }
 
 function hasInvalidRolls(notation) {
-  const rolls = Array.isArray(notation?.result) ? notation.result : [];
-  return rolls.some((value) => typeof value === 'number' && value < 0);
+  return notation?.invalidRoll === true;
 }
 
 function normalizeHistoryLabel(value) {
@@ -514,9 +516,13 @@ function parseEditableDiceNotation(value) {
     const sign = match[1] === '-' ? -1 : 1;
     if (match[3]) {
       const sides = Number(match[3]);
-      const count = Number(match[2] || 1) * sign;
+      const count = Number(match[2] || 1);
       if (Number.isFinite(sides) && sides > 0) {
-        counts.set(sides, Math.max((counts.get(sides) || 0) + count, 0));
+        const current = counts.get(sides) || { positive: 0, negative: 0 };
+        counts.set(sides, {
+          positive: current.positive + (sign > 0 ? count : 0),
+          negative: current.negative + (sign < 0 ? count : 0)
+        });
       }
       continue;
     }
@@ -530,16 +536,33 @@ function stringifyEditableDiceNotation({ counts, constant }) {
   const extraSides = [...counts.keys()]
     .filter((sides) => !orderedSides.includes(sides))
     .sort((a, b) => a - b);
-  const diceParts = [...orderedSides, ...extraSides]
-    .map((sides) => ({ sides, count: Number(counts.get(sides)) || 0 }))
-    .filter(({ count }) => count > 0)
-    .map(({ sides, count }) => `${count}d${sides}`);
+  const diceCounts = [...orderedSides, ...extraSides]
+    .map((sides) => ({ sides, ...(counts.get(sides) || { positive: 0, negative: 0 }) }))
+    .filter(({ positive, negative }) => positive > 0 || negative > 0);
+  const positiveParts = diceCounts
+    .filter(({ positive }) => positive > 0)
+    .map(({ sides, positive }) => `${positive}d${sides}`);
+  const negativeParts = diceCounts
+    .filter(({ negative }) => negative > 0)
+    .map(({ sides, negative }) => `-${negative}d${sides}`);
 
-  const parts = [...diceParts];
+  const parts = [...positiveParts, ...negativeParts];
   if (constant) {
     parts.push(String(constant));
   }
   return parts.join('+').replace(/\+\-/g, '-');
+}
+
+function hasPositiveDice(counts) {
+  return [...counts.values()].some(({ positive }) => positive > 0);
+}
+
+function canAddNegativeDie(counts, { guaranteedPositiveDice = false } = {}) {
+  return guaranteedPositiveDice || hasPositiveDice(counts);
+}
+
+function cloneDiceCounts(counts) {
+  return new Map([...counts].map(([sides, value]) => [sides, { ...value }]));
 }
 
 
@@ -562,7 +585,12 @@ function formatDiceValues(values, { compactAfter = 8 } = {}) {
   if (rolls.length > compactAfter) {
     return `${rolls.length} dadi, somma ${total}`;
   }
-  return rolls.join(' + ');
+  return rolls
+    .map((value, index) => {
+      if (index === 0) return String(value);
+      return value < 0 ? `- ${Math.abs(value)}` : `+ ${value}`;
+    })
+    .join(' ');
 }
 
 function resetLegacyDiceScene() {
@@ -682,6 +710,7 @@ export function openDiceOverlay({
   const quickDiceControls = overlayEl.querySelector('[data-quick-dice]');
   const quickDiceContent = overlayEl.querySelector('[data-quick-dice-content]');
   const quickDiceToggle = overlayEl.querySelector('[data-quick-dice-toggle]');
+  const diceResetButton = overlayEl.querySelector('[data-dice-reset]');
   const accordionRow = overlayEl.querySelector('[data-dice-accordion-row]');
   const rerollCard = overlayEl.querySelector('[data-reroll-card]');
   const rerollContent = overlayEl.querySelector('[data-reroll-content]');
@@ -727,7 +756,8 @@ export function openDiceOverlay({
     rerollOpen: false,
     lastCriticalSignature: null,
     rerollHint: null,
-    pendingReroll: null
+    pendingReroll: null,
+    openingDefaults: null
   };
 
   function syncRollModeCards() {
@@ -1145,7 +1175,8 @@ export function openDiceOverlay({
       const rollMode = getRollMode(overlayEl);
       const diceCount = rollMode === 'normal' ? 1 : 2;
       const extraNotation = stringifyEditableDiceNotation({ counts: state.extraDiceCounts, constant: 0 });
-      const fullNotation = `${diceCount}d${sides}${extraNotation ? `+${extraNotation}` : ''}`;
+      const extraSeparator = extraNotation && !extraNotation.startsWith('-') ? '+' : '';
+      const fullNotation = `${diceCount}d${sides}${extraNotation ? `${extraSeparator}${extraNotation}` : ''}`;
       if (notationInput) notationInput.value = fullNotation;
       updateDiceInput(overlayEl, fullNotation);
       syncTabletopEmptyState('d20');
@@ -1171,6 +1202,38 @@ export function openDiceOverlay({
 
   function updateModifier() {
     if (state.lastRoll) renderRollResult(state.lastRoll, { playCriticalSound: false });
+  }
+
+  function resetToOpeningDefaults() {
+    const defaults = state.openingDefaults;
+    if (!defaults) return;
+
+    if (selectInput && defaults.selectionValue !== null) {
+      selectInput.value = defaults.selectionValue;
+      const selected = state.selectionOptions.find((option) => option.value === selectInput.value);
+      state.selectionRollMode = selected?.disabled ? null : (selected?.rollMode || null);
+      state.selectionRollModeReason = selected?.disabled ? null : (selected?.rollModeReason || null);
+    }
+    if (modifierInput) modifierInput.value = defaults.modifier;
+    if (genericModifierInput) genericModifierInput.value = defaults.genericModifier;
+    if (criticalDamageInput) criticalDamageInput.checked = defaults.criticalDamage;
+    if (sneakAttackInput) sneakAttackInput.checked = defaults.sneakAttack;
+    state.extraDiceCounts = cloneDiceCounts(defaults.extraDiceCounts);
+
+    if (inspirationInput) inspirationInput.checked = state.inspirationAvailable && defaults.inspiration;
+    if (rollModeInput) rollModeInput.value = defaults.rollMode;
+    syncRollModeCards();
+    updateWeaknessWarning();
+    updateRollModeWarning();
+    if (inspirationWarning) inspirationWarning.toggleAttribute('hidden', !inspirationInput?.checked);
+
+    if (mode === 'generic') {
+      if (notationInput) notationInput.value = defaults.notation;
+      syncGenericInputsFromNotation(overlayEl, defaults.notation);
+      updateNotationFromGeneric();
+    } else {
+      updateNotationFromMode();
+    }
   }
 
   async function consumeInspiration() {
@@ -1248,6 +1311,7 @@ export function openDiceOverlay({
     const currentInput = state.pendingReroll?.returnInput || overlayEl.querySelector('#textInput')?.value || null;
     state.pendingReroll = {
       ...die,
+      sign: Number(state.lastRoll.signs?.[index]) || 1,
       previousValue: state.lastRoll.result[index],
       returnInput: currentInput
     };
@@ -1269,12 +1333,13 @@ export function openDiceOverlay({
       renderRollResult(state.lastRoll, { playCriticalSound: false });
       return true;
     }
-    const nextValue = Array.isArray(rolledNotation.result) ? rolledNotation.result[0] : null;
-    if (typeof nextValue !== 'number') {
+    const rolledValue = Array.isArray(rolledNotation.result) ? rolledNotation.result[0] : null;
+    if (typeof rolledValue !== 'number') {
       state.rerollHint = 'Ritiro non valido: riprova con uno swipe sul tavolo.';
       renderRollResult(state.lastRoll, { playCriticalSound: false });
       return true;
     }
+    const nextValue = rolledValue * pending.sign;
     state.lastRoll.result[pending.index] = nextValue;
     refreshNotationSummary(state.lastRoll);
     state.pendingReroll = null;
@@ -1400,8 +1465,12 @@ export function openDiceOverlay({
     }
     const parsed = parseEditableDiceNotation(notationInput.value);
     const baseDiceCount = getRollMode(overlayEl) === 'normal' ? 1 : 2;
-    const enteredBaseCount = Number(parsed.counts.get(Number(sides))) || 0;
-    parsed.counts.set(Number(sides), Math.max(enteredBaseCount - baseDiceCount, 0));
+    const baseSides = Number(sides);
+    const enteredBase = parsed.counts.get(baseSides) || { positive: 0, negative: 0 };
+    parsed.counts.set(baseSides, {
+      ...enteredBase,
+      positive: Math.max(enteredBase.positive - baseDiceCount, 0)
+    });
     state.extraDiceCounts = parsed.counts;
     updateNotationFromMode();
   };
@@ -1450,17 +1519,23 @@ export function openDiceOverlay({
       if (!QUICK_DICE_SIDES.includes(die)) return;
       const action = button.dataset.quickDieAction;
       if (mode !== 'generic') {
-        const current = Number(state.extraDiceCounts.get(die)) || 0;
-        const next = action === 'decrement' ? Math.max(current - 1, 0) : current + 1;
-        state.extraDiceCounts.set(die, next);
+        const current = state.extraDiceCounts.get(die) || { positive: 0, negative: 0 };
+        if (action === 'decrement' && !canAddNegativeDie(state.extraDiceCounts, { guaranteedPositiveDice: true })) return;
+        state.extraDiceCounts.set(die, {
+          positive: current.positive + (action === 'increment' ? 1 : 0),
+          negative: current.negative + (action === 'decrement' ? 1 : 0)
+        });
         updateNotationFromMode();
         return;
       }
       if (!notationInput) return;
       const parsed = parseEditableDiceNotation(notationInput.value);
-      const current = Number(parsed.counts.get(die)) || 0;
-      const next = action === 'decrement' ? Math.max(current - 1, 0) : current + 1;
-      parsed.counts.set(die, next);
+      const current = parsed.counts.get(die) || { positive: 0, negative: 0 };
+      if (action === 'decrement' && !canAddNegativeDie(parsed.counts)) return;
+      parsed.counts.set(die, {
+        positive: current.positive + (action === 'increment' ? 1 : 0),
+        negative: current.negative + (action === 'decrement' ? 1 : 0)
+      });
       notationInput.value = stringifyEditableDiceNotation(parsed);
       syncGenericInputsFromNotation(overlayEl, notationInput.value);
       updateNotationFromGeneric();
@@ -1477,6 +1552,10 @@ export function openDiceOverlay({
 
   if (quickDiceToggle) {
     quickDiceToggle.onclick = () => setQuickDiceOpen(!state.quickDiceOpen);
+  }
+
+  if (diceResetButton) {
+    diceResetButton.onclick = resetToOpeningDefaults;
   }
 
   if (rerollToggle) {
@@ -1559,6 +1638,18 @@ export function openDiceOverlay({
   } else {
     updateNotationFromMode();
   }
+
+  state.openingDefaults = {
+    notation: notationInput?.value || '',
+    modifier: modifierInput?.value || '0',
+    genericModifier: genericModifierInput?.value || '0',
+    rollMode: rollModeInput?.value || 'normal',
+    selectionValue: selectInput?.value ?? null,
+    inspiration: Boolean(inspirationInput?.checked),
+    criticalDamage: Boolean(criticalDamageInput?.checked),
+    sneakAttack: Boolean(sneakAttackInput?.checked),
+    extraDiceCounts: cloneDiceCounts(state.extraDiceCounts)
+  };
 
   ensureLegacyDiceAssets()
     .then(() => {

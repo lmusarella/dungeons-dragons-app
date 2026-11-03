@@ -171,7 +171,7 @@
     // @param notation now includes results
     function after_roll(notation) {
         //console.log('after_roll notation: ' + JSON.stringify(notation));
-        if(notation.result[0] < 0) {
+        if(notation.invalidRoll) {
             elem.result.innerHTML = "Oops, your dice fell off the table. <br> Refresh and roll again."
         } else {
             elem.result.innerHTML = notation.resultString;

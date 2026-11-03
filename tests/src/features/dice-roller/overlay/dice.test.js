@@ -121,4 +121,21 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     expect(styles).toContain('.number-stepper:focus-within');
   });
 
+  it('supports subtractive dice, restores opening defaults and places contextual warnings below inspiration', () => {
+    const source = readFileSync('src/features/dice-roller/overlay/dice.js', 'utf8');
+    const legacyDice = readFileSync('public/dice-roller/dice.js', 'utf8');
+    expect(source).toContain('data-dice-reset');
+    expect(source).toContain('resetToOpeningDefaults');
+    expect(source).toContain('canAddNegativeDie');
+    expect(source).toContain('const negativeParts = diceCounts');
+    expect(source).toContain('positive: current.positive + (action === \'increment\' ? 1 : 0)');
+    expect(source).toContain('negative: current.negative + (action === \'decrement\' ? 1 : 0)');
+    expect(source).toContain('value < 0 ? `- ${Math.abs(value)}` : `+ ${value}`');
+    expect(legacyDice).toContain('signs: []');
+    expect(legacyDice).toContain('notation.invalidRoll = result.some');
+    expect(source).toContain('const nextValue = rolledValue * pending.sign');
+    expect(source.indexOf('data-custom-warning')).toBeGreaterThan(source.indexOf('data-inspiration-warning'));
+    expect(source.indexOf('data-custom-warning')).toBeLessThan(source.indexOf('data-weakness-warning'));
+  });
+
 });

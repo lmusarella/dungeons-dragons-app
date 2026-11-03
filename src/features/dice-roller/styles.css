@@ -1490,6 +1490,32 @@ header {
 #dice-overlay .diceov-result--final .diceov-result-value { background: #71364c; color: #fff4df; }
 
 #dice-overlay .diceov-quick-die { border-color: #d6bd98; background: #f4e7d4; }
+#dice-overlay .diceov-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 4px;
+}
+#dice-overlay .diceov-quick-reset {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  justify-self: center;
+  padding: 0;
+  border: 1px solid #cbb08a;
+  border-radius: 50%;
+  background: #fffaf1;
+  color: #633349;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+#dice-overlay .diceov-quick-reset:is(:hover, :focus-visible) {
+  border-color: var(--diceov-plum);
+  background: #ead9df;
+  box-shadow: 0 0 0 2px rgba(118,54,75,.13);
+}
 #dice-overlay .diceov-quick-die-label,
 #dice-overlay .diceov-reroll-die-type { color: var(--diceov-plum); }
 #dice-overlay .diceov-quick-die-btn,
