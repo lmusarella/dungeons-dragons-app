@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { getDiceOutcomeTier } from '../../../../../src/features/dice-roller/overlay/dice.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -39,6 +40,34 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     );
     expect(warmup).toContain('preloadCriticalAudio()');
     expect(warmup).not.toContain('overlaySessionToken += 1');
+  });
+
+  it('uses every added sound tier while keeping 10 as the only neutral mediocre roll', () => {
+    expect(Array.from({ length: 20 }, (_, index) => getDiceOutcomeTier(index + 1, 'TC'))).toEqual([
+      'criticalFailure',
+      'poor', 'poor',
+      'veryPoor', 'veryPoor',
+      'mediocreVeryNegative', 'mediocreVeryNegative',
+      'mediocreNegative', 'mediocreNegative',
+      'mediocre', 'mediocre',
+      'mediocrePositive', 'mediocrePositive',
+      'mediocreVeryPositive', 'mediocreVeryPositive',
+      'good', 'good',
+      'excellent', 'excellent',
+      'criticalSuccess'
+    ]);
+    const source = readFileSync('src/features/dice-roller/overlay/dice.js', 'utf8');
+    [
+      'tiro_mediocre_molto_negativo.mp3',
+      'tiro_mediocre_negativo.mp3',
+      'tiro_mediocre_positivo.mp3',
+      'tiro_medriocre_molto_positivo.mp3'
+    ].forEach((fileName) => expect(source).toContain(fileName));
+    const styles = readFileSync('src/features/dice-roller/styles.css', 'utf8');
+    expect(styles).toContain('.diceov-critical-banner--mediocre-very-negative');
+    expect(styles).toContain('.diceov-critical-banner--mediocre-negative');
+    expect(styles).toContain('.diceov-critical-banner--mediocre-positive');
+    expect(styles).toContain('.diceov-critical-banner--mediocre-very-positive');
   });
 
   it('uses the application visual language for the roller surface', () => {
