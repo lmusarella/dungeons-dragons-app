@@ -831,6 +831,134 @@ body {
   min-height: 130px;
 }
 
+.spell-editor-wizard {
+  min-width: 0;
+}
+
+.spell-editor-wizard__panel {
+  gap: 10px;
+}
+
+.spell-editor-wizard__panel > .spell-form-section,
+.spell-editor-wizard__panel > .spell-editor-overview {
+  margin: 0;
+}
+
+.spell-trait-card {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.spell-trait-card > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.spell-trait-card > span {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid #ddc9ad;
+  border-radius: 11px;
+  background: #fffaf1;
+  color: #704f3d;
+}
+
+.spell-trait-card i,
+.spell-trait-card b {
+  display: grid;
+  place-items: center;
+  font-style: normal;
+}
+
+.spell-trait-card i {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(118, 54, 75, .1);
+  color: #76364b;
+}
+
+.spell-trait-card b {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ccb28e;
+  border-radius: 50%;
+  color: transparent;
+  font-size: .65rem;
+}
+
+.spell-trait-card strong {
+  overflow: hidden;
+  font-size: .7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spell-trait-card > input:checked + span,
+.spell-trait-card.is-selected > span {
+  border-color: #76364b;
+  background: #f0e1e4;
+  box-shadow: inset 0 0 0 1px #76364b;
+}
+
+.spell-trait-card > input:checked + span b,
+.spell-trait-card.is-selected b {
+  border-color: #76364b;
+  background: #76364b;
+  color: #fff;
+}
+
+.spell-trait-card > input:focus-visible + span {
+  outline: 2px solid #b88845;
+  outline-offset: 2px;
+}
+
+.spell-editor-review {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.spell-editor-review > div {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #ddc7a8;
+  border-radius: 11px;
+  background: rgba(255, 250, 240, .76);
+}
+
+.spell-editor-review dt {
+  color: #947a58;
+  font-size: .56rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.spell-editor-review dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: #633349;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.spell-editor-modal-active [data-form-submit]:disabled {
+  display: inline-flex;
+  visibility: visible;
+  opacity: .52;
+  cursor: not-allowed;
+}
+
 .library-results-grid {
   gap: 7px;
 }
@@ -909,6 +1037,10 @@ body {
 
   .spell-form-section__header p {
     text-align: left;
+  }
+
+  .spell-editor-review {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1322,6 +1454,315 @@ body {
   line-height: 1;
 }
 
+/* Spell editor uses the same warm content surface and selectable-card language as items. */
+.modal-card--spell-editor .modal-body {
+  background: #fffaf1;
+}
+
+.spell-editor-wizard__body {
+  padding: 2px;
+  border-radius: 18px;
+  background: rgba(255, 250, 241, .72);
+}
+
+.spell-form-section {
+  padding: 16px;
+  border-color: rgba(59, 93, 96, .18);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .9), rgba(255, 250, 241, .72)),
+    rgba(255, 255, 255, .45);
+  box-shadow: 0 10px 24px rgba(59, 93, 96, .08);
+}
+
+.spell-caster-class-grid,
+.spell-choice-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.spell-choice-group {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.spell-choice-group__label {
+  color: #2f4d50;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.spell-choice-card {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  cursor: pointer;
+  text-transform: none;
+}
+
+.spell-choice-card > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.spell-choice-card > span {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21px;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 9px 10px;
+  border: 1px solid #ddc9ad;
+  border-radius: 12px;
+  background: #fffaf1;
+  color: #704f3d;
+}
+
+.spell-choice-card strong {
+  overflow: hidden;
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.spell-choice-card b {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 1px solid #ccb28e;
+  border-radius: 50%;
+  color: transparent;
+  font-size: .65rem;
+}
+
+.spell-choice-card > input:checked + span {
+  border-color: #76364b;
+  background: #f0e1e4;
+  box-shadow: inset 0 0 0 1px #76364b;
+}
+
+.spell-choice-card > input:checked + span b {
+  border-color: #76364b;
+  background: #76364b;
+  color: #fff;
+}
+
+.spell-choice-card > input:focus-visible + span {
+  outline: 2px solid #b88845;
+  outline-offset: 2px;
+}
+
+.spell-trait-card--described > span {
+  grid-template-columns: 30px minmax(0, 1fr) 20px;
+}
+
+.spell-trait-card__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.spell-trait-card__copy small {
+  color: #806d5c;
+  font-size: .58rem;
+  line-height: 1.3;
+}
+
+.spell-launch-options-row {
+  grid-template-columns: minmax(250px, 1.05fr) minmax(180px, .65fr) minmax(340px, 1.3fr);
+  align-items: end;
+}
+
+.spell-launch-options-row > .spell-trait-card,
+.spell-launch-options-row > .spell-saving-throw-ability,
+.spell-launch-options-row > .spell-choice-group {
+  align-self: end;
+}
+
+.spell-editor-wizard__panel[data-spell-editor-panel="3"] textarea {
+  min-height: 280px;
+}
+
+.spell-launch-options-row .spell-choice-card-grid {
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
+.attack-configure-button {
+  min-height: 36px;
+  padding-inline: 13px;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.modal-card--attack-configurator {
+  width: min(780px, 94vw);
+}
+
+.attack-configurator {
+  display: grid;
+  gap: 14px;
+}
+
+.attack-configurator__section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(59, 93, 96, .18);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .9), rgba(255, 250, 241, .72)),
+    rgba(255, 255, 255, .45);
+  box-shadow: 0 8px 20px rgba(59, 93, 96, .07);
+}
+
+.attack-configurator__heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.attack-configurator__heading > span {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(118, 54, 75, .1);
+  color: #76364b;
+}
+
+.attack-configurator__heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.attack-configurator__heading strong {
+  color: #633349;
+  font-size: .82rem;
+}
+
+.attack-configurator__heading small {
+  color: #806d5c;
+  font-size: .65rem;
+}
+
+.attack-configurator__weapon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.attack-configurator__option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 10px 11px;
+  border: 1px solid #ddc9ad;
+  border-radius: 13px;
+  background: #fffaf1;
+  cursor: pointer;
+}
+
+.attack-configurator__option > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.attack-configurator__option > span:not(.attack-configurator__visual) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.attack-configurator__option strong {
+  overflow: hidden;
+  color: #633349;
+  font-size: .75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attack-configurator__option small {
+  color: #806d5c;
+  font-size: .62rem;
+  line-height: 1.3;
+}
+
+.attack-configurator__visual,
+.attack-configurator__weapon-image {
+  display: grid;
+  width: 44px;
+  height: 48px;
+  place-items: center;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #efe3d0;
+  color: #94703b;
+}
+
+.attack-configurator__option > b {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid #ccb28e;
+  border-radius: 50%;
+  color: transparent;
+  font-size: .68rem;
+}
+
+.attack-configurator__option:has(input:checked) {
+  border-color: #76364b;
+  background: #f0e1e4;
+  box-shadow: inset 0 0 0 1px #76364b;
+}
+
+.attack-configurator__option:has(input:checked) > b {
+  border-color: #76364b;
+  background: #76364b;
+  color: #fff;
+}
+
+.attack-configurator__empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed rgba(148, 123, 90, .35);
+  border-radius: 12px;
+  color: #806d5c;
+  font-size: .7rem;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .spell-caster-class-grid,
+  .spell-choice-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spell-launch-options-row .spell-choice-card-grid,
+  .attack-configurator__weapon-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spell-launch-options-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* Stronger inventory hierarchy and quick loose-item insertion. */
 .inventory-group--container.inventory-container-accordion,
@@ -1556,12 +1997,16 @@ body {
   }
 }
 
-/* Additional grips use two rows so attack and damage modifiers stay readable. */
+/* Additional grips stay on one compact line in the item editor. */
+.weapon-damage-modes-field__list {
+  overflow-x: auto;
+}
+
 .weapon-damage-mode-row {
-  grid-template-columns: minmax(190px, 1.4fr) minmax(120px, 0.75fr) minmax(150px, 1fr) auto;
-  grid-template-areas:
-    "name die type remove"
-    "damage attack type remove";
+  grid-template-columns: minmax(130px, 1.25fr) minmax(85px, .72fr) minmax(82px, .68fr) minmax(82px, .68fr) minmax(115px, 1fr) 34px;
+  grid-template-areas: "name die damage attack type remove";
+  min-width: 690px;
+  align-items: end;
 }
 
 .weapon-damage-mode-field--name { grid-area: name; }
@@ -1570,31 +2015,3 @@ body {
 .weapon-damage-mode-field--attack-modifier { grid-area: attack; }
 .weapon-damage-mode-field--type { grid-area: type; align-self: stretch; }
 .weapon-damage-mode-row__remove { grid-area: remove; }
-
-@media (max-width: 980px) {
-  .weapon-damage-mode-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "name name"
-      "die type"
-      "damage attack"
-      "remove remove";
-  }
-
-  .weapon-damage-mode-row__remove {
-    justify-self: end;
-  }
-}
-
-@media (max-width: 720px) {
-  .weapon-damage-mode-row {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "name"
-      "die"
-      "type"
-      "damage"
-      "attack"
-      "remove";
-  }
-}

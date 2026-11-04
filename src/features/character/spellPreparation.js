@@ -11,10 +11,15 @@ export const SPELLCASTER_CLASS_OPTIONS = [
 ];
 
 const PREPARATION_PRIORITY = {
-  known: 0,
-  prepared: 1,
-  always: 2
+  prepared: 0,
+  always: 1
 };
+
+export function normalizeSpellPreparationState(value, fallback = 'prepared') {
+  if (value === 'always' || value === 'always_prepared') return 'always';
+  if (value === 'prepared') return 'prepared';
+  return fallback;
+}
 
 function normalizeText(value) {
   return String(value || '')
@@ -84,8 +89,8 @@ export function getSpellSignature(spell) {
 }
 
 function pickPreparationState(left, right) {
-  const leftState = left || 'known';
-  const rightState = right || 'known';
+  const leftState = normalizeSpellPreparationState(left);
+  const rightState = normalizeSpellPreparationState(right);
   return (PREPARATION_PRIORITY[rightState] ?? 0) > (PREPARATION_PRIORITY[leftState] ?? 0)
     ? rightState
     : leftState;
@@ -132,7 +137,10 @@ export function dedupeCharacterSpells(spells = []) {
     }
 
     const nextIndex = result.length;
-    result.push({ ...spell });
+    result.push({
+      ...spell,
+      prep_state: normalizeSpellPreparationState(spell.prep_state)
+    });
     if (sharedKey) sharedIndexes.set(sharedKey, nextIndex);
     if (signature) signatureIndexes.set(signature, nextIndex);
   });
@@ -174,6 +182,6 @@ export function mapSharedSpellForPreparation(sharedSpell) {
     school: sharedSpell.school || null,
     caster_classes: sharedSpell.caster_classes || [],
     rules_version: sharedSpell.rules_version || null,
-    prep_state: 'known'
+    prep_state: null
   };
 }

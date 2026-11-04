@@ -15,9 +15,9 @@ describe('src/features/character/home.js', () => {
   it('adds catalog spells with the assignment state explicitly chosen by the user', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const catalogPicker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
-    expect(source).toContain("prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'known'");
-    expect(source).toContain("nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'known'");
-    expect(source).toContain("const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known')");
+    expect(source).toContain("prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'prepared'");
+    expect(source).toContain("nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'prepared'");
+    expect(source).toContain('const prepState = normalizeSpellPreparationState(row.prep_state)');
   });
 
   it('reconnects an edited archive snapshot through its source key', () => {

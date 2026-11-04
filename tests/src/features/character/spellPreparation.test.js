@@ -17,10 +17,10 @@ describe('spell preparation helpers', () => {
   it('asks how selected catalog spells are assigned and reuses preparation card styling', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     expect(source).not.toContain('data-spell-assignment-state');
-    expect(source).toContain("knownButton.name = 'assignment_prep_state'");
-    expect(source).toContain("knownButton.value = 'known'");
+    expect(source).toContain("preparedButton.name = 'assignment_prep_state'");
+    expect(source).toContain("preparedButton.value = 'prepared'");
     expect(source).toContain("alwaysButton.value = 'always'");
-    expect(source).toContain("formData.get('assignment_prep_state') === 'known' ? 'known' : 'always'");
+    expect(source).toContain("formData.get('assignment_prep_state') === 'prepared' ? 'prepared' : 'always'");
     expect(source).toContain('submitButtons.forEach((button) => { button.disabled = count === 0; })');
     expect(source).toContain("prepared-spells-modal__spell play-card play-card--spell");
     expect(source).toContain("selected ? 'Selezionato' : 'Seleziona'");
@@ -29,8 +29,8 @@ describe('spell preparation helpers', () => {
     expect(source).not.toContain('shared-spell-picker__active-filters');
     expect(source).not.toContain('shared-spell-picker__search-icon');
     expect(source).not.toContain('shared-spell-picker__spell-badges');
-    expect(source).toContain("submitLabel: canPrepare ? 'Aggiungi come sempre pronti' : 'Aggiungi come sempre conosciuti'");
-    expect(source).toContain('const knownButton = canPrepare ? document.createElement(\'button\') : primaryButton');
+    expect(source).toContain("submitLabel: 'Aggiungi come sempre preparati'");
+    expect(source).toContain("const preparedButton = canPrepare ? document.createElement('button') : null");
   });
 
   it('keeps the acquisition picker compact and makes selected cards legible', () => {
@@ -81,7 +81,7 @@ describe('spell preparation helpers', () => {
 
     expect(spells).toHaveLength(2);
     expect(spells.find((entry) => entry.shared_spell_id)).toMatchObject({ shared_spell_id: 'wish-2014', prep_state: 'prepared' });
-    expect(spells.find((entry) => !entry.shared_spell_id)).toMatchObject({ id: 'legacy', prep_state: 'known' });
+    expect(spells.find((entry) => !entry.shared_spell_id)).toMatchObject({ id: 'legacy', prep_state: 'prepared' });
   });
 
   it('rejoins an edited catalog snapshot that temporarily lost its shared id', () => {

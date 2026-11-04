@@ -18,6 +18,7 @@ import { createSharedItem, deleteSharedItem, searchSharedItems, updateSharedItem
 import { canManageSharedCatalog } from './catalogPermissions.js';
 import { normalizeSpellSchool, spellSchoolLabels, spellSchoolsEqual } from '../character/spellSchools.js';
 import { groupSpellSources, normalizeSpellSource, spellSourceKey } from '../character/spellSources.js';
+import { normalizeSpellPreparationState } from '../character/spellPreparation.js';
 import './library.css';
 
 const SPELL_SCHOOLS = spellSchoolLabels;
@@ -77,7 +78,7 @@ function spellPayload(spell = {}) {
   };
 }
 
-function characterSpellFromShared(spell, existing = {}) {
+function characterSpellFromShared(spell, existing = {}, fallbackPrepState = 'prepared') {
   return {
     ...existing,
     id: existing.id || `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -85,7 +86,7 @@ function characterSpellFromShared(spell, existing = {}) {
     ...spellPayload(spell),
     kind: Number(spell.level) === 0 ? 'cantrip' : 'spell',
     is_ritual: Boolean(spell.ritual),
-    prep_state: existing.prep_state || 'known'
+    prep_state: normalizeSpellPreparationState(existing.prep_state, fallbackPrepState)
   };
 }
 
@@ -557,8 +558,14 @@ export async function renderLibrary(container) {
         const character = activeCharacter();
         if (character?.data?.is_spellcaster) {
           const current = Array.isArray(character.data?.spells) ? character.data.spells : [];
-          await saveCharacterData(character, { ...(character.data || {}), spells: [...current, characterSpellFromShared(row)] });
-          await assignSharedSpellToCharacter({ user_id: character.user_id, character_id: character.id, shared_spell_id: row.id, prep_state: 'known' });
+          const prepState = character.data?.spellcasting?.can_prepare ? 'prepared' : 'always';
+          await saveCharacterData(character, { ...(character.data || {}), spells: [...current, characterSpellFromShared(row, {}, prepState)] });
+          await assignSharedSpellToCharacter({
+            user_id: character.user_id,
+            character_id: character.id,
+            shared_spell_id: row.id,
+            prep_state: prepState === 'always' ? 'always_prepared' : 'prepared'
+          });
         }
         createToast('Incantesimo aggiunto al compendio', 'success');
         await loadSpells();

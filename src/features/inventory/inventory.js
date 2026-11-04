@@ -129,9 +129,11 @@ async function equipInventoryItem(character, item, equipSlots, currentItems) {
       createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
       return false;
     }
-    const proficient = item.weapon_type === 'simple'
-      ? Boolean(proficiencies.weapon_simple)
-      : Boolean(proficiencies.weapon_martial);
+    const proficient = item.weapon_type === 'improvised'
+      ? true
+      : item.weapon_type === 'simple'
+        ? Boolean(proficiencies.weapon_simple)
+        : Boolean(proficiencies.weapon_martial);
     if (!proficient) {
       createToast('Non hai la competenza per equipaggiare questo oggetto', 'error');
       return false;

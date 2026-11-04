@@ -1899,7 +1899,7 @@ body .modal-card--equipment-item-detail .equipment-item-detail {
 }
 body .modal-card--equipment-item-detail .equipment-item-detail:not(:has(.equipment-item-detail__body)) { grid-template-columns: 1fr; }
 body .modal-card--equipment-item-detail .equipment-item-detail__image {
-  float: left; width: 190px; height: 190px; margin: 0 16px 12px 0; object-fit: contain;
+  float: left; width: 240px; height: 240px; margin: 0 18px 14px 0; object-fit: contain;
   border: 1px solid #dcc5a4; border-radius: 13px; background: #fffaf0;
 }
 body .modal-card--equipment-item-detail .power-detail-facts {
@@ -1931,10 +1931,10 @@ body .modal-card--equipment-item-detail .equipment-rule-card {
   display: grid; clear: both; gap: 4px; margin-top: 12px; padding: 11px 13px;
   border: 1px solid #cdb178; border-radius: 12px; background: linear-gradient(135deg,#fff8e7,#f1e4c9);
 }
-body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94703b; font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
-body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 14px/1.2 'Fraunces',Georgia,serif; }
-body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 10px; line-height: 1.45; }
-body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 9px; font-weight: 750; }
+body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94703b; font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 15px/1.25 'Fraunces',Georgia,serif; }
+body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 11.5px; line-height: 1.5; }
+body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 10px; font-weight: 750; }
 body .modal-card--equipment-item-detail .equipment-weapon-properties { clear: both; padding-top: 12px; }
 body .modal-card--equipment-item-detail .equipment-weapon-properties__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 body .modal-card--equipment-item-detail .equipment-weapon-property { margin-top: 0; }
@@ -2184,6 +2184,16 @@ body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor
 }
 body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .spell-editor-form {
   display: grid; gap: 11px; width: 100%;
+}
+body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .spell-editor-wizard__nav {
+  border-color: #d8bf98; background: rgba(251,244,230,.96);
+}
+body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .item-editor-wizard__step-button.is-active {
+  border-color: #76364b; background: #f0e1e4; color: #633349;
+}
+body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .item-editor-wizard__step-button.is-active > span,
+body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .item-editor-wizard__step-button.is-complete > span {
+  background: #76364b; color: #fff7e8;
 }
 body :is(.modal-card--spell-editor,.sheet-inline-detail.modal-card--spell-editor) .spell-form-section {
   display: grid; gap: 10px; padding: 13px 14px;
@@ -3726,7 +3736,7 @@ body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--share
   display: flex; align-items: center; gap: 8px;
 }
 body .shared-spell-picker__assignment-submit { min-height: 42px; padding-inline: 14px; white-space: nowrap; }
-body .shared-spell-picker__assignment-submit--known { border-color: #9d7451; background: #fff8ec; color: #633349; }
+body .shared-spell-picker__assignment-submit--prepared { border-color: #9d7451; background: #fff8ec; color: #633349; }
 
 /* Spell preparation belongs to the launch workflow and shares its header actions. */
 body .sheet-detail[data-sheet-panel='Lancia incantesimi'] > .modal-header {

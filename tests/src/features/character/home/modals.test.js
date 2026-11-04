@@ -348,7 +348,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.spell-manual__reference-meta a');
   });
 
-  it('captures spell damage type and the explicit cantrip attack category', () => {
+  it('captures spell damage type without the redundant cantrip attack category control', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const editor = source.slice(
       source.indexOf('export function openSpellDrawer'),
@@ -357,18 +357,55 @@ describe('src/features/character/home/modals.js', () => {
     const migration = readFileSync('db/shared_spells_attack_range_type.sql', 'utf8');
 
     expect(editor).toContain("damageTypeSelect.name = 'spell_damage_type'");
-    expect(editor).toContain('name="spell_attack_range_type" value="melee"');
-    expect(editor).toContain('name="spell_attack_range_type" value="ranged"');
-    expect(editor).toContain("attack_range_type: selectedKind === 'cantrip'");
-    expect(editor).toContain('cantripRangeField.hidden = true');
+    expect(editor).not.toContain('name="spell_attack_range_type"');
+    expect(editor).not.toContain('cantripRangeField');
+    expect(editor).toContain('attack_range_type: spell?.attack_range_type || null');
     expect(migration).toContain('add column if not exists attack_range_type text');
     expect(migration).toContain("attack_range_type in ('melee', 'ranged')");
+  });
+
+  it('uses a guided create and edit flow for spells', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/theme.css', 'utf8');
+    const editor = source.slice(
+      source.indexOf('export function openSpellDrawer'),
+      source.indexOf('export async function openSpellSourceModal')
+    );
+
+    expect(editor).toContain("{ label: 'Identità', hint: 'Nome, livello e classi'");
+    expect(editor).toContain("{ label: 'Lancio', hint: 'Tempi e proprietà'");
+    expect(editor).toContain("{ label: 'Effetti', hint: 'Danni e progressione'");
+    expect(editor).toContain("{ label: 'Descrizione', hint: 'Dettagli dell’incantesimo'");
+    expect(editor).toContain('data-spell-editor-back');
+    expect(editor).toContain('data-spell-editor-next');
+    expect(editor).not.toContain('spell-editor-review');
+    expect(editor).not.toContain('spell-editor-overview');
+    expect(editor).toContain('buildSpellTraitCard');
+    expect(editor).toContain('spell-choice-card');
+    expect(editor).toContain('spell_has_saving_throw');
+    expect(editor).toContain('const launchOptionsRow = buildRow([savingThrowField, savingThrowAbilityField, prepStateField]');
+    expect(editor).toContain("launchOptionsRow.classList.add('spell-launch-options-row')");
+    expect(editor).toContain('traitsSection.appendChild(launchOptionsRow)');
+    expect(editor).toContain("savingThrowAbilitySelect.name = 'spell_saving_throw_ability'");
+    expect(editor).toContain("{ value: 'prepared', label: 'Preparato' }");
+    expect(editor).toContain("{ value: 'always', label: 'Sempre preparato' }");
+    expect(editor).not.toContain("{ value: 'known', label: 'Conosciuto' }");
+    expect(editor).toContain("nameInput.title = 'Inserisci il nome dell’incantesimo.'");
+    expect(editor).toContain("nameInput.setCustomValidity('Inserisci il nome dell’incantesimo.')");
+    expect(editor).toContain("name: 'spell_material'");
+    expect(editor).toContain("material: formData.get('spell_material')?.trim() || null");
+    expect(editor).toContain('wizardSubmitButton.disabled = !spell && activeWizardStep !== wizardSteps.length - 1');
+    expect(editor).toContain('if (spell || activeWizardStep === wizardSteps.length - 1) return');
+    expect(editor).toContain("title: spell ? `Modifica incantesimo: ${spell.name || 'Senza nome'}`");
+    expect(styles).toContain('.spell-trait-card');
+    expect(styles).toContain('.spell-choice-card');
+    expect(styles).toContain('.spell-editor-wizard__panel[data-spell-editor-panel="3"] textarea');
   });
 
   it('captures saving throw abilities for spells and powers', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const migration = readFileSync('db/add_saving_throw_ability.sql', 'utf8');
-    expect(source).toContain("savingThrowSelect.name = 'spell_saving_throw_ability'");
+    expect(source).toContain("savingThrowAbilitySelect.name = 'spell_saving_throw_ability'");
     expect(source).toContain("saving_throw_ability: formData.get('spell_saving_throw_ability')?.toString() || null");
     expect(source).toContain("resourceSavingThrowSelect.name = 'saving_throw_ability'");
     expect(source).toContain("saving_throw_ability: formData.get('saving_throw_ability')?.toString() || null");

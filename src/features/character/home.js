@@ -1,5 +1,6 @@
 import { openEquipmentItemDetail } from './home/itemDetail.js';
-import { openQuickAttackDetail, openQuickRollEditor } from './home/quickRollEditor.js';
+import { openAttackConfigurator, openQuickAttackDetail, openQuickRollEditor } from './home/quickRollEditor.js';
+import { openEquipmentMannequin } from './home/equipmentMannequin.js';
 import { weaponForAttackRange } from './home/attackRanges.js';
 import { deleteResource, fetchCharacters, fetchResources, updateResource, updateResourcesReset } from './characterApi.js';
 import { fetchItems, updateItem } from '../inventory/inventoryApi.js';
@@ -34,7 +35,7 @@ import { fetchWallet, createTransaction } from '../wallet/walletApi.js';
 import { buildCoinBundleMovement } from '../wallet/coinMovements.js';
 import { fetchCompanions } from './companionsApi.js';
 import { assignSharedSpellToCharacter, fetchCharacterSpells, fetchSharedSpellSources, removeCharacterSpell, searchSharedSpells } from './spellbookApi.js';
-import { dedupeCharacterSpells } from './spellPreparation.js';
+import { dedupeCharacterSpells, normalizeSpellPreparationState } from './spellPreparation.js';
 import {
   openAvatarModal,
   openBackgroundModal,
@@ -261,7 +262,7 @@ function restoreHomeScrollState(container, scrollState) {
   }
 }
 
-function mapSharedSpellToCharacterSpell(sharedSpell, { prepState = 'known' } = {}) {
+function mapSharedSpellToCharacterSpell(sharedSpell, { prepState = 'prepared' } = {}) {
   if (!sharedSpell) return null;
   return {
     id: `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -293,7 +294,7 @@ function mapSharedSpellToCharacterSpell(sharedSpell, { prepState = 'known' } = {
     school: sharedSpell.school || null,
     caster_classes: sharedSpell.caster_classes || [],
     rules_version: sharedSpell.rules_version,
-    prep_state: prepState
+    prep_state: normalizeSpellPreparationState(prepState)
   };
 }
 
@@ -303,7 +304,7 @@ function mapCharacterSpellRowToSpell(row) {
   const source = row?.shared_spell_id ? sharedSpell : customSpell;
   if (!source?.name) return null;
   const level = Number(source.level) || 0;
-  const prepState = row.prep_state === 'always_prepared' ? 'always' : (row.prep_state || 'known');
+  const prepState = normalizeSpellPreparationState(row.prep_state);
   return {
     id: row.id || `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     shared_spell_id: row.shared_spell_id || null,
@@ -451,11 +452,11 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   const setSubmitState = () => {
     const count = selectedSpells.size;
     submitButtons.forEach((button) => { button.disabled = count === 0; });
-    const knownButton = submitButtons.find((button) => button.value === 'known');
+    const preparedButton = submitButtons.find((button) => button.value === 'prepared');
     const alwaysButton = submitButtons.find((button) => button.value === 'always');
     const countLabel = count ? ` ${count}` : '';
-    if (knownButton) knownButton.textContent = `Aggiungi${countLabel} come ${canPrepare ? 'conosciuti' : 'sempre conosciuti'}`;
-    if (alwaysButton) alwaysButton.textContent = `Aggiungi${countLabel} come sempre pronti`;
+    if (preparedButton) preparedButton.textContent = `Aggiungi${countLabel} come preparati`;
+    if (alwaysButton) alwaysButton.textContent = `Aggiungi${countLabel} come sempre preparati`;
     if (selectedCountEl) selectedCountEl.textContent = `${count} ${count === 1 ? 'selezionato' : 'selezionati'}`;
     if (clearSelectionButton) clearSelectionButton.hidden = count === 0;
   };
@@ -697,40 +698,36 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
 
   const formData = await present({
     title: 'Scegli un incantesimo dalla raccolta',
-    submitLabel: canPrepare ? 'Aggiungi come sempre pronti' : 'Aggiungi come sempre conosciuti',
+    submitLabel: 'Aggiungi come sempre preparati',
     cancelLabel: 'Annulla',
     content,
     cardClass: ['modal-card--form', 'modal-card--shared-spell-picker'],
     onOpen: ({ modal, formEl }) => {
       const primaryButton = modal.querySelector('[data-form-submit]');
       const actions = primaryButton?.closest('.modal-actions__right') || primaryButton?.parentElement;
-      const knownButton = canPrepare ? document.createElement('button') : primaryButton;
-      if (knownButton) {
-        knownButton.type = 'submit';
-        if (canPrepare) knownButton.classList.add('ghost-button');
-        knownButton.classList.add('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--known');
-        knownButton.name = 'assignment_prep_state';
-        knownButton.value = 'known';
-        if (formEl?.id) knownButton.setAttribute('form', formEl.id);
+      const preparedButton = canPrepare ? document.createElement('button') : null;
+      if (preparedButton) {
+        preparedButton.type = 'submit';
+        preparedButton.classList.add('ghost-button', 'shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--prepared');
+        preparedButton.name = 'assignment_prep_state';
+        preparedButton.value = 'prepared';
+        if (formEl?.id) preparedButton.setAttribute('form', formEl.id);
       }
-      const alwaysButton = canPrepare ? primaryButton : null;
+      const alwaysButton = primaryButton;
       if (alwaysButton) {
         alwaysButton.name = 'assignment_prep_state';
         alwaysButton.value = 'always';
         alwaysButton.classList.add('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--always');
-        actions?.insertBefore(knownButton, alwaysButton);
+        if (preparedButton) actions?.insertBefore(preparedButton, alwaysButton);
       }
-      submitButtons = [knownButton, alwaysButton].filter(Boolean);
+      submitButtons = [preparedButton, alwaysButton].filter(Boolean);
       setSubmitState();
       queryInput.focus();
       void loadSourceOptions();
       void loadResults();
       return () => {
         window.clearTimeout(searchTimer);
-        if (canPrepare) knownButton?.remove();
-        else knownButton?.classList.remove('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--known');
-        knownButton?.removeAttribute('name');
-        knownButton?.removeAttribute('value');
+        preparedButton?.remove();
         alwaysButton?.removeAttribute('name');
         alwaysButton?.removeAttribute('value');
         alwaysButton?.classList.remove('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--always');
@@ -739,7 +736,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     }
   });
   if (!formData) return null;
-  const assignmentState = formData.get('assignment_prep_state') === 'known' ? 'known' : 'always';
+  const assignmentState = formData.get('assignment_prep_state') === 'prepared' ? 'prepared' : 'always';
   return [...selectedSpells.values()].map((spell) => ({ ...spell, assignment_prep_state: assignmentState }));
 }
 
@@ -996,6 +993,52 @@ export async function renderHome(container) {
     </div>
   `;
 
+  const configureAttack = async () => openAttackConfigurator(activeCharacter, items, () => renderHome(container), {
+    onEquipWeapon: async (weapon) => {
+      const result = await openEquipmentMannequin({
+        items,
+        initialItemId: weapon.id,
+        singleItem: true,
+        canEdit: true,
+        title: `Equipaggia · ${weapon.name || 'Arma'}`,
+        onEquip: async (item, equipSlots, currentItems) => {
+          if (!item.weapon_type) {
+            createToast('Definisci il tipo di arma prima di equipaggiarla', 'error');
+            return false;
+          }
+          const proficiencies = activeCharacter?.data?.proficiencies || {};
+          const proficient = item.weapon_type === 'improvised'
+            ? true
+            : item.weapon_type === 'simple'
+              ? Boolean(proficiencies.weapon_simple)
+              : Boolean(proficiencies.weapon_martial);
+          if (!proficient) {
+            createToast('Non hai la competenza per equipaggiare questa arma', 'error');
+            return false;
+          }
+          if (!item.sovrapponibile) {
+            const conflicting = currentItems
+              .filter((entry) => String(entry.id) !== String(item.id))
+              .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+            if (conflicting.length) {
+              createToast('Lo slot selezionato è già occupato', 'error');
+              return false;
+            }
+          }
+          try {
+            const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
+            createToast('Arma aggiunta agli attacchi');
+            return updated;
+          } catch (error) {
+            createToast('Errore durante la configurazione dell’arma', 'error');
+            return false;
+          }
+        }
+      });
+      if (result?.changed) await renderHome(container);
+    }
+  });
+
   mountTabletLayout(container, {
     characterName: activeCharacter?.name || '',
     proficiencyBonus: formatSigned(normalizeNumber(activeCharacter?.data?.proficiency_bonus)),
@@ -1005,6 +1048,7 @@ export async function renderHome(container) {
     ])),
     onRefresh: () => renderHome(container),
     onAddRoll: container.querySelector('[data-edit-character]') ? kind => openQuickRollEditor(activeCharacter, kind, () => renderHome(container)) : null,
+    onConfigureAttack: container.querySelector('[data-edit-character]') ? configureAttack : null,
     onOpenAttack: index => openQuickAttackDetail(activeCharacter, index, () => renderHome(container))
   });
   bindFabHandlers();
@@ -1073,14 +1117,14 @@ export async function renderHome(container) {
             return;
           }
           const nextSpells = spellsToAdd.map((sharedSpell) => mapSharedSpellToCharacterSpell(sharedSpell, {
-            prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'known'
+            prepState: sharedSpell.assignment_prep_state === 'always' ? 'always' : 'prepared'
           }));
           if (activeCharacter.user_id) {
             await Promise.all(spellsToAdd.map((sharedSpell, index) => assignSharedSpellToCharacter({
               user_id: activeCharacter.user_id,
               character_id: activeCharacter.id,
               shared_spell_id: sharedSpell.id,
-              prep_state: nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'known'
+              prep_state: nextSpells[index].prep_state === 'always' ? 'always_prepared' : 'prepared'
             })));
           }
           const nextData = { ...(activeCharacter.data || {}), spells: [...currentSpells, ...nextSpells] };

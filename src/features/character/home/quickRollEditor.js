@@ -1,7 +1,63 @@
 import { buildInput, buildSelect, openConfirmModal, openFormModal } from '../../../ui/components.js';
-import { escapeHtml } from '../../../lib/html.js';
+import { escapeHtml, sanitizeImageUrl } from '../../../lib/html.js';
 import { saveCharacterData } from './data.js';
-import { calculateUnarmedAttackBonuses } from './utils.js';
+import { calculateUnarmedAttackBonuses, getEquipSlots } from './utils.js';
+
+export async function openAttackConfigurator(character, items = [], onRender, { onEquipWeapon } = {}) {
+  if (!character) return;
+  const availableWeapons = items.filter((item) => item.category === 'weapon' && item.equipable && !getEquipSlots(item).length);
+  const content = document.createElement('div');
+  content.className = 'attack-configurator';
+  content.innerHTML = `
+    <section class="attack-configurator__section">
+      <div class="attack-configurator__heading"><span aria-hidden="true">✦</span><div><strong>Attacco senz’armi</strong><small>Crea pugni, calci, morsi o altri attacchi personalizzati.</small></div></div>
+      <label class="attack-configurator__option attack-configurator__option--unarmed">
+        <input type="radio" name="attack_configuration" value="unarmed" />
+        <span class="attack-configurator__visual" aria-hidden="true">⚔</span>
+        <span><strong>Aggiungi attacco senz’armi</strong><small>Configura caratteristica, tiro per colpire e danni.</small></span>
+        <b aria-hidden="true">✓</b>
+      </label>
+    </section>
+    <section class="attack-configurator__section">
+      <div class="attack-configurator__heading"><span aria-hidden="true">◇</span><div><strong>Armi equipaggiabili</strong><small>Seleziona un’arma dell’inventario e assegnala al manichino.</small></div></div>
+      ${availableWeapons.length ? `<div class="attack-configurator__weapon-grid">
+        ${availableWeapons.map((item) => {
+    const image = sanitizeImageUrl(item.image_url);
+    return `
+          <label class="attack-configurator__option">
+            <input type="radio" name="attack_configuration" value="weapon:${escapeHtml(item.id)}" />
+            ${image ? `<img class="attack-configurator__weapon-image" src="${image}" alt="" />` : '<span class="attack-configurator__visual" aria-hidden="true">◇</span>'}
+            <span><strong>${escapeHtml(item.name || 'Arma')}</strong><small>${escapeHtml(item.weapon_type || 'Arma equipaggiabile')}</small></span>
+            <b aria-hidden="true">✓</b>
+          </label>`;
+  }).join('')}
+      </div>` : '<p class="attack-configurator__empty">Non ci sono armi equipaggiabili libere nell’inventario.</p>'}
+    </section>
+  `;
+  const result = await openFormModal({
+    title: 'Configura attacco',
+    content,
+    submitLabel: 'Continua',
+    cancelLabel: 'Annulla',
+    cardClass: 'modal-card--attack-configurator',
+    onOpen: ({ modal }) => {
+      const submit = modal.querySelector('[data-form-submit]');
+      const sync = () => { if (submit) submit.disabled = !content.querySelector('input[name="attack_configuration"]:checked'); };
+      content.addEventListener('change', sync);
+      sync();
+      return () => content.removeEventListener('change', sync);
+    }
+  });
+  const selection = result?.get('attack_configuration')?.toString() || '';
+  if (!selection) return;
+  if (selection === 'unarmed') {
+    await openQuickRollEditor(character, 'attack', onRender);
+    return;
+  }
+  const weaponId = selection.startsWith('weapon:') ? selection.slice('weapon:'.length) : '';
+  const weapon = availableWeapons.find((item) => String(item.id) === weaponId);
+  if (weapon) await onEquipWeapon?.(weapon, availableWeapons);
+}
 
 export async function openQuickRollEditor(character, kind, onRender, { index = null } = {}) {
   if (!character) return;

@@ -11,10 +11,10 @@ describe('compact spell launch reference', () => {
     expect(html).toContain('data-spell-slot-filter="1"');
     expect(html).not.toContain('<small>Tipo</small>Fuoco');
   });
-  it('includes known spells for casters who do not prepare them while respecting preparation for others', () => {
+  it('normalizes legacy known spells as prepared spells', () => {
     const data = { is_spellcaster: true, spells: [{ id: 'known', name: 'IncantoConosciuto', level: 1, prep_state: 'known' }] };
     expect(buildSpellSection({ data: { ...data, spellcasting: { can_prepare: false } } })).toContain('IncantoConosciuto');
-    expect(buildSpellSection({ data: { ...data, spellcasting: { can_prepare: true } } })).not.toContain('IncantoConosciuto');
+    expect(buildSpellSection({ data: { ...data, spellcasting: { can_prepare: true } } })).toContain('IncantoConosciuto');
   });
   it('unifies cantrips and slotted spells while preserving ritual and concentration metadata', () => {
     const character = { data: { is_spellcaster: true, spellcasting: { can_prepare: false }, spells: [

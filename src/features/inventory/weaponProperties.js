@@ -66,7 +66,7 @@ export const weaponPropertyMap = new Map(weaponPropertyOptions.map((property) =>
 export function normalizeWeaponProperties(item = {}) {
   const source = item?.item_data && typeof item.item_data === 'object'
     ? { ...item.item_data, ...item }
-    : item;
+    : (item || {});
   const rawValue = source.weapon_properties;
   let raw = [];
   if (Array.isArray(rawValue)) {

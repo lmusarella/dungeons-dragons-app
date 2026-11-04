@@ -21,7 +21,8 @@ import {
   getCharacterMaxSpellLevel,
   getCharacterRulesVersion,
   inferCharacterCasterClasses,
-  mapSharedSpellForPreparation
+  mapSharedSpellForPreparation,
+  normalizeSpellPreparationState
 } from '../spellPreparation.js';
 import { attachUnifiedDetailActions } from './detailManagement.js';
 import { sanitizeExternalUrl, sanitizeImageUrl } from '../../../lib/html.js';
@@ -600,21 +601,6 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   const canPrepare = !catalogMode && Boolean(character?.data?.is_spellcaster);
   const form = document.createElement('div');
   form.className = 'drawer-form modal-form-grid spell-form spell-editor-form';
-  const editorOverview = document.createElement('section');
-  editorOverview.className = 'spell-editor-overview';
-  editorOverview.innerHTML = `
-    <span class="spell-editor-overview__sigil" aria-hidden="true">✦</span>
-    <div class="spell-editor-overview__identity">
-      <small data-spell-editor-kicker>Nuovo incantesimo</small>
-      <strong data-spell-editor-name>Incantesimo senza nome</strong>
-      <span data-spell-editor-school>Definisci livello e scuola</span>
-    </div>
-    <div class="spell-editor-overview__facts">
-      <span><small>Tempo</small><strong data-spell-editor-time>—</strong></span>
-      <span><small>Danni</small><strong data-spell-editor-damage>—</strong></span>
-    </div>
-  `;
-  form.appendChild(editorOverview);
   const buildSection = (title, description = '') => {
     const section = document.createElement('section');
     section.className = 'spell-form-section';
@@ -651,6 +637,12 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   const nameInput = nameField.querySelector('input');
   if (nameInput) {
     nameInput.required = true;
+    nameInput.title = 'Inserisci il nome dell’incantesimo.';
+    const clearNameValidation = () => nameInput.setCustomValidity('');
+    nameInput.addEventListener('input', clearNameValidation);
+    nameInput.addEventListener('invalid', () => {
+      if (nameInput.validity.valueMissing) nameInput.setCustomValidity('Inserisci il nome dell’incantesimo.');
+    });
   }
   const levelField = buildInput({
     label: 'Livello incantesimo',
@@ -663,18 +655,24 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     levelInput.min = '1';
     levelInput.max = '9';
   }
-  const prepStateField = canPrepare ? document.createElement('label') : null;
-  let prepStateSelect = null;
+  const prepStateField = canPrepare ? document.createElement('div') : null;
   if (prepStateField) {
-    prepStateField.className = 'field';
-    prepStateField.innerHTML = '<span>Preparazione</span>';
-    prepStateSelect = buildSelect([
-      { value: 'known', label: 'Conosciuto' },
-      { value: 'prepared', label: 'Preparato' },
-      { value: 'always', label: 'Sempre preparato' }
-    ], spell?.prep_state ?? 'known');
-    prepStateSelect.name = 'spell_prep_state';
-    prepStateField.appendChild(prepStateSelect);
+    const selectedPrepState = ['always', 'always_prepared'].includes(spell?.prep_state) ? 'always' : 'prepared';
+    prepStateField.className = 'spell-choice-group';
+    prepStateField.innerHTML = `
+      <span class="spell-choice-group__label">Preparazione</span>
+      <div class="spell-choice-card-grid spell-choice-card-grid--preparation">
+        ${[
+    { value: 'prepared', label: 'Preparato' },
+    { value: 'always', label: 'Sempre preparato' }
+  ].map((entry) => `
+          <label class="spell-choice-card">
+            <input type="radio" name="spell_prep_state" value="${entry.value}" ${selectedPrepState === entry.value ? 'checked' : ''} />
+            <span><strong>${entry.label}</strong><b aria-hidden="true">✓</b></span>
+          </label>
+        `).join('')}
+      </div>
+    `;
   }
   const identitySection = buildSection('Identità', 'Nome, livello e regole base dell\'incantesimo.');
   identitySection.appendChild(buildRow([nameField, spellKindField, levelField], 'compact'));
@@ -728,9 +726,9 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
     <span>Classi incantatrici</span>
     <div class="spell-caster-class-grid">
       ${SPELL_CASTER_CLASS_OPTIONS.map((entry) => `
-        <label class="spell-caster-class-option">
+        <label class="spell-caster-class-option spell-choice-card">
           <input type="checkbox" name="spell_caster_classes" value="${entry}" ${selectedCasterClasses.has(entry) ? 'checked' : ''} />
-          <span>${entry}</span>
+          <span><strong>${entry}</strong><b aria-hidden="true">✓</b></span>
         </label>
       `).join('')}
     </div>
@@ -759,63 +757,56 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       name: 'spell_components',
       placeholder: 'Es. V, S, M',
       value: spell?.components ?? ''
+    }),
+    buildInput({
+      label: 'Componenti materiali',
+      name: 'spell_material',
+      placeholder: 'Es. una perla del valore di 100 mo',
+      value: spell?.material ?? ''
     })
   ], 'compact'));
   form.appendChild(castingSection);
 
-  const traitsSection = buildSection('Proprietà rapide');
-  const concentrationField = document.createElement('div');
-  concentrationField.className = 'modal-toggle-field';
-  concentrationField.innerHTML = `
-    <span class="modal-toggle-field__label">Concentrazione</span>
-    <label class="diceov-toggle condition-modal__toggle">
-      <input type="checkbox" name="spell_concentration" />
-      <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </label>
-  `;
-  const attackRollField = document.createElement('div');
-  attackRollField.className = 'modal-toggle-field';
-  attackRollField.innerHTML = `
-    <span class="modal-toggle-field__label">Tiro per colpire</span>
-    <label class="diceov-toggle condition-modal__toggle">
-      <input type="checkbox" name="spell_attack_roll" />
-      <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </label>
-  `;
+  const traitsSection = buildSection('Proprietà rapide', 'Seleziona solo le regole applicate dall’incantesimo.');
+  const buildSpellTraitCard = (name, label, icon) => {
+    const field = document.createElement('label');
+    field.className = 'spell-trait-card';
+    field.innerHTML = `
+      <input type="checkbox" name="${name}" />
+      <span><i aria-hidden="true">${icon}</i><strong>${label}</strong><b aria-hidden="true">✓</b></span>
+    `;
+    const input = field.querySelector('input');
+    input.addEventListener('change', () => field.classList.toggle('is-selected', input.checked));
+    return field;
+  };
+  const concentrationField = buildSpellTraitCard('spell_concentration', 'Concentrazione', '◉');
+  const attackRollField = buildSpellTraitCard('spell_attack_roll', 'Tiro per colpire', '⚔');
   const savingThrowField = document.createElement('label');
-  savingThrowField.className = 'field modal-quick-property';
-  savingThrowField.innerHTML = '<span>Tiro salvezza</span>';
-  const savingThrowSelect = buildSelect([
-    { value: '', label: 'Nessun tiro salvezza' },
-    ...savingThrowList.map((entry) => ({ value: entry.key, label: entry.label }))
-  ], spell?.saving_throw_ability ?? '');
-  savingThrowSelect.name = 'spell_saving_throw_ability';
-  savingThrowField.appendChild(savingThrowSelect);
-  const ritualField = document.createElement('div');
-  ritualField.className = 'modal-toggle-field';
-  ritualField.innerHTML = `
-    <span class="modal-toggle-field__label">Rituale</span>
-    <label class="diceov-toggle condition-modal__toggle">
-      <input type="checkbox" name="spell_is_ritual" />
-      <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </label>
+  savingThrowField.className = 'spell-trait-card spell-trait-card--described';
+  savingThrowField.innerHTML = `
+    <input type="checkbox" name="spell_has_saving_throw" ${spell?.saving_throw_ability ? 'checked' : ''} />
+    <span>
+      <i aria-hidden="true">◈</i>
+      <span class="spell-trait-card__copy"><strong>Tiro salvezza</strong><small>L’incantesimo fa effettuare un tiro salvezza.</small></span>
+      <b aria-hidden="true">✓</b>
+    </span>
   `;
-  const initialCantripRangeType = ['melee', 'ranged'].includes(spell?.attack_range_type)
-    ? spell.attack_range_type
-    : spell?.range?.trim() ? 'ranged' : 'melee';
-  const cantripRangeField = document.createElement('fieldset');
-  cantripRangeField.className = 'spell-range-flag';
-  cantripRangeField.innerHTML = `
-    <legend>Tipo di attacco del trucchetto</legend>
-    <p>Determina se il trucchetto compare tra gli attacchi in mischia o a distanza.</p>
-    <div class="spell-range-flag__options">
-      <label><input type="radio" name="spell_attack_range_type" value="melee" ${initialCantripRangeType === 'melee' ? 'checked' : ''} /><span>Mischia</span></label>
-      <label><input type="radio" name="spell_attack_range_type" value="ranged" ${initialCantripRangeType === 'ranged' ? 'checked' : ''} /><span>Distanza</span></label>
-    </div>
-  `;
-  traitsSection.appendChild(buildRow([concentrationField, attackRollField, ritualField, savingThrowField, prepStateField], 'compact'));
-  traitsSection.appendChild(cantripRangeField);
+  const savingThrowToggle = savingThrowField.querySelector('input[name="spell_has_saving_throw"]');
+  const savingThrowAbilityField = document.createElement('label');
+  savingThrowAbilityField.className = 'field spell-saving-throw-ability';
+  savingThrowAbilityField.innerHTML = '<span>Caratteristica</span>';
+  const savingThrowAbilitySelect = buildSelect(
+    savingThrowList.map((entry) => ({ value: entry.key, label: entry.label })),
+    spell?.saving_throw_ability ?? savingThrowList[0]?.key ?? 'str'
+  );
+  savingThrowAbilitySelect.name = 'spell_saving_throw_ability';
+  savingThrowAbilityField.appendChild(savingThrowAbilitySelect);
+  const ritualField = buildSpellTraitCard('spell_is_ritual', 'Rituale', '✦');
+  traitsSection.appendChild(buildRow([concentrationField, attackRollField, ritualField], 'compact'));
   form.appendChild(traitsSection);
+  const launchOptionsRow = buildRow([savingThrowField, savingThrowAbilityField, prepStateField], 'compact');
+  launchOptionsRow.classList.add('spell-launch-options-row');
+  traitsSection.appendChild(launchOptionsRow);
   const damageDieField = buildInput({
     label: 'Notazione dado',
     name: 'spell_damage_die',
@@ -881,15 +872,26 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
   const concentrationInput = form.querySelector('input[name="spell_concentration"]');
   if (concentrationInput) {
     concentrationInput.checked = Boolean(spell?.concentration);
+    concentrationField.classList.toggle('is-selected', concentrationInput.checked);
   }
   const attackRollInput = form.querySelector('input[name="spell_attack_roll"]');
   if (attackRollInput) {
     attackRollInput.checked = Boolean(spell?.attack_roll);
+    attackRollField.classList.toggle('is-selected', attackRollInput.checked);
   }
   const ritualInput = form.querySelector('input[name="spell_is_ritual"]');
   if (ritualInput) {
     ritualInput.checked = Boolean(spell?.is_ritual);
+    ritualField.classList.toggle('is-selected', ritualInput.checked);
   }
+  const syncSavingThrow = () => {
+    const enabled = Boolean(savingThrowToggle?.checked);
+    savingThrowField.classList.toggle('is-selected', enabled);
+    savingThrowAbilityField.hidden = !enabled;
+    savingThrowAbilitySelect.disabled = !enabled;
+  };
+  savingThrowToggle?.addEventListener('change', syncSavingThrow);
+  syncSavingThrow();
 
   const syncSpellKind = () => {
     if (!levelInput) return;
@@ -899,8 +901,6 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       levelInput.max = '0';
       levelInput.readOnly = true;
       levelInput.disabled = true;
-      cantripRangeField.hidden = false;
-      cantripRangeField.querySelectorAll('input').forEach((input) => { input.disabled = false; });
     } else {
       if (Number(levelInput.value) === 0) {
         levelInput.value = '1';
@@ -909,41 +909,128 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       levelInput.max = '9';
       levelInput.readOnly = false;
       levelInput.disabled = false;
-      cantripRangeField.hidden = true;
-      cantripRangeField.querySelectorAll('input').forEach((input) => { input.disabled = true; });
     }
   };
-  const syncEditorOverview = () => {
-    const level = spellKindSelect.value === 'cantrip' ? 0 : Math.max(1, Number(levelInput?.value) || 1);
-    const kindLabel = level === 0 ? 'Trucchetto' : `Incantesimo di ${level}° livello`;
-    const schoolLabel = schoolSelect.value || 'Scuola non indicata';
-    const modifier = Number(damageModifierField.querySelector('input')?.value) || 0;
-    const notation = damageDieField.querySelector('input')?.value?.trim();
-    editorOverview.querySelector('[data-spell-editor-kicker]').textContent = kindLabel;
-    editorOverview.querySelector('[data-spell-editor-name]').textContent = nameInput?.value?.trim() || 'Incantesimo senza nome';
-    editorOverview.querySelector('[data-spell-editor-school]').textContent = schoolLabel;
-    editorOverview.querySelector('[data-spell-editor-time]').textContent = castTimeSelect.value || '—';
-    editorOverview.querySelector('[data-spell-editor-damage]').textContent = notation
-      ? `${notation}${modifier ? ` ${modifier > 0 ? '+' : ''}${modifier}` : ''}`
-      : '—';
-  };
-  spellKindSelect.addEventListener('change', () => { syncSpellKind(); syncEditorOverview(); });
-  [nameInput, levelInput, schoolSelect, castTimeSelect, damageDieField.querySelector('input'), damageModifierField.querySelector('input')]
-    .filter(Boolean)
-    .forEach((input) => input.addEventListener('input', syncEditorOverview));
+  spellKindSelect.addEventListener('change', syncSpellKind);
   syncSpellKind();
-  syncEditorOverview();
 
   form.querySelectorAll('input[type="number"]').forEach((input) => {
     const field = input.closest('.field');
     enhanceSpellNumericField(field);
   });
 
-  present({
-    title: spell ? 'Modifica incantesimo' : 'Nuovo incantesimo',
-    submitLabel: spell ? 'Salva' : 'Aggiungi',
+  const wizard = document.createElement('div');
+  wizard.className = 'item-editor-wizard spell-editor-wizard';
+  const wizardNav = document.createElement('nav');
+  wizardNav.className = 'item-editor-wizard__nav spell-editor-wizard__nav';
+  wizardNav.setAttribute('aria-label', 'Passaggi modifica incantesimo');
+  const wizardBody = document.createElement('div');
+  wizardBody.className = 'item-editor-wizard__body';
+  const wizardSteps = [
+    { label: 'Identità', hint: 'Nome, livello e classi', sections: [identitySection, classesSection] },
+    { label: 'Lancio', hint: 'Tempi e proprietà', sections: [castingSection, traitsSection] },
+    { label: 'Effetti', hint: 'Danni e progressione', sections: [damageSection] },
+    { label: 'Descrizione', hint: 'Dettagli dell’incantesimo', sections: [descriptionSection] }
+  ].map((step, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'item-editor-wizard__step-button';
+    button.dataset.spellEditorStep = String(index);
+    button.innerHTML = `<span>${index + 1}</span><strong>${step.label}</strong><small>${step.hint}</small>`;
+    const panel = document.createElement('div');
+    panel.className = 'item-editor-wizard__panel spell-editor-wizard__panel';
+    panel.dataset.spellEditorPanel = String(index);
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', `Passaggio ${index + 1}: ${step.label}`);
+    step.sections.forEach((section) => panel.appendChild(section));
+    wizardNav.appendChild(button);
+    wizardBody.appendChild(panel);
+    return { ...step, button, panel };
+  });
+  const wizardActions = document.createElement('div');
+  wizardActions.className = 'item-editor-wizard__actions item-editor-wizard__actions--footer character-edit-stepper-actions character-edit-stepper-actions--footer';
+  wizardActions.innerHTML = `
+    <button type="button" class="ghost-button" data-spell-editor-back>Indietro</button>
+    <span data-spell-editor-progress aria-live="polite"></span>
+    <button type="button" class="primary" data-spell-editor-next>Continua</button>
+  `;
+  wizard.append(wizardNav, wizardBody, wizardActions);
+  form.replaceChildren(wizard);
+  const wizardBack = wizardActions.querySelector('[data-spell-editor-back]');
+  const wizardNext = wizardActions.querySelector('[data-spell-editor-next]');
+  const wizardProgress = wizardActions.querySelector('[data-spell-editor-progress]');
+  let activeWizardStep = 0;
+  let wizardSubmitButton = null;
+
+  const validateWizardStep = (index) => {
+    const invalid = wizardSteps[index]?.panel.querySelector('input:invalid, select:invalid, textarea:invalid');
+    if (!invalid) return true;
+    invalid.reportValidity?.();
+    invalid.focus?.();
+    return false;
+  };
+  const showWizardStep = (nextIndex, { validateForward = false } = {}) => {
+    const boundedIndex = Math.max(0, Math.min(wizardSteps.length - 1, nextIndex));
+    if (validateForward && boundedIndex > activeWizardStep && !validateWizardStep(activeWizardStep)) return;
+    activeWizardStep = boundedIndex;
+    wizardSteps.forEach((step, index) => {
+      const active = index === activeWizardStep;
+      step.panel.hidden = !active;
+      step.button.classList.toggle('is-active', active);
+      step.button.classList.toggle('is-complete', index < activeWizardStep);
+      step.button.setAttribute('aria-current', active ? 'step' : 'false');
+    });
+    wizardBack.disabled = activeWizardStep === 0;
+    wizardNext.disabled = activeWizardStep === wizardSteps.length - 1;
+    if (wizardSubmitButton) {
+      wizardSubmitButton.hidden = false;
+      wizardSubmitButton.disabled = !spell && activeWizardStep !== wizardSteps.length - 1;
+    }
+    wizardProgress.textContent = `Passaggio ${activeWizardStep + 1} di ${wizardSteps.length}`;
+    wizardSteps[activeWizardStep].panel.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
+  wizardBack.addEventListener('click', () => showWizardStep(activeWizardStep - 1));
+  wizardNext.addEventListener('click', () => showWizardStep(activeWizardStep + 1, { validateForward: true }));
+  wizardSteps.forEach((step, index) => step.button.addEventListener('click', () => {
+    showWizardStep(index, { validateForward: index > activeWizardStep });
+  }));
+  return present({
+    title: spell ? `Modifica incantesimo: ${spell.name || 'Senza nome'}` : 'Nuovo incantesimo',
+    submitLabel: 'Salva',
     content: form,
-    cardClass: ['modal-card--form', 'modal-card--spell-editor']
+    cardClass: ['modal-card--form', 'modal-card--spell-editor'],
+    onOpen: ({ modal, formEl }) => {
+      modal?.classList.add('spell-editor-modal-active');
+      wizardSubmitButton = modal?.querySelector('[data-form-submit]') || formEl?.querySelector('button[type="submit"]');
+      const modalActions = modal?.querySelector('.modal-footer .modal-actions');
+      const centeredActions = document.createElement('div');
+      centeredActions.className = 'modal-actions__center spell-editor-wizard__footer-center';
+      if (modalActions) {
+        centeredActions.appendChild(wizardActions);
+        modalActions.classList.add('modal-actions--with-center');
+        modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
+      }
+      const guardIntermediateSubmit = (event) => {
+        if (spell || activeWizardStep === wizardSteps.length - 1) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showWizardStep(activeWizardStep + 1, { validateForward: true });
+      };
+      formEl?.addEventListener('submit', guardIntermediateSubmit, true);
+      showWizardStep(0);
+      nameInput?.focus();
+      return () => {
+        formEl?.removeEventListener('submit', guardIntermediateSubmit, true);
+        if (wizardSubmitButton) {
+          wizardSubmitButton.hidden = false;
+          wizardSubmitButton.disabled = false;
+        }
+        modal?.classList.remove('spell-editor-modal-active');
+        centeredActions.remove();
+        modalActions?.classList.remove('modal-actions--with-center');
+        wizard.appendChild(wizardActions);
+      };
+    }
   }).then(async (formData) => {
     if (!formData) return;
     const name = formData.get('spell_name')?.trim();
@@ -958,7 +1045,9 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       ? 0
       : Math.min(9, Math.max(1, rawLevel || 1));
     const damageModifier = toNumberOrNull(formData.get('spell_damage_modifier'));
-    const prepState = canPrepare ? formData.get('spell_prep_state') || 'known' : spell?.prep_state || 'known';
+    const prepState = canPrepare
+      ? normalizeSpellPreparationState(formData.get('spell_prep_state'))
+      : normalizeSpellPreparationState(spell?.prep_state, 'always');
     const nextSpell = {
       id: spell?.id ?? `spell-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       shared_spell_id: spell?.shared_spell_id || null,
@@ -969,11 +1058,11 @@ export function openSpellDrawer(character, onSave, spell = null, options = {}) {
       duration: formData.get('spell_duration')?.trim() || null,
       range: formData.get('spell_range')?.trim() || null,
       components: formData.get('spell_components')?.trim() || null,
-      material: spell?.material || null,
+      material: formData.get('spell_material')?.trim() || null,
       concentration: formData.has('spell_concentration'),
       attack_roll: formData.has('spell_attack_roll'),
       saving_throw_ability: formData.get('spell_saving_throw_ability')?.toString() || null,
-      attack_range_type: selectedKind === 'cantrip' ? formData.get('spell_attack_range_type')?.toString() || 'melee' : null,
+      attack_range_type: spell?.attack_range_type || null,
       is_ritual: formData.has('spell_is_ritual'),
       image_url: null,
       damage_die: formData.get('spell_damage_die')?.trim() || null,
@@ -1308,7 +1397,7 @@ async function openPreparedSpellsModalAsync(character, onSave) {
   const deletedIds = new Set();
   const preparedIds = new Set(
     selectable
-      .filter((entry) => prepareableIds.has(entry.id) && (entry.prep_state || 'known') === 'prepared')
+      .filter((entry) => prepareableIds.has(entry.id) && entry.prep_state === 'prepared')
       .map((entry) => entry.id)
   );
   const levelOrder = Array.from(new Set(selectable.map((entry) => Math.max(0, Number(entry.level) || 0))))
@@ -1547,10 +1636,8 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     const nextCustomSpells = characterSpells
       .filter((entry) => !entry.shared_spell_id)
       .filter((entry) => !deletedIds.has(entry.id))
-      .map((entry) => {
-        if (!visibleCustomIds.has(String(entry.id)) || entry.prep_state === 'always') return entry;
-        return { ...entry, prep_state: preparedIds.has(entry.id) ? 'prepared' : 'known' };
-      });
+      .filter((entry) => !visibleCustomIds.has(String(entry.id)) || entry.prep_state === 'always' || preparedIds.has(entry.id))
+      .map((entry) => ({ ...entry, prep_state: normalizeSpellPreparationState(entry.prep_state) }));
     const preservedCantrips = characterSpells.filter((entry) => entry.shared_spell_id && Number(entry.level) === 0);
     const nextSpells = dedupeCharacterSpells([...preservedCantrips, ...nextCustomSpells, ...retainedSpells
       .map((entry) => {

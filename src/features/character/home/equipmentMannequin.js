@@ -201,9 +201,9 @@ export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
   const field = document.createElement('fieldset');
   field.className = 'equip-slot-field item-equip-3d';
   field.innerHTML = `
-    <legend>Parti del corpo consentite</legend>
+    <legend>Zone consentite</legend>
     <div class="item-equip-3d__intro">
-      <div><strong>Definisci la vestibilità sul manichino 3D</strong><span>Seleziona uno o più punti specifici. L’oggetto non viene ancora equipaggiato.</span></div>
+      <div><strong>Seleziona sul manichino</strong></div>
       <span class="item-equip-3d__count" data-equip-3d-count>0 selezionate</span>
     </div>
   `;
@@ -239,7 +239,7 @@ export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
   const summary = document.createElement('aside');
   summary.className = 'item-equip-3d__summary';
   summary.innerHTML = `
-    <div class="item-equip-3d__summary-header"><span aria-hidden="true">✦</span><div><strong>Zone consentite</strong><small>Solo parti anatomiche specifiche</small></div></div>
+    <strong class="item-equip-3d__summary-title">Parti selezionate</strong>
     <div class="item-equip-3d__selected" data-equip-3d-selected></div>
   `;
   layout.append(viewer, summary);
@@ -270,26 +270,23 @@ export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
     if (count) count.textContent = `${selectedParts.length} ${selectedParts.length === 1 ? 'selezionata' : 'selezionate'}`;
     if (selectedList) {
       selectedList.innerHTML = '';
-      if (!selectedParts.length) {
-        const empty = document.createElement('p');
-        empty.className = 'item-equip-3d__empty';
-        empty.textContent = 'Nessuna zona scelta. Ruota il modello o usa le viste rapide.';
-        selectedList.appendChild(empty);
-      } else {
-        selectedParts.forEach((part) => {
-          const chip = document.createElement('button');
-          chip.type = 'button';
-          chip.className = 'item-equip-3d__selected-chip';
-          chip.innerHTML = `<span>${part.label}</span><b aria-hidden="true">×</b>`;
-          chip.setAttribute('aria-label', `Rimuovi ${part.label}`);
-          chip.addEventListener('click', () => {
-            const input = inputByPartId.get(part.id);
-            if (input) input.checked = false;
-            sync();
-          });
-          selectedList.appendChild(chip);
+      PART_DEFINITIONS.forEach((part) => {
+        const input = inputByPartId.get(part.id);
+        const selected = Boolean(input?.checked);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'item-equip-3d__selected-chip';
+        card.classList.toggle('is-selected', selected);
+        card.setAttribute('aria-pressed', String(selected));
+        card.innerHTML = `<span>${part.label}</span><b aria-hidden="true">${selected ? '✓' : '+'}</b>`;
+        card.setAttribute('aria-label', `${selected ? 'Deseleziona' : 'Seleziona'} ${part.label}`);
+        card.addEventListener('click', () => {
+          if (!input || input.disabled) return;
+          input.checked = !input.checked;
+          sync();
         });
-      }
+        selectedList.appendChild(card);
+      });
     }
     renderScene();
   };

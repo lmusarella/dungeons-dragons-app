@@ -68,6 +68,9 @@ describe('src/features/inventory/inventory.js', () => {
     expect(inventory).toContain('openQuickLootItemModal(activeCharacter');
     expect(inventory).toContain('allowQuantities: true');
     expect(picker).toContain('modal-card--shortcut-size');
+    expect(inventory).toContain("headerActionLabel: 'Aggiungi oggetto'");
+    expect(picker).toContain("headerActionHost.dataset.formHeaderActions = ''");
+    expect(picker).toContain('sheetActions.prepend(headerActionHost)');
     expect(styles).toContain('.modal-card--shortcut-size');
   });
 

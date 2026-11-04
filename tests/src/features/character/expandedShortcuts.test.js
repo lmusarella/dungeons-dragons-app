@@ -43,6 +43,18 @@ describe('expanded shortcut reference',()=>{
     expect(layout).not.toContain("'Lancia incantesimi', 'Magie e slot'");
     expect(sections).not.toContain('buildCompactSpellSlots(character)');
   });
+  it('opens a dedicated attack configurator for unarmed attacks and inventory weapons',()=>{
+    const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');
+    const home=readFileSync('src/features/character/home.js','utf8');
+    const editor=readFileSync('src/features/character/home/quickRollEditor.js','utf8');
+    expect(layout).toContain("configure.textContent = 'Configura attacco'");
+    expect(layout).toContain('configuration.onConfigureAttack()');
+    expect(home).toContain('openAttackConfigurator(activeCharacter, items');
+    expect(home).toContain('openEquipmentMannequin({');
+    expect(editor).toContain('export async function openAttackConfigurator');
+    expect(editor).toContain('Aggiungi attacco senz’armi');
+    expect(editor).toContain("item.category === 'weapon' && item.equipable");
+  });
   it('keeps parent ability cards option-first and exposes the eight-action footer',()=>{
     const cards=readFileSync('src/features/character/home/playCards.js','utf8');
     const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');

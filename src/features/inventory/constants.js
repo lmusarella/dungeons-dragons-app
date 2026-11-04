@@ -51,7 +51,7 @@ export const bodyParts = [
 
 export const itemCategories = [
   { value: 'gear', label: 'Vestiario', equipable: true },
-  { value: 'loot', label: 'Loot' },
+  { value: 'loot', label: 'Loot/Oggetto generico' },
   { value: 'consumable', label: 'Consumabili' },
   { value: 'weapon', label: 'Armi', equipable: true },
   { value: 'armor', label: 'Armature', equipable: true },
@@ -74,7 +74,8 @@ export const bodyPartLabels = new Map(bodyParts.map((part) => [part.value, part.
 export const weaponTypes = [
   { value: '', label: 'Seleziona' },
   { value: 'simple', label: 'Semplice' },
-  { value: 'martial', label: 'Da guerra' }
+  { value: 'martial', label: 'Da guerra' },
+  { value: 'improvised', label: 'Arma improvvisata' }
 ];
 
 export const weaponRanges = [

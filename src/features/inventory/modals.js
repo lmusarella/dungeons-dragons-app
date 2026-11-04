@@ -1,7 +1,7 @@
 import { createItem, updateItem } from './inventoryApi.js';
 import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { ammunitionTypes, armorTypes, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
-import { getWeaponMasterySummary, weaponMasteryOptions } from '../rules/weaponMasteries.js';
+import { weaponMasteryOptions } from '../rules/weaponMasteries.js';
 import { getCompatibleEquipSlots, getEquipSlots } from './utils.js';
 import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
 import { normalizeWeaponProperties, weaponPropertyOptions } from './weaponProperties.js';
@@ -55,15 +55,25 @@ export async function openItemModal(character, item, items = [], onSave, options
     elements.filter(Boolean).forEach((element) => row.appendChild(element));
     return row;
   };
+  const localizeRequiredField = (input, message) => {
+    if (!input) return;
+    input.title = message;
+    const clearMessage = () => input.setCustomValidity('');
+    input.addEventListener('input', clearMessage);
+    input.addEventListener('change', clearMessage);
+    input.addEventListener('invalid', () => {
+      if (input.validity.valueMissing) input.setCustomValidity(message);
+    });
+  };
   const buildToggleField = ({ name, label, checked = false, type = 'checkbox', value = '' }) => {
     const field = document.createElement('label');
-    field.className = 'condition-modal__item item-modal-toggle-field';
+    field.className = 'condition-modal__item item-choice-card item-modal-toggle-field';
     const valueAttribute = value ? ` value="${value}"` : '';
     field.innerHTML = `
-      <span class="condition-modal__item-label"><strong>${label}</strong></span>
-      <span class="diceov-toggle condition-modal__toggle">
-        <input type="${type}" name="${name}"${valueAttribute} ${checked ? 'checked' : ''} />
-        <span class="diceov-toggle-track" aria-hidden="true"></span>
+      <input class="item-choice-card__input" type="${type}" name="${name}"${valueAttribute} ${checked ? 'checked' : ''} />
+      <span class="item-choice-card__body">
+        <span class="item-choice-card__check" aria-hidden="true">✓</span>
+        <strong>${label}</strong>
       </span>
     `;
     const input = field.querySelector('input');
@@ -74,6 +84,11 @@ export async function openItemModal(character, item, items = [], onSave, options
     return { field, input };
   };
   const nameField = buildInput({ label: 'Nome', name: 'name', value: item?.name ?? '' });
+  const nameInput = nameField.querySelector('input');
+  if (nameInput) {
+    nameInput.required = true;
+    localizeRequiredField(nameInput, 'Inserisci il nome dell’oggetto.');
+  }
   const imageField = buildInput({
     label: 'Foto (URL)',
     name: 'image_url',
@@ -97,13 +112,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     weightInput.min = '0';
     weightInput.step = 'any';
   }
-  const volumeField = buildInput({ label: 'Volume', name: 'volume', type: 'number', value: item?.volume ?? 0 });
-  const volumeInput = volumeField.querySelector('input');
-  if (volumeInput) {
-    volumeInput.min = '0';
-    volumeInput.step = '0.1';
-  }
-  const valueField = buildInput({ label: 'Valore (cp)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
+  const valueField = buildInput({ label: 'Valore (monete rame)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
   const valueInput = valueField.querySelector('input');
   if (valueInput) {
     valueInput.min = '0';
@@ -111,18 +120,50 @@ export async function openItemModal(character, item, items = [], onSave, options
   }
   const logisticsSection = buildSection(
     'Quantità, peso e valore',
-    [buildRow([qtyField, weightField, volumeField, valueField], 'compact')],
+    [buildRow([qtyField, weightField, valueField], 'compact')],
     { icon: '⚖️', description: 'Numeri essenziali per carico, scorte e tesoro.' }
   );
-  const categorySelect = buildSelect(
-    [{ value: '', label: 'Seleziona' }, ...itemCategories],
-    item?.category ?? ''
-  );
+  const categorySelect = buildSelect(itemCategories, item?.category ?? 'loot');
   categorySelect.name = 'category';
-  const categoryField = document.createElement('label');
-  categoryField.className = 'field';
-  categoryField.innerHTML = '<span>Categoria</span>';
-  categoryField.appendChild(categorySelect);
+  categorySelect.hidden = true;
+  categorySelect.tabIndex = -1;
+  categorySelect.setAttribute('aria-hidden', 'true');
+  const categoryField = document.createElement('div');
+  categoryField.className = 'item-category-card-list';
+  const categoryIcons = {
+    gear: '♙', loot: '◇', consumable: '✚', weapon: '⚔', armor: '⛨', jewelry: '✦', tool: '⚒', container: '▱'
+  };
+  const categoryInputs = itemCategories.map((category) => {
+    const card = document.createElement('label');
+    card.className = 'item-choice-card item-category-card';
+    card.innerHTML = `
+      <input class="item-choice-card__input" type="radio" name="item_category_card" value="${category.value}" ${categorySelect.value === category.value ? 'checked' : ''} required />
+      <span class="item-choice-card__body item-choice-card__body--category">
+        <span class="item-choice-card__icon" aria-hidden="true">${categoryIcons[category.value] || '◇'}</span>
+        <strong>${category.label}</strong>
+        <span class="item-choice-card__check" aria-hidden="true">✓</span>
+      </span>
+    `;
+    categoryField.appendChild(card);
+    const input = card.querySelector('input');
+    localizeRequiredField(input, 'Seleziona una categoria per l’oggetto.');
+    return input;
+  });
+  categoryField.prepend(categorySelect);
+  const syncCategoryCards = () => {
+    categoryInputs.forEach((input) => {
+      const selected = input.value === categorySelect.value;
+      input.checked = selected;
+      input.closest('.item-category-card')?.classList.toggle('is-selected', selected);
+    });
+  };
+  categoryInputs.forEach((input) => input.addEventListener('change', () => {
+    if (!input.checked) return;
+    categorySelect.value = input.value;
+    syncCategoryCards();
+    updateEquipmentFields();
+  }));
+  syncCategoryCards();
 
   const containerOptions = [{ value: '', label: 'Nessuno' }].concat(
     items.filter((entry) => entry.category === 'container').map((entry) => ({
@@ -148,69 +189,54 @@ export async function openItemModal(character, item, items = [], onSave, options
   };
   containerSelect.addEventListener('change', syncPlacementFields);
   syncPlacementFields();
-  const maxVolumeField = buildInput({
-    label: 'Volume massimo contenitore',
-    name: 'max_volume',
-    type: 'number',
-    value: item?.max_volume ?? ''
-  });
-  const maxVolumeInput = maxVolumeField.querySelector('input');
   const ammunitionTypeField = document.createElement('label');
   ammunitionTypeField.className = 'field';
   ammunitionTypeField.innerHTML = '<span>Tipo munizione</span>';
   const ammunitionTypeSelect = buildSelect(ammunitionTypes, item?.ammunition_type ?? '');
   ammunitionTypeSelect.name = 'ammunition_type';
   ammunitionTypeField.appendChild(ammunitionTypeSelect);
-  const categoryKindField = document.createElement('div');
-  categoryKindField.className = 'item-modal-kind';
-  categoryKindField.innerHTML = '<span class="item-modal-kind__label">Tipologia rapida</span><p class="item-modal-kind__hint">Scegli una tipologia per mostrare solo i campi davvero utili.</p>';
-  const categoryKindList = document.createElement('div');
-  categoryKindList.className = 'condition-modal__list item-modal-kind__list';
-  const kindOptions = [
-    { value: 'generic', label: 'Oggetto' },
-    { value: 'weapon', label: 'Arma' },
-    { value: 'armor', label: 'Armatura' }
-  ];
-  const kindInputs = kindOptions.map((option) => {
-    const optionLabel = document.createElement('label');
-    optionLabel.className = 'condition-modal__item item-modal-kind__item';
-    optionLabel.innerHTML = `
-      <span class="condition-modal__item-label"><strong>${option.label}</strong></span>
-      <span class="diceov-toggle condition-modal__toggle">
-        <input type="radio" name="item_kind" value="${option.value}" />
-        <span class="diceov-toggle-track" aria-hidden="true"></span>
-      </span>
-    `;
-    categoryKindList.appendChild(optionLabel);
-    return optionLabel.querySelector('input');
-  });
-  categoryKindField.appendChild(categoryKindList);
-  const categoryRow = buildRow([categoryField, containerField, locationField, maxVolumeField, ammunitionTypeField], 'compact');
-  categoryRow.classList.add('item-modal-row--classification');
+  const categoryContextRow = buildRow([ammunitionTypeField], 'balanced');
+  categoryContextRow.classList.add('item-modal-row--classification-context');
   const classificationSection = buildSection(
-    'Categoria e collocazione',
-    [categoryKindField, categoryRow],
-    { icon: '🧭', description: 'Definisci tipo, contenitore e dettagli contestuali.' }
+    'Categoria',
+    [categoryField, categoryContextRow],
+    { icon: '🧭', description: 'Scegli la categoria più adatta all’oggetto.' }
+  );
+  const placementSection = buildSection(
+    'Collocazione',
+    [buildRow([containerField, locationField], 'balanced')],
+    { icon: '⌂', description: 'Scegli un contenitore oppure indica il luogo in cui si trova.' }
   );
 
   const basicToggleList = document.createElement('div');
   basicToggleList.className = 'condition-modal__list item-modal-toggle-list';
-  const { field: attunement, input: attunementInput } = buildToggleField({
-    name: 'attunement_active',
-    label: 'Sintonia attiva',
-    checked: item?.attunement_active ?? false
-  });
   const { field: magicField, input: magicInput } = buildToggleField({
     name: 'is_magic',
     label: 'Magico',
-    checked: item?.is_magic ?? false
+    checked: Boolean(item?.is_magic || item?.attunement_active)
   });
-  basicToggleList.appendChild(attunement);
+  const { field: attunement, input: attunementInput } = buildToggleField({
+    name: 'attunement_active',
+    label: 'Sintonia attiva',
+    checked: !catalogMode && (item?.attunement_active ?? false)
+  });
   basicToggleList.appendChild(magicField);
+  if (!catalogMode) basicToggleList.appendChild(attunement);
+  const syncMagicAndAttunement = () => {
+    if (!catalogMode && attunementInput?.checked && magicInput) magicInput.checked = true;
+    const isMagic = Boolean(magicInput?.checked);
+    if ((catalogMode || !isMagic) && attunementInput) attunementInput.checked = false;
+    attunement.hidden = catalogMode || !isMagic;
+    magicField.classList.toggle('is-selected', isMagic);
+    attunement.classList.toggle('is-selected', Boolean(attunementInput?.checked));
+  };
+  magicInput?.addEventListener('change', syncMagicAndAttunement);
+  attunementInput?.addEventListener('change', syncMagicAndAttunement);
+  syncMagicAndAttunement();
   const statusSection = buildSection(
     'Stato speciale',
     [basicToggleList],
-    { icon: '✨', description: 'Flag rapidi per magia e sintonia.' }
+    { icon: '✨', description: catalogMode ? 'Indica se l’oggetto è magico.' : 'Flag rapidi per magia e sintonia.' }
   );
 
   const equipToggleList = document.createElement('div');
@@ -234,16 +260,22 @@ export async function openItemModal(character, item, items = [], onSave, options
     sync: syncEquipPickerState,
     mount: mountEquipPicker
   } = buildEquipmentCompatibilityPicker3D(selectedSlots);
+  const equipSelectionSummary = equipSlotsField.querySelector('.item-equip-3d__summary');
+  const equipmentWorkspace = document.createElement('div');
+  equipmentWorkspace.className = 'item-equipment-workspace';
+  equipmentWorkspace.appendChild(equipToggleList);
+  if (equipSelectionSummary) equipmentWorkspace.appendChild(equipSelectionSummary);
+  equipmentWorkspace.appendChild(equipSlotsField);
   const equipmentSection = buildSection(
     'Equipaggiamento',
-    [equipToggleList, equipSlotsField],
-    { icon: '🛡️', description: 'Indica dove l’oggetto potrà essere equipaggiato. L’assegnazione avviene dal manichino.' }
+    [equipmentWorkspace],
+    { icon: '🛡️', description: 'Attiva l’equipaggiamento e seleziona sul manichino le zone consentite.' }
   );
 
   const notesSection = buildSection(
-    'Note e descrizione',
-    [buildTextarea({ label: 'Note', name: 'notes', value: item?.notes ?? '' })],
-    { icon: '📝', description: 'Descrizione, effetti particolari o promemoria di gioco.' }
+    'Descrizione',
+    [buildTextarea({ label: 'Descrizione', name: 'notes', value: item?.notes ?? item?.description ?? '' })],
+    { icon: '📝', description: 'Descrivi l’oggetto, i suoi effetti particolari o altre informazioni utili.' }
   );
 
   const proficiencySection = document.createElement('div');
@@ -272,14 +304,6 @@ export async function openItemModal(character, item, items = [], onSave, options
   const weaponMasterySelect = buildSelect(weaponMasteryOptions, item?.weapon_mastery ?? '');
   weaponMasterySelect.name = 'weapon_mastery';
   weaponMasteryField.appendChild(weaponMasterySelect);
-  const weaponMasteryHelp = document.createElement('p');
-  weaponMasteryHelp.className = 'muted weapon-mastery-help';
-  weaponMasteryField.appendChild(weaponMasteryHelp);
-  const updateWeaponMasteryHelp = () => {
-    weaponMasteryHelp.textContent = getWeaponMasterySummary(weaponMasterySelect.value);
-  };
-  weaponMasterySelect.addEventListener('change', updateWeaponMasteryHelp);
-  updateWeaponMasteryHelp();
   const damageDieField = buildInput({
     label: 'Dado danno',
     name: 'damage_die',
@@ -422,7 +446,7 @@ export async function openItemModal(character, item, items = [], onSave, options
     removeButton.className = 'icon-button weapon-damage-mode-row__remove';
     removeButton.setAttribute('aria-label', 'Rimuovi impugnatura');
     removeButton.title = 'Rimuovi';
-    removeButton.innerHTML = '<span aria-hidden="true">🗑️</span>';
+    removeButton.innerHTML = '<span aria-hidden="true">×</span>';
     removeButton.addEventListener('click', () => row.remove());
     row.append(labelField, dieField, modifierField, attackModifierField, typeField, removeButton);
     enhanceNumericFields(row);
@@ -448,19 +472,23 @@ export async function openItemModal(character, item, items = [], onSave, options
     placeholder: 'Es. 1,5',
     value: item?.melee_range ?? 1.5
   });
+  const meleeRangeInput = meleeRangeField.querySelector('input');
   const rangeNormalField = buildInput({
     label: 'Gittata normale',
     name: 'range_normal',
     type: 'number',
     value: item?.range_normal ?? ''
   });
+  const rangeNormalInput = rangeNormalField.querySelector('input');
   const rangeDisadvantageField = buildInput({
     label: 'Gittata svantaggio',
     name: 'range_disadvantage',
     type: 'number',
     value: item?.range_disadvantage ?? ''
   });
-  rangeGrid.append(thrownField, meleeRangeField, rangeNormalField, rangeDisadvantageField);
+  const rangeDisadvantageInput = rangeDisadvantageField.querySelector('input');
+  rangeGrid.append(thrownField, rangeNormalField, rangeDisadvantageField);
+  rangeGrid.classList.add('item-modal-row--conditional-control');
 
   const armorTypeField = document.createElement('label');
   armorTypeField.className = 'field';
@@ -498,13 +526,15 @@ export async function openItemModal(character, item, items = [], onSave, options
   });
   const shieldBonusInput = shieldBonusField.querySelector('input');
 
-  const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, weaponAbilityField, weaponMasteryField], 'compact');
+  const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, meleeRangeField, weaponAbilityField, weaponMasteryField], 'compact');
   weaponPrimaryRow.classList.add('item-modal-row--weapon-primary');
   const weaponDamageRow = buildRow([damageDieField, damageTypeField, attackModifierField, damageModifierField], 'compact');
   const weaponAmmoRow = buildRow([consumesAmmoField, weaponAmmoTypeField], 'compact');
-  const armorPrimaryRow = buildRow([armorTypeField, armorClassField, armorBonusField, shieldBonusField], 'compact');
+  weaponAmmoRow.classList.add('item-modal-row--conditional-control');
+  const armorPrimaryRow = buildRow([armorTypeField, armorClassField, armorBonusField], 'compact');
   armorPrimaryRow.classList.add('item-modal-row--armor-primary');
-  const armorShieldRow = buildRow([shieldField], 'compact');
+  const armorShieldRow = buildRow([shieldField, shieldBonusField], 'compact');
+  armorShieldRow.classList.add('item-modal-row--conditional-control', 'item-modal-row--armor-shield');
   proficiencySection.appendChild(weaponPrimaryRow);
   proficiencySection.appendChild(weaponDamageRow);
   proficiencySection.appendChild(rangeGrid);
@@ -518,42 +548,110 @@ export async function openItemModal(character, item, items = [], onSave, options
     [proficiencySection],
     { icon: '⚔️', description: 'Questa sezione appare solo per armi e armature.' }
   );
-  fields.appendChild(identitySection);
-  fields.appendChild(logisticsSection);
-  fields.appendChild(classificationSection);
-  fields.appendChild(statusSection);
-  fields.appendChild(equipmentSection);
-  fields.appendChild(combatSection);
-  fields.appendChild(notesSection);
-
-  const getKindFromCategory = (categoryValue) => {
-    if (categoryValue === 'weapon') return 'weapon';
-    if (categoryValue === 'armor') return 'armor';
-    return 'generic';
-  };
-  const syncKindWithCategory = () => {
-    const selectedKind = getKindFromCategory(categorySelect.value);
-    kindInputs.forEach((input) => {
-      if (!input) return;
-      const isActive = input.value === selectedKind;
-      input.checked = isActive;
-      input.closest('.condition-modal__item')?.classList.toggle('is-selected', isActive);
-    });
-  };
-  kindInputs.forEach((input) => {
-    input?.addEventListener('change', () => {
-      if (!input.checked) return;
-      if (input.value === 'weapon') {
-        categorySelect.value = 'weapon';
-      } else if (input.value === 'armor') {
-        categorySelect.value = 'armor';
-      } else if (categorySelect.value === 'weapon' || categorySelect.value === 'armor') {
-        categorySelect.value = 'gear';
-      }
-      syncKindWithCategory();
-      updateEquipmentFields();
-    });
+  const wizard = document.createElement('div');
+  wizard.className = 'item-editor-wizard';
+  const wizardNav = document.createElement('nav');
+  wizardNav.className = 'item-editor-wizard__nav';
+  wizardNav.setAttribute('aria-label', 'Passaggi modifica oggetto');
+  const wizardBody = document.createElement('div');
+  wizardBody.className = 'item-editor-wizard__body';
+  const wizardSteps = [
+    { label: 'Identità', hint: 'Nome e tipologia', sections: [identitySection, classificationSection] },
+    { label: 'Inventario', hint: 'Quantità e stato', sections: [logisticsSection, ...(catalogMode ? [] : [placementSection]), statusSection] },
+    { label: 'Equipaggiamento', hint: 'Uso e vestibilità', sections: [equipmentSection] },
+    { label: 'Statistiche e combattimento', hint: 'Arma o armatura', sections: [combatSection], combatOnly: true },
+    { label: 'Descrizione', hint: 'Dettagli dell’oggetto', sections: [notesSection] }
+  ].map((step, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'item-editor-wizard__step-button';
+    button.dataset.itemEditorStep = String(index);
+    button.innerHTML = `<span>${index + 1}</span><strong>${step.label}</strong><small>${step.hint}</small>`;
+    const panel = document.createElement('div');
+    panel.className = 'item-editor-wizard__panel';
+    panel.dataset.itemEditorPanel = String(index);
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', `Passaggio ${index + 1}: ${step.label}`);
+    step.sections.forEach((section) => panel.appendChild(section));
+    wizardNav.appendChild(button);
+    wizardBody.appendChild(panel);
+    return { ...step, button, panel };
   });
+  const wizardActions = document.createElement('div');
+  wizardActions.className = 'item-editor-wizard__actions item-editor-wizard__actions--footer character-edit-stepper-actions character-edit-stepper-actions--footer';
+  wizardActions.innerHTML = `
+    <button type="button" class="ghost-button" data-item-editor-back>Indietro</button>
+    <span data-item-editor-progress aria-live="polite"></span>
+    <button type="button" class="primary" data-item-editor-next>Continua</button>
+  `;
+  wizard.append(wizardNav, wizardBody, wizardActions);
+  fields.appendChild(wizard);
+  const wizardBack = wizardActions.querySelector('[data-item-editor-back]');
+  const wizardNext = wizardActions.querySelector('[data-item-editor-next]');
+  const wizardProgress = wizardActions.querySelector('[data-item-editor-progress]');
+  let activeWizardStep = 0;
+  let wizardSubmitButton = null;
+  let disposeEquipPicker = null;
+  let equipPickerMounted = false;
+
+  const validateWizardStep = (index) => {
+    const invalid = wizardSteps[index]?.panel.querySelector('input:invalid, select:invalid, textarea:invalid');
+    if (!invalid) return true;
+    invalid.reportValidity?.();
+    invalid.focus?.();
+    return false;
+  };
+  const getVisibleWizardStepIndexes = () => wizardSteps
+    .map((step, index) => (!step.combatOnly || ['weapon', 'armor'].includes(categorySelect.value) ? index : -1))
+    .filter((index) => index >= 0);
+  const showWizardStep = (nextIndex, { validateForward = false } = {}) => {
+    const visibleIndexes = getVisibleWizardStepIndexes();
+    let boundedIndex = Math.max(0, Math.min(wizardSteps.length - 1, nextIndex));
+    if (!visibleIndexes.includes(boundedIndex)) {
+      boundedIndex = [...visibleIndexes].reverse().find((index) => index < boundedIndex) ?? visibleIndexes[0];
+    }
+    if (validateForward && boundedIndex > activeWizardStep && !validateWizardStep(activeWizardStep)) return;
+    activeWizardStep = boundedIndex;
+    wizardSteps.forEach((step, index) => {
+      const visiblePosition = visibleIndexes.indexOf(index);
+      const visible = visiblePosition >= 0;
+      const active = index === activeWizardStep;
+      step.button.hidden = !visible;
+      step.panel.hidden = !active || !visible;
+      step.button.classList.toggle('is-active', active);
+      step.button.classList.toggle('is-complete', visible && visiblePosition < visibleIndexes.indexOf(activeWizardStep));
+      step.button.setAttribute('aria-current', active ? 'step' : 'false');
+      const stepNumber = step.button.querySelector(':scope > span');
+      if (stepNumber && visible) stepNumber.textContent = String(visiblePosition + 1);
+    });
+    const activeVisiblePosition = visibleIndexes.indexOf(activeWizardStep);
+    const finalStep = activeVisiblePosition === visibleIndexes.length - 1;
+    wizardNav.style.gridTemplateColumns = `repeat(${visibleIndexes.length}, minmax(0, 1fr))`;
+    wizardBack.disabled = activeVisiblePosition === 0;
+    wizardNext.hidden = false;
+    wizardNext.disabled = finalStep;
+    if (wizardSubmitButton) {
+      wizardSubmitButton.hidden = false;
+      wizardSubmitButton.disabled = !item && !finalStep;
+    }
+    wizardProgress.textContent = `Passaggio ${activeVisiblePosition + 1} di ${visibleIndexes.length}`;
+    if (activeWizardStep === 2 && !equipPickerMounted) {
+      equipPickerMounted = true;
+      disposeEquipPicker = mountEquipPicker();
+    }
+    wizardSteps[activeWizardStep].panel.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
+  const moveWizardStep = (direction) => {
+    const visibleIndexes = getVisibleWizardStepIndexes();
+    const currentPosition = visibleIndexes.indexOf(activeWizardStep);
+    const nextPosition = Math.max(0, Math.min(visibleIndexes.length - 1, currentPosition + direction));
+    showWizardStep(visibleIndexes[nextPosition], { validateForward: direction > 0 });
+  };
+  wizardBack.addEventListener('click', () => moveWizardStep(-1));
+  wizardNext.addEventListener('click', () => moveWizardStep(1));
+  wizardSteps.forEach((step, index) => step.button.addEventListener('click', () => {
+    showWizardStep(index, { validateForward: index > activeWizardStep });
+  }));
   const toggleFieldVisibility = (element, visible) => {
     if (!element) return;
     element.hidden = !visible;
@@ -574,13 +672,13 @@ export async function openItemModal(character, item, items = [], onSave, options
       }
       overlayableInput.closest('.condition-modal__item')?.classList.toggle('is-selected', overlayableInput.checked);
     }
+    toggleFieldVisibility(overlayableField, equipableEnabled);
     toggleFieldVisibility(equipSlotsField, equipableEnabled);
+    toggleFieldVisibility(equipSelectionSummary, equipableEnabled);
     syncEquipPickerState();
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
-    const isContainer = categorySelect.value === 'container';
     const isConsumable = categorySelect.value === 'consumable';
-    const itemKind = getKindFromCategory(categorySelect.value);
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
@@ -593,7 +691,9 @@ export async function openItemModal(character, item, items = [], onSave, options
       consumesAmmoInput.disabled = !isWeapon;
       consumesAmmoInput.closest('.condition-modal__item')?.classList.toggle('is-selected', consumesAmmoInput.checked);
     }
-    weaponAmmoTypeSelect.disabled = !isWeapon || !(consumesAmmoInput?.checked ?? false);
+    const consumesAmmo = isWeapon && Boolean(consumesAmmoInput?.checked);
+    weaponAmmoTypeSelect.disabled = !consumesAmmo;
+    toggleFieldVisibility(weaponAmmoTypeField, consumesAmmo);
     weaponPropertyInputs.forEach((input) => { input.disabled = !isWeapon; });
     weaponDamageModesField.querySelectorAll('input, select, button').forEach((field) => {
       field.disabled = !isWeapon;
@@ -602,15 +702,18 @@ export async function openItemModal(character, item, items = [], onSave, options
       thrownInput.disabled = !isWeapon;
       thrownInput.closest('.condition-modal__item')?.classList.toggle('is-selected', thrownInput.checked);
     }
-    const rangeInputs = rangeGrid.querySelectorAll('input');
-    rangeInputs.forEach((input) => {
-      input.disabled = !isWeapon;
-      if (!isWeapon) {
-        input.value = '';
-      } else if (input.name === 'melee_range' && !input.value) {
-        input.value = '1.5';
-      }
+    const isThrown = isWeapon && Boolean(thrownInput?.checked);
+    const isMeleeWeapon = isWeapon && weaponRangeSelect.value === 'melee';
+    if (meleeRangeInput) {
+      meleeRangeInput.disabled = !isMeleeWeapon;
+      if (isMeleeWeapon && !meleeRangeInput.value) meleeRangeInput.value = '1.5';
+    }
+    toggleFieldVisibility(meleeRangeField, isMeleeWeapon);
+    [rangeNormalInput, rangeDisadvantageInput].forEach((input) => {
+      if (input) input.disabled = !isThrown;
     });
+    toggleFieldVisibility(rangeNormalField, isThrown);
+    toggleFieldVisibility(rangeDisadvantageField, isThrown);
     armorTypeSelect.disabled = !isArmor;
     if (shieldInput) {
       shieldInput.disabled = !isArmor;
@@ -625,9 +728,10 @@ export async function openItemModal(character, item, items = [], onSave, options
     if (shieldBonusInput) {
       shieldBonusInput.disabled = !isArmor || !(shieldInput?.checked ?? false);
     }
+    toggleFieldVisibility(shieldBonusField, isArmor && Boolean(shieldInput?.checked));
 
-    const showWeaponFields = itemKind === 'weapon';
-    const showArmorFields = itemKind === 'armor';
+    const showWeaponFields = isWeapon;
+    const showArmorFields = isArmor;
     toggleFieldVisibility(weaponPrimaryRow, showWeaponFields);
     toggleFieldVisibility(weaponDamageRow, showWeaponFields);
     toggleFieldVisibility(rangeGrid, showWeaponFields);
@@ -637,24 +741,19 @@ export async function openItemModal(character, item, items = [], onSave, options
     toggleFieldVisibility(armorPrimaryRow, showArmorFields);
     toggleFieldVisibility(armorShieldRow, showArmorFields);
     toggleFieldVisibility(combatSection, showWeaponFields || showArmorFields);
-    toggleFieldVisibility(maxVolumeField, isContainer);
     toggleFieldVisibility(ammunitionTypeField, isConsumable);
     ammunitionTypeSelect.disabled = !isConsumable;
-    if (maxVolumeInput) {
-      maxVolumeInput.disabled = !isContainer;
-      if (!isContainer) {
-        maxVolumeInput.value = '';
-      }
-    }
+    showWizardStep(activeWizardStep);
   };
   equipableInput?.addEventListener('change', updateEquipmentFields);
   categorySelect.addEventListener('change', () => {
-    syncKindWithCategory();
+    syncCategoryCards();
     updateEquipmentFields();
   });
   shieldInput?.addEventListener('change', updateEquipmentFields);
   thrownInput?.addEventListener('change', updateEquipmentFields);
   consumesAmmoInput?.addEventListener('change', updateEquipmentFields);
+  weaponRangeSelect.addEventListener('change', updateEquipmentFields);
   weaponPropertyInputs.forEach((input) => input.addEventListener('change', () => {
     if (input.checked && ['due_mani', 'versatile'].includes(input.value)) {
       weaponPropertyInputs
@@ -671,19 +770,52 @@ export async function openItemModal(character, item, items = [], onSave, options
     }
     updateEquipmentFields();
   }));
-  syncKindWithCategory();
+  syncCategoryCards();
   updateEquipmentFields();
 
   enhanceNumericFields(fields);
 
   const formData = await present({
     title: item
-      ? (catalogMode ? 'Modifica oggetto del compendio' : 'Modifica oggetto')
+      ? `${catalogMode ? 'Modifica oggetto del compendio' : 'Modifica oggetto'}: ${item.name?.trim() || 'Senza nome'}`
       : (catalogMode ? 'Nuovo oggetto del compendio' : 'Nuovo oggetto'),
-    submitLabel: item ? 'Salva' : 'Crea',
+    submitLabel: 'Salva',
     content: fields,
     cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--item-editor'],
-    onOpen: () => mountEquipPicker()
+    onOpen: ({ modal, formEl }) => {
+      modal?.classList.add('item-editor-modal-active');
+      wizardSubmitButton = modal?.querySelector('[data-form-submit]') || formEl?.querySelector('button[type="submit"]');
+      const modalActions = modal?.querySelector('.modal-footer .modal-actions');
+      const centeredActions = document.createElement('div');
+      centeredActions.className = 'modal-actions__center item-editor-wizard__footer-center';
+      if (modalActions) {
+        centeredActions.appendChild(wizardActions);
+        modalActions.classList.add('modal-actions--with-center');
+        modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
+      }
+      const guardIntermediateSubmit = (event) => {
+        const visibleStepIndexes = getVisibleWizardStepIndexes();
+        if (item || activeWizardStep === visibleStepIndexes[visibleStepIndexes.length - 1]) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        moveWizardStep(1);
+      };
+      formEl?.addEventListener('submit', guardIntermediateSubmit, true);
+      showWizardStep(0);
+      nameInput?.focus();
+      return () => {
+        formEl?.removeEventListener('submit', guardIntermediateSubmit, true);
+        if (wizardSubmitButton) {
+          wizardSubmitButton.hidden = false;
+          wizardSubmitButton.disabled = false;
+        }
+        modal?.classList.remove('item-editor-modal-active');
+        centeredActions.remove();
+        modalActions?.classList.remove('modal-actions--with-center');
+        wizard.appendChild(wizardActions);
+        disposeEquipPicker?.();
+      };
+    }
   });
   if (!formData) return;
   const equipableEnabled = formData.get('equipable') === 'on';
@@ -723,12 +855,12 @@ export async function openItemModal(character, item, items = [], onSave, options
     image_url: formData.get('image_url')?.trim() || null,
     qty: Number(formData.get('qty')),
     weight: Number(formData.get('weight')),
-    volume: Number(formData.get('volume')) || 0,
+    volume: Number(item?.volume) || 0,
     value_cp: Number(formData.get('value_cp')),
     category,
     container_item_id: catalogMode ? null : (formData.get('container_item_id') || null),
     ...(catalogMode ? {} : { inventory_location: formData.get('inventory_location')?.trim() || null }),
-    max_volume: formData.get('max_volume') === '' ? null : Number(formData.get('max_volume')),
+    max_volume: item?.max_volume ?? null,
     equipable: equipableEnabled,
     equip_slot: equipSlot,
     equip_slots: equippedSlots,

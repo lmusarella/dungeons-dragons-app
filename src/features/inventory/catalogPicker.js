@@ -176,11 +176,19 @@ export async function openSharedItemPicker({
     onOpen: ({ modal }) => {
       let mounted = true;
       let headerActionButton = null;
+      let headerActionHost = null;
       submitButton = modal?.querySelector('[data-form-submit], .sheet-view-footer button[type="submit"]');
       if (submitButton) submitButton.disabled = true;
       if (headerActionLabel && typeof onHeaderAction === 'function') {
         const sheetActions = modal?.querySelector(':scope > .modal-header .sheet-modal-actions');
-        const headerActions = sheetActions || modal?.querySelector('[data-form-header-actions]');
+        let headerActions = modal?.querySelector('[data-form-header-actions]');
+        if (sheetActions && modal?.classList.contains('sheet-detail--inline')) {
+          headerActionHost = document.createElement('div');
+          headerActionHost.className = 'modal-header__actions shared-item-picker__header-actions';
+          headerActionHost.dataset.formHeaderActions = '';
+          sheetActions.prepend(headerActionHost);
+          headerActions = headerActionHost;
+        }
         if (headerActions) {
           headerActionButton = document.createElement('button');
           headerActionButton.type = 'button';
@@ -217,6 +225,7 @@ export async function openSharedItemPicker({
       return () => {
         mounted = false;
         headerActionButton?.remove();
+        headerActionHost?.remove();
         onLoadingChange?.(false);
       };
     }

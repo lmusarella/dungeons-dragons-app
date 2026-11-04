@@ -965,7 +965,7 @@ export function buildSpellSection(character, canManageSpells = false) {
     .filter((spell) => {
       const level = Number(spell.level) || 0;
       if (level < 1) return false;
-      const prepState = spell.prep_state || 'known';
+      const prepState = spell.prep_state === 'always' || spell.prep_state === 'always_prepared' ? 'always' : 'prepared';
       return !data.spellcasting?.can_prepare || prepState === 'prepared' || prepState === 'always';
     });
   const launchSpells = [...cantrips, ...preparedSpells];

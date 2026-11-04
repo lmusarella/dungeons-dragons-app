@@ -131,12 +131,17 @@ export function mountTabletLayout(container, configuration = {}) {
     }
     if (['Attacchi', 'Tiri Abilità', 'Tiri salvezza'].includes(title)) {
       headerActions.querySelectorAll('[data-open-dice]').forEach(control => control.remove());
-      if (title !== 'Tiri salvezza' && configuration.onAddRoll) {
+      if (title === 'Attacchi' && configuration.onConfigureAttack) {
+        const configure = document.createElement('button');
+        configure.type = 'button';
+        configure.className = 'ghost-button attack-configure-button';
+        configure.textContent = 'Configura attacco';
+        configure.addEventListener('click', () => configuration.onConfigureAttack());
+        headerActions.append(configure);
+      } else if (title === 'Tiri Abilità' && configuration.onAddRoll) {
         const add = document.createElement('button'); add.type = 'button'; add.className = 'icon-button'; add.textContent = '+';
-        add.setAttribute('aria-label', title === 'Attacchi' ? 'Aggiungi colpo senza armi' : 'Aggiungi tiro speciale');
-        add.addEventListener('click', () => {
-          configuration.onAddRoll(title === 'Attacchi' ? 'attack' : 'skill');
-        });
+        add.setAttribute('aria-label', 'Aggiungi tiro speciale');
+        add.addEventListener('click', () => configuration.onAddRoll('skill'));
         headerActions.append(add);
       }
     }
