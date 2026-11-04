@@ -1841,6 +1841,15 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     return section;
   };
   const nameField = buildInput({ label: 'Nome abilità', name: 'name', placeholder: 'Es. Azione Impetuosa', value: resource?.name ?? '' });
+  const nameInput = nameField.querySelector('input');
+  if (nameInput) {
+    nameInput.required = true;
+    nameInput.title = 'Inserisci il nome dell’abilità.';
+    nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
+    nameInput.addEventListener('invalid', () => {
+      if (nameInput.validity.valueMissing) nameInput.setCustomValidity('Inserisci il nome dell’abilità.');
+    });
+  }
   const imageField = buildInput({
     label: 'Foto (URL)',
     name: 'image_url',
@@ -2015,33 +2024,107 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     placeholder: 'Inserisci una descrizione, effetti e note di utilizzo...',
     value: resource?.description ?? ''
   });
-  form.appendChild(buildSection({
+  const identitySection = buildSection({
     title: 'Dettagli abilità',
     description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
     content: identitySectionRows
-  }));
+  });
   const usageSection = buildSection({
     title: 'Utilizzi, pool e recupero',
     description: 'Scegli Cariche per utilizzi singoli, Pool per consumare quantità variabili oppure Passiva per abilità sempre attive.',
     content: chargeSectionRows
   });
-  form.appendChild(usageSection);
   const childUsageSection = buildSection({
     title: 'Consumo risorsa padre',
     description: 'Configura quante cariche o punti del padre vengono consumati usando questa sotto-abilità.',
     content: [buildRow([resourceCostField, variableResourceCostField], 'balanced')]
   });
-  form.appendChild(childUsageSection);
-  form.appendChild(buildSection({
+  const rollsSection = buildSection({
     title: 'Tiri e CD',
     description: 'Configura il dado opzionale dell’abilità e l’eventuale caratteristica del tiro salvezza richiesto.',
     content: [buildRow([damageDiceNotationField, damageModifierField, resourceDamageTypeField, resourceSavingThrowField], 'compact')]
-  }));
-  form.appendChild(buildSection({
+  });
+  const descriptionSection = buildSection({
     title: 'Descrizione',
     description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.',
     content: [descriptionField],
     variant: 'ability-modal-section--description'
+  });
+
+  const wizard = document.createElement('div');
+  wizard.className = 'item-editor-wizard ability-editor-wizard';
+  const wizardNav = document.createElement('nav');
+  wizardNav.className = 'item-editor-wizard__nav ability-editor-wizard__nav';
+  wizardNav.setAttribute('aria-label', 'Passaggi modifica abilità');
+  const wizardBody = document.createElement('div');
+  wizardBody.className = 'item-editor-wizard__body';
+  const wizardSteps = [
+    { label: 'Identità', hint: 'Nome e organizzazione', sections: [identitySection] },
+    { label: 'Utilizzi e tiri', hint: 'Cariche, dadi e CD', sections: [usageSection, childUsageSection, rollsSection] },
+    { label: 'Descrizione', hint: 'Regole e dettagli', sections: [descriptionSection] }
+  ].map((step, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'item-editor-wizard__step-button';
+    button.dataset.abilityEditorStep = String(index);
+    button.innerHTML = `<span>${index + 1}</span><strong>${step.label}</strong><small>${step.hint}</small>`;
+    const panel = document.createElement('div');
+    panel.className = 'item-editor-wizard__panel ability-editor-wizard__panel';
+    panel.dataset.abilityEditorPanel = String(index);
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', `Passaggio ${index + 1}: ${step.label}`);
+    step.sections.forEach((section) => panel.appendChild(section));
+    wizardNav.appendChild(button);
+    wizardBody.appendChild(panel);
+    return { ...step, button, panel };
+  });
+  const wizardActions = document.createElement('div');
+  wizardActions.className = 'item-editor-wizard__actions item-editor-wizard__actions--footer character-edit-stepper-actions character-edit-stepper-actions--footer';
+  wizardActions.innerHTML = `
+    <button type="button" class="ghost-button" data-ability-editor-back>Indietro</button>
+    <span data-ability-editor-progress aria-live="polite"></span>
+    <button type="button" class="primary" data-ability-editor-next>Continua</button>
+  `;
+  wizard.append(wizardNav, wizardBody, wizardActions);
+  form.appendChild(wizard);
+  const wizardBack = wizardActions.querySelector('[data-ability-editor-back]');
+  const wizardNext = wizardActions.querySelector('[data-ability-editor-next]');
+  const wizardProgress = wizardActions.querySelector('[data-ability-editor-progress]');
+  let activeWizardStep = 0;
+  let wizardSubmitButton = null;
+
+  const validateWizardStep = (index) => {
+    const invalid = wizardSteps[index]?.panel.querySelector('input:invalid, select:invalid, textarea:invalid');
+    if (!invalid) return true;
+    invalid.reportValidity?.();
+    invalid.focus?.();
+    return false;
+  };
+  const showWizardStep = (nextIndex, { validateForward = false } = {}) => {
+    const boundedIndex = Math.max(0, Math.min(wizardSteps.length - 1, nextIndex));
+    if (validateForward && boundedIndex > activeWizardStep && !validateWizardStep(activeWizardStep)) return;
+    activeWizardStep = boundedIndex;
+    wizardSteps.forEach((step, index) => {
+      const active = index === activeWizardStep;
+      step.panel.hidden = !active;
+      step.button.classList.toggle('is-active', active);
+      step.button.classList.toggle('is-complete', index < activeWizardStep);
+      step.button.setAttribute('aria-current', active ? 'step' : 'false');
+    });
+    const finalStep = activeWizardStep === wizardSteps.length - 1;
+    wizardBack.disabled = activeWizardStep === 0;
+    wizardNext.disabled = finalStep;
+    if (wizardSubmitButton) {
+      wizardSubmitButton.hidden = false;
+      wizardSubmitButton.disabled = !resource && !finalStep;
+    }
+    wizardProgress.textContent = `Passaggio ${activeWizardStep + 1} di ${wizardSteps.length}`;
+    wizardSteps[activeWizardStep].panel.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
+  wizardBack.addEventListener('click', () => showWizardStep(activeWizardStep - 1));
+  wizardNext.addEventListener('click', () => showWizardStep(activeWizardStep + 1, { validateForward: true }));
+  wizardSteps.forEach((step, index) => step.button.addEventListener('click', () => {
+    showWizardStep(index, { validateForward: index > activeWizardStep });
   }));
 
   const maxUsesInput = form.querySelector('input[name="max_uses"]');
@@ -2078,11 +2161,43 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   variableResourceCostInput?.addEventListener('change', syncResourceTypeState);
   syncResourceTypeState();
 
-  openFormModal({
-    title: resource ? 'Modifica abilità' : (parentSelect.value ? 'Nuova opzione abilità' : 'Nuova abilità'),
-    submitLabel: resource ? 'Salva' : 'Crea',
+  return openFormModal({
+    title: resource ? `Modifica abilità: ${resource.name || 'Senza nome'}` : (parentSelect.value ? 'Nuova opzione abilità' : 'Nuova abilità'),
+    submitLabel: 'Salva',
     content: form,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--ability-editor'],
+    onOpen: ({ modal, formEl }) => {
+      modal?.classList.add('ability-editor-modal-active');
+      wizardSubmitButton = modal?.querySelector('[data-form-submit]') || formEl?.querySelector('button[type="submit"]');
+      const modalActions = modal?.querySelector('.modal-footer .modal-actions');
+      const centeredActions = document.createElement('div');
+      centeredActions.className = 'modal-actions__center item-editor-wizard__footer-center ability-editor-wizard__footer-center';
+      if (modalActions) {
+        centeredActions.appendChild(wizardActions);
+        modalActions.classList.add('modal-actions--with-center');
+        modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
+      }
+      const guardIntermediateSubmit = (event) => {
+        if (resource || activeWizardStep === wizardSteps.length - 1) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showWizardStep(activeWizardStep + 1, { validateForward: true });
+      };
+      formEl?.addEventListener('submit', guardIntermediateSubmit, true);
+      showWizardStep(0);
+      nameInput?.focus();
+      return () => {
+        formEl?.removeEventListener('submit', guardIntermediateSubmit, true);
+        if (wizardSubmitButton) {
+          wizardSubmitButton.hidden = false;
+          wizardSubmitButton.disabled = false;
+        }
+        modal?.classList.remove('ability-editor-modal-active');
+        centeredActions.remove();
+        modalActions?.classList.remove('modal-actions--with-center');
+        wizard.appendChild(wizardActions);
+      };
+    }
   }).then(async (formData) => {
     if (!formData) return;
     const name = formData.get('name')?.trim();

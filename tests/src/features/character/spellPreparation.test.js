@@ -58,6 +58,7 @@ describe('spell preparation helpers', () => {
     expect(layout).toContain("prepareControl.classList.add('sheet-spell-action', 'sheet-spell-action--prepare')");
     expect(layout).toContain("addSpellControl.classList.add('sheet-spell-action', 'sheet-spell-action--add')");
     expect(layout).toContain('<span aria-hidden="true">+</span><span>Aggiungi incantesimi</span>');
+    expect(layout).toContain('<span aria-hidden="true">+</span><span>Aggiungi Abilità</span>');
     expect(layout).not.toContain('const prepareShortcut = addPanel');
     expect(layout).not.toContain("preparation.className = 'sheet-preparation'");
     expect(baseStyles).not.toContain('.shared-spell-picker__spell-badges');

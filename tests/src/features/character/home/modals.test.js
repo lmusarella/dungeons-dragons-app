@@ -184,6 +184,25 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('class="diceov-toggle-track"');
   });
 
+  it('uses a guided create and edit flow for abilities', () => {
+    const source = readFileSync('src/features/character/home/modals.js', 'utf8');
+    const styles = readFileSync('src/styles/theme.css', 'utf8');
+    const editor = source.slice(source.indexOf('export function openResourceDrawer'));
+
+    expect(editor).toContain("{ label: 'Identità', hint: 'Nome e organizzazione'");
+    expect(editor).toContain("{ label: 'Utilizzi e tiri', hint: 'Cariche, dadi e CD'");
+    expect(editor).toContain('sections: [usageSection, childUsageSection, rollsSection]');
+    expect(editor).toContain("{ label: 'Descrizione', hint: 'Regole e dettagli'");
+    expect(editor).toContain('data-ability-editor-back');
+    expect(editor).toContain('data-ability-editor-next');
+    expect(editor).toContain("wizardSubmitButton.disabled = !resource && !finalStep");
+    expect(editor).toContain("nameInput.title = 'Inserisci il nome dell’abilità.'");
+    expect(editor).toContain("title: resource ? `Modifica abilità: ${resource.name || 'Senza nome'}`");
+    expect(editor).toContain("cardClass: ['modal-card--form', 'modal-card--ability-editor']");
+    expect(styles).toContain('.modal-card--ability-editor');
+    expect(styles).toContain('.ability-editor-wizard__panel[data-ability-editor-panel="2"] textarea');
+  });
+
   it('keeps child actions separate from parent detail actions', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const detailActions = readFileSync('src/features/character/home/detailManagement.js', 'utf8');

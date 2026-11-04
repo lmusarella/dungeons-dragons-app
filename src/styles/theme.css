@@ -1587,6 +1587,53 @@ body {
   align-self: end;
 }
 
+.spell-launch-options-row > .spell-saving-throw-ability {
+  margin-bottom: 0;
+}
+
+.spell-launch-options-row .spell-saving-throw-ability select,
+.spell-launch-options-row .spell-choice-card > span {
+  min-height: 52px;
+}
+
+.spell-launch-options-row .spell-saving-throw-ability > span,
+.spell-launch-options-row .spell-choice-group__label {
+  min-height: 17px;
+  line-height: 17px;
+}
+
+.modal-card--ability-editor {
+  width: min(960px, 96vw);
+  max-height: 92vh;
+}
+
+.modal-card--ability-editor .modal-body {
+  background: linear-gradient(180deg, #fffaf1, #f9efd9);
+}
+
+.ability-editor-wizard__panel {
+  gap: 12px;
+}
+
+.ability-editor-wizard__nav {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ability-editor-wizard__panel > .ability-modal-section {
+  margin: 0;
+}
+
+.ability-editor-wizard__panel[data-ability-editor-panel="2"] textarea {
+  min-height: 280px;
+}
+
+.ability-editor-modal-active [data-form-submit]:disabled {
+  display: inline-flex;
+  visibility: visible;
+  opacity: .52;
+  cursor: not-allowed;
+}
+
 .spell-editor-wizard__panel[data-spell-editor-panel="3"] textarea {
   min-height: 280px;
 }

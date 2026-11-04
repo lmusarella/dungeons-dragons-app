@@ -195,6 +195,14 @@ export function mountTabletLayout(container, configuration = {}) {
     prepareControl.classList.add('sheet-spell-action', 'sheet-spell-action--prepare');
     prepareControl.innerHTML = '<span aria-hidden="true">📖</span><span>Prepara incantesimi</span>';
   }
+  const resourcePanel = layout.querySelector('.home-feature-panel--resources');
+  const resourceDialog = resourcePanel?.closest('dialog');
+  const addResourceControl = resourceDialog?.querySelector('[data-add-resource]');
+  if (addResourceControl) {
+    addResourceControl.classList.add('sheet-resource-action', 'sheet-resource-action--add');
+    addResourceControl.setAttribute('aria-label', 'Aggiungi abilità');
+    addResourceControl.innerHTML = '<span aria-hidden="true">+</span><span>Aggiungi Abilità</span>';
+  }
   addPanel(layout.querySelector('.home-column--center > :nth-child(2)'), '♙', 'Equipaggiamento', 'Oggetti e dotazioni');
   createInventoryShortcut(addPanel, configuration);
   createCharacterShortcuts(addPanel, configuration);
