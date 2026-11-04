@@ -39,6 +39,12 @@ describe('src/features/library/library.js', () => {
     expect(styles).toContain('.library-shell--refined');
     expect(styles).toContain('.library-spell-card:focus-visible');
     expect(styles).toContain('.library-item-card { min-height: 0; }');
+    expect(source).toContain('data-spell-class="${value}" aria-pressed="false"');
+    expect(source).toContain('data-item-trait="magic" aria-pressed="false"');
+    expect(source).toContain("button.setAttribute('aria-pressed', String(state.spellLevels.has(level)))");
+    expect(styles).toContain('.library-category-pills button::after');
+    expect(styles).toContain('grid-template-columns: minmax(180px, 360px) minmax(0, 1fr) auto');
+    expect(styles).toContain('min-height: 32px; align-self: end;');
   });
 
   it('preserves imported spell metadata when editing or assigning catalog entries', () => {

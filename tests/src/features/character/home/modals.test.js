@@ -69,6 +69,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('attachUnifiedDetailActions(modal, formEl, { onEdit, onDelete })');
     expect(management).toContain("modal.querySelector('[data-form-header-actions]')");
     expect(management).toContain("actions.closest('.sheet-management-menu')");
+    expect(management).toContain("modal.classList.add('detail-actions-in-header-left')");
+    expect(management).toContain("modal.classList.remove('detail-actions-in-header-left')");
     expect(layout).toContain('class="modal-header__top"');
     expect(layout).toContain('data-form-header-actions');
   });

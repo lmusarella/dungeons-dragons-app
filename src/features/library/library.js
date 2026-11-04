@@ -228,23 +228,23 @@ export async function renderLibrary(container) {
                 <div class="spell-manual-filter__options" data-spell-source-options></div>
               </details>
               <div class="library-version-switch" role="group" aria-label="Versione delle regole">
-                <span>Regole</span><div><button type="button" class="is-active" data-spell-version="2014">2014</button><button type="button" data-spell-version="2024">2024</button></div>
+                <span>Regole</span><div><button type="button" class="is-active" data-spell-version="2014" aria-pressed="true">2014</button><button type="button" data-spell-version="2024" aria-pressed="false">2024</button></div>
               </div>
               <button type="button" class="library-reset-button" data-reset-spells>↺ Azzera</button>
             </div>
             <div class="library-filter-strip library-filter-strip--classes">
               <span class="library-filter-strip__label">Classe</span>
-              <div class="library-class-pills">${SPELL_CASTER_CLASSES.map(([value, label]) => `<button type="button" data-spell-class="${value}">${label}</button>`).join('')}</div>
+              <div class="library-class-pills">${SPELL_CASTER_CLASSES.map(([value, label]) => `<button type="button" data-spell-class="${value}" aria-pressed="false">${label}</button>`).join('')}</div>
             </div>
             <div class="library-filter-strip">
               <span class="library-filter-strip__label">Livello</span>
               <div class="library-level-pills" data-spell-levels>
-                <button type="button" data-level="0">Trucchetti</button>
-                ${Array.from({ length: 9 }, (_, index) => `<button type="button" data-level="${index + 1}">${index + 1}°</button>`).join('')}
+                <button type="button" data-level="0" aria-pressed="false">Trucchetti</button>
+                ${Array.from({ length: 9 }, (_, index) => `<button type="button" data-level="${index + 1}" aria-pressed="false">${index + 1}°</button>`).join('')}
               </div>
               <div class="library-trait-pills">
-                <button type="button" data-spell-trait="concentration">Concentrazione</button>
-                <button type="button" data-spell-trait="ritual">Rituale</button>
+                <button type="button" data-spell-trait="concentration" aria-pressed="false">Concentrazione</button>
+                <button type="button" data-spell-trait="ritual" aria-pressed="false">Rituale</button>
               </div>
             </div>
           </div>
@@ -258,15 +258,15 @@ export async function renderLibrary(container) {
             <div class="library-search-line library-search-line--items">
               <label class="library-search-field"><span>Nome</span><input type="search" placeholder="Cerca un oggetto…" data-item-query /></label>
               <div class="library-trait-pills">
-                <button type="button" data-item-trait="magic">Magici</button>
-                <button type="button" data-item-trait="equipable">Equipaggiabili</button>
+                <button type="button" data-item-trait="magic" aria-pressed="false">Magici</button>
+                <button type="button" data-item-trait="equipable" aria-pressed="false">Equipaggiabili</button>
               </div>
               <button type="button" class="library-reset-button" data-reset-items>↺ Azzera</button>
             </div>
             <div class="library-filter-strip library-filter-strip--categories">
               <span class="library-filter-strip__label">Categoria</span>
               <div class="library-category-pills" data-item-categories>
-                ${itemCategories.map((category) => `<button type="button" data-category="${escapeHtml(category.value)}">${escapeHtml(category.label)}</button>`).join('')}
+                ${itemCategories.map((category) => `<button type="button" data-category="${escapeHtml(category.value)}" aria-pressed="false">${escapeHtml(category.label)}</button>`).join('')}
               </div>
             </div>
           </div>
@@ -476,6 +476,7 @@ export async function renderLibrary(container) {
     const level = button.dataset.level;
     state.spellLevels.has(level) ? state.spellLevels.delete(level) : state.spellLevels.add(level);
     button.classList.toggle('is-active', state.spellLevels.has(level));
+    button.setAttribute('aria-pressed', String(state.spellLevels.has(level)));
     state.spellPage = 1;
     renderSpells();
   }));
@@ -483,12 +484,17 @@ export async function renderLibrary(container) {
     const trait = button.dataset.spellTrait;
     state.spellTraits.has(trait) ? state.spellTraits.delete(trait) : state.spellTraits.add(trait);
     button.classList.toggle('is-active', state.spellTraits.has(trait));
+    button.setAttribute('aria-pressed', String(state.spellTraits.has(trait)));
     state.spellPage = 1;
     renderSpells();
   }));
   container.querySelectorAll('[data-spell-version]').forEach((button) => button.addEventListener('click', () => {
     state.spellRulesVersion = button.dataset.spellVersion;
-    container.querySelectorAll('[data-spell-version]').forEach((entry) => entry.classList.toggle('is-active', entry === button));
+    container.querySelectorAll('[data-spell-version]').forEach((entry) => {
+      const active = entry === button;
+      entry.classList.toggle('is-active', active);
+      entry.setAttribute('aria-pressed', String(active));
+    });
     state.spellPage = 1;
     syncSpellSourceOptions();
     renderSpells();
@@ -497,6 +503,7 @@ export async function renderLibrary(container) {
     const casterClass = button.dataset.spellClass;
     state.spellCasterClasses.has(casterClass) ? state.spellCasterClasses.delete(casterClass) : state.spellCasterClasses.add(casterClass);
     button.classList.toggle('is-active', state.spellCasterClasses.has(casterClass));
+    button.setAttribute('aria-pressed', String(state.spellCasterClasses.has(casterClass)));
     state.spellPage = 1;
     renderSpells();
   }));
@@ -508,8 +515,15 @@ export async function renderLibrary(container) {
     state.spellRulesVersion = '2014';
     state.spellCasterClasses.clear();
     state.spellTraits.clear();
-    container.querySelectorAll('[data-level], [data-spell-trait], [data-spell-class]').forEach((button) => button.classList.remove('is-active'));
-    container.querySelectorAll('[data-spell-version]').forEach((button) => button.classList.toggle('is-active', button.dataset.spellVersion === '2014'));
+    container.querySelectorAll('[data-level], [data-spell-trait], [data-spell-class]').forEach((button) => {
+      button.classList.remove('is-active');
+      button.setAttribute('aria-pressed', 'false');
+    });
+    container.querySelectorAll('[data-spell-version]').forEach((button) => {
+      const active = button.dataset.spellVersion === '2014';
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
     syncSpellSourceOptions();
     state.spellPage = 1;
     renderSpells();
@@ -518,7 +532,11 @@ export async function renderLibrary(container) {
   container.querySelector('[data-item-query]').addEventListener('input', () => { state.itemPage = 1; renderItems(); });
   container.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
     state.itemCategory = state.itemCategory === button.dataset.category ? '' : button.dataset.category;
-    container.querySelectorAll('[data-category]').forEach((entry) => entry.classList.toggle('is-active', entry.dataset.category === state.itemCategory));
+    container.querySelectorAll('[data-category]').forEach((entry) => {
+      const active = entry.dataset.category === state.itemCategory;
+      entry.classList.toggle('is-active', active);
+      entry.setAttribute('aria-pressed', String(active));
+    });
     state.itemPage = 1;
     renderItems();
   }));
@@ -526,6 +544,7 @@ export async function renderLibrary(container) {
     const trait = button.dataset.itemTrait;
     state.itemTraits.has(trait) ? state.itemTraits.delete(trait) : state.itemTraits.add(trait);
     button.classList.toggle('is-active', state.itemTraits.has(trait));
+    button.setAttribute('aria-pressed', String(state.itemTraits.has(trait)));
     state.itemPage = 1;
     renderItems();
   }));
@@ -533,7 +552,10 @@ export async function renderLibrary(container) {
     container.querySelector('[data-item-query]').value = '';
     state.itemCategory = '';
     state.itemTraits.clear();
-    container.querySelectorAll('[data-category], [data-item-trait]').forEach((button) => button.classList.remove('is-active'));
+    container.querySelectorAll('[data-category], [data-item-trait]').forEach((button) => {
+      button.classList.remove('is-active');
+      button.setAttribute('aria-pressed', 'false');
+    });
     state.itemPage = 1;
     renderItems();
   });

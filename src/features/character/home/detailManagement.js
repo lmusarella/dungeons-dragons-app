@@ -24,6 +24,7 @@ export function attachUnifiedDetailActions(modal, formEl, {
   };
 
   actions.classList.add('detail-modal-actions', 'detail-modal-actions--overflow');
+  modal.classList.add('detail-actions-in-header-left');
   const shellOwnsOverflow = Boolean(actions.closest('.sheet-management-menu'));
   let root = actions;
   let panel = actions;
@@ -68,5 +69,6 @@ export function attachUnifiedDetailActions(modal, formEl, {
     if (shellOwnsOverflow) actionButtons.forEach((button) => button.remove());
     else root.remove();
     actions.classList.remove('detail-modal-actions', 'detail-modal-actions--overflow');
+    modal.classList.remove('detail-actions-in-header-left');
   };
 }
