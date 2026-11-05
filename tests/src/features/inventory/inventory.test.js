@@ -65,7 +65,8 @@ describe('src/features/inventory/inventory.js', () => {
     expect(picker).toContain('const syncCategoryButtons = () =>');
     expect(picker).toContain('button.blur()');
     expect(inventory).toContain("title: 'Loot rapido'");
-    expect(inventory).toContain('openQuickLootItemModal(activeCharacter');
+    expect(inventory).toContain('openItemModal(activeCharacter, null, items');
+    expect(picker).not.toContain('Aggiungi oggetto manualmente');
     expect(inventory).toContain('allowQuantities: true');
     expect(picker).toContain('modal-card--shortcut-size');
     expect(inventory).toContain("headerActionLabel: 'Nuovo oggetto'");

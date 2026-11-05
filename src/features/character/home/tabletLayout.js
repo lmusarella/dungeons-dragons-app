@@ -175,6 +175,22 @@ export function mountTabletLayout(container, configuration = {}) {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
     });
+    dialog.addEventListener('close', () => {
+      window.setTimeout(() => {
+        delete dialog.dataset.shortcutView;
+        delete dialog.dataset.resourceId;
+        dialog.querySelectorAll('[data-shortcut-view], [data-shortcut-kind], [data-inventory-shortcut]').forEach((host) => {
+          delete host.dataset.shortcutView;
+        });
+        dialog.querySelectorAll('.shortcut-view-tabs').forEach((tabs) => {
+          tabs.querySelector('[role="tab"]')?.click();
+        });
+        [dialog, ...dialog.querySelectorAll('*')].forEach((node) => {
+          if (node.scrollTop) node.scrollTop = 0;
+          if (node.scrollLeft) node.scrollLeft = 0;
+        });
+      }, 0);
+    }, { signal: events.signal });
     shortcuts.append(button);
     return button;
   }

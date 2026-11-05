@@ -18,7 +18,7 @@ import {
 import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories } from './constants.js';
 import { openItemModal } from './modals.js';
-import { addSharedItemsToInventory, openItemSourceModal, openQuickLootItemModal, openSharedItemPicker } from './catalogPicker.js';
+import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from './catalogPicker.js';
 import { buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
 import { getCategoryLabel, getEquipSlots, getWeightUnit, normalizeTransactionAmount } from './utils.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
@@ -932,13 +932,9 @@ export async function renderInventory(container) {
         title: 'Loot rapido',
         allowQuantities: true,
         headerActionLabel: 'Nuovo oggetto',
-        onHeaderAction: async () => {
+        onHeaderAction: async ({ present }) => {
           try {
-            const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
-            if (created) {
-              manualItemCreated = true;
-              createToast('Oggetto aggiunto', 'success');
-            }
+            await openItemModal(activeCharacter, null, items, () => { manualItemCreated = true; }, { present });
           } catch (error) {
             createToast('Errore durante l’aggiunta dell’oggetto', 'error');
           }

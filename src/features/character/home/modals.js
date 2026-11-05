@@ -392,8 +392,7 @@ export function openResourceDetail(resource, {
   onEdit,
   onDelete,
   onCreateChild,
-  onEditChild,
-  onDeleteChild
+  onOpenChild
 } = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
@@ -459,7 +458,7 @@ export function openResourceDetail(resource, {
       ? `${child.damage_dice_notation}${Number(child.damage_modifier) ? ` ${Number(child.damage_modifier) > 0 ? '+' : ''}${Number(child.damage_modifier)}` : ''}`
       : 'Nessun tiro';
     return `
-            <article class="resource-detail-option">
+            <button type="button" class="resource-detail-option" data-resource-child-open="${escapeHtml(child.id)}">
               <span class="resource-detail-option__branch" aria-hidden="true">${index + 1}</span>
               <div class="resource-detail-option__content">
                 <div class="resource-detail-option__heading">
@@ -472,11 +471,7 @@ export function openResourceDetail(resource, {
                 </div>
                 ${childDescription ? `<p>${escapeHtml(childDescription)}</p>` : '<p class="muted">Nessuna descrizione.</p>'}
               </div>
-              ${onEditChild || onDeleteChild ? `<div class="resource-detail-option__actions">
-                ${onEditChild ? `<button type="button" data-resource-child-edit="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button" aria-label="Modifica ${escapeHtml(child.name || 'sotto-abilità')}" title="Modifica"><span aria-hidden="true">✏️</span></button>` : ''}
-                ${onDeleteChild ? `<button type="button" data-resource-child-delete="${escapeHtml(child.id)}" class="resource-action-button resource-icon-button icon-button--danger" aria-label="Elimina ${escapeHtml(child.name || 'sotto-abilità')}" title="Elimina"><span aria-hidden="true">🗑️</span></button>` : ''}
-              </div>` : ''}
-            </article>
+            </button>
           `;
   }).join('')}
         </div>` : '<div class="resource-detail-options__empty"><span aria-hidden="true">◇</span><p>Nessuna sotto-abilità configurata.</p></div>'}
@@ -496,29 +491,11 @@ export function openResourceDetail(resource, {
     cardClass: 'modal-card--resource-detail',
     onOpen: ({ modal, formEl }) => {
       const cleanupManagementActions = attachDetailManagementActions(modal, formEl, { onEdit, onDelete });
-      const childActionInput = document.createElement('input');
-      childActionInput.type = 'hidden';
-      childActionInput.name = 'resource_child_action';
-      formEl?.appendChild(childActionInput);
-
-      const submitChildAction = (action) => {
-        if (!formEl) return;
-        const detailActionInput = formEl.querySelector('input[name="detail_action"]');
-        if (detailActionInput) detailActionInput.value = '';
-        childActionInput.value = action;
-        formEl.requestSubmit();
-      };
       const createButton = detail.querySelector('[data-resource-child-create]');
-      const editButtons = [...detail.querySelectorAll('[data-resource-child-edit]')];
-      const deleteButtons = [...detail.querySelectorAll('[data-resource-child-delete]')];
-      const createHandler = () => submitChildAction('create');
-      const editHandlers = editButtons.map((button) => {
-        const handler = () => submitChildAction(`edit:${button.dataset.resourceChildEdit}`);
-        button.addEventListener('click', handler);
-        return [button, handler];
-      });
-      const deleteHandlers = deleteButtons.map((button) => {
-        const handler = () => submitChildAction(`delete:${button.dataset.resourceChildDelete}`);
+      const childButtons = [...detail.querySelectorAll('[data-resource-child-open]')];
+      const createHandler = () => onCreateChild?.();
+      const childHandlers = childButtons.map((button) => {
+        const handler = () => onOpenChild?.(button.dataset.resourceChildOpen);
         button.addEventListener('click', handler);
         return [button, handler];
       });
@@ -541,28 +518,13 @@ export function openResourceDetail(resource, {
 
       return () => {
         createButton?.removeEventListener('click', createHandler);
-        editHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
-        deleteHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
-        childActionInput.remove();
+        childHandlers.forEach(([button, handler]) => button.removeEventListener('click', handler));
         recoverButton?.remove();
         cleanupManagementActions?.();
       };
     }
   }).then(async (formData) => {
     if (!formData) return;
-    const childAction = formData.get('resource_child_action');
-    if (childAction === 'create' && onCreateChild) {
-      onCreateChild();
-      return;
-    }
-    if (childAction?.startsWith('edit:') && onEditChild) {
-      onEditChild(childAction.slice(5));
-      return;
-    }
-    if (childAction?.startsWith('delete:') && onDeleteChild) {
-      await onDeleteChild(childAction.slice(7));
-      return;
-    }
     const detailAction = formData.get('detail_action');
     if (detailAction === 'edit' && onEdit) {
       onEdit();
@@ -1836,7 +1798,7 @@ export function openAvatarModal(subject, onSave = null) {
   overlay.focus();
 }
 
-export function openResourceDrawer(character, onSave, resource = null, { parentResourceId = null } = {}) {
+export function openResourceDrawer(character, onSave, resource = null, { parentResourceId = null, present = openFormModal } = {}) {
   if (!character) return;
   const enhanceNumericField = (field, labels = {}) => {
     const input = field?.querySelector('input[type="number"]');
@@ -2182,7 +2144,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   variableResourceCostInput?.addEventListener('change', syncResourceTypeState);
   syncResourceTypeState();
 
-  return openFormModal({
+  return present({
     title: resource ? `Modifica abilità: ${resource.name || 'Senza nome'}` : (parentSelect.value ? 'Nuova opzione abilità' : 'Nuova abilità'),
     submitLabel: 'Salva',
     content: form,
@@ -2258,14 +2220,16 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     };
 
     try {
+      let savedResource;
       if (resource) {
-        await updateResource(resource.id, payload);
+        savedResource = await updateResource(resource.id, payload);
         createToast('Risorsa aggiornata');
       } else {
-        await createResource(payload);
+        savedResource = await createResource(payload);
         createToast('Risorsa creata');
       }
-      onSave();
+      await onSave?.(savedResource);
+      return savedResource;
     } catch (error) {
       createToast('Errore salvataggio risorsa', 'error');
     }

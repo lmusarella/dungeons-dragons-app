@@ -37,7 +37,7 @@ function getItemValueCp(item) {
   const factor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
   return Number.isFinite(quantity) && factor ? quantity * factor : 0;
 }
-export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false, present = openFormModal } = {}) {
+export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false, present = openFormModal, shortcutSize = false } = {}) {
   if (!item) return;
   const slots = getEquipSlots(item);
   const content = document.createElement('div');
@@ -119,7 +119,7 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
   return present({
     title: item.name || 'Oggetto',
     content, submitLabel: 'Chiudi', cancelLabel: null, showFooter: false,
-    cardClass: 'modal-card--equipment-item-detail',
+    cardClass: ['modal-card--equipment-item-detail', shortcutSize ? 'modal-card--shortcut-size' : ''],
     onOpen: ({ modal, formEl }) => {
       const host = content.querySelector('[data-item-body-view]');
       const mannequinCleanup = host

@@ -249,7 +249,7 @@ describe('src/features/character/home.js', () => {
     expect(source).not.toContain("event.target.closest('[data-actions-fab]')");
     const quickActionUses = (source.match(/modal-card--quick-action/g)?.length || 0)
       + (catalogPicker.match(/modal-card--quick-action/g)?.length || 0);
-    expect(quickActionUses).toBeGreaterThanOrEqual(3);
+    expect(quickActionUses).toBeGreaterThanOrEqual(2);
     expect(styles).toContain('.modal-card--quick-action .modal-footer');
     expect(styles).toContain('.modal-card--quick-action .modal-actions');
   });

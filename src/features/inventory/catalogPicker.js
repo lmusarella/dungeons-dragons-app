@@ -1,10 +1,9 @@
 import { searchSharedItems } from '../library/itemLibraryApi.js';
-import { attachNumberSteppers, createToast, openFormModal } from '../../ui/components.js';
+import { createToast, openFormModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { getCategoryLabel } from './utils.js';
 import { createItem, createItems } from './inventoryApi.js';
 import { itemCategories } from './constants.js';
-import { buildLootFields } from './render.js';
 import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
 
 export async function openItemSourceModal({
@@ -89,7 +88,7 @@ function presentPickerDetail(modal, options = {}) {
       primaryActions.append(submit);
     }
     form.append(fields, footer);
-    card.append(form);
+    card.insertBefore(form, parentForm);
     let cleanupHook = options.onOpen?.({ modal, formEl: form, fieldsEl: fields });
     let settled = false;
     const finish = (result) => {
@@ -171,6 +170,7 @@ export async function openSharedItemPicker({
   let submitButton = null;
   let syncSelections = () => {};
   let detailPresenter = openFormModal;
+  let selectedCount = 0;
 
   const syncCategoryButtons = () => {
     categoryButtons.forEach((button) => {
@@ -193,7 +193,6 @@ export async function openSharedItemPicker({
   };
 
   const syncSubmitState = () => {
-    const selectedCount = cards.filter((card) => card.querySelector('input[name="shared_item_ids"]')?.checked).length;
     if (!submitButton) return;
     submitButton.disabled = selectedCount === 0;
     submitButton.textContent = multiple
@@ -226,10 +225,9 @@ export async function openSharedItemPicker({
   }).join('')}
     </div>`;
     cards = [...content.querySelectorAll('[data-shared-item-option]')];
-    syncSelections = () => {
-      let selectedCount = 0;
-      cards.forEach((card) => {
-        const selection = card.querySelector('input[name="shared_item_ids"]');
+    const syncCardSelection = (card) => {
+      const selection = card.querySelector('input[name="shared_item_ids"]');
+      if (!selection) return;
         const quantityInput = card.querySelector('[data-shared-item-quantity] input');
         const selectButton = card.querySelector('[data-shared-item-select]');
         card.classList.toggle('is-selected', selection.checked);
@@ -237,7 +235,13 @@ export async function openSharedItemPicker({
         const label = selectButton?.querySelector('strong');
         if (label) label.textContent = selection.checked ? 'Selezionato' : 'Seleziona';
         if (quantityInput) quantityInput.disabled = !selection.checked;
-        if (selection.checked) selectedCount += 1;
+    };
+    syncSelections = () => {
+      selectedCount = 0;
+      cards.forEach((card) => {
+        const selection = card.querySelector('input[name="shared_item_ids"]');
+        syncCardSelection(card);
+        if (selection?.checked) selectedCount += 1;
       });
       clearSelectionButton.hidden = selectedCount === 0;
       syncSubmitState();
@@ -245,7 +249,23 @@ export async function openSharedItemPicker({
     cards.forEach((card) => {
       const selection = card.querySelector('input[name="shared_item_ids"]');
       const quantityInput = card.querySelector('[data-shared-item-quantity] input');
-      selection.addEventListener('change', syncSelections);
+      selection.addEventListener('change', () => {
+        const wasSelected = card.classList.contains('is-selected');
+        if (!multiple && selection.checked) {
+          cards.filter((entry) => entry !== card).forEach((entry) => {
+            const otherSelection = entry.querySelector('input[name="shared_item_ids"]');
+            if (!otherSelection?.checked) return;
+            otherSelection.checked = false;
+            syncCardSelection(entry);
+          });
+          selectedCount = 1;
+        } else if (selection.checked !== wasSelected) {
+          selectedCount += selection.checked ? 1 : -1;
+        }
+        syncCardSelection(card);
+        clearSelectionButton.hidden = selectedCount === 0;
+        syncSubmitState();
+      });
       card.querySelector('[data-shared-item-select]')?.addEventListener('click', () => {
         selection.checked = multiple ? !selection.checked : true;
         selection.dispatchEvent(new Event('change', { bubbles: true }));
@@ -256,7 +276,8 @@ export async function openSharedItemPicker({
         const template = item.item_data && typeof item.item_data === 'object' ? item.item_data : {};
         void openEquipmentItemDetail({ ...template, ...item, description: item.description || template.description }, {
           catalogMode: true,
-          present: detailPresenter
+          present: detailPresenter,
+          shortcutSize
         });
       });
       card.querySelectorAll('[data-quantity-step]').forEach((button) => {
@@ -326,7 +347,7 @@ export async function openSharedItemPicker({
           headerActionButton.addEventListener('click', async () => {
             headerActionButton.disabled = true;
             try {
-              await onHeaderAction();
+              await onHeaderAction({ present: detailPresenter });
             } finally {
               if (mounted) headerActionButton.disabled = false;
             }
@@ -372,37 +393,6 @@ export async function openSharedItemPicker({
         selected_quantity: Math.max(1, Number(formData.get(`shared_item_qty_${item.id}`)) || 1)
       } : {})
     }));
-}
-
-export async function openQuickLootItemModal(character, { title = 'Aggiungi oggetto manualmente', shortcutSize = false } = {}) {
-  if (!character) return null;
-  const formData = await openFormModal({
-    title,
-    submitLabel: 'Aggiungi',
-    cardClass: ['modal-card--quick-action', shortcutSize ? 'modal-card--shortcut-size' : ''],
-    content: buildLootFields(),
-    onOpen: ({ fieldsEl }) => attachNumberSteppers(fieldsEl)
-  });
-  if (!formData) return null;
-  const category = formData.get('category')?.toString() || 'loot';
-  const categoryDefinition = itemCategories.find((entry) => entry.value === category);
-  return createItem({
-    user_id: character.user_id,
-    character_id: character.id,
-    name: formData.get('name'),
-    qty: Number(formData.get('qty')),
-    weight: 0,
-    volume: 0,
-    value_cp: 0,
-    category,
-    inventory_location: formData.get('inventory_location')?.toString().trim() || null,
-    equipable: Boolean(categoryDefinition?.equipable),
-    equip_slot: null,
-    equip_slots: [],
-    sovrapponibile: false,
-    is_magic: false,
-    max_volume: null
-  });
 }
 
 export function sharedItemToInventoryPayload(item, character, overrides = {}) {

@@ -27,7 +27,7 @@ import {
 } from './home/sections.js';
 import { moneyBundleFields } from '../inventory/render.js';
 import { openItemModal } from '../inventory/modals.js';
-import { addSharedItemsToInventory, openQuickLootItemModal, openSharedItemPicker } from '../inventory/catalogPicker.js';
+import { addSharedItemsToInventory, openSharedItemPicker } from '../inventory/catalogPicker.js';
 import { getWeightUnit } from '../inventory/utils.js';
 import { ammunitionTypeLabels, itemCategories } from '../inventory/constants.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../rules/weaponMasteries.js';
@@ -1630,21 +1630,24 @@ export async function renderHome(container) {
     const canHaveChildren = Boolean(resource.can_have_children);
     const canManageChildResources = canManageResources && canHaveChildren;
     const resourceDialog = container.querySelector('.home-feature-panel--resources')?.closest('dialog');
+    const presentResourceView = (options) => presentSheetDetail(resourceDialog, options);
     if (resourceDialog) resourceDialog.dataset.resourceId = String(resource.id);
     openResourceDetail(resource, {
-      present: (options) => presentSheetDetail(container.querySelector('.home-feature-panel--resources')?.closest('dialog'), options),
+      present: presentResourceView,
       childResources,
       canHaveChildren,
       onUse: () => requestResourceUse(resource),
-      onCreateChild: canManageChildResources ? () => openResourceDrawer(activeCharacter, () => renderHome(container), null, { parentResourceId: resource.id }) : null,
-      onEditChild: canManageChildResources ? (childId) => {
+      onCreateChild: canManageChildResources ? () => openResourceDrawer(activeCharacter, null, null, { parentResourceId: resource.id, present: presentResourceView }) : null,
+      onOpenChild: (childId) => {
         const child = childResources.find((entry) => String(entry.id) === String(childId));
-        if (child) openResourceDrawer(activeCharacter, () => renderHome(container), child);
-      } : null,
-      onDeleteChild: canManageChildResources ? async (childId) => {
-        const child = childResources.find((entry) => String(entry.id) === String(childId));
-        if (child) await deleteResourceWithConfirmation(child);
-      } : null,
+        if (!child) return;
+        openResourceDetail(child, {
+          present: presentResourceView,
+          canHaveChildren: false,
+          onEdit: canManageResources ? () => openResourceDrawer(activeCharacter, null, child, { present: presentResourceView }) : null,
+          onDelete: canManageResources ? () => deleteResourceWithConfirmation(child) : null
+        });
+      },
       onEdit: canManageResources ? () => editResource(resource) : null,
       onDelete: canManageResources ? () => deleteResourceWithConfirmation(resource) : null,
       onReset: async () => {
@@ -2272,13 +2275,9 @@ async function handleLootAction(container) {
     title: 'Loot rapido',
     allowQuantities: true,
     headerActionLabel: 'Nuovo oggetto',
-    onHeaderAction: async () => {
+    onHeaderAction: async ({ present }) => {
       try {
-        const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
-        if (created) {
-          manualItemCreated = true;
-          createToast('Loot aggiunto');
-        }
+        await openItemModal(activeCharacter, null, state.cache.items || [], () => { manualItemCreated = true; }, { present });
       } catch (error) {
         createToast('Errore loot', 'error');
       }

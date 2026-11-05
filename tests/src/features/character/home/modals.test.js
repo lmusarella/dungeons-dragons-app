@@ -87,19 +87,16 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('Hai <strong>${remaining}</strong> risorse disponibili');
   });
 
-  it('wires child edit and delete icon buttons explicitly', () => {
+  it('opens linked child abilities through their full-width detail cards', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const detailModal = source.slice(
       source.indexOf('export function openResourceDetail'),
       source.indexOf('export function openSpellDrawer')
     );
-    expect(detailModal).toContain('type="button" data-resource-child-edit=');
-    expect(detailModal).toContain('type="button" data-resource-child-delete=');
-    expect(detailModal).toContain('aria-hidden="true">✏️</span>');
-    expect(detailModal).toContain('aria-hidden="true">🗑️</span>');
-    expect(detailModal).toContain("childActionInput.name = 'resource_child_action'");
-    expect(detailModal).toContain("submitChildAction(`edit:${button.dataset.resourceChildEdit}`)");
-    expect(detailModal).toContain("submitChildAction(`delete:${button.dataset.resourceChildDelete}`)");
+    expect(detailModal).toContain('data-resource-child-open=');
+    expect(detailModal).toContain('onOpenChild?.(button.dataset.resourceChildOpen)');
+    expect(detailModal).not.toContain('data-resource-child-edit=');
+    expect(detailModal).not.toContain('data-resource-child-delete=');
   });
 
   it('keeps option dice in the selection flow and reports the filtered spell total', () => {
@@ -220,7 +217,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(editor).not.toContain("description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.'");
   });
 
-  it('keeps child actions separate from parent detail actions', () => {
+  it('keeps child navigation separate from parent detail management', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const detailActions = readFileSync('src/features/character/home/detailManagement.js', 'utf8');
     const detailModal = source.slice(
@@ -229,9 +226,9 @@ describe('src/features/character/home/modals.js', () => {
     );
     expect(detailActions).toContain('staleInputs.forEach((input) => input.remove())');
     expect(detailActions).toContain('actionInput.remove()');
-    expect(detailModal).toContain("if (detailActionInput) detailActionInput.value = ''");
-    expect(detailModal.indexOf("const childAction = formData.get('resource_child_action')"))
-      .toBeLessThan(detailModal.indexOf("const detailAction = formData.get('detail_action')"));
+    expect(detailModal).toContain('attachDetailManagementActions(modal, formEl, { onEdit, onDelete })');
+    expect(detailModal).toContain("const detailAction = formData.get('detail_action')");
+    expect(detailModal).not.toContain("formData.get('resource_child_action')");
   });
 
   it('keeps the variable child cost as a compact toggle', () => {
