@@ -42,7 +42,11 @@ describe('spell preparation helpers', () => {
     expect(styles).toContain("'levels levels levels levels levels levels levels levels levels levels levels levels'");
     expect(styles).toContain("'classes classes classes classes classes classes classes classes classes classes classes reset'");
     expect(styles).toContain('.shared-spell-picker__spell-main .play-card__title {\n  grid-row: 2;');
-    expect(styles).toContain('padding: 12px 12px 9px !important');
+    expect(styles).toContain('padding: 9px 10px 7px !important');
+    expect(styles).toContain('.shared-spell-picker__spell-arrow');
+    expect(styles).toContain('.spell-manual__description { width: 100%; max-width: none;');
+    expect(styles).toContain('.shared-spell-picker__source-filter { grid-area: source; align-self: end; }');
+    expect(styles).toContain('.shared-spell-picker__source-filter > summary { height: 40px; min-height: 40px;');
     expect(styles).toContain('.shared-spell-picker__select.is-active {\n  border-color: #76364b !important; background: #76364b !important; color: #fff8e9 !important;');
     expect(styles).toContain('background: #fff8e9 !important; color: #76364b !important; opacity: 1;');
     expect(styles).toContain('.shared-spell-picker__state {\n  grid-column: 1 / -1; width: 100%; min-height: 260px;');
@@ -71,6 +75,11 @@ describe('spell preparation helpers', () => {
     ]);
     expect(spells).toHaveLength(1);
     expect(spells[0].damage_die).toBe('2d8');
+  });
+
+  it('keeps catalog-only spells available without marking them as prepared', () => {
+    const [spell] = dedupeCharacterSpells([{ id: 'catalog-spell', name: 'Dardo', level: 1, catalog_only: true, prep_state: null }]);
+    expect(spell.prep_state).toBeNull();
   });
 
   it('deduplicates shared copies while preserving custom spells as distinct entries', () => {

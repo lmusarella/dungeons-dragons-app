@@ -37,7 +37,7 @@ function getItemValueCp(item) {
   const factor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
   return Number.isFinite(quantity) && factor ? quantity * factor : 0;
 }
-export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false } = {}) {
+export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false, present = openFormModal } = {}) {
   if (!item) return;
   const slots = getEquipSlots(item);
   const content = document.createElement('div');
@@ -116,7 +116,7 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
     propertiesMarkup +
     (description ? '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(description)+'</p></section>' : '') + '</section>' +
     (slots.length && !catalogMode ? '<aside class="equipment-item-detail__body"><header class="equipment-position-header"><div><span class="eyebrow">Equipaggiamento</span><h3>'+escapeHtml(getBodyPartLabels(slots))+'</h3></div></header><div data-item-body-view></div><p class="equipment-position-hint">La parte lampeggiante indica la posizione dell’oggetto.</p></aside>' : '');
-  return openFormModal({
+  return present({
     title: item.name || 'Oggetto',
     content, submitLabel: 'Chiudi', cancelLabel: null, showFooter: false,
     cardClass: 'modal-card--equipment-item-detail',

@@ -280,7 +280,7 @@ export async function renderLibrary(container) {
   const state = {
     tab: 'spells', spells: [], items: [], spellPage: 1, itemPage: 1,
     spellLevels: new Set(), spellTraits: new Set(), spellRulesVersion: '2014', spellCasterClasses: new Set(), spellSources: new Set(), sourceGroups: [],
-    itemCategory: '', itemTraits: new Set()
+    itemCategories: new Set(), itemTraits: new Set()
   };
   const spellList = container.querySelector('[data-library-spells]');
   const itemList = container.querySelector('[data-library-items]');
@@ -418,7 +418,7 @@ export async function renderLibrary(container) {
     const query = container.querySelector('[data-item-query]')?.value.trim().toLocaleLowerCase('it') || '';
     const filtered = state.items
       .filter((item) => !query || String(item.name || '').toLocaleLowerCase('it').includes(query))
-      .filter((item) => !state.itemCategory || item.category === state.itemCategory)
+      .filter((item) => !state.itemCategories.size || state.itemCategories.has(item.category))
       .filter((item) => !state.itemTraits.has('magic') || item.is_magic)
       .filter((item) => !state.itemTraits.has('equipable') || item.equipable)
       .sort((a, b) => String(a.name).localeCompare(String(b.name), 'it'));
@@ -531,12 +531,11 @@ export async function renderLibrary(container) {
 
   container.querySelector('[data-item-query]').addEventListener('input', () => { state.itemPage = 1; renderItems(); });
   container.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
-    state.itemCategory = state.itemCategory === button.dataset.category ? '' : button.dataset.category;
-    container.querySelectorAll('[data-category]').forEach((entry) => {
-      const active = entry.dataset.category === state.itemCategory;
-      entry.classList.toggle('is-active', active);
-      entry.setAttribute('aria-pressed', String(active));
-    });
+    const category = button.dataset.category;
+    state.itemCategories.has(category) ? state.itemCategories.delete(category) : state.itemCategories.add(category);
+    const active = state.itemCategories.has(category);
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
     state.itemPage = 1;
     renderItems();
   }));
@@ -550,7 +549,7 @@ export async function renderLibrary(container) {
   }));
   container.querySelector('[data-reset-items]').addEventListener('click', () => {
     container.querySelector('[data-item-query]').value = '';
-    state.itemCategory = '';
+    state.itemCategories.clear();
     state.itemTraits.clear();
     container.querySelectorAll('[data-category], [data-item-trait]').forEach((button) => {
       button.classList.remove('is-active');

@@ -139,7 +139,9 @@ export function dedupeCharacterSpells(spells = []) {
     const nextIndex = result.length;
     result.push({
       ...spell,
-      prep_state: normalizeSpellPreparationState(spell.prep_state)
+      prep_state: spell.catalog_only && spell.prep_state == null
+        ? null
+        : normalizeSpellPreparationState(spell.prep_state)
     });
     if (sharedKey) sharedIndexes.set(sharedKey, nextIndex);
     if (signature) signatureIndexes.set(signature, nextIndex);

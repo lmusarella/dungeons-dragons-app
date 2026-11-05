@@ -28,7 +28,7 @@
 .sheet-dashboard .sheet-shortcut > span {
   display: grid; place-items: center; border-radius: 50%; background: #76364b12; color: #76364b;
 }
-.sheet-dashboard .sheet-shortcut strong { font-family: 'Fraunces', Georgia, serif; font-size: 15px; }
+.sheet-dashboard .sheet-shortcut strong { margin-bottom: 3px; font-family: 'Fraunces', Georgia, serif; font-size: 15px; }
 .sheet-dashboard .sheet-shortcut small { color: #715e63; }
 .sheet-dashboard .sheet-shortcut:hover, .sheet-dashboard .sheet-quickbar button:hover { background: #fff6e5; border-color: #76364b; }
 .sheet-dashboard .sheet-quickbar button span { color: #76364b; }
@@ -735,9 +735,9 @@ body .sheet-detail .equipment-shortcut-card .item-name-button { font: 650 17px/1
 body .sheet-detail .equipment-shortcut-card .resource-card-actions { border: 0; margin: 0; padding: 0; }
 body .sheet-detail .equipment-shortcut-card:hover { border-color: #ae8190 !important; }
 body .sheet-detail .equipment-shortcut-card:focus-visible { outline: 2px solid #b88845; outline-offset: 3px; }
-body .sheet-detail .equipment-item-detail { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(280px,.9fr); gap: 24px; }
+body .sheet-detail .equipment-item-detail { display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,260px); gap: 24px; }
 body .sheet-detail .equipment-item-detail:not(:has(.equipment-item-detail__body)) { grid-template-columns: 1fr; }
-body .sheet-detail .equipment-item-detail__image { width: 100%; max-height: 230px; object-fit: contain; border: 1px solid #dfccb0; border-radius: 18px; background: #fffaf0; margin-bottom: 16px; }
+body .sheet-detail .equipment-item-detail__image { width: 100%; max-height: 280px; object-fit: contain; border: 1px solid #dfccb0; border-radius: 18px; background: #fffaf0; margin-bottom: 16px; }
 body .sheet-detail .equipment-item-detail h3 { font-family: 'Fraunces',Georgia,serif; color: #633349; font-size: 19px; }
 body .sheet-detail .equipment-item-detail__description { font-size: 15px; line-height: 1.65; white-space: pre-line; }
 body .sheet-detail .equipment-item-detail__body { padding: 16px; border-radius: 20px; background: #efe3d0; }
@@ -1168,7 +1168,11 @@ body .sheet-detail .play-card__trait {
 body .sheet-detail .play-card__trait.is-magic { border-color: #c9bdd4; background: #eee8f2; color: #665478; }
 
 /* Spell detail: a compact manual page rather than a generic content card. */
-body .spell-quick-detail-modal { width: min(920px, calc(100vw - 32px)); }
+body .spell-quick-detail-modal:not(.sheet-inline-detail) { width: min(920px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: hidden; }
+body .spell-quick-detail-modal:not(.sheet-inline-detail) .modal-body { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+body .modal-card.sheet-detail > .modal-body:has(> .sheet-inline-detail.spell-quick-detail-modal:not([hidden])) { overflow-y: auto; }
+body .sheet-inline-detail.spell-quick-detail-modal { width: 100%; height: auto; min-height: 0; max-height: none; flex: 0 0 auto; overflow: visible; }
+body .sheet-inline-detail.spell-quick-detail-modal > .sheet-inline-detail__content { min-height: auto; overflow: visible; }
 body .spell-quick-detail { width: 100%; }
 body .spell-manual {
   position: relative; overflow: hidden; border: 1px solid #c8a66f; border-radius: 16px;
@@ -1210,7 +1214,7 @@ body .spell-manual__damage strong { color: #633349; font: 700 18px/1.1 'Fraunces
 body .spell-manual__damage p { flex: 1 1 230px; margin: 0; color: #664f43; font-size: 12px; }
 body .spell-manual__body { padding: 20px 26px 24px; }
 body .spell-manual__body > h4 { margin: 0 0 9px; color: #76364b; font: 700 15px/1.2 'Fraunces',Georgia,serif; letter-spacing: .04em; text-transform: uppercase; }
-body .spell-manual__description { max-width: 78ch; color: #513f37; font: 400 14px/1.65 Georgia,'Times New Roman',serif; }
+body .spell-manual__description { width: 100%; max-width: none; color: #513f37; font: 400 14px/1.65 Georgia,'Times New Roman',serif; }
 body .spell-manual__description p:first-child { margin-top: 0; }
 body .spell-manual__reference { display: flex; justify-content: space-between; gap: 12px; padding: 11px 26px; background: #ede0cc; border-top: 1px solid #d8c09d; color: #795e48; font-size: 10px; font-weight: 650; }
 body .spell-manual__material {
@@ -1343,7 +1347,7 @@ body .sheet-detail .power-manual .resource-parent-overview {
   display: block; margin: 0; padding: 20px 26px 24px; border: 0; border-radius: 0; background: transparent;
 }
 body .sheet-detail .power-manual .resource-parent-overview__content { display: grid; gap: 14px; }
-body .sheet-detail .power-manual .resource-parent-overview .detail-rich-text { max-width: 78ch; color: #513f37; font: 400 14px/1.65 Georgia,'Times New Roman',serif; }
+body :is(.sheet-detail,.modal-card--resource-detail) .power-manual .resource-parent-overview .detail-rich-text { width: 100%; max-width: none; color: #513f37; font: 400 14px/1.65 Georgia,'Times New Roman',serif; }
 body .sheet-detail .power-manual .resource-detail-options { margin: 0 24px 24px; border-color: #d9c09c; background: rgba(255,250,240,.72); }
 body .sheet-detail .power-manual .resource-pool--detail { margin: 0; }
 
@@ -1385,7 +1389,8 @@ body .sheet-detail .play-card--attack .play-card__footer,
 body .sheet-detail .play-card--spell .play-card__footer { justify-content: flex-start; }
 body .sheet-detail .attack-catalog-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
 body .modal-card--prepared-spells .prepared-spells-modal__spell.play-card { min-height: 118px; }
-body .modal-card--prepared-spells .prepared-spells-modal__detail-surface { padding: 3px; }
+body .modal-card--prepared-spells .prepared-spells-modal__detail-surface { display: grid; grid-template-columns: minmax(0,1fr) 26px; align-items: center; gap: 8px; padding: 3px; }
+body .modal-card--prepared-spells .prepared-spells-modal__open-arrow { display: grid; width: 26px; height: 34px; place-items: center; border-radius: 9px; background: #efe1ca; color: #71344a; font-size: 21px; line-height: 1; }
 body .modal-card--prepared-spells .prepared-spells-modal__card-actions { margin-top: 0; }
 body .modal-card--prepared-spells .prepared-spells-modal__delete { margin-left: auto; }
 @media (max-width: 900px) {
@@ -1550,14 +1555,33 @@ body .sheet-detail--familiars .familiar-hit-button { min-height: 34px; }
 }
 .status-launch-card--death .status-launch-card__icon { background: #ead7d8; color: #8a3446; font-family: Georgia,serif; font-size: 20px; }
 
-body .modal-card--proficiencies { width: min(980px,calc(100vw - 32px)); max-height: min(86dvh,760px); }
-body .modal-card--proficiencies .modal-body { overflow-y: auto; padding: 16px 20px 22px; }
-body .modal-card--proficiencies .proficiency-modal { min-height: 390px; }
-body .modal-card--proficiencies .proficiency-overview { padding: 0; }
-body .modal-card--proficiencies .proficiency-tab-bar { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
-body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button { min-height: 48px; justify-content: space-between; border: 1px solid #d6bea0; border-radius: 10px; background: #f8eddc; }
-body .modal-card--proficiencies .proficiency-panel { min-height: 260px; margin-top: 12px; padding: 18px; border-color: #d3b995; background: #fffaf0; }
-body .modal-card--proficiencies .proficiency-chip { padding: 7px 10px; }
+body .modal-card--proficiencies { width: min(1040px,calc(100vw - 32px)); max-height: min(88dvh,780px); overflow: hidden; border: 1px solid #c39a62; border-radius: 24px; background: #f8eddb; }
+body .modal-card--proficiencies > .modal-header { min-height: 70px; padding: 18px 26px; border-bottom: 1px solid #c39a62; background: linear-gradient(135deg,#7b3b55,#5d2c42); color: #fff7e7; }
+body .modal-card--proficiencies > .modal-header .modal-title { color: #fff7e7; font: 750 clamp(20px,2.2vw,28px)/1.1 'Fraunces',Georgia,serif; text-align: center; }
+body .modal-card--proficiencies .modal-body { overflow-y: auto; padding: 18px 22px; background: linear-gradient(180deg,#fff9ee,#f6ead7); }
+body .modal-card--proficiencies .proficiency-modal { min-height: 420px; }
+body .modal-card--proficiencies .proficiency-overview { display: grid; gap: 14px; padding: 0; }
+body .modal-card--proficiencies .proficiency-modal__hero { display: flex; align-items: center; gap: 13px; padding: 13px 15px; border: 1px solid #d7bd96; border-radius: 15px; background: linear-gradient(135deg,#fffaf0,#eadcc5); }
+body .modal-card--proficiencies .proficiency-modal__hero-icon { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border-radius: 13px; background: #71344a; color: #fff7e7; font-size: 22px; box-shadow: 0 5px 12px rgba(84,38,55,.2); }
+body .modal-card--proficiencies .proficiency-modal__hero > div { display: grid; gap: 2px; }
+body .modal-card--proficiencies .proficiency-modal__hero > div > span { color: #8c6b57; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+body .modal-card--proficiencies .proficiency-modal__hero > div > strong { color: #593744; font: 750 16px/1.2 'Fraunces',Georgia,serif; }
+body .modal-card--proficiencies .proficiency-modal__hero > div > small { color: #806b5e; font-size: 11px; }
+body .modal-card--proficiencies .proficiency-modal__hero > output { display: grid; min-width: 62px; margin-left: auto; justify-items: center; padding: 7px 10px; border-left: 1px solid #d2b995; color: #71344a; }
+body .modal-card--proficiencies .proficiency-modal__hero > output strong { font: 800 20px/1 'Fraunces',Georgia,serif; }
+body .modal-card--proficiencies .proficiency-modal__hero > output span { margin-top: 3px; color: #8b705e; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+body .modal-card--proficiencies .proficiency-tab-bar { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; min-height: 58px; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #d6bea0; border-radius: 13px; background: #fffaf0; color: #633349; text-align: left; box-shadow: 0 3px 8px rgba(84,54,47,.06); }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button i { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #eee0ca; color: #71344a; font-style: normal; font-size: 16px; }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button > span { overflow: hidden; font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button > small { display: grid; min-width: 23px; height: 23px; place-items: center; border-radius: 999px; background: #eadcc6; color: #6c4d43; font-size: 10px; }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button.is-active { border-color: #5e293e; background: linear-gradient(135deg,#7b3b55,#642e45); color: #fff8e9; box-shadow: 0 7px 15px rgba(82,35,53,.22); }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button.is-active i { background: rgba(255,255,255,.16); color: #fff8e9; }
+body .modal-card--proficiencies .proficiency-tab-bar .tab-bar__button.is-active > small { background: #fff3df; color: #71344a; }
+body .modal-card--proficiencies .proficiency-panel { min-height: 230px; margin-top: 14px; padding: 20px; border: 1px solid #d3b995; border-radius: 16px; background: rgba(255,250,240,.9); box-shadow: inset 0 1px rgba(255,255,255,.8); }
+body .modal-card--proficiencies .proficiency-chip-list { align-content: start; }
+body .modal-card--proficiencies .proficiency-chip { padding: 9px 12px; border-color: #d0b893; border-radius: 10px; background: #f3e5d0; color: #593744; font-size: .76rem; }
+body .modal-card--proficiencies > .modal-footer { padding: 12px 22px; border-top: 1px solid #d1b68e; background: #efe1c9; }
 
 body .modal-card--death-saves { width: min(600px,calc(100vw - 28px)); }
 body .modal-card--death-saves .modal-body { padding: 18px 20px 22px; }
@@ -1895,11 +1919,11 @@ body .power-manual .power-detail-facts > div {
 
 body .modal-card--equipment-item-detail { width: min(940px,calc(100vw - 32px)); }
 body .modal-card--equipment-item-detail .equipment-item-detail {
-  display: grid; grid-template-columns: minmax(0,1.08fr) minmax(270px,.82fr); align-items: start; gap: 16px;
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,260px); align-items: start; gap: 16px;
 }
 body .modal-card--equipment-item-detail .equipment-item-detail:not(:has(.equipment-item-detail__body)) { grid-template-columns: 1fr; }
 body .modal-card--equipment-item-detail .equipment-item-detail__image {
-  float: left; width: 240px; height: 240px; margin: 0 18px 14px 0; object-fit: contain;
+  float: left; width: 280px; height: 280px; margin: 0 18px 14px 0; object-fit: contain;
   border: 1px solid #dcc5a4; border-radius: 13px; background: #fffaf0;
 }
 body .modal-card--equipment-item-detail .power-detail-facts {
@@ -1931,10 +1955,10 @@ body .modal-card--equipment-item-detail .equipment-rule-card {
   display: grid; clear: both; gap: 4px; margin-top: 12px; padding: 11px 13px;
   border: 1px solid #cdb178; border-radius: 12px; background: linear-gradient(135deg,#fff8e7,#f1e4c9);
 }
-body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94703b; font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
-body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 15px/1.25 'Fraunces',Georgia,serif; }
-body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 11.5px; line-height: 1.5; }
-body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 10px; font-weight: 750; }
+body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94703b; font-size: 10.5px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 16px/1.25 'Fraunces',Georgia,serif; }
+body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 12.5px; line-height: 1.5; }
+body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 11px; font-weight: 750; }
 body .modal-card--equipment-item-detail .equipment-weapon-properties { clear: both; padding-top: 12px; }
 body .modal-card--equipment-item-detail .equipment-weapon-properties__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 body .modal-card--equipment-item-detail .equipment-weapon-property { margin-top: 0; }
@@ -1942,8 +1966,11 @@ body .modal-card--equipment-item-detail .equipment-item-lore { clear: both; padd
 body .modal-card--equipment-item-detail .equipment-item-lore h3 { margin: 0 0 5px; color: #633349; font: 700 15px/1.2 'Fraunces',Georgia,serif; }
 body .modal-card--equipment-item-detail .equipment-item-detail__description { margin: 0; color: #59453d; font-size: 13px; line-height: 1.5; }
 body .modal-card--equipment-item-detail .equipment-item-detail__body {
-  padding: 12px; border: 1px solid #d7c1a0; border-radius: 16px; background: linear-gradient(145deg,#f2e6cf,#faf3e5);
+  width: min(100%,290px); justify-self: end; padding: 10px; border: 1px solid #d7c1a0; border-radius: 16px; background: linear-gradient(145deg,#f2e6cf,#faf3e5);
 }
+body .modal-card--equipment-item-detail [data-item-body-view] .equipment-mannequin__viewer { height: 330px; min-height: 330px; }
+body .sheet-detail .equipment-item-detail__body { width: min(100%,300px); justify-self: end; }
+body .sheet-detail [data-item-body-view] .equipment-mannequin__viewer { height: 330px; min-height: 330px; }
 body .modal-card--equipment-item-detail .equipment-position-header h3 { margin: 2px 0 6px; }
 body .modal-card--equipment-item-detail .equipment-position-hint { margin: 7px 0 0; font-size: 10px; text-align: center; }
 
@@ -2020,6 +2047,8 @@ body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__cou
 }
 @media (max-width: 720px) {
   body .modal-card--equipment-item-detail .equipment-item-detail { grid-template-columns: 1fr; }
+  body .modal-card--equipment-item-detail .equipment-item-detail__image { width: 100%; height: auto; aspect-ratio: 1; float: none; }
+  body .modal-card--proficiencies .proficiency-modal__hero > output { display: none; }
   body .modal-card--prepared-spells .prepared-spells-modal__levels { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
@@ -2085,10 +2114,11 @@ body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__sta
   border-color: #76364b; background: #76364b; color: #fff7e9;
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__catalog {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1px 6px 8px 0;
+  display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 1px 0 0;
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__list {
-  flex: 0 0 auto; align-content: start; grid-auto-rows: max-content; padding-bottom: 8px;
+  flex: 1 1 auto; min-height: 0; align-content: start; grid-auto-rows: max-content; overflow-y: auto;
+  padding: 1px 6px 8px 0; overscroll-behavior: contain; scrollbar-gutter: stable;
 }
 
 /* Persistent preparation controls, option-first abilities and the play footer. */
@@ -2108,7 +2138,7 @@ body .modal-card--prepared-spells .prepared-spells-modal__sticky-filters {
   position: sticky; top: 0; z-index: 30; flex: 0 0 auto;
 }
 body .modal-card--prepared-spells .prepared-spells-modal__catalog {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable;
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
 }
 body .modal-card--prepared-spells .prepared-spells-modal__visible-count {
   flex: 0 0 auto; margin-left: auto; padding: 0 5px;
@@ -2145,7 +2175,7 @@ body .resource-option-picker__roll:disabled { cursor: not-allowed; opacity: .55;
 
 /* Preparation filters remain a compact command bar while only the spell grid scrolls. */
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__sticky-filters {
-  display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: stretch; flex-wrap: nowrap;
+  display: grid; grid-template-columns: minmax(150px,.8fr) minmax(360px,2fr) auto; align-items: center; flex-wrap: nowrap;
   gap: 8px 10px; margin: 0 0 10px; padding: 8px 9px 9px;
   border: 1px solid #d5bd98; border-radius: 15px;
   background: linear-gradient(145deg,#fffaf0,#efe1cd); box-shadow: 0 10px 18px -15px rgba(73,43,64,.65);
@@ -2175,7 +2205,7 @@ body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__sta
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__status-filters button { min-height: 32px; }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count {
-  grid-column: 1 / -1; justify-self: end; margin: -2px 2px 0;
+  grid-column: auto; justify-self: end; margin: 0 2px 0 0;
 }
 
 /* Spell creation uses the same parchment-and-wine language as spell details. */
@@ -2886,26 +2916,27 @@ body dialog.sheet-detail[data-sheet-panel='Abilità & Poteri'] .resource-kind-fi
 body dialog.sheet-detail .play-card__button--damage .play-card__button-damage-type {
   display: inline-flex; align-items: center; margin-left: 3px; padding: 0;
   border: 0; border-radius: 0; opacity: .72;
-  font-size: 7px; font-weight: 850; letter-spacing: .055em; line-height: 1.2; text-transform: uppercase;
+  font-size: 8px; font-weight: 850; letter-spacing: .055em; line-height: 1.2; text-transform: uppercase;
 }
 body .sheet-dashboard .sheet-detail .modal-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* Contextual shortcut loading keeps the active dialog visible and understandable. */
-body .sheet-detail .modal-body.is-context-loading { position: relative; overflow: hidden !important; }
-body .sheet-detail .shortcut-context-loader {
+body .sheet-detail .modal-body.is-context-loading,
+body :is(.modal-card--prepared-spells,.modal-card--shared-item-picker) .modal-body.is-context-loading { position: relative; overflow: hidden !important; }
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader {
   position: absolute; inset: 0; z-index: 45; display: grid; width: 100%; height: 100%;
   grid-auto-flow: row; place-items: center; align-content: center; justify-content: center; gap: 12px;
   min-height: 100%; padding: 28px; border: 0; border-radius: 0; box-sizing: border-box;
   background: rgba(251,244,230,.94); color: #633349; text-align: center; opacity: 1;
   backdrop-filter: blur(7px); transition: opacity .14s ease;
 }
-body .sheet-detail .shortcut-context-loader.is-leaving { opacity: 0; pointer-events: none; }
-body .sheet-detail .shortcut-context-loader > span:last-child { display: grid; justify-items: center; gap: 4px; text-align: center; }
-body .sheet-detail .shortcut-context-loader strong { font: 700 17px/1.2 'Fraunces',Georgia,serif; }
-body .sheet-detail .shortcut-context-loader small { color: #8a7161; font-size: 11px; }
-body .sheet-detail .shortcut-context-loader__spinner {
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader.is-leaving { opacity: 0; pointer-events: none; }
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader > span:last-child { display: grid; justify-items: center; gap: 4px; text-align: center; }
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader strong { font: 700 17px/1.2 'Fraunces',Georgia,serif; }
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader small { color: #8a7161; font-size: 11px; }
+body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-picker) .shortcut-context-loader__spinner {
   width: 34px; height: 34px; border: 3px solid #dbc49f; border-top-color: #76364b; border-radius: 50%;
   animation: shortcut-context-spin .75s linear infinite;
 }
@@ -3442,8 +3473,8 @@ body .character-edit-form--guided .spell-list-config__classes {
 body .character-edit-form--guided .spell-list-config__classes .toggle-pill { min-width: 0; }
 
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__list-context {
-  grid-column: 1 / -1; display: flex; align-items: baseline; gap: 7px; min-width: 0;
-  padding: 0 2px 2px; color: #725361;
+  grid-column: auto; display: grid; align-items: center; gap: 1px; min-width: 0;
+  padding: 0 2px; color: #725361;
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__list-context span {
   color: #917864; font-size: 8px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase;
@@ -3452,7 +3483,7 @@ body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__lis
   overflow: hidden; color: #633349; font: 750 12px/1.2 'Fraunces',Georgia,serif; text-overflow: ellipsis; white-space: nowrap;
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__list-context small {
-  margin-left: auto; color: #846e60; font-size: 9px; white-space: nowrap;
+  margin-left: 0; color: #846e60; font-size: 9px; white-space: nowrap;
 }
 
 /* One scroll owner for the sheet: every section remains in normal flow and reachable. */
@@ -3648,7 +3679,7 @@ body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--share
 body .shared-spell-picker__search-wrap { grid-area: search; align-self: end; }
 body .shared-spell-picker__filter-toolbar { display: contents; }
 body .shared-spell-picker__filter-toolbar > .field { grid-area: school; }
-body .shared-spell-picker__source-filter { grid-area: source; }
+body .shared-spell-picker__source-filter { grid-area: source; align-self: end; }
 body .shared-spell-picker__edition-filter { grid-area: edition; }
 body .shared-spell-picker__property-filter { grid-area: property; }
 body .shared-spell-picker__property-filter { display: flex; align-items: end; }
@@ -3674,6 +3705,9 @@ body .shared-spell-picker__edition-filter button,
 body .shared-spell-picker__property-filter button,
 body .shared-spell-picker__levels button,
 body .shared-spell-picker__class-chip span { min-height: 30px; }
+body .shared-spell-picker__filter-toolbar > .field select,
+body .shared-spell-picker__source-filter > summary { height: 40px; min-height: 40px; box-sizing: border-box; }
+body .shared-spell-picker__filter-toolbar > .field select { padding: 6px 34px 6px 10px; line-height: normal; }
 body .shared-spell-picker__filter-label,
 body .shared-spell-picker__filters .field > span { font-size: 8px; }
 body .shared-spell-picker__workspace { grid-template-columns: minmax(0,1fr); }
@@ -3687,7 +3721,7 @@ body .shared-spell-picker__list {
   position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-content: start; gap: 8px;
 }
 body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--shared-spell-picker) .shared-spell-picker__spell {
-  display: flex; min-height: 126px; padding: 0; flex-direction: column; overflow: hidden;
+  display: flex; min-height: 104px; padding: 0; flex-direction: column; overflow: hidden;
   border-color: #dfcdb2; border-radius: 12px; background: #fffaf1; transform: none;
 }
 body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--shared-spell-picker) .shared-spell-picker__spell:hover {
@@ -3697,8 +3731,8 @@ body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--share
   border-color: #76364b; background: #f1e1e6; box-shadow: inset 0 3px 0 #76364b;
 }
 body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--shared-spell-picker) .shared-spell-picker__detail-surface {
-  display: flex; width: 100%; min-height: 0; flex: 1 1 auto; align-items: flex-start; justify-content: space-between;
-  gap: 8px; padding: 12px 12px 9px !important; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: minmax(0,1fr) 24px; width: 100%; min-height: 0; flex: 1 1 auto; align-items: center;
+  gap: 8px; padding: 9px 10px 7px !important; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer;
 }
 body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--shared-spell-picker) .shared-spell-picker__spell-main {
   display: grid !important; grid-template-columns: minmax(0,1fr); align-content: start; align-items: start; gap: 5px;
@@ -3708,11 +3742,12 @@ body .shared-spell-picker__spell-main .play-card__eyebrow { color: #876b58; font
 body .shared-spell-picker__spell-main .play-card__eyebrow,
 body .shared-spell-picker__spell-main .play-card__title { display: block; grid-column: 1; width: 100%; }
 body .shared-spell-picker__spell-main .play-card__title {
-  grid-row: 2; margin: 0; color: #633349; font-size: 14px; line-height: 1.25; white-space: normal;
+  grid-row: 2; margin: 0; color: #633349; font-size: 14px; line-height: 1.2; white-space: normal;
 }
+body .shared-spell-picker__spell-arrow { display: grid; width: 24px; height: 30px; place-items: center; border-radius: 9px; background: #efe1ca; color: #71344a; font-size: 20px; line-height: 1; }
 body .shared-spell-picker__spell .play-card__footer {
-  display: flex !important; width: 100%; min-height: 46px; flex: 0 0 auto; align-items: center;
-  padding: 6px 8px !important; border-top: 1px solid #e4d2b8; box-sizing: border-box;
+  display: flex !important; width: 100%; min-height: 40px; flex: 0 0 auto; align-items: center;
+  padding: 4px 8px !important; border-top: 1px solid #e4d2b8; box-sizing: border-box;
 }
 body .shared-spell-picker__select {
   display: inline-flex !important; width: 100% !important; min-width: 0; min-height: 34px !important; flex: 1 1 auto;
@@ -3737,6 +3772,9 @@ body :is(.modal-card--shared-spell-picker,.sheet-inline-detail.modal-card--share
 }
 body .shared-spell-picker__assignment-submit { min-height: 42px; padding-inline: 14px; white-space: nowrap; }
 body .shared-spell-picker__assignment-submit--prepared { border-color: #9d7451; background: #fff8ec; color: #633349; }
+body .shared-spell-picker__header-actions { position: static !important; inset: auto !important; transform: none !important; }
+body .shared-spell-picker__create-action { display: inline-flex; min-height: 38px; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #c69b69; border-radius: 12px; background: #fff6e6; color: #71344a; cursor: pointer; }
+body .shared-spell-picker__create-action strong { color: inherit; font-size: 11px; white-space: nowrap; }
 
 /* Spell preparation belongs to the launch workflow and shares its header actions. */
 body .sheet-detail[data-sheet-panel='Lancia incantesimi'] > .modal-header {

@@ -1616,15 +1616,113 @@ body {
 }
 
 .ability-editor-wizard__nav {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .ability-editor-wizard__panel > .ability-modal-section {
   margin: 0;
 }
 
-.ability-editor-wizard__panel[data-ability-editor-panel="2"] textarea {
-  min-height: 280px;
+.ability-editor-wizard__panel[data-ability-editor-panel="0"] textarea {
+  min-height: 190px;
+}
+
+.ability-parent-field {
+  width: min(100%, 360px);
+  justify-self: start;
+}
+
+.ability-parent-choice {
+  position: relative;
+  display: block;
+  min-width: 0;
+  align-self: end;
+  cursor: pointer;
+}
+
+.ability-parent-choice > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ability-parent-choice__card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 22px;
+  min-height: 64px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid #d5bea0;
+  border-radius: 13px;
+  background: #fffaf1;
+  color: #704f3d;
+}
+
+.ability-parent-choice__card > i,
+.ability-parent-choice__card > b {
+  display: grid;
+  place-items: center;
+  font-style: normal;
+}
+
+.ability-parent-choice__card > i {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(118, 54, 75, .1);
+  color: #76364b;
+  font-size: 1rem;
+}
+
+.ability-parent-choice__card > b {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #c9ad85;
+  border-radius: 50%;
+  color: transparent;
+  font-size: .68rem;
+}
+
+.ability-parent-choice__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ability-parent-choice__copy strong {
+  color: #5d3946;
+  font-size: .73rem;
+}
+
+.ability-parent-choice__copy small {
+  color: #826e5c;
+  font-size: .61rem;
+  line-height: 1.35;
+}
+
+.ability-parent-choice > input:checked + .ability-parent-choice__card {
+  border-color: #76364b;
+  background: #f0e1e4;
+  box-shadow: inset 0 0 0 1px #76364b;
+}
+
+.ability-parent-choice > input:checked + .ability-parent-choice__card > b {
+  border-color: #76364b;
+  background: #76364b;
+  color: #fff;
+}
+
+.ability-parent-choice > input:focus-visible + .ability-parent-choice__card {
+  outline: 2px solid #b88845;
+  outline-offset: 2px;
+}
+
+.ability-parent-choice > input:disabled + .ability-parent-choice__card {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .ability-editor-modal-active [data-form-submit]:disabled {

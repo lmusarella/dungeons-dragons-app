@@ -28,6 +28,7 @@ import { attachUnifiedDetailActions } from './detailManagement.js';
 import { sanitizeExternalUrl, sanitizeImageUrl } from '../../../lib/html.js';
 import { normalizeSpellSchool, spellSchoolLabels } from '../spellSchools.js';
 import { normalizeSpellSource } from '../spellSources.js';
+import { showShortcutLoader } from './shortcutViews.js';
 
 const SPELL_CAST_TIME_OPTIONS = ['Azione', 'Azione Bonus', 'Reazione', 'Azione Gratuita', 'Durata'];
 const SPELL_SCHOOL_OPTIONS = ['', ...spellSchoolLabels];
@@ -1349,6 +1350,35 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     createToast('Configura gli slot incantesimo prima di preparare il grimorio', 'info');
     return;
   }
+  const content = document.createElement('div');
+  content.className = 'prepared-spells-modal';
+  let modalActive = true;
+  let loadingHost = null;
+  let submitButton = null;
+  let stopPreparationLoading = null;
+  const preparationView = openFormModal({
+    title: character.name ? `Prepara gli incantesimi di ${character.name}` : 'Prepara gli incantesimi',
+    submitLabel: 'Salva preparazione',
+    cancelLabel: 'Annulla',
+    content,
+    cardClass: ['modal-card--form', 'modal-card--prepared-spells'],
+    onOpen: ({ modal, fieldsEl }) => {
+      loadingHost = fieldsEl;
+      submitButton = modal?.querySelector('[data-form-submit], .sheet-view-footer button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+      return () => {
+        modalActive = false;
+        stopPreparationLoading?.();
+        stopPreparationLoading = null;
+      };
+    }
+  });
+  const nextPaint = window.requestAnimationFrame
+    ? (callback) => window.requestAnimationFrame(callback)
+    : (callback) => window.setTimeout(callback, 0);
+  await new Promise((resolve) => nextPaint(() => nextPaint(resolve)));
+  if (!modalActive) return;
+  stopPreparationLoading = showShortcutLoader(loadingHost || content, 'Caricamento grimorio');
   let catalogSpells = [];
 
   try {
@@ -1373,9 +1403,13 @@ async function openPreparedSpellsModalAsync(character, onSave) {
       .map(mapSharedSpellForPreparation)
       .filter(Boolean);
   } catch (error) {
+    stopPreparationLoading?.();
+    stopPreparationLoading = null;
+    content.innerHTML = '<div class="prepared-spells-modal__empty"><strong>Archivio non disponibile</strong><small>Chiudi la finestra e riprova tra qualche istante.</small></div>';
     createToast('Non riesco a caricare l’archivio centrale degli incantesimi', 'error');
     return;
   }
+  if (!modalActive) return;
 
   const catalogSharedIds = new Set(catalogSpells.map((entry) => String(entry.shared_spell_id)));
   const associatedSharedSpells = characterSpells
@@ -1406,8 +1440,6 @@ async function openPreparedSpellsModalAsync(character, onSave) {
 
   const getLevelLabel = (level) => `${level}° livello`;
 
-  const content = document.createElement('div');
-  content.className = 'prepared-spells-modal';
   content.innerHTML = `
     <div class="prepared-spells-modal__workspace">
       <div class="prepared-spells-modal__sticky-filters">
@@ -1452,6 +1484,7 @@ async function openPreparedSpellsModalAsync(character, onSave) {
                     <h3 class="play-card__title prepared-spells-modal__toggle-name">${escapeHtml(entry.name)}</h3>
                     <span class="prepared-spells-modal__origin prepared-spells-modal__origin--${entry.preparation_origin === 'custom' ? 'custom' : 'archive'}">${entry.preparation_origin === 'custom' ? 'Personalizzato' : 'Archivio'}</span>
                   </header>
+                  <span class="prepared-spells-modal__open-arrow" aria-hidden="true">›</span>
                 </button>
                 <footer class="play-card__footer prepared-spells-modal__card-actions">
                   <button class="play-card__button play-card__button--primary prepared-spells-modal__toggle ${isPrepared ? 'is-active' : ''}" type="button" data-prepared-toggle="${entry.id}" ${isLocked ? 'disabled' : ''} aria-pressed="${isPrepared}">
@@ -1575,14 +1608,9 @@ async function openPreparedSpellsModalAsync(character, onSave) {
 
   syncPreparedState();
   applyFilters();
-
-  const preparationView = openFormModal({
-    title: character.name ? `Prepara gli incantesimi di ${character.name}` : 'Prepara gli incantesimi',
-    submitLabel: 'Salva preparazione',
-    cancelLabel: 'Annulla',
-    content,
-    cardClass: ['modal-card--form', 'modal-card--prepared-spells']
-  });
+  stopPreparationLoading?.();
+  stopPreparationLoading = null;
+  if (submitButton) submitButton.disabled = false;
   void preparationView.then(async (formData) => {
     if (!formData) return;
     let linkedRows = [];
@@ -1660,10 +1688,6 @@ async function openPreparedSpellsModalAsync(character, onSave) {
       : 'Preparazione sincronizzata con il personaggio';
     await saveCharacterData(character, nextData, message, onSave);
   });
-  const nextPaint = window.requestAnimationFrame
-    ? (callback) => window.requestAnimationFrame(callback)
-    : (callback) => window.setTimeout(callback, 0);
-  await new Promise((resolve) => nextPaint(() => nextPaint(resolve)));
 }
 
 function readAvatarFile(file) {
@@ -1879,7 +1903,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
       && entry.reset_on !== 'none'
       && String(entry.id) !== String(resource?.id));
   const parentField = document.createElement('label');
-  parentField.className = 'field';
+  parentField.className = 'field ability-parent-field';
   parentField.innerHTML = '<span>Abilità padre (opzionale)</span>';
   const parentSelect = buildSelect([
     { value: '', label: 'Nessuna — abilità principale' },
@@ -1888,26 +1912,24 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   parentSelect.name = 'parent_resource_id';
   parentField.appendChild(parentSelect);
 
-  const canHaveChildrenField = document.createElement('div');
-  canHaveChildrenField.className = 'field ability-parent-toggle condition-modal__item';
+  const canHaveChildrenField = document.createElement('label');
+  canHaveChildrenField.className = 'ability-parent-choice';
   canHaveChildrenField.innerHTML = `
-    <span class="condition-modal__item-label">   
-      <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
+    <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} aria-label="Può avere sotto-abilità" />
+    <span class="ability-parent-choice__card">
+      <i aria-hidden="true">◇</i>
+      <span class="ability-parent-choice__copy">
+        <strong>Abilità con opzioni</strong>
+        <small>Abilita questa risorsa come padre di opzioni selezionabili.</small>
+      </span>
+      <b aria-hidden="true">✓</b>
     </span>
-    <label class="diceov-toggle condition-modal__toggle ability-parent-toggle__control">
-      <input type="checkbox" name="can_have_children" value="1" ${resource?.can_have_children && !resource?.parent_resource_id ? 'checked' : ''} aria-label="Può avere sotto-abilità" />
-      <span class="diceov-toggle-track" aria-hidden="true"></span>
-    </label>
   `;
   const canHaveChildrenInput = canHaveChildrenField.querySelector('input[name="can_have_children"]');
-  canHaveChildrenField.classList.toggle('is-selected', Boolean(canHaveChildrenInput?.checked));
-  canHaveChildrenInput?.addEventListener('change', () => {
-    canHaveChildrenField.classList.toggle('is-selected', canHaveChildrenInput.checked);
-  });
 
   const identitySectionRows = [
     buildRow([nameField, castTimeField, imageField], 'balanced'),
-    buildRow([parentField, canHaveChildrenField], 'balanced')
+    buildRow([canHaveChildrenField, parentField], 'balanced')
   ];
 
   const resourceTypeField = document.createElement('label');
@@ -1934,7 +1956,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     label: 'Recupero riposo breve',
     name: 'recovery_short',
     type: 'number',
-    value: resource?.recovery_short ?? ''
+    value: resource?.recovery_short ?? 0
   })
   enhanceNumericField(inputRiposoCorto, { decrementLabel: 'Riduci recupero riposo breve', incrementLabel: 'Aumenta recupero riposo breve' });
 
@@ -1942,7 +1964,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     label: 'Recupero riposo lungo',
     name: 'recovery_long',
     type: 'number',
-    value: resource?.recovery_long ?? ''
+    value: resource?.recovery_long ?? 0
   })
   enhanceNumericField(inputRiposoLungo, { decrementLabel: 'Riduci recupero riposo lungo', incrementLabel: 'Aumenta recupero riposo lungo' });
 
@@ -1969,7 +1991,7 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     label: 'Modificatore dado',
     name: 'damage_modifier',
     type: 'number',
-    value: resource?.damage_modifier ?? ''
+    value: resource?.damage_modifier ?? 0
   });
   enhanceNumericField(damageModifierField, { decrementLabel: 'Riduci modificatore dado', incrementLabel: 'Aumenta modificatore dado' });
   const resourceSavingThrowField = document.createElement('label');
@@ -2024,6 +2046,9 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     placeholder: 'Inserisci una descrizione, effetti e note di utilizzo...',
     value: resource?.description ?? ''
   });
+  descriptionField.querySelector(':scope > span')?.remove();
+  const descriptionInput = descriptionField.querySelector('textarea');
+  descriptionInput?.setAttribute('aria-label', 'Descrizione');
   const identitySection = buildSection({
     title: 'Dettagli abilità',
     description: 'Nome, categoria d’azione e immagine opzionale mostrata nelle liste.',
@@ -2044,12 +2069,9 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
     description: 'Configura il dado opzionale dell’abilità e l’eventuale caratteristica del tiro salvezza richiesto.',
     content: [buildRow([damageDiceNotationField, damageModifierField, resourceDamageTypeField, resourceSavingThrowField], 'compact')]
   });
-  const descriptionSection = buildSection({
-    title: 'Descrizione',
-    description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.',
-    content: [descriptionField],
-    variant: 'ability-modal-section--description'
-  });
+  const descriptionSection = document.createElement('section');
+  descriptionSection.className = 'ability-modal-section ability-modal-section--description ability-modal-section--description-plain';
+  descriptionSection.appendChild(descriptionField);
 
   const wizard = document.createElement('div');
   wizard.className = 'item-editor-wizard ability-editor-wizard';
@@ -2059,9 +2081,8 @@ export function openResourceDrawer(character, onSave, resource = null, { parentR
   const wizardBody = document.createElement('div');
   wizardBody.className = 'item-editor-wizard__body';
   const wizardSteps = [
-    { label: 'Identità', hint: 'Nome e organizzazione', sections: [identitySection] },
-    { label: 'Utilizzi e tiri', hint: 'Cariche, dadi e CD', sections: [usageSection, childUsageSection, rollsSection] },
-    { label: 'Descrizione', hint: 'Regole e dettagli', sections: [descriptionSection] }
+    { label: 'Identità', hint: 'Nome, organizzazione e descrizione', sections: [identitySection, descriptionSection] },
+    { label: 'Utilizzi e tiri', hint: 'Cariche, dadi e CD', sections: [usageSection, childUsageSection, rollsSection] }
   ].map((step, index) => {
     const button = document.createElement('button');
     button.type = 'button';

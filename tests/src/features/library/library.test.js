@@ -41,6 +41,9 @@ describe('src/features/library/library.js', () => {
     expect(styles).toContain('.library-item-card { min-height: 0; }');
     expect(source).toContain('data-spell-class="${value}" aria-pressed="false"');
     expect(source).toContain('data-item-trait="magic" aria-pressed="false"');
+    expect(source).toContain('itemCategories: new Set()');
+    expect(source).toContain('!state.itemCategories.size || state.itemCategories.has(item.category)');
+    expect(source).toContain('state.itemCategories.has(category) ? state.itemCategories.delete(category) : state.itemCategories.add(category)');
     expect(source).toContain("button.setAttribute('aria-pressed', String(state.spellLevels.has(level)))");
     expect(styles).toContain('.library-category-pills button::after');
     expect(styles).toContain('grid-template-columns: minmax(180px, 360px) minmax(0, 1fr) auto');

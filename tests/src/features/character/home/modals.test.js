@@ -66,6 +66,7 @@ describe('src/features/character/home/modals.js', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const management = readFileSync('src/features/character/home/detailManagement.js', 'utf8');
     const layout = readFileSync('src/ui/layout.js', 'utf8');
+    const shellStyles = readFileSync('src/styles/shellExperience.css', 'utf8');
     expect(source).toContain('attachUnifiedDetailActions(modal, formEl, { onEdit, onDelete })');
     expect(management).toContain("modal.querySelector('[data-form-header-actions]')");
     expect(management).toContain("actions.closest('.sheet-management-menu')");
@@ -73,6 +74,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(management).toContain("modal.classList.remove('detail-actions-in-header-left')");
     expect(layout).toContain('class="modal-header__top"');
     expect(layout).toContain('data-form-header-actions');
+    expect(shellStyles).toContain('grid-column: 1 !important;');
+    expect(shellStyles).toContain('justify-self: start !important;');
   });
 
   it('supports linked ability options that consume the parent resource', () => {
@@ -118,7 +121,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain('data-prepared-visible-count');
     expect(preparedModal).toContain("visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'");
     expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__sticky-filters\s*\{[^}]*position:\s*sticky;/s);
-    expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__catalog\s*\{[^}]*overflow-y:\s*auto;/s);
+    expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__catalog\s*\{[^}]*overflow:\s*hidden;/s);
+    expect(styles).toMatch(/:is\(\.sheet-detail,\.modal-card--prepared-spells\) \.prepared-spells-modal__list\s*\{[^}]*overflow-y:\s*auto;/s);
     expect(styles).toMatch(/:is\(\.sheet-detail,\.modal-card--prepared-spells\) \.prepared-spells-modal\s*\{[^}]*height:\s*100%;/s);
     expect(styles).toContain('.sheet-detail--preparing > .modal-body > .sheet-inline-detail.modal-card--prepared-spells');
     expect(preparedModal).toContain('const preparationView = openFormModal({');
@@ -139,6 +143,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.resource-parent-overview');
     expect(styles).toContain('.resource-detail-option__actions .resource-icon-button');
     expect(styles).toContain('.power-manual .resource-parent-overview');
+    expect(styles).toContain('.modal-card--resource-detail) .power-manual .resource-parent-overview .detail-rich-text { width: 100%; max-width: none;');
   });
 
   it('adds an explicit parent ability flag and hides child management for non-parents', () => {
@@ -180,10 +185,12 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.resource-option-picker__item.is-disabled');
   });
 
-  it('renders the parent capability control as a compact toggle', () => {
+  it('renders the parent capability control as a selectable card', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
-    expect(source).toContain('class="diceov-toggle condition-modal__toggle ability-parent-toggle__control"');
-    expect(source).toContain('class="diceov-toggle-track"');
+    const editor = source.slice(source.indexOf('export function openResourceDrawer'));
+    expect(editor).toContain("canHaveChildrenField.className = 'ability-parent-choice'");
+    expect(editor).toContain('class="ability-parent-choice__card"');
+    expect(editor).toContain('<strong>Abilità con opzioni</strong>');
   });
 
   it('uses a guided create and edit flow for abilities', () => {
@@ -191,10 +198,10 @@ describe('src/features/character/home/modals.js', () => {
     const styles = readFileSync('src/styles/theme.css', 'utf8');
     const editor = source.slice(source.indexOf('export function openResourceDrawer'));
 
-    expect(editor).toContain("{ label: 'Identità', hint: 'Nome e organizzazione'");
+    expect(editor).toContain("{ label: 'Identità', hint: 'Nome, organizzazione e descrizione', sections: [identitySection, descriptionSection] }");
     expect(editor).toContain("{ label: 'Utilizzi e tiri', hint: 'Cariche, dadi e CD'");
     expect(editor).toContain('sections: [usageSection, childUsageSection, rollsSection]');
-    expect(editor).toContain("{ label: 'Descrizione', hint: 'Regole e dettagli'");
+    expect(editor).not.toContain("{ label: 'Descrizione', hint: 'Regole e dettagli'");
     expect(editor).toContain('data-ability-editor-back');
     expect(editor).toContain('data-ability-editor-next');
     expect(editor).toContain("wizardSubmitButton.disabled = !resource && !finalStep");
@@ -202,7 +209,15 @@ describe('src/features/character/home/modals.js', () => {
     expect(editor).toContain("title: resource ? `Modifica abilità: ${resource.name || 'Senza nome'}`");
     expect(editor).toContain("cardClass: ['modal-card--form', 'modal-card--ability-editor']");
     expect(styles).toContain('.modal-card--ability-editor');
-    expect(styles).toContain('.ability-editor-wizard__panel[data-ability-editor-panel="2"] textarea');
+    expect(styles).toContain('.ability-editor-wizard__panel[data-ability-editor-panel="0"] textarea');
+    expect(styles).toContain('.ability-parent-field');
+    expect(styles).toContain('.ability-parent-choice > input:checked + .ability-parent-choice__card');
+    expect(editor).toContain("value: resource?.recovery_short ?? 0");
+    expect(editor).toContain("value: resource?.recovery_long ?? 0");
+    expect(editor).toContain("value: resource?.damage_modifier ?? 0");
+    expect(editor).toContain('buildRow([canHaveChildrenField, parentField]');
+    expect(editor).toContain("descriptionField.querySelector(':scope > span')?.remove()");
+    expect(editor).not.toContain("description: 'Aggiungi regole, durata, trigger o note utili durante la sessione.'");
   });
 
   it('keeps child actions separate from parent detail actions', () => {
@@ -219,12 +234,12 @@ describe('src/features/character/home/modals.js', () => {
       .toBeLessThan(detailModal.indexOf("const detailAction = formData.get('detail_action')"));
   });
 
-  it('uses the same toggle structure as the conditions modal without forced dimensions', () => {
+  it('keeps the variable child cost as a compact toggle', () => {
     const source = readFileSync('src/features/character/home/modals.js', 'utf8');
     const styles = readFileSync('src/styles/base.css', 'utf8');
-    expect(source).toContain('ability-parent-toggle condition-modal__item');
-    expect(source).toContain('condition-modal__item-label');
-    expect(source).toContain('diceov-toggle condition-modal__toggle ability-parent-toggle__control');
+    const editor = source.slice(source.indexOf('export function openResourceDrawer'));
+    expect(editor).toContain("variableResourceCostField.className = 'field ability-parent-toggle condition-modal__item'");
+    expect(editor).toContain('diceov-toggle condition-modal__toggle ability-parent-toggle__control');
     expect(styles).toMatch(/\.ability-parent-toggle\s*\{[^}]*flex-direction:\s*row;/s);
     expect(styles).not.toContain('.ability-parent-toggle__control .diceov-toggle-track');
     expect(styles).not.toMatch(/\.ability-parent-toggle__control\s*\{[^}]*width:/s);
@@ -310,6 +325,7 @@ describe('src/features/character/home/modals.js', () => {
     expect(preparedModal).toContain('play-card play-card--spell');
     expect(preparedModal).toContain('data-prepared-quick-detail');
     expect(preparedModal).toContain('prepared-spells-modal__detail-surface');
+    expect(preparedModal).toContain('prepared-spells-modal__open-arrow');
     expect(preparedModal).not.toContain('data-prepared-description-toggle');
     expect(preparedModal).toContain('data-prepared-delete');
     expect(preparedModal).toContain("title: 'Elimina incantesimo'");
@@ -333,6 +349,8 @@ describe('src/features/character/home/modals.js', () => {
     expect(styles).toContain('.prepared-spells-modal__check');
     expect(styles).toContain('.prepared-spells-modal__delete');
     expect(styles).toContain('.prepared-spells-modal__detail-surface');
+    expect(styles).toContain('.prepared-spells-modal__open-arrow');
+    expect(styles).toContain('grid-template-columns: minmax(150px,.8fr) minmax(360px,2fr) auto;');
     expect(styles).toContain('.prepared-spells-modal__empty');
   });
 

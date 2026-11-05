@@ -5,6 +5,7 @@ import { getCategoryLabel } from './utils.js';
 import { createItem, createItems } from './inventoryApi.js';
 import { itemCategories } from './constants.js';
 import { buildLootFields } from './render.js';
+import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
 
 export async function openItemSourceModal({
   title = 'Aggiungi oggetto',
@@ -39,6 +40,98 @@ async function loadAllSharedItems() {
   return items;
 }
 
+function presentPickerDetail(modal, options = {}) {
+  const card = modal?.querySelector('.modal-card');
+  const parentForm = modal?.querySelector('[data-form-body]');
+  const heading = modal?.querySelector('[data-form-title]');
+  const overlay = modal?.querySelector('[data-form-overlay]');
+  if (!card || !parentForm || !heading) return openFormModal(options);
+  return new Promise((resolve) => {
+    const previousTitle = heading.textContent;
+    const previousClasses = (modal.dataset.formCardClasses || '').split(/\s+/).filter(Boolean);
+    const detailClasses = (Array.isArray(options.cardClass) ? options.cardClass : [options.cardClass])
+      .flatMap((value) => String(value || '').split(/\s+/))
+      .filter(Boolean);
+    const previousHeaderControls = [...modal.querySelectorAll('[data-form-header-actions]')]
+      .map((node) => [node, node.hidden]);
+    previousHeaderControls.forEach(([node]) => {
+      node.removeAttribute('data-form-header-actions');
+      node.hidden = true;
+    });
+    previousClasses.forEach((className) => card.classList.remove(className));
+    detailClasses.forEach((className) => card.classList.add(className));
+    parentForm.hidden = true;
+    heading.textContent = options.title || 'Dettaglio oggetto';
+
+    const headerActions = document.createElement('div');
+    headerActions.className = 'modal-header__actions';
+    headerActions.dataset.formHeaderActions = '';
+    modal.querySelector('.modal-header__top')?.append(headerActions);
+    const form = document.createElement('form');
+    form.className = 'modal-form picker-nested-detail';
+    if (detailClasses.length) form.classList.add(...detailClasses);
+    const fields = document.createElement('div');
+    fields.className = 'modal-body';
+    fields.dataset.formFields = '';
+    if (typeof options.content === 'string') fields.innerHTML = options.content;
+    else if (options.content) fields.append(options.content);
+    const footer = document.createElement('footer');
+    footer.className = 'modal-footer sheet-view-footer';
+    footer.innerHTML = '<div class="modal-actions"><div class="modal-actions__left"><button class="ghost-button" type="button" data-picker-detail-back>‹ Indietro</button></div><div class="modal-actions__right"></div></div>';
+    const primaryActions = footer.querySelector('.modal-actions__right');
+    const hasPrimaryAction = options.showFooter !== false && options.submitLabel !== 'Chiudi';
+    if (hasPrimaryAction) {
+      const submit = document.createElement('button');
+      submit.type = 'submit';
+      submit.className = 'primary';
+      submit.dataset.formSubmit = '';
+      submit.textContent = options.submitLabel || 'Conferma';
+      primaryActions.append(submit);
+    }
+    form.append(fields, footer);
+    card.append(form);
+    let cleanupHook = options.onOpen?.({ modal, formEl: form, fieldsEl: fields });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      cleanupHook?.();
+      cleanupHook = null;
+      form.remove();
+      headerActions.remove();
+      detailClasses.forEach((className) => card.classList.remove(className));
+      previousClasses.forEach((className) => card.classList.add(className));
+      previousHeaderControls.forEach(([node, hidden]) => {
+        node.dataset.formHeaderActions = '';
+        node.hidden = hidden;
+      });
+      parentForm.hidden = false;
+      heading.textContent = previousTitle;
+      overlay?.removeEventListener('click', onOverlay, true);
+      document.removeEventListener('keydown', onKeydown, true);
+      resolve(result);
+    };
+    const onOverlay = (event) => {
+      event.stopPropagation();
+      finish(null);
+    };
+    const onKeydown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      finish(null);
+    };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      finish(new FormData(form, event.submitter));
+    });
+    footer.querySelector('[data-picker-detail-back]')?.addEventListener('click', () => finish(null));
+    overlay?.addEventListener('click', onOverlay, true);
+    document.addEventListener('keydown', onKeydown, true);
+    footer.querySelector('[data-picker-detail-back]')?.focus();
+  });
+}
+
 export async function openSharedItemPicker({
   title = 'Scegli dall’archivio',
   multiple = true,
@@ -58,6 +151,7 @@ export async function openSharedItemPicker({
     </div>
     <div class="shared-item-picker__toolbar">
       <label><span aria-hidden="true">⌕</span><input type="search" placeholder="Cerca nell’archivio" data-shared-item-search /></label>
+      <button class="shared-item-picker__clear-selection" type="button" data-clear-shared-item-selection hidden>Deseleziona tutti</button>
       <output data-shared-item-count aria-live="polite">Caricamento…</output>
     </div>
     <div class="shared-item-picker__results" data-shared-item-results>
@@ -68,12 +162,15 @@ export async function openSharedItemPicker({
       </div>
     </div>`;
   const search = content.querySelector('[data-shared-item-search]');
+  const clearSelectionButton = content.querySelector('[data-clear-shared-item-selection]');
   const count = content.querySelector('[data-shared-item-count]');
   const results = content.querySelector('[data-shared-item-results]');
   const categoryButtons = [...content.querySelectorAll('[data-shared-item-category]')];
   const selectedCategories = new Set();
   let cards = [];
   let submitButton = null;
+  let syncSelections = () => {};
+  let detailPresenter = openFormModal;
 
   const syncCategoryButtons = () => {
     categoryButtons.forEach((button) => {
@@ -108,38 +205,60 @@ export async function openSharedItemPicker({
     results.innerHTML = `<div class="shared-item-picker__grid">
       ${items.map((item) => {
     const image = sanitizeImageUrl(item.image_url);
-    return `<article class="shared-item-picker__card" data-shared-item-option data-item-category="${escapeHtml(item.category || 'gear')}" data-search-value="${escapeHtml(`${item.name} ${getCategoryLabel(item.category)}`.toLowerCase())}">
-        <label class="shared-item-picker__selection">
-          <input type="${inputType}" name="shared_item_ids" value="${escapeHtml(item.id)}" />
+    return `<article class="shared-item-picker__card" data-shared-item-option data-shared-item-id="${escapeHtml(item.id)}" data-item-category="${escapeHtml(item.category || 'gear')}" data-search-value="${escapeHtml(`${item.name} ${getCategoryLabel(item.category)}`.toLowerCase())}">
+        <input class="shared-item-picker__input" type="${inputType}" name="shared_item_ids" value="${escapeHtml(item.id)}" />
+        <button class="shared-item-picker__detail" type="button" data-shared-item-detail aria-label="Apri il dettaglio di ${escapeHtml(item.name)}">
           <span class="shared-item-picker__visual">${image ? `<img src="${image}" alt="" />` : '<i aria-hidden="true">◇</i>'}</span>
           <span class="shared-item-picker__copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(getCategoryLabel(item.category))}${item.is_magic ? ' · Magico' : ''}</small></span>
-          <b aria-hidden="true">✓</b>
-        </label>
-        ${allowQuantities ? `
-          <div class="shared-item-picker__quantity" data-shared-item-quantity>
-            <span>Quantità</span>
+          <span class="shared-item-picker__open-hint" aria-hidden="true">›</span>
+        </button>
+        <footer class="shared-item-picker__footer">
+          <button class="shared-item-picker__select" type="button" data-shared-item-select aria-pressed="false"><span aria-hidden="true">✓</span><strong>Seleziona</strong></button>
+          ${allowQuantities ? `<div class="shared-item-picker__quantity" data-shared-item-quantity>
             <span class="shared-item-picker__stepper">
               <button type="button" data-quantity-step="-1" aria-label="Riduci quantità di ${escapeHtml(item.name)}">−</button>
               <input type="number" name="shared_item_qty_${escapeHtml(item.id)}" value="1" min="1" max="999" step="1" aria-label="Quantità di ${escapeHtml(item.name)}" disabled />
               <button type="button" data-quantity-step="1" aria-label="Aumenta quantità di ${escapeHtml(item.name)}">+</button>
             </span>
           </div>` : ''}
+        </footer>
       </article>`;
   }).join('')}
     </div>`;
     cards = [...content.querySelectorAll('[data-shared-item-option]')];
+    syncSelections = () => {
+      let selectedCount = 0;
+      cards.forEach((card) => {
+        const selection = card.querySelector('input[name="shared_item_ids"]');
+        const quantityInput = card.querySelector('[data-shared-item-quantity] input');
+        const selectButton = card.querySelector('[data-shared-item-select]');
+        card.classList.toggle('is-selected', selection.checked);
+        selectButton?.setAttribute('aria-pressed', String(selection.checked));
+        const label = selectButton?.querySelector('strong');
+        if (label) label.textContent = selection.checked ? 'Selezionato' : 'Seleziona';
+        if (quantityInput) quantityInput.disabled = !selection.checked;
+        if (selection.checked) selectedCount += 1;
+      });
+      clearSelectionButton.hidden = selectedCount === 0;
+      syncSubmitState();
+    };
     cards.forEach((card) => {
       const selection = card.querySelector('input[name="shared_item_ids"]');
       const quantityInput = card.querySelector('[data-shared-item-quantity] input');
-      const syncSelection = () => {
-        if (!multiple && selection.checked) {
-          cards.filter((entry) => entry !== card).forEach((entry) => entry.classList.remove('is-selected'));
-        }
-        card.classList.toggle('is-selected', selection.checked);
-        if (quantityInput) quantityInput.disabled = !selection.checked;
-        syncSubmitState();
-      };
-      selection.addEventListener('change', syncSelection);
+      selection.addEventListener('change', syncSelections);
+      card.querySelector('[data-shared-item-select]')?.addEventListener('click', () => {
+        selection.checked = multiple ? !selection.checked : true;
+        selection.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      card.querySelector('[data-shared-item-detail]')?.addEventListener('click', () => {
+        const item = items.find((entry) => String(entry.id) === String(card.dataset.sharedItemId));
+        if (!item) return;
+        const template = item.item_data && typeof item.item_data === 'object' ? item.item_data : {};
+        void openEquipmentItemDetail({ ...template, ...item, description: item.description || template.description }, {
+          catalogMode: true,
+          present: detailPresenter
+        });
+      });
       card.querySelectorAll('[data-quantity-step]').forEach((button) => {
         button.addEventListener('click', () => {
           if (!selection.checked) {
@@ -154,13 +273,20 @@ export async function openSharedItemPicker({
       quantityInput?.addEventListener('input', () => {
         quantityInput.value = String(Math.min(999, Math.max(1, Number(quantityInput.value) || 1)));
       });
-      syncSelection();
     });
+    syncSelections();
     applyFilters();
     syncSubmitState();
   };
 
   search.addEventListener('input', applyFilters);
+  clearSelectionButton.addEventListener('click', () => {
+    cards.forEach((card) => {
+      const selection = card.querySelector('input[name="shared_item_ids"]');
+      if (selection) selection.checked = false;
+    });
+    syncSelections();
+  });
   categoryButtons.forEach((button) => button.addEventListener('click', () => {
     const category = button.dataset.sharedItemCategory;
     if (selectedCategories.has(category)) selectedCategories.delete(category);
@@ -173,11 +299,14 @@ export async function openSharedItemPicker({
   const formData = await openFormModal({
     title, submitLabel: multiple ? 'Aggiungi selezionati' : 'Aggiungi oggetto', cancelLabel: 'Annulla', content,
     cardClass: ['modal-card--wide', 'modal-card--scrollable', 'modal-card--shared-item-picker', shortcutSize ? 'modal-card--shortcut-size' : ''],
-    onOpen: ({ modal }) => {
+    onOpen: ({ modal, fieldsEl }) => {
       let mounted = true;
       let headerActionButton = null;
       let headerActionHost = null;
       submitButton = modal?.querySelector('[data-form-submit], .sheet-view-footer button[type="submit"]');
+      detailPresenter = modal?.matches?.('[data-form-modal]')
+        ? (options) => presentPickerDetail(modal, options)
+        : (options) => modal.presentForm(options);
       if (submitButton) submitButton.disabled = true;
       if (headerActionLabel && typeof onHeaderAction === 'function') {
         const sheetActions = modal?.querySelector(':scope > .modal-header .sheet-modal-actions');
@@ -194,16 +323,19 @@ export async function openSharedItemPicker({
           headerActionButton.type = 'button';
           headerActionButton.className = 'resource-action-button shared-item-picker__header-action';
           headerActionButton.innerHTML = `<span aria-hidden="true">＋</span><strong>${escapeHtml(headerActionLabel)}</strong>`;
-          headerActionButton.addEventListener('click', () => {
-            onHeaderAction();
-            const backButton = modal.querySelector('.sheet-view-footer .sheet-detail-back');
-            const cancelButton = modal.querySelector('[data-form-cancel]');
-            (backButton || cancelButton)?.click();
+          headerActionButton.addEventListener('click', async () => {
+            headerActionButton.disabled = true;
+            try {
+              await onHeaderAction();
+            } finally {
+              if (mounted) headerActionButton.disabled = false;
+            }
           });
           headerActions.prepend(headerActionButton);
         }
       }
-      onLoadingChange?.(true);
+      const loadingContext = { modal, fieldsEl, content };
+      onLoadingChange?.(true, loadingContext);
       void loadAllSharedItems()
         .then((loadedItems) => {
           if (!mounted) return;
@@ -221,12 +353,12 @@ export async function openSharedItemPicker({
           count.textContent = 'Errore';
           createToast('Impossibile caricare l’archivio degli oggetti', 'error');
         })
-        .finally(() => onLoadingChange?.(false));
+        .finally(() => onLoadingChange?.(false, loadingContext));
       return () => {
         mounted = false;
         headerActionButton?.remove();
         headerActionHost?.remove();
-        onLoadingChange?.(false);
+        onLoadingChange?.(false, loadingContext);
       };
     }
   });

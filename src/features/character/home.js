@@ -47,7 +47,6 @@ import {
   openVariableResourceCostModal,
   openResourceOptionModal,
   openResourceDrawer,
-  openSpellSourceModal,
   openSpellDrawer,
   openSpellQuickDetailModal
 } from './home/modals.js';
@@ -339,10 +338,10 @@ function mapCharacterSpellRowToSpell(row) {
   };
 }
 
-export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014', canPrepare = true } = {}) {
+export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014', canPrepare = true, onCreateSpell = null } = {}) {
   const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
   const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   const initialRulesVersion = ['2014', '2024'].includes(String(defaultRulesVersion)) ? String(defaultRulesVersion) : '2014';
   const content = document.createElement('div');
   content.className = 'shared-spell-picker';
@@ -414,11 +413,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
           </div>
         </div>
         <div class="shared-spell-picker__list" data-spell-results aria-live="polite"></div>
-        <div class="shared-spell-picker__paging" data-spell-paging hidden>
-          <button type="button" class="ghost-button" data-prev-page aria-label="Pagina precedente">← Precedente</button>
-          <span data-page-label>Pagina 1</span>
-          <button type="button" class="ghost-button" data-next-page aria-label="Pagina successiva">Successiva →</button>
-        </div>
       </section>
     </div>
   `;
@@ -429,14 +423,8 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   const sourceSummary = content.querySelector('[data-picker-source-summary]');
   const resultsEl = content.querySelector('[data-spell-results]');
   const resultsCountEl = content.querySelector('[data-spell-results-count]');
-  const pagingEl = content.querySelector('[data-spell-paging]');
-  const pageLabel = content.querySelector('[data-page-label]');
-  const prevBtn = content.querySelector('[data-prev-page]');
-  const nextBtn = content.querySelector('[data-next-page]');
   const selectedCountEl = content.querySelector('[data-spell-selected-count]');
   const clearSelectionButton = content.querySelector('[data-clear-spell-selection]');
-  let currentPage = 1;
-  let totalPages = 1;
   let loadSequence = 0;
   let searchTimer = null;
   let submitButtons = [];
@@ -546,7 +534,11 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
       name.className = 'play-card__title';
       name.textContent = spell.name;
       main.append(meta, name);
-      surface.append(main);
+      const openArrow = document.createElement('span');
+      openArrow.className = 'shared-spell-picker__spell-arrow';
+      openArrow.setAttribute('aria-hidden', 'true');
+      openArrow.textContent = '›';
+      surface.append(main, openArrow);
       surface.addEventListener('click', () => openSpellQuickDetailModal(null, spell, null, { present }));
 
       const footer = document.createElement('footer');
@@ -575,7 +567,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     resultsCountEl.textContent = 'Caricamento...';
     const selectedClasses = Array.from(content.querySelectorAll('input[name="spell_caster_filter"]:checked')).map((el) => el.value);
     try {
-      const result = await searchSharedSpells({
+      const request = {
         query: queryInput.value,
         rulesVersion: selectedRulesVersion,
         level: selectedLevel,
@@ -584,22 +576,24 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
         casterClasses: selectedClasses,
         concentration: selectedProperties.has('concentration') ? true : '',
         ritual: selectedProperties.has('ritual') ? true : '',
-        page: currentPage,
         pageSize: PAGE_SIZE
-      });
-      if (sequence !== loadSequence) return;
-      totalPages = Math.max(1, Math.ceil((result.total || 0) / (result.pageSize || PAGE_SIZE)));
-      currentPage = Math.min(currentPage, totalPages);
-      renderResults(result.items || [], result.total || 0);
+      };
+      const loadedSpells = [];
+      let page = 1;
+      let total = 0;
+      do {
+        const result = await searchSharedSpells({ ...request, page });
+        if (sequence !== loadSequence) return;
+        loadedSpells.push(...(result.items || []));
+        total = Number(result.total) || loadedSpells.length;
+        if (!result.items?.length) break;
+        page += 1;
+      } while (loadedSpells.length < total);
+      renderResults(loadedSpells, total);
       resultsEl.scrollTop = 0;
-      pageLabel.textContent = `Pagina ${currentPage} di ${totalPages}`;
-      prevBtn.disabled = currentPage <= 1;
-      nextBtn.disabled = currentPage >= totalPages;
-      pagingEl.hidden = totalPages <= 1;
     } catch (error) {
       if (sequence !== loadSequence) return;
       resultsCountEl.textContent = 'Errore di caricamento';
-      pagingEl.hidden = true;
       resultsEl.innerHTML = `
         <div class="shared-spell-picker__state shared-spell-picker__state--error">
           <span aria-hidden="true">!</span>
@@ -613,7 +607,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   };
 
   const refreshFromFirstPage = () => {
-    currentPage = 1;
     void loadResults();
   };
   queryInput.addEventListener('input', () => {
@@ -685,17 +678,6 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     queryInput.focus();
     refreshFromFirstPage();
   });
-  prevBtn.addEventListener('click', () => {
-    if (currentPage <= 1) return;
-    currentPage -= 1;
-    void loadResults();
-  });
-  nextBtn.addEventListener('click', () => {
-    if (currentPage >= totalPages) return;
-    currentPage += 1;
-    void loadResults();
-  });
-
   const formData = await present({
     title: 'Scegli un incantesimo dalla raccolta',
     submitLabel: 'Aggiungi come sempre preparati',
@@ -703,6 +685,29 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     content,
     cardClass: ['modal-card--form', 'modal-card--shared-spell-picker'],
     onOpen: ({ modal, formEl }) => {
+      let createButton = null;
+      let headerActionHost = null;
+      if (typeof onCreateSpell === 'function') {
+        const sheetActions = modal?.querySelector(':scope > .modal-header .sheet-modal-actions');
+        let headerActions = modal?.querySelector('[data-form-header-actions]');
+        if (sheetActions && modal?.classList.contains('sheet-detail--inline')) {
+          headerActionHost = document.createElement('div');
+          headerActionHost.className = 'modal-header__actions shared-spell-picker__header-actions';
+          headerActionHost.dataset.formHeaderActions = '';
+          sheetActions.prepend(headerActionHost);
+          headerActions = headerActionHost;
+        }
+        if (headerActions) {
+          createButton = document.createElement('button');
+          createButton.type = 'button';
+          createButton.className = 'resource-action-button shared-spell-picker__create-action';
+          createButton.innerHTML = '<span aria-hidden="true">＋</span><strong>Crea incantesimo</strong>';
+          createButton.addEventListener('click', () => {
+            onCreateSpell();
+          });
+          headerActions.prepend(createButton);
+        }
+      }
       const primaryButton = modal.querySelector('[data-form-submit]');
       const actions = primaryButton?.closest('.modal-actions__right') || primaryButton?.parentElement;
       const preparedButton = canPrepare ? document.createElement('button') : null;
@@ -731,6 +736,8 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
         alwaysButton?.removeAttribute('name');
         alwaysButton?.removeAttribute('value');
         alwaysButton?.classList.remove('shared-spell-picker__assignment-submit', 'shared-spell-picker__assignment-submit--always');
+        createButton?.remove();
+        headerActionHost?.remove();
         submitButtons = [];
       };
     }
@@ -1097,15 +1104,13 @@ export async function renderHome(container) {
       if (!activeCharacter) return;
       const spellDialog = addSpellButton.closest('dialog');
       const presentInShortcut = (modalOptions) => presentSheetDetail(spellDialog, modalOptions);
-      const mode = await openSpellSourceModal({ present: presentInShortcut });
-      if (!mode) return;
-      if (mode === 'shared') {
-        try {
+      try {
           const preferredRulesVersion = (activeCharacter.data?.spells || [])
             .find((entry) => ['2014', '2024'].includes(String(entry.rules_version)))?.rules_version || '2014';
           const sharedSpells = await openSharedSpellPicker(presentInShortcut, {
             defaultRulesVersion: preferredRulesVersion,
-            canPrepare: Boolean(activeCharacter.data?.spellcasting?.can_prepare)
+            canPrepare: Boolean(activeCharacter.data?.spellcasting?.can_prepare),
+            onCreateSpell: () => openSpellDrawer(activeCharacter, () => renderHome(container), null, { present: presentInShortcut })
           });
           if (!sharedSpells?.length) return;
           const currentSpells = Array.isArray(activeCharacter.data?.spells) ? activeCharacter.data.spells : [];
@@ -1132,12 +1137,10 @@ export async function renderHome(container) {
           await saveCharacterData(activeCharacter, nextData, addedLabel, () => renderHome(container));
           if (duplicateCount) createToast(`${duplicateCount} ${duplicateCount === 1 ? 'incantesimo già presente è stato ignorato' : 'incantesimi già presenti sono stati ignorati'}`, 'info');
           return;
-        } catch (error) {
+      } catch (error) {
           createToast('Errore durante l\'associazione dell\'incantesimo condiviso', 'error');
           return;
-        }
       }
-      openSpellDrawer(activeCharacter, () => renderHome(container), null, { present: presentInShortcut });
     });
   }
 
@@ -1187,18 +1190,7 @@ export async function renderHome(container) {
   const preparedSpellsButton = container.querySelector('[data-open-prepared-spells]');
   if (preparedSpellsButton) {
     preparedSpellsButton.addEventListener('click', async () => {
-      const shortcutBody = preparedSpellsButton.closest('dialog.sheet-detail')?.querySelector('.modal-body');
-      const stopLoading = shortcutBody
-        ? showShortcutLoader(shortcutBody, 'Caricamento grimorio')
-        : (() => {
-          setGlobalLoading(true);
-          return () => setGlobalLoading(false);
-        })();
-      try {
-        await openPreparedSpellsModal(activeCharacter, () => renderHome(container));
-      } finally {
-        stopLoading();
-      }
+      await openPreparedSpellsModal(activeCharacter, () => renderHome(container));
     });
   }
 
@@ -2274,15 +2266,34 @@ async function handleLootAction(container) {
     createToast('Loot disponibile solo online.', 'error');
     return;
   }
-  let manualRequested = false;
+  let manualItemCreated = false;
+  let stopCatalogLoader = null;
   const selected = await openSharedItemPicker({
     title: 'Loot rapido',
     allowQuantities: true,
-    headerActionLabel: 'Aggiungi oggetto',
-    onHeaderAction: () => { manualRequested = true; },
-    shortcutSize: true
+    headerActionLabel: 'Nuovo oggetto',
+    onHeaderAction: async () => {
+      try {
+        const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
+        if (created) {
+          manualItemCreated = true;
+          createToast('Loot aggiunto');
+        }
+      } catch (error) {
+        createToast('Errore loot', 'error');
+      }
+    },
+    shortcutSize: true,
+    onLoadingChange: (isLoading, context = {}) => {
+      if (isLoading) {
+        stopCatalogLoader = showShortcutLoader(context.fieldsEl || context.modal || container, 'Caricamento archivio oggetti');
+      } else {
+        stopCatalogLoader?.();
+        stopCatalogLoader = null;
+      }
+    }
   });
-  if (!manualRequested && selected.length) {
+  if (selected.length) {
     setGlobalLoading(true);
     try {
       await addSharedItemsToInventory(selected, activeCharacter);
@@ -2296,13 +2307,7 @@ async function handleLootAction(container) {
     }
     return;
   }
-  if (!manualRequested) return;
-  try {
-    const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
-    if (created) createToast('Loot aggiunto');
-  } catch (error) {
-    createToast('Errore loot', 'error');
-  }
+  if (manualItemCreated && container) await renderHome(container);
 }
 
 

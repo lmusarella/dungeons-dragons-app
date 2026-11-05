@@ -50,5 +50,11 @@ describe('inventory equipment management', () => {
     expect(detail).not.toContain('<h3>Proprietà dell’arma</h3>');
     expect(styles).toContain('.equipment-rule-card');
     expect(styles).toContain('flex: 0 0 30px; margin: 0;');
+    expect(styles).toContain('grid-template-columns: minmax(0,1fr) minmax(220px,260px)');
+    expect(styles).toContain('width: 280px; height: 280px;');
+    expect(styles).toContain('max-height: 280px;');
+    expect(styles).toContain('width: min(100%,290px); justify-self: end;');
+    expect(styles).toContain('font-size: 10.5px;');
+    expect(styles).toContain('font-size: 12.5px;');
   });
 });

@@ -128,7 +128,11 @@ describe('expanded shortcut reference',()=>{
     expect(layout).not.toContain('proficiencyShortcut');
     expect(sections).not.toContain('character-proficiency-section');
     expect(sections).toContain('data-show-proficiencies');
+    expect(sections).toContain('proficiency-modal__hero');
+    expect(sections).toContain('Competenze e conoscenze');
     expect(styles).toContain('.modal-card--proficiencies .proficiency-tab-bar');
+    expect(styles).toContain('.proficiency-modal__hero-icon');
+    expect(styles).toContain('margin-bottom: 3px;');
     expect(styles).toContain(".home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right)");
     expect(styles).toContain('background: rgba(251,244,230,.96)');
     expect(styles).toContain('border-radius: 20px');
@@ -146,6 +150,8 @@ describe('expanded shortcut reference',()=>{
     expect(views).toContain("moneyPage.append(wallet, transactions)");
     expect(views).not.toContain("{ key: 'transactions', label: 'Transazioni'");
     expect(styles).toContain('.shortcut-context-loader__spinner');
+    expect(styles).toContain('.sheet-detail .modal-body.is-context-loading');
+    expect(styles).not.toContain('.sheet-detail > .shortcut-context-loader { border-radius: inherit; }');
     expect(styles).toContain('grid-auto-flow: row; place-items: center; align-content: center; justify-content: center');
     expect(styles).toContain('.shortcut-context-loader > span:last-child { display: grid; justify-items: center;');
     expect(styles).toContain('.inventory-money-workspace');

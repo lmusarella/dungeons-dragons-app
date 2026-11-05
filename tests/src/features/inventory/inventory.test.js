@@ -68,7 +68,13 @@ describe('src/features/inventory/inventory.js', () => {
     expect(inventory).toContain('openQuickLootItemModal(activeCharacter');
     expect(inventory).toContain('allowQuantities: true');
     expect(picker).toContain('modal-card--shortcut-size');
-    expect(inventory).toContain("headerActionLabel: 'Aggiungi oggetto'");
+    expect(inventory).toContain("headerActionLabel: 'Nuovo oggetto'");
+    expect(picker).toContain('data-shared-item-detail');
+    expect(picker).toContain('data-shared-item-select');
+    expect(picker).toContain("label.textContent = selection.checked ? 'Selezionato' : 'Seleziona'");
+    expect(picker).toContain('openEquipmentItemDetail({ ...template, ...item');
+    expect(styles).toContain('.shared-item-picker__select');
+    expect(styles).toContain(".shared-item-picker__category.is-active::after");
     expect(picker).toContain("headerActionHost.dataset.formHeaderActions = ''");
     expect(picker).toContain('sheetActions.prepend(headerActionHost)');
     expect(styles).toContain('.modal-card--shortcut-size');

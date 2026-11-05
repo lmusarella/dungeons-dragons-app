@@ -77,7 +77,13 @@ describe('src/features/character/home.js', () => {
     expect(picker).toContain('const selectedSourceKeys = new Set()');
     expect(picker).not.toContain('data-spell-preview');
     expect(picker).toContain('openSpellQuickDetailModal(null, spell, null, { present })');
+    expect(picker).toContain("openArrow.className = 'shared-spell-picker__spell-arrow'");
+    expect(picker).toContain("createButton.innerHTML = '<span aria-hidden=\"true\">＋</span><strong>Crea incantesimo</strong>'");
     expect(picker).toContain("pageSize: PAGE_SIZE");
+    expect(picker).toContain('loadedSpells.push(...(result.items || []))');
+    expect(picker).toContain('while (loadedSpells.length < total)');
+    expect(picker).not.toContain('data-next-page');
+    expect(picker).not.toContain('data-prev-page');
     expect(picker).toContain("cardClass: ['modal-card--form', 'modal-card--shared-spell-picker']");
     expect(picker).toContain('const selectedSpells = new Map()');
     expect(picker).toContain('submitButtons.forEach((button) => { button.disabled = count === 0; })');
@@ -100,10 +106,11 @@ describe('src/features/character/home.js', () => {
       source.indexOf('const deleteSpellWithConfirmation')
     );
     expect(addFlow).toContain('const presentInShortcut = (modalOptions) => presentSheetDetail(spellDialog, modalOptions)');
-    expect(addFlow).toContain('openSpellSourceModal({ present: presentInShortcut })');
+    expect(addFlow).not.toContain('openSpellSourceModal');
     expect(addFlow).toContain('openSharedSpellPicker(presentInShortcut, {');
     expect(addFlow).toContain('defaultRulesVersion: preferredRulesVersion');
     expect(addFlow).toContain('canPrepare: Boolean(activeCharacter.data?.spellcasting?.can_prepare)');
+    expect(addFlow).toContain('onCreateSpell: () => openSpellDrawer(activeCharacter');
     expect(addFlow).toContain('const spellsToAdd = sharedSpells.filter');
     expect(addFlow).toContain('await Promise.all(spellsToAdd.map');
     expect(addFlow).toContain('spells: [...currentSpells, ...nextSpells]');

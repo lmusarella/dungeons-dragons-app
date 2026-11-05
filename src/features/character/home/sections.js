@@ -602,30 +602,37 @@ export function buildProficiencyOverview(character, items = [], canEditCharacter
     ? (Array.isArray(data.weapon_masteries) ? data.weapon_masteries : [])
     : [];
   const weaponMasteryTab = weaponMasteries.length > 0 || Boolean(data.weapon_mastery_enabled);
+  const defenseCount = (damageDefenses.resistances?.length || 0) + (damageDefenses.immunities?.length || 0);
+  const configuredCount = equipped.length + weaponMasteries.length + tools.length + languages.length + talents.length + fightingStyles.length + defenseCount;
   return `
     <div class="detail-section proficiency-overview">
+      <header class="proficiency-modal__hero">
+        <span class="proficiency-modal__hero-icon" aria-hidden="true">✦</span>
+        <div><span>Profilo del personaggio</span><strong>Competenze e conoscenze</strong><small>Scegli una sezione per consultare rapidamente ciò che il personaggio sa usare.</small></div>
+        <output><strong>${configuredCount}</strong><span>voci</span></output>
+      </header>
       <div class="proficiency-tabs" data-proficiency-tabs>
         <div class="tab-bar proficiency-tab-bar" role="tablist" aria-label="Competenze extra">
           <button class="tab-bar__button is-active" type="button" role="tab" aria-selected="true" data-proficiency-tab="equipment">
-            <span>Equipaggiamento</span><small>${equipped.length}</small>
+            <i aria-hidden="true">⚔</i><span>Equipaggiamento</span><small>${equipped.length}</small>
           </button>
           ${weaponMasteryTab ? `<button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="weapon-masteries">
-            <span>Maestrie armi</span><small>${weaponMasteries.length}</small>
+            <i aria-hidden="true">◆</i><span>Maestrie armi</span><small>${weaponMasteries.length}</small>
           </button>` : ''}
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="tools">
-            <span>Strumenti</span><small>${tools.length}</small>
+            <i aria-hidden="true">⚒</i><span>Strumenti</span><small>${tools.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="languages">
-            <span>Lingue</span><small>${languages.length}</small>
+            <i aria-hidden="true">文</i><span>Lingue</span><small>${languages.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="talents">
-            <span>Talenti</span><small>${talents.length}</small>
+            <i aria-hidden="true">★</i><span>Talenti</span><small>${talents.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="fighting-styles">
-            <span>Stili di combattimento</span><small>${fightingStyles.length}</small>
+            <i aria-hidden="true">♜</i><span>Stili di combattimento</span><small>${fightingStyles.length}</small>
           </button>
           <button class="tab-bar__button" type="button" role="tab" aria-selected="false" data-proficiency-tab="defenses">
-            <span>Difese</span><small>${(damageDefenses.resistances?.length || 0) + (damageDefenses.immunities?.length || 0)}</small>
+            <i aria-hidden="true">◈</i><span>Difese</span><small>${defenseCount}</small>
           </button>
         </div>
         <div class="detail-card detail-card--text tab-panel proficiency-panel is-active" role="tabpanel" data-proficiency-panel="equipment">

@@ -927,12 +927,22 @@ export async function renderInventory(container) {
     const isShortcut = container.hasAttribute('data-inventory-shortcut');
     let stopCatalogLoader = null;
     if (isShortcut) {
-      let manualRequested = false;
+      let manualItemCreated = false;
       const selected = await openSharedItemPicker({
         title: 'Loot rapido',
         allowQuantities: true,
-        headerActionLabel: 'Aggiungi oggetto',
-        onHeaderAction: () => { manualRequested = true; },
+        headerActionLabel: 'Nuovo oggetto',
+        onHeaderAction: async () => {
+          try {
+            const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
+            if (created) {
+              manualItemCreated = true;
+              createToast('Oggetto aggiunto', 'success');
+            }
+          } catch (error) {
+            createToast('Errore durante l’aggiunta dell’oggetto', 'error');
+          }
+        },
         shortcutSize: true,
         onLoadingChange: (isLoading) => {
           if (isLoading) stopCatalogLoader = showShortcutLoader(container, 'Caricamento archivio oggetti');
@@ -942,19 +952,10 @@ export async function renderInventory(container) {
           }
         }
       });
-      if (manualRequested) {
-        try {
-          const created = await openQuickLootItemModal(activeCharacter, { shortcutSize: true });
-          if (created) {
-            createToast('Oggetto aggiunto', 'success');
-            await refreshAfterMutation();
-          }
-        } catch (error) {
-          createToast('Errore durante l’aggiunta dell’oggetto', 'error');
-        }
+      if (!selected.length) {
+        if (manualItemCreated) await refreshAfterMutation();
         return;
       }
-      if (!selected.length) return;
       const stopAddingLoader = showShortcutLoader(container, 'Aggiunta oggetti');
       try {
         await addSharedItemsToInventory(selected, activeCharacter);
