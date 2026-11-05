@@ -4176,6 +4176,58 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-st
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack.has-wild-shape { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: 1fr; }
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack > .wild-shape-card { height: 100%; align-self: stretch; }
 }
+
+/* Final character-sheet density and readability pass. */
+.app-shell[data-route='home'] .sheet-dashboard .character-sheet-card > .character-manual { gap: 8px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions {
+  display: grid; width: 100%; grid-template-columns: repeat(2,minmax(0,1fr));
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions .profile-status-card {
+  width: 100%; min-width: 0;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .character-quick-stats .combat-stat {
+  grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto; column-gap: 6px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .combat-stat__label {
+  grid-column: 1; grid-row: 1; overflow: visible; color: #6b4a57; font-size: 9px; font-weight: 850;
+  line-height: 1.15; letter-spacing: .025em; text-overflow: clip; white-space: normal;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .combat-stat > strong {
+  grid-column: 1; grid-row: 2;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .combat-stat--defenses .combat-stat__label {
+  grid-column: 1 / -1; font-size: 8.5px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .combat-stat__defense-chips {
+  grid-column: 1 / -1; grid-row: 2;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row {
+  grid-template-columns: minmax(168px,.82fr) repeat(3,minmax(0,1fr)); gap: 6px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row .status-launch-card,
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row .status-launch-card--concentration {
+  min-height: 58px; align-self: stretch; gap: 6px; padding: 5px 7px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row .status-launch-card__icon,
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__icon {
+  width: 29px; height: 29px; border-radius: 9px; font-size: 14px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row .status-launch-card__copy > strong {
+  margin-top: 0; font-size: 15px;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row .status-launch-card__copy > small {
+  margin-top: 1px; font-size: 8px; line-height: 1.12;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__copy {
+  overflow: visible;
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__copy > span,
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__copy > strong {
+  overflow: visible; text-overflow: clip; white-space: nowrap;
+}
+@media (max-width: 980px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) .combat-stat--hit-dice { grid-column: 3; }
 @media (max-width: 980px) {
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row { grid-template-columns: repeat(2,minmax(0,1fr)); }

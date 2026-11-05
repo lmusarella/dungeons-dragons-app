@@ -270,37 +270,27 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
         </header>
         <div class="character-quick-stats" aria-label="Statistiche rapide del personaggio">
         <button class="combat-stat combat-stat--initiative combat-stat--interactive" type="button" data-special-skill-card="${escapeHtml(initiativeRollKey)}" title="Tira iniziativa" aria-label="Tira iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
-          <span class="combat-stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg></span>
           <span class="combat-stat__label">Iniziativa</span>
           <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
           <span class="combat-stat__roll" aria-hidden="true">d20</span>
         </button>
         <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${effectiveArmorClass ?? '-'}">
-          <span class="combat-stat__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
-          </span>
           <span class="combat-stat__label">Classe armatura</span>
           <strong>${effectiveArmorClass ?? '-'}</strong>
         </div>
         <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
-          <span class="combat-stat__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
-          </span>
           <span class="combat-stat__label">Velocità</span>
           <strong>${effectiveSpeed}<small>m</small></strong>
         </div>
         <div class="combat-stat combat-stat--sense combat-stat--perception" title="Percezione passiva" aria-label="Percezione passiva ${passivePerception ?? '-'}">
-          <span class="combat-stat__icon" aria-hidden="true">◉</span>
           <span class="combat-stat__label">Percezione passiva</span>
           <strong>${passivePerception ?? '-'}</strong>
         </div>
         <div class="combat-stat combat-stat--sense combat-stat--darkvision" title="Scurovisione" aria-label="Scurovisione ${darkvisionLabel}">
-          <span class="combat-stat__icon" aria-hidden="true">◐</span>
           <span class="combat-stat__label">Scurovisione</span>
           <strong>${hasDarkvision ? `${darkvisionRange ?? 18}<small>m</small>` : 'No'}</strong>
         </div>
         <div class="combat-stat combat-stat--defenses" title="${escapeHtml(defenseTitle)}" aria-label="${escapeHtml(defenseTitle)}">
-          <span class="combat-stat__icon" aria-hidden="true">◈</span>
           <span class="combat-stat__label">Resistenze / immunità</span>
           <span class="combat-stat__defense-chips">
             ${resistanceLabels.map((label) => `<span class="combat-stat__defense-chip combat-stat__defense-chip--resistance"><small>R</small>${escapeHtml(label)}</span>`).join('')}

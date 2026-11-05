@@ -108,7 +108,7 @@
 .sheet-dashboard .character-manual .meta-tag small { font-size: 7px; }
 .sheet-dashboard .character-manual .meta-tag strong { font-size: 11px; }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions {
-  grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: 54px; align-content: start; gap: 8px;
+  grid-column: 2; grid-row: 2; display: grid; grid-template-rows: 54px; align-content: start; gap: 8px;
   align-self: start; margin: 0; padding: 0; overflow: visible;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card {
