@@ -83,7 +83,7 @@
 .sheet-dashboard .character-manual .character-identity__traits { display: flex; min-width: 0; flex: 1 1 auto; align-items: center; flex-wrap: wrap; gap: 6px; }
 .sheet-dashboard .character-manual .character-identity__kicker { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-dashboard .character-manual :is(.character-identity__kicker--race,.character-identity__kicker--background,.character-identity__kicker--alignment) {
-  padding-left: 7px; border-left: 1px solid #c8a979;
+  padding-left: 0; border-left: 0;
 }
 .sheet-dashboard .character-manual .character-edit-trigger--identity {
   display: inline-flex; min-height: 31px; flex: 0 0 auto; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #5e293e; border-radius: 10px;

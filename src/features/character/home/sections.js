@@ -72,19 +72,6 @@ function getActiveWildShape(character, companions = []) {
   return { companion, statBlock, hpCurrent, hpMax };
 }
 
-function formatWildShapeSpeeds(speeds = {}) {
-  const labels = [
-    ['walk', 'terra'],
-    ['fly', 'volo'],
-    ['climb', 'scalata'],
-    ['burrow', 'scavare']
-  ];
-  return labels
-    .map(([key, label]) => Number(speeds?.[key]) ? `${label} ${Number(speeds[key])} m` : '')
-    .filter(Boolean)
-    .join(' · ');
-}
-
 export function buildEmptyState(canCreateCharacter, offline) {
   if (!canCreateCharacter) {
     const message = offline
@@ -105,6 +92,10 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const data = character.data || {};
   const hp = data.hp || {};
   const hitDice = data.hit_dice || {};
+  const hitDiceUsed = Math.max(0, Number(hitDice.used) || 0);
+  const hitDiceMax = Math.max(0, Number(hitDice.max) || 0);
+  const hitDiceRemaining = Math.max(hitDiceMax - hitDiceUsed, 0);
+  const hitDiceType = hitDice.die || '—';
   const abilities = data.abilities || {};
   const activeWildShape = getActiveWildShape(character, companions);
   const effectiveAbilities = activeWildShape
@@ -145,9 +136,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const tempHpValue = Math.max(0, Number(tempHp) || 0);
   const hpPool = Math.max(0, Number(maxHp ?? currentHp ?? 0));
   const hasTempHp = tempHpValue > 0;
-  const tempHpPercent = hasTempHp ? 100 : 0;
-  const hpTrackFlex = hasTempHp ? hpPool : 1;
-  const tempTrackFlex = hasTempHp ? tempHpValue : 0;
+  const tempHpPercent = hasTempHp && hpPool ? Math.min((tempHpValue / hpPool) * 100, 100) : 0;
   const hpLabel = maxHp ? `${currentHp ?? '-'}/${maxHp}` : `${currentHp ?? '-'}`;
   const hpPercentLabel = maxHp ? `${Math.round(hpPercent)}%` : '-';
   const tempHpLabel = tempHp ?? '-';
@@ -171,20 +160,16 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const darkvisionLabel = hasDarkvision
     ? `${darkvisionRange ?? 18} m`
     : 'No';
-  const wildShapeDarkvision = activeWildShape
-    ? normalizeNumber(activeWildShape.statBlock.darkvision_range_m)
-    : null;
-  const wildShapeDarkvisionLabel = wildShapeDarkvision === null ? 'No' : `${wildShapeDarkvision} m`;
   const wildShapeForms = (companions || []).filter((entry) => ['familiar', 'summon', 'transformation', 'animal'].includes(entry.kind || 'familiar'));
   const wildShapeHpPercent = activeWildShape ? Math.min(Math.max((activeWildShape.hpCurrent / activeWildShape.hpMax) * 100, 0), 100) : 0;
-  const wildShapeSpeedLabel = activeWildShape ? formatWildShapeSpeeds(activeWildShape.statBlock.speeds) : '';
+  const fullAbilityLabels = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
   const abilityCards = [
-    { key: 'str', label: abilityShortLabel.str, value: effectiveAbilities.str, wild: Boolean(activeWildShape) },
-    { key: 'dex', label: abilityShortLabel.dex, value: effectiveAbilities.dex, wild: Boolean(activeWildShape) },
-    { key: 'con', label: abilityShortLabel.con, value: effectiveAbilities.con, wild: Boolean(activeWildShape) },
-    { key: 'int', label: abilityShortLabel.int, value: abilities.int },
-    { key: 'wis', label: abilityShortLabel.wis, value: abilities.wis },
-    { key: 'cha', label: abilityShortLabel.cha, value: abilities.cha }
+    { key: 'str', label: fullAbilityLabels.str, value: effectiveAbilities.str, wild: Boolean(activeWildShape) },
+    { key: 'dex', label: fullAbilityLabels.dex, value: effectiveAbilities.dex, wild: Boolean(activeWildShape) },
+    { key: 'con', label: fullAbilityLabels.con, value: effectiveAbilities.con, wild: Boolean(activeWildShape) },
+    { key: 'int', label: fullAbilityLabels.int, value: abilities.int },
+    { key: 'wis', label: fullAbilityLabels.wis, value: abilities.wis },
+    { key: 'cha', label: fullAbilityLabels.cha, value: abilities.cha }
   ];
   const damageDefenses = data.damage_defenses || {};
   const resistanceKeys = Array.isArray(damageDefenses.resistances) ? damageDefenses.resistances : [];
@@ -218,8 +203,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             <div class="character-identity__toolbar">
               <span class="character-identity__traits">
                 <span class="character-identity__kicker">${escapeHtml([data.class_name ?? data.class_archetype, data.archetype].filter(Boolean).join(' · ') || 'Avventuriero')}</span>
+                <span class="character-identity__trait-separator" aria-hidden="true">•</span>
                 <span class="character-identity__kicker character-identity__kicker--race">${escapeHtml(data.race || 'Razza non specificata')}</span>
+                <span class="character-identity__trait-separator" aria-hidden="true">•</span>
                 <span class="character-identity__kicker character-identity__kicker--background">${escapeHtml(data.background || 'Background non specificato')}</span>
+                <span class="character-identity__trait-separator" aria-hidden="true">•</span>
                 <span class="character-identity__kicker character-identity__kicker--alignment">${escapeHtml(data.alignment || 'Allineamento non specificato')}</span>
               </span>
               ${canEditCharacter ? `
@@ -231,59 +219,41 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </div>
             <div class="character-identity__heading">
               <h3 class="character-name">${character.name}</h3>
-              <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              <span class="character-identity__badges">
+                <button class="inspiration-quick-toggle ${hasInspiration ? 'is-active' : ''}" type="button" data-toggle-inspiration aria-pressed="${hasInspiration}" aria-label="${hasInspiration ? 'Rimuovi' : 'Attiva'} ispirazione" title="Ispirazione" ${canEditCharacter ? '' : 'disabled'}><span aria-hidden="true">★</span></button>
+                <span class="character-level-seal"><small>Livello</small><strong>${data.level ?? '-'}</strong></span>
+              </span>
             </div>
           </div>
         </div>
         <div class="character-summary-actions" aria-label="Stato del personaggio">
-          <div class="profile-status-card profile-status-card--inspiration ${hasInspiration ? 'is-active' : ''}">
-            <span class="profile-status-card__text">
-              <span class="profile-status-card__label">Ispirazione</span>
-              <span class="profile-status-card__state">${hasInspiration ? 'Attiva' : 'Non attiva'}</span>
-            </span>
-            <button
-              class="inspiration-toggle"
-              type="button"
-              data-toggle-inspiration
-              aria-pressed="${hasInspiration}"
-              aria-label="${hasInspiration ? 'Rimuovi' : 'Attiva'} ispirazione"
-              ${canEditCharacter ? '' : 'disabled'}
-            >
-              <span class="inspiration-toggle__icon" aria-hidden="true">★</span>
-            </button>
-          </div>
-          <div class="profile-status-card profile-status-card--concentration ${hasConcentration ? 'is-active' : ''}">
-            <span class="profile-status-card__text">
-              <span class="profile-status-card__label">Concentrazione</span>
-              <span class="profile-status-card__state">${hasConcentration ? 'Attiva' : 'Non attiva'}</span>
-            </span>
-            <button
-              class="inspiration-toggle concentration-toggle"
-              type="button"
-              data-toggle-concentration
-              aria-pressed="${hasConcentration}"
-              aria-label="${hasConcentration ? 'Termina' : 'Attiva'} concentrazione"
-              ${canEditCharacter ? '' : 'disabled'}
-            >
-              <span class="inspiration-toggle__icon" aria-hidden="true">◉</span>
-            </button>
-          </div>
           <button class="profile-status-card profile-status-card--background background-button" type="button" data-show-background title="${escapeHtml(data.background ?? 'Apri dettagli background')}">
-            <span class="profile-status-card__label">Background</span>
+            <span class="profile-status-card__icon" aria-hidden="true">◇</span>
+            <span class="profile-status-card__copy"><span class="profile-status-card__label">Background</span><strong>${escapeHtml(data.background || 'Non definito')}</strong><small>Apri storia e dettagli</small></span>
             <span class="profile-status-card__arrow" aria-hidden="true">›</span>
           </button>
           <button class="profile-status-card profile-status-card--proficiencies background-button" type="button" data-show-proficiencies title="Apri competenze, maestrie e stili di combattimento">
-            <span class="profile-status-card__label">Competenze</span>
+            <span class="profile-status-card__icon" aria-hidden="true">✦</span>
+            <span class="profile-status-card__copy"><span class="profile-status-card__label">Competenze</span><strong>Maestrie e stili</strong><small>Consulta tutte le competenze</small></span>
             <span class="profile-status-card__arrow" aria-hidden="true">›</span>
           </button>
         </div>
       </div>
-      <div class="stat-panel">     
-        <div class="stat-grid stat-grid--compact stat-grid--abilities">
+      <section class="character-sheet-section character-sheet-section--abilities" aria-labelledby="character-abilities-title">
+        <header class="character-sheet-section__header">
+          <div><strong id="character-abilities-title">Caratteristiche</strong><small>Valori e modificatori principali</small></div>
+        </header>
+        <div class="stat-panel">
+          <div class="stat-grid stat-grid--compact stat-grid--abilities">
           ${abilityCards.map((ability) => {
     const score = normalizeNumber(ability.value);
     const modifier = score === null ? '-' : formatModifier(score);
     return `
+            ${ability.key === 'str' ? `
+            <div class="stat-card stat-card--proficiency" title="Bonus competenza" aria-label="Bonus competenza ${formatSigned(proficiencyBonus)}">
+              <span>Bonus competenza</span>
+              <strong>${formatSigned(proficiencyBonus)}</strong>
+            </div>` : ''}
             <button class="stat-card stat-card--interactive stat-card--${ability.key} ${ability.wild ? 'stat-card--wild-shape' : ''}" type="button" data-ability-card="${ability.key}" aria-label="Tira una prova di ${ability.label} con modificatore ${modifier}">
               <span>${ability.label}${ability.wild ? ' <small>forma</small>' : ''}</span>
               <strong>${score ?? '-'}</strong>
@@ -291,22 +261,27 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </button>
           `;
   }).join('')}
+          </div>
         </div>
-      </div>
-      <div class="character-quick-stats" aria-label="Statistiche rapide del personaggio">
-        <div class="combat-stat combat-stat--proficiency" title="Bonus competenza" aria-label="Bonus competenza ${formatSigned(proficiencyBonus)}">
-          <span class="combat-stat__icon" aria-hidden="true">◆</span>
-          <span class="combat-stat__label">Bonus competenza</span>
-          <strong>${formatSigned(proficiencyBonus)}</strong>
-        </div>
+      </section>
+      <section class="character-sheet-section character-sheet-section--exploration" aria-labelledby="character-exploration-title">
+        <header class="character-sheet-section__header">
+          <div><strong id="character-exploration-title">Statistiche operative</strong><small>Iniziativa, movimento, sensi e difese</small></div>
+        </header>
+        <div class="character-quick-stats" aria-label="Statistiche rapide del personaggio">
         <button class="combat-stat combat-stat--initiative combat-stat--interactive" type="button" data-special-skill-card="${escapeHtml(initiativeRollKey)}" title="Tira iniziativa" aria-label="Tira iniziativa ${formatSigned(normalizeNumber(initiativeBonus))}">
-          <span class="combat-stat__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
-          </span>
+          <span class="combat-stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg></span>
           <span class="combat-stat__label">Iniziativa</span>
           <strong>${formatSigned(normalizeNumber(initiativeBonus))}</strong>
           <span class="combat-stat__roll" aria-hidden="true">d20</span>
         </button>
+        <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${effectiveArmorClass ?? '-'}">
+          <span class="combat-stat__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
+          </span>
+          <span class="combat-stat__label">Classe armatura</span>
+          <strong>${effectiveArmorClass ?? '-'}</strong>
+        </div>
         <div class="combat-stat combat-stat--speed" title="Velocità in metri" aria-label="Velocità ${effectiveSpeed} metri">
           <span class="combat-stat__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 2.5-6 2 1.5L16 21M5 12l4-4 4 2 3 4 3-1M10 8l2-3"/></svg>
@@ -333,73 +308,64 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             ${resistanceLabels.length || immunityLabels.length ? '' : '<span class="combat-stat__defense-chip">Nessuna</span>'}
           </span>
         </div>
-      </div>
-      <section class="hp-panel" aria-label="Statistiche di combattimento">
-        <div class="combat-vitals-grid">
-          <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${effectiveArmorClass ?? '-'}">
-            <span class="combat-stat__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
-            </span>
-            <span class="combat-stat__label">Classe armatura</span>
-            <strong>${effectiveArmorClass ?? '-'}</strong>
-          </div>
-          <div class="hp-vitals-card">
-            <div class="hp-bar-label">
-              <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
-              <span class="hp-bar-label__title">Punti ferita</span>
-              <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
-                <div class="hp-bar" style="flex: ${hpTrackFlex};">
-                  <div class="hp-bar__fill" style="width: ${hpPercent}%;"></div>
-                </div>
-                ${hasTempHp ? `
-                <div class="hp-bar hp-bar--temp is-active" style="flex: ${tempTrackFlex};">
-                  <div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div>
-                </div>
-                ` : ''}
-              </div>
-              <strong class="hp-bar-label__value">${hpLabel}</strong>
-              <span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span>
-              ${hasTempHp ? `
-              <span class="hp-bar-label__temp-group is-active">
-                <span>Punti ferita temporanei</span><strong>${tempHpLabel}</strong>
-              </span>
-              ` : ''}
-            </div>
-            ${activeWildShape ? `
-            <div class="wild-shape-vitals">
-              <div class="hp-bar-label hp-bar-label--wild-shape">
-                <span class="hp-vitals-card__icon hp-vitals-card__icon--wild" aria-hidden="true">♥</span>
-                <span class="hp-bar-label__title">Punti ferita forma</span>
-                <strong class="hp-bar-label__value">${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</strong>
-                <span class="hp-bar-label__percent">${Math.round(wildShapeHpPercent)}%</span>
-                <span class="wild-shape-vitals__name">${escapeHtml(activeWildShape.companion.name)}</span>
-                <button class="ghost-button ghost-button--compact wild-shape-end-button" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>
-              </div>
-              <div class="hp-bar-track hp-bar-track--wild-shape" role="meter" aria-label="Punti ferita della forma" aria-valuemin="0" aria-valuemax="${activeWildShape.hpMax}" aria-valuenow="${activeWildShape.hpCurrent}">
-                <div class="hp-bar"><div class="hp-bar__fill hp-bar__fill--wild" style="width: ${wildShapeHpPercent}%;"></div></div>
-              </div>
-              <div class="wild-shape-vitals__info">
-                ${wildShapeSpeedLabel ? `<span class="vital-mini-chip vital-mini-chip--speed"><span>Movimento</span><strong>${escapeHtml(wildShapeSpeedLabel)}</strong></span>` : ''}
-                <span class="vital-mini-chip vital-mini-chip--darkvision"><span>Scurovisione</span><strong>${wildShapeDarkvisionLabel}</strong></span>
-              </div>
-            </div>
-            ` : data.wild_shape_enabled ? `
-            <div class="wild-shape-empty">
-              <span>Forma selvatica pronta</span>
-              <button class="ghost-button ghost-button--compact" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
-                Trasformati (${wildShapeForms.length})
-              </button>
-            </div>
-            ` : ''}
-          </div>
-          <button class="combat-stat combat-stat--hit-dice combat-stat--interactive" type="button" data-roll-hit-dice ${canEditCharacter ? '' : 'disabled'} title="Usa un dado vita" aria-label="Dadi vita disponibili ${formatHitDice(hitDice)}">
-            <span class="combat-stat__icon" aria-hidden="true">◆</span>
-            <span class="combat-stat__label">Dadi vita</span>
-            <strong>${formatHitDice(hitDice)}</strong>
-            <span class="combat-stat__roll" aria-hidden="true">usa</span>
-          </button>
         </div>
-        <div class="hp-panel-status-row" aria-label="Stati rapidi del personaggio">
+      </section>
+      <section class="character-sheet-section character-sheet-section--vitals" aria-labelledby="character-vitals-title">
+        <header class="character-sheet-section__header">
+          <div><strong id="character-vitals-title">Salute e combattimento</strong><small>Difesa, punti ferita e condizioni attive</small></div>
+        </header>
+        <div class="hp-panel" aria-label="Statistiche di combattimento">
+          <div class="combat-vitals-grid">
+          <div class="hp-vitals-card">
+            <div class="hp-vitals-card__controls">
+              <div class="hp-vitals-card__action-zone hp-vitals-card__action-zone--damage">
+                <button class="hp-inline-action hp-inline-action--damage" type="button" data-hp-action="damage" ${canEditCharacter ? '' : 'disabled'} aria-label="Subisci danno"><span aria-hidden="true">−</span><strong>Danno</strong></button>
+              </div>
+              <div class="hp-vitals-card__life-zone">
+                <div class="hp-vitals-card__header">
+                  <span class="hp-vitals-card__heading"><span class="hp-vitals-card__icon" aria-hidden="true">♥</span><strong class="hp-bar-label__title">Punti ferita</strong></span>
+                  <span class="hp-vitals-card__values"><strong class="hp-bar-label__value">${hpLabel}</strong><span class="hp-bar-label__percent" aria-label="Percentuale vita ${hpPercentLabel}">${hpPercentLabel}</span></span>
+                </div>
+                <div class="hp-vitals-card__bars">
+                  <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${maxHp ?? 0}" aria-valuenow="${currentHp ?? 0}">
+                    <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
+                  </div>
+                  ${hasTempHp ? `
+                  <div class="hp-vitals-card__temp-label"><span>PF temporanei</span><strong>${tempHpLabel}</strong></div>
+                  <div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="Punti ferita temporanei" aria-valuemin="0" aria-valuemax="${maxHp ?? tempHpValue}" aria-valuenow="${tempHpValue}">
+                    <div class="hp-bar hp-bar--temp is-active"><div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div></div>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+              <div class="hp-vitals-card__action-zone hp-vitals-card__action-zone--heal">
+                <button class="hp-inline-action hp-inline-action--heal" type="button" data-hp-action="heal" ${canEditCharacter ? '' : 'disabled'} aria-label="Cura punti ferita"><span aria-hidden="true">+</span><strong>Cura</strong></button>
+              </div>
+            </div>
+          </div>
+          <div class="combat-vitals-side-stack ${data.wild_shape_enabled ? 'has-wild-shape' : ''}">
+            ${data.wild_shape_enabled ? `
+            <div class="wild-shape-card ${activeWildShape ? 'is-active' : ''}">
+              <button class="wild-shape-card__main" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
+                <span class="wild-shape-card__icon" aria-hidden="true">♞</span>
+                <span class="wild-shape-card__copy"><strong>${activeWildShape ? escapeHtml(activeWildShape.companion.name) : 'Trasformati'}</strong>${activeWildShape ? `<span>PF ${activeWildShape.hpCurrent}/${activeWildShape.hpMax} · ${Math.round(wildShapeHpPercent)}%</span>` : `<span>${wildShapeForms.length} forme disponibili</span>`}</span>
+                <span class="wild-shape-card__arrow" aria-hidden="true">›</span>
+              </button>
+              ${activeWildShape ? `<button class="wild-shape-card__end" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>` : ''}
+            </div>` : ''}
+            <button class="combat-stat combat-stat--hit-dice combat-stat--interactive" type="button" data-roll-hit-dice ${canEditCharacter ? '' : 'disabled'} title="Usa un dado vita" aria-label="Dadi vita disponibili ${formatHitDice(hitDice)}">
+              <span class="combat-stat__icon" aria-hidden="true">◆</span>
+              <span class="combat-stat__label">Dadi vita</span>
+              <strong>${hitDiceRemaining}<small>/${hitDiceMax || '—'}</small></strong>
+              <span class="combat-stat__die">${hitDiceType}</span>
+            </button>
+          </div>
+          </div>
+          <div class="hp-panel-status-row" aria-label="Stati rapidi del personaggio">
+          <button class="combat-status-card status-launch-card status-launch-card--concentration ${hasConcentration ? 'is-active' : ''}" type="button" data-toggle-concentration aria-pressed="${hasConcentration}" ${canEditCharacter ? '' : 'disabled'}>
+            <span class="status-launch-card__icon" aria-hidden="true">◉</span>
+            <span class="status-launch-card__copy"><span>Concentrazione</span><strong>${hasConcentration ? 'Attiva' : 'Non attiva'}</strong></span>
+          </button>
           <button class="combat-status-card status-launch-card status-launch-card--weakness" type="button" data-edit-weakness ${canEditCharacter ? '' : 'disabled'}>
             <span class="status-launch-card__icon" aria-hidden="true">◒</span>
             <span class="status-launch-card__copy">
@@ -427,6 +393,7 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
             </span>
             <span class="status-launch-card__arrow" aria-hidden="true">›</span>
           </button>
+          </div>
         </div>
       </section>
     </div>

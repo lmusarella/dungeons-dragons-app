@@ -61,8 +61,9 @@ describe('expanded shortcut reference',()=>{
     const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
     expect(cards).toContain('if (dice && !options)');
     expect(cards).toContain("options ? 'Scegli opzione'");
-    ['Dadi','Danno','Cura','Riposo breve','Riposo lungo','Paga','Ricevi','Loot rapido'].forEach(label=>expect(layout).toContain(`'${label}'`));
-    expect(layout.indexOf("'Dadi'")).toBeLessThan(layout.indexOf("'Danno'"));
+    ['Dadi','Riposo breve','Riposo lungo','Paga','Ricevi','Loot rapido'].forEach(label=>expect(layout).toContain(`'${label}'`));
+    expect(layout).not.toContain("['−', 'Danno'");
+    expect(layout).not.toContain("['+', 'Cura'");
     expect(layout).toContain("toolbar.className = 'sheet-quickbar sheet-action-footer'");
     expect(layout).toContain("toolbar.dataset.sheetActionFooter = ''");
     expect(layout).toContain("button.dataset.gameAction = ''");

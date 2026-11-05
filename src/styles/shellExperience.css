@@ -241,7 +241,7 @@
 .character-select-empty { grid-column: 1 / -1; min-height: 150px; justify-content: center; border-color: #c9ab7e; background: rgba(255,250,240,.62); }
 
 /* Game footer replaces the removed floating Actions launcher. */
-body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-footer { grid-column: 2; grid-template-columns: repeat(8,minmax(74px,1fr)) !important; }
+body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-footer { grid-column: 2; grid-template-columns: repeat(6,minmax(74px,1fr)) !important; }
 body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-footer button[data-open-dice] {
   border-color: #b6925a;
   background: linear-gradient(145deg,#f5e4c4,#e7c994);

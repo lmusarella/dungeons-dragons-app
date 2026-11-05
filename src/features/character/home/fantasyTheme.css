@@ -2464,7 +2464,7 @@ body dialog.sheet-detail[data-sheet-panel='Lancia incantesimi'] .catalog-magic-s
 
 .home-layout.sheet-dashboard .sheet-action-footer {
   position: sticky; bottom: 8px; z-index: 35; grid-column: 2;
-  display: grid; grid-template-columns: repeat(8,minmax(76px,1fr)); gap: 7px;
+  display: grid; grid-template-columns: repeat(6,minmax(76px,1fr)); gap: 7px;
   margin: 4px -4px -8px; padding: 9px;
   border: 1px solid #b99b69; border-radius: 20px;
   background: rgba(251,244,230,.96); box-shadow: 0 -10px 28px rgba(25,14,32,.22);
@@ -3340,7 +3340,7 @@ body .modal-card--background .background-modal-description { margin: 0; color: #
   grid-column: 1; grid-row: 1; width: 100%; max-width: none; height: 100%; min-width: 0; min-height: 0; padding-bottom: 12px; grid-template-rows: minmax(0,1fr);
 }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer {
-  position: relative; grid-column: 1 !important; grid-row: 2; bottom: auto; z-index: 32; display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 7px;
+  position: relative; grid-column: 1 !important; grid-row: 2; bottom: auto; z-index: 32; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 7px;
   width: 100%; max-width: none; height: var(--game-footer-height); min-height: var(--game-footer-height); margin: 0;
   padding: 6px max(14px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
   border: 0; border-top: 1px solid #b99b69; border-radius: 0;
@@ -3997,4 +3997,194 @@ body .familiar-sheet--refined .familiar-panel-title { margin-bottom: 6px; }
 @media (max-width: 980px) {
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .app-shell[data-route='home'] .sheet-dashboard .character-manual :is(.profile-status-card--background,.profile-status-card--proficiencies) { grid-column: auto; }
+}
+
+/* Character sheet information architecture: grouped, proportional sections. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section {
+  display: grid; grid-template-columns: 132px minmax(0,1fr); align-items: stretch; gap: 8px;
+  padding: 7px; border: 1px solid #d6bd96; border-radius: 14px;
+  background: linear-gradient(145deg,rgba(255,250,240,.96),rgba(244,232,214,.92));
+  box-shadow: inset 0 1px rgba(255,255,255,.72);
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration { border-color: #d2bdab; background: linear-gradient(145deg,#fffaf1,#f0e7da); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals { border-color: #d7b7b0; background: linear-gradient(145deg,#fff9ef,#f2e3df); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 6px 8px; border-right: 1px solid rgba(168,126,92,.28); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 9px; background: #ead9bd; color: #71364c; font-size: 13px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .character-sheet-section__icon { background: #e5ded0; color: #5c5367; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .character-sheet-section__icon { background: #eed9d5; color: #8a3e46; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header > div { display: grid; gap: 2px; min-width: 0; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header strong { color: #633349; font: 800 11px/1.15 'Fraunces',Georgia,serif; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header small { color: #887166; font-size: 7.5px; line-height: 1.25; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section :is(.stat-panel,.hp-panel) { min-width: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section .character-quick-stats { align-self: center; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .hp-panel-status-row { margin-top: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action { display: inline-flex; min-width: 68px; min-height: 36px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 5px; padding: 5px 8px; border: 1px solid; border-radius: 10px; font: inherit; cursor: pointer; box-shadow: 0 3px 8px rgba(78,42,48,.1); transition: transform .15s ease,filter .15s ease,box-shadow .15s ease; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action span { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 7px; color: #fff; font-size: 16px; font-weight: 900; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action strong { font-size: 9px; font-weight: 850; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action--damage { border-color: #d29a9a; background: #f7e5e3; color: #873a43; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action--damage span { background: #a8434d; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action--heal { border-color: #9fc4aa; background: #e3f0e6; color: #356c50; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action--heal span { background: #3f7f5e; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action:is(:hover,:focus-visible) { outline: 0; filter: saturate(1.08); transform: translateY(-1px); box-shadow: 0 5px 11px rgba(78,42,48,.15); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action:focus-visible { outline: 3px solid rgba(116,55,77,.2); outline-offset: 2px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action:disabled { cursor: not-allowed; opacity: .5; transform: none; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-label > .hp-bar-track { margin-inline: 3px; }
+@media (max-width: 1080px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section { grid-template-columns: 1fr; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header { padding: 3px 5px 6px; border-right: 0; border-bottom: 1px solid rgba(168,126,92,.24); }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header small { display: none; }
+}
+@media (max-width: 760px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action { min-width: 40px; padding-inline: 6px; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-inline-action strong { display: none; }
+}
+
+/* Final placement of core statistics and the two-level hit-point display. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section { grid-template-columns: 112px minmax(0,1fr); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header { padding-inline: 6px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--abilities .stat-grid--abilities { grid-template-columns: repeat(7,minmax(0,1fr)); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .stat-card--proficiency { border-color: #cdb68e; background: linear-gradient(145deg,#fff8e8,#eee0c5); }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat--armor { grid-column: auto; grid-row: auto; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid { grid-template-columns: minmax(0,1fr) minmax(140px,.22fr); }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .hp-vitals-card { grid-column: 1; grid-row: 1; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-stat--hit-dice { grid-column: 2; grid-row: 1; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card { align-content: stretch; gap: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__heading,
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__values { display: inline-flex; align-items: center; gap: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__values { margin-left: auto; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__controls { display: grid; grid-template-columns: minmax(78px,.18fr) minmax(160px,1fr) minmax(78px,.18fr); align-items: stretch; gap: 0; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__action-zone { display: grid; min-height: 74px; place-items: center; padding: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__action-zone--damage { border-right: 1px solid #ead2cd; background: linear-gradient(90deg,rgba(247,229,227,.72),rgba(247,229,227,.18)); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__action-zone--heal { border-left: 1px solid #cfe3d4; background: linear-gradient(90deg,rgba(227,240,230,.18),rgba(227,240,230,.72)); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__life-zone { display: grid; align-content: center; gap: 8px; min-width: 0; padding: 6px 12px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__bars { display: grid; min-width: 0; gap: 4px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__bars > .hp-bar-track { width: 100%; height: 11px; margin: 0; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__temp-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #315f9f; font-size: 10.5px; font-weight: 850; line-height: 1.15; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-vitals-card__temp-label strong { font-size: 11px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-track--temp-secondary { height: 8px !important; border-color: #a9cbed; background: #dceeff; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-track--temp-secondary .hp-bar--temp.is-active { width: 100%; height: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-track--temp-secondary .hp-bar__fill--temp { background: linear-gradient(90deg,#2184db,#72c9ff) !important; box-shadow: 0 0 7px rgba(50,148,222,.28); }
+@media (max-width: 1080px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section { grid-template-columns: 1fr; }
+}
+@media (max-width: 820px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--abilities .stat-grid--abilities { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid { grid-template-columns: 1fr; }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals :is(.hp-vitals-card,.combat-stat--hit-dice) { grid-column: 1; grid-row: auto; }
+}
+
+/* Compact inspiration, combat concentration and wild-shape management. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity__badges { display: inline-flex; flex: 0 0 auto; align-items: stretch; gap: 7px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .inspiration-quick-toggle { display: grid; width: 46px; min-height: 42px; place-items: center; padding: 0; border: 1px solid #c8ad86; border-radius: 11px; background: linear-gradient(145deg,#f5ecdc,#e8d8bf); color: #82613f; cursor: pointer; box-shadow: 0 3px 8px rgba(82,57,41,.1); transition: .15s ease; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .inspiration-quick-toggle span { font-size: 21px; line-height: 1; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .inspiration-quick-toggle.is-active { border-color: #9f7655; background: linear-gradient(145deg,#c9a273,#a77958); color: #fff8e9; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25),0 4px 12px rgba(99,60,42,.22); animation: inspiration-star-pulse 1.8s ease-in-out infinite; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .inspiration-quick-toggle:is(:hover,:focus-visible) { outline: 0; transform: translateY(-1px); filter: brightness(1.03); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row { grid-template-columns: repeat(4,minmax(0,1fr)); }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration.is-active { border-color: #96749d !important; background: linear-gradient(145deg,#f4e9f3,#dfcadf) !important; box-shadow: inset 4px 0 #76516f; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__icon { background: #eaddea; color: #704d70; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration.is-active .status-launch-card__icon { background: #76516f; color: #fff; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration { min-height: 54px; align-self: center; grid-template-columns: 30px minmax(0,1fr); gap: 7px; padding: 6px 8px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__icon { width: 30px; height: 30px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .status-launch-card--concentration .status-launch-card__copy > strong { margin-top: 1px; font-size: 14px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: minmax(0,1fr) minmax(180px,.34fr) minmax(140px,.22fr); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card { display: grid; grid-column: 2; grid-row: 1; min-width: 0; align-self: center; overflow: hidden; border: 1px solid #b8aa8d; border-radius: 12px; background: linear-gradient(145deg,#f5f0df,#e6e3c9); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card.is-active { border-color: #879b72; background: linear-gradient(145deg,#eef2df,#dce5ca); box-shadow: inset 4px 0 #66814f; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__main { display: grid; grid-template-columns: 30px minmax(0,1fr) 16px; align-items: center; gap: 7px; min-width: 0; min-height: 55px; padding: 6px 8px; border: 0; background: transparent; color: #504839; text-align: left; cursor: pointer; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: #d8d8b9; color: #526344; font-size: 15px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy { display: grid; gap: 2px; min-width: 0; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy small { color: #6e705e; font-size: 7.5px; font-weight: 850; letter-spacing: .065em; text-transform: uppercase; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy strong { overflow: hidden; color: #44513a; font: 800 13.5px/1.15 'Fraunces',Georgia,serif; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy > span { overflow: hidden; color: #656958; font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__arrow { color: #6d755c; font-size: 20px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__end { min-height: 23px; border: 0; border-top: 1px solid rgba(101,119,78,.22); background: rgba(255,255,255,.38); color: #785047; font-size: 8px; font-weight: 850; cursor: pointer; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice { position: relative; min-height: 56px; align-self: center; padding: 6px 38px 6px 7px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice > strong { font-size: 17px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__die { position: absolute; top: 7px; right: 7px; padding: 3px 6px; border-radius: 999px; background: #e3eadb; color: #506544; font-size: 8px; font-weight: 900; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat--initiative { border-color: #9fb5cf !important; background: linear-gradient(145deg,#edf4fb,#dce8f4) !important; box-shadow: inset 3px 0 #597da4; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat--initiative:is(:hover,:focus-visible) { border-color: #52779f !important; background: linear-gradient(145deg,#e3effa,#cddff0) !important; }
+@keyframes inspiration-star-pulse {
+  0%,100% { box-shadow: inset 0 0 0 2px rgba(255,255,255,.22),0 3px 9px rgba(99,60,42,.18); transform: scale(1); }
+  50% { box-shadow: inset 0 0 0 2px rgba(255,255,255,.34),0 0 0 5px rgba(167,121,80,.16),0 5px 14px rgba(99,60,42,.25); transform: scale(1.035); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .inspiration-quick-toggle.is-active { animation: none; }
+}
+
+/* Align secondary combat cards and improve identity actions. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section__header small { font-size: 9px; line-height: 1.35; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card { height: 100%; align-self: stretch; grid-template-rows: minmax(0,1fr) auto; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__main { height: 100%; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice { height: 100%; align-self: stretch; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions .profile-status-card {
+  display: grid; grid-template-columns: 36px minmax(0,1fr) 22px; align-items: center; gap: 9px;
+  min-height: 58px; padding: 7px 9px; text-align: left;
+  transition: transform .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions .profile-status-card:is(:hover,:focus-visible) { outline: 0; transform: translateY(-1px); border-color: #a87968 !important; box-shadow: 0 6px 13px rgba(81,47,56,.12) !important; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #ead9c0; color: #743d53; font-size: 16px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card--proficiencies .profile-status-card__icon { background: #dedbea; color: #5f5379; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card__copy { display: grid; gap: 1px; min-width: 0; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card__copy strong { overflow: hidden; color: #583441; font: 800 12px/1.15 'Fraunces',Georgia,serif; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card__copy small { color: #846f65; font-size: 8px; line-height: 1.2; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .profile-status-card__arrow { display: grid; width: 21px; height: 21px; place-items: center; border-radius: 50%; background: #7a3b52; color: #fff; font-size: 16px; }
+.sheet-dashboard .character-manual :is(.character-identity__kicker--race,.character-identity__kicker--background,.character-identity__kicker--alignment) { padding-left: 0; border-left: 0; }
+.sheet-dashboard .character-manual :is(.character-identity__kicker--race,.character-identity__kicker--background,.character-identity__kicker--alignment)::before { content: none; }
+.sheet-dashboard .character-manual .character-identity__trait-separator { display: inline-grid; place-items: center; color: #a67d62; font-size: 11px; line-height: 1; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--abilities .stat-card > span:first-child { font-size: 8px; letter-spacing: .045em; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy small { font-size: 9px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy strong { font-size: 15px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card__copy > span { font-size: 10.5px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__label { font-size: 10.5px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice > strong { font-size: 20px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice > strong small { font-size: 10px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__die { font-size: 9.5px; }
+
+/* Combat vitals: initiative, life, then a stacked wild-shape/hit-dice column. */
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .character-quick-stats { grid-template-columns: repeat(5,minmax(0,1fr)) minmax(210px,1.8fr); }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid,
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: minmax(0,1fr) minmax(170px,.3fr); align-items: stretch; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .hp-vitals-card { grid-column: 1; grid-row: 1; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack { display: grid; grid-column: 2; grid-row: 1; grid-template-rows: minmax(0,1fr); gap: 6px; min-width: 0; height: 100%; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack.has-wild-shape { grid-template-rows: repeat(2,minmax(0,1fr)); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack > .wild-shape-card,
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack > .combat-stat--hit-dice { grid-column: auto !important; grid-row: auto !important; width: 100%; height: 100%; min-height: 0; align-self: stretch; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack .wild-shape-card__main { min-height: 0; }
+@media (max-width: 980px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid,
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: minmax(0,1fr) minmax(155px,.3fr); }
+}
+@media (max-width: 760px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid,
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: 1fr; }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--vitals :is(.hp-vitals-card,.combat-vitals-side-stack) { grid-column: 1; grid-row: auto; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack.has-wild-shape { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: 1fr; }
+}
+
+/* Compact wild-shape control; give hit-dice the remaining vertical space. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack.has-wild-shape { grid-template-rows: auto minmax(0,1fr); }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack > .wild-shape-card { height: auto; align-self: start; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack .wild-shape-card__main { min-height: 43px; height: auto; padding-block: 5px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack .wild-shape-card__icon { width: 26px; height: 26px; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack .wild-shape-card__end { min-height: 20px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__label { overflow: visible; font-size: 12px; line-height: 1.15; text-overflow: clip; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice > strong { font-size: 22px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice > strong small { font-size: 11px; }
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__die { padding: 4px 7px; font-size: 11px; }
+@media (max-width: 760px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack.has-wild-shape { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: 1fr; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-side-stack > .wild-shape-card { height: 100%; align-self: stretch; }
+}
+body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) .combat-stat--hit-dice { grid-column: 3; }
+@media (max-width: 980px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-panel-status-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: minmax(0,1fr) minmax(170px,.38fr); }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card { grid-column: 2; }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) .combat-stat--hit-dice { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 700px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) { grid-template-columns: 1fr; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card,
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) .combat-stat--hit-dice { grid-column: 1; grid-row: auto; }
 }
