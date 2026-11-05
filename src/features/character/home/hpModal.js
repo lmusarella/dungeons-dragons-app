@@ -163,3 +163,87 @@ export function buildHpShortcutFields(
 
   return wrapper;
 }
+
+export function buildHpActionFields(character, action = 'damage') {
+  const healing = action === 'heal';
+  const hp = character?.data?.hp || {};
+  const current = Math.max(0, Number(hp.current) || 0);
+  const maximum = Math.max(0, Number(hp.max) || 0);
+  const temporary = Math.max(0, Number(hp.temp) || 0);
+  const wrapper = document.createElement('div');
+  wrapper.className = `hp-action-editor hp-action-editor--${healing ? 'heal' : 'damage'}`;
+  wrapper.innerHTML = `
+    <section class="hp-action-editor__hero">
+      <span class="hp-action-editor__hero-icon" aria-hidden="true">${healing ? '+' : '−'}</span>
+      <div><strong>${healing ? 'Recupera punti ferita' : 'Applica danno'}</strong><small>${healing ? 'Scegli la quantità e dove applicare la cura.' : 'Scegli la quantità di punti ferita da sottrarre.'}</small></div>
+      <div class="hp-action-editor__summary" aria-label="Punti ferita attuali">
+        <span><small>Attuali</small><strong>${current}</strong></span>
+        <span><small>Massimi</small><strong>${maximum || '—'}</strong></span>
+        <span><small>Temporanei</small><strong>${temporary}</strong></span>
+      </div>
+    </section>
+    <section class="hp-action-editor__amount-section">
+      <span class="hp-action-editor__section-label">Quantità</span>
+      <div class="hp-action-editor__amount-control">
+        <button type="button" data-hp-amount-step="-5" aria-label="Riduci di 5">−5</button>
+        <button type="button" data-hp-amount-step="-1" aria-label="Riduci di 1">−</button>
+        <input type="number" name="amount" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantità ${healing ? 'di cura' : 'di danno'}" required />
+        <button type="button" data-hp-amount-step="1" aria-label="Aumenta di 1">+</button>
+        <button type="button" data-hp-amount-step="5" aria-label="Aumenta di 5">+5</button>
+      </div>
+      <div class="hp-action-editor__presets" aria-label="Valori rapidi">
+        ${[1, 5, 10, 25, 50].map((value) => `<button type="button" data-hp-amount-preset="${value}">${value}</button>`).join('')}
+      </div>
+    </section>
+    ${healing ? `
+      <section class="hp-action-editor__selection-section">
+        <span class="hp-action-editor__section-label">Dove applicare la cura</span>
+        <div class="hp-action-editor__choices" aria-label="Destinazione della cura">
+          <label class="hp-action-editor__choice">
+            <input type="radio" name="healing_target" value="hp" checked />
+            <span aria-hidden="true">♥</span><strong>Punti ferita</strong><small>Recupera PF fino al massimo.</small><i aria-hidden="true">✓</i>
+          </label>
+          <label class="hp-action-editor__choice">
+            <input type="radio" name="healing_target" value="temp" />
+            <span aria-hidden="true">◇</span><strong>PF temporanei</strong><small>Aggiunge protezione temporanea.</small><i aria-hidden="true">✓</i>
+          </label>
+        </div>
+      </section>` : `
+      <section class="hp-action-editor__selection-section">
+        <span class="hp-action-editor__section-label">Opzioni aggiuntive</span>
+        <div class="hp-action-editor__damage-options">
+          <label class="hp-action-editor__max-choice">
+            <input type="checkbox" name="change_hp_max" />
+            <span aria-hidden="true">◇</span>
+            <span><strong>Modifica PF massimi</strong><small>Imposta anche un nuovo valore massimo.</small></span>
+            <i aria-hidden="true">✓</i>
+          </label>
+          <label class="field hp-action-editor__max-field"><span>Nuovo massimo PF</span><input type="number" name="hp_max_override" min="1" inputmode="numeric" placeholder="Attuale: ${maximum || '—'}" disabled /></label>
+        </div>
+      </section>`}
+  `;
+  const amountInput = wrapper.querySelector('input[name="amount"]');
+  wrapper.querySelectorAll('[data-hp-amount-step]').forEach((button) => button.addEventListener('click', () => {
+    amountInput.value = String(Math.max(1, (Number(amountInput.value) || 1) + Number(button.dataset.hpAmountStep)));
+    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }));
+  wrapper.querySelectorAll('[data-hp-amount-preset]').forEach((button) => button.addEventListener('click', () => {
+    amountInput.value = button.dataset.hpAmountPreset;
+    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+    amountInput.focus();
+    amountInput.select();
+  }));
+  const maxChoice = wrapper.querySelector('input[name="change_hp_max"]');
+  const maxInput = wrapper.querySelector('input[name="hp_max_override"]');
+  maxChoice?.addEventListener('change', () => {
+    maxInput.disabled = !maxChoice.checked;
+    if (maxChoice.checked) {
+      maxInput.value = maxInput.value || String(maximum || '');
+      maxInput.focus();
+      maxInput.select();
+    } else {
+      maxInput.value = '';
+    }
+  });
+  return wrapper;
+}

@@ -139,8 +139,8 @@ export function mountTabletLayout(container, configuration = {}) {
         configure.addEventListener('click', () => configuration.onConfigureAttack());
         headerActions.append(configure);
       } else if (title === 'Tiri Abilità' && configuration.onAddRoll) {
-        const add = document.createElement('button'); add.type = 'button'; add.className = 'icon-button'; add.textContent = '+';
-        add.setAttribute('aria-label', 'Aggiungi tiro speciale');
+        const add = document.createElement('button'); add.type = 'button'; add.className = 'ghost-button skill-special-add-button'; add.textContent = 'Aggiungi abilità speciale';
+        add.setAttribute('aria-label', 'Aggiungi abilità speciale');
         add.addEventListener('click', () => configuration.onAddRoll('skill'));
         headerActions.append(add);
       }

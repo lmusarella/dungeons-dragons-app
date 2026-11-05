@@ -51,7 +51,7 @@ import {
   openSpellQuickDetailModal
 } from './home/modals.js';
 import { consumeSpellSlot, restoreSpellSlot, saveCharacterData } from './home/data.js';
-import { attachModalValueStepper, buildHpShortcutFields } from './home/hpModal.js';
+import { attachModalValueStepper, buildHpActionFields } from './home/hpModal.js';
 import { abilityShortLabel, conditionList, damageTypeList, savingThrowList, skillList } from './home/constants.js';
 import { normalizeSpellSchool } from './spellSchools.js';
 import { expandSpellSourceSelection, groupSpellSources } from './spellSources.js';
@@ -3168,16 +3168,17 @@ async function handleHpAction(action, container) {
   const formData = await openFormModal({
     title,
     submitLabel,
-    cardClass: 'modal-card--quick-action',
-    content: buildHpShortcutFields(activeCharacter, {
-      allowHitDice: false,
-      allowTempHp: action === 'heal',
-      allowMaxOverride: action === 'damage'
-    })
+    cardClass: ['modal-card--quick-action', 'modal-card--hp-action'],
+    content: buildHpActionFields(activeCharacter, action),
+    onOpen: ({ fieldsEl }) => {
+      const amountInput = fieldsEl?.querySelector('input[name="amount"]');
+      amountInput?.focus();
+      amountInput?.select();
+    }
   });
   if (!formData) return;
   const useHitDice = formData.has('use_hit_dice');
-  const useTempHp = formData.has('temp_hp');
+  const useTempHp = formData.get('healing_target') === 'temp';
   const hitDice = activeCharacter.data?.hit_dice || {};
   const abilities = activeCharacter.data?.abilities || {};
   const hitDiceUsed = Number(hitDice.used) || 0;
@@ -3185,8 +3186,6 @@ async function handleHpAction(action, container) {
   const hitDiceSides = getHitDiceSides(hitDice.die);
   const diceCount = Math.max(Number(formData.get('hit_dice_count')) || 1, 1);
   let amount = Number(formData.get('amount'));
-  const rawDamageAmount = amount;
-  const selectedDamageType = action === 'damage' ? formData.get('damage_type')?.toString() || '' : '';
 
   if (action === 'heal' && useHitDice) {
     if (!hitDiceSides) {
@@ -3211,12 +3210,6 @@ async function handleHpAction(action, container) {
   if (!amount || amount <= 0) {
     createToast('Inserisci un valore valido', 'error');
     return;
-  }
-  const damageAdjustment = action === 'damage'
-    ? calculateEffectiveDamage(activeCharacter, amount, selectedDamageType)
-    : { amount, reason: null };
-  if (action === 'damage') {
-    amount = damageAdjustment.amount;
   }
   const currentHp = Number(activeCharacter.data?.hp?.current) || 0;
   const currentTempHp = Number(activeCharacter.data?.hp?.temp) || 0;
@@ -3272,12 +3265,6 @@ async function handleHpAction(action, container) {
       used: Math.min(hitDiceUsed + diceCount, hitDiceMax)
     }
     : hitDice;
-  const damageLabel = action === 'damage' && selectedDamageType
-    ? ` ${getDamageTypeLabel(selectedDamageType).toLowerCase()}`
-    : '';
-  const adjustmentLabel = action === 'damage' && damageAdjustment.reason
-    ? ` (da ${rawDamageAmount}, ${damageAdjustment.reason})`
-    : '';
   const wildShapeLabel = action === 'damage' && wildShapeDamageTaken > 0
     ? ` · forma selvatica -${wildShapeDamageTaken}`
     : '';
@@ -3286,7 +3273,7 @@ async function handleHpAction(action, container) {
     : '';
   const message = action === 'heal'
     ? `${useTempHp ? 'HP temporanei +' : 'PF curati +'}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
-    : `Danno${damageLabel} ${amount}${adjustmentLabel}${wildShapeLabel}${normalHpLabel}`;
+    : `Danno ${amount}${wildShapeLabel}${normalHpLabel}`;
   const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
   const saveOnComplete = async () => {
     if (container) renderHome(container);

@@ -259,6 +259,9 @@ body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-fo
   background: var(--shell-cream);
   box-shadow: 0 26px 70px rgba(35,19,25,.3);
 }
+.modal-card.modal-card--quick-action.modal-card--hp-action {
+  width: min(820px, calc(100vw - 40px));
+}
 .modal-card--quick-action .modal-header { padding: 17px 20px 0; background: linear-gradient(180deg,#f0dfc4,rgba(255,248,235,0)); }
 
 /* One compact management entry point in detail headers. */

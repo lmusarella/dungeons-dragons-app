@@ -63,27 +63,65 @@ export async function openQuickRollEditor(character, kind, onRender, { index = n
   if (!character) return;
   const attack = kind === 'attack';
   const existing = attack && Number.isInteger(index) ? character.data?.unarmed_attacks?.[index] : null;
-  const form = document.createElement('div'); form.className = 'quick-roll-editor';
-  const intro = document.createElement('p'); intro.className = 'muted';
-  intro.textContent = attack ? 'Crea un colpo senza armi. Caratteristica e competenza vengono incluse nel tiro.' : 'Crea una prova personalizzata con caratteristica, competenza e bonus.';
-  form.append(intro, buildInput({ label: 'Nome', name: 'name', required: true, value: existing?.name || '', placeholder: attack ? 'Es. Colpo di coda' : 'Es. Scassinare' }));
-  const nameInput = form.querySelector?.('[name="name"]');
-  if (nameInput) nameInput.required = true;
-  const label = document.createElement('label'); label.className = 'field';
-  const caption = document.createElement('span'); caption.textContent = 'Caratteristica';
   const abilities = [['str','Forza'],['dex','Destrezza'],['con','Costituzione'],['int','Intelligenza'],['wis','Saggezza'],['cha','Carisma']];
-  const select = buildSelect(abilities.filter(([key]) => !attack || ['str','dex'].includes(key)).map(([value,label]) => ({ value, label })), existing?.ability || 'str'); select.name = 'ability';
-  label.append(caption, select); form.append(label);
-  form.append(buildInput({ label: attack ? 'Bonus aggiuntivo al tiro per colpire' : 'Bonus aggiuntivo', name: 'bonus', type: 'number', value: existing?.attack_bonus ?? 0 }));
-  if (attack) form.append(buildInput({ label: 'Danni base o dado', name: 'damage', value: existing?.damage || '1', placeholder: 'Es. 1 oppure 1d4' }), buildInput({ label: 'Bonus aggiuntivo ai danni', name: 'damage_bonus', type: 'number', value: existing?.damage_bonus ?? 0 }));
-  else {
-    ['Competenza','Maestria'].forEach((text,index) => {
-      const field = document.createElement('label'); field.className = 'toggle-pill';
-      const input = document.createElement('input'); input.type = 'checkbox'; input.name = index ? 'mastery' : 'proficient';
-      field.append(input, document.createTextNode(text)); form.append(field);
+  const form = document.createElement('div');
+  if (attack) {
+    form.className = 'quick-roll-editor';
+    const intro = document.createElement('p'); intro.className = 'muted';
+    intro.textContent = 'Crea un colpo senza armi. Caratteristica e competenza vengono incluse nel tiro.';
+    form.append(intro, buildInput({ label: 'Nome', name: 'name', required: true, value: existing?.name || '', placeholder: 'Es. Colpo di coda' }));
+    const label = document.createElement('label'); label.className = 'field';
+    const caption = document.createElement('span'); caption.textContent = 'Caratteristica';
+    const select = buildSelect(abilities.filter(([key]) => ['str','dex'].includes(key)).map(([value,abilityLabel]) => ({ value, label: abilityLabel })), existing?.ability || 'str'); select.name = 'ability';
+    label.append(caption, select); form.append(label);
+    form.append(buildInput({ label: 'Bonus aggiuntivo al tiro per colpire', name: 'bonus', type: 'number', value: existing?.attack_bonus ?? 0 }));
+    form.append(buildInput({ label: 'Danni base o dado', name: 'damage', value: existing?.damage || '1', placeholder: 'Es. 1 oppure 1d4' }), buildInput({ label: 'Bonus aggiuntivo ai danni', name: 'damage_bonus', type: 'number', value: existing?.damage_bonus ?? 0 }));
+  } else {
+    form.className = 'quick-skill-editor';
+    form.innerHTML = `
+      <section class="quick-skill-editor__hero">
+        <span aria-hidden="true">◇</span>
+        <div><strong>Nuova abilità speciale</strong><small>Crea una prova rapida da usare direttamente dalla scheda.</small></div>
+      </section>
+      <section class="quick-skill-editor__section">
+        <label class="field quick-skill-editor__name"><span>Nome abilità</span><input name="name" required placeholder="Es. Scassinare serrature" autocomplete="off" /></label>
+        <div class="quick-skill-editor__field-group">
+          <span class="quick-skill-editor__label">Caratteristica</span>
+          <div class="quick-skill-editor__ability-grid">
+            ${abilities.map(([value, abilityLabel], abilityIndex) => `<label class="quick-skill-editor__ability"><input type="radio" name="ability" value="${value}" ${abilityIndex === 0 ? 'checked' : ''} /><span><b>${abilityLabel.slice(0, 3).toUpperCase()}</b><strong>${abilityLabel}</strong><i aria-hidden="true">✓</i></span></label>`).join('')}
+          </div>
+        </div>
+      </section>
+      <section class="quick-skill-editor__section quick-skill-editor__rules">
+        <div class="quick-skill-editor__proficiency" role="group" aria-label="Competenza dell’abilità">
+          <label><input type="checkbox" name="proficient" /><span><i aria-hidden="true">✓</i><strong>Competenza</strong><small>Aggiunge il bonus di competenza.</small></span></label>
+          <label><input type="checkbox" name="mastery" /><span><i aria-hidden="true">✓</i><strong>Maestria</strong><small>Raddoppia il bonus di competenza.</small></span></label>
+        </div>
+        <div class="quick-skill-editor__bonus">
+          <span><strong>Bonus aggiuntivo</strong><small>Modificatore extra oltre a caratteristica e competenza.</small></span>
+          <div><button type="button" data-quick-skill-step="-1" aria-label="Riduci bonus">−</button><input type="number" name="bonus" value="0" step="1" inputmode="numeric" /><button type="button" data-quick-skill-step="1" aria-label="Aumenta bonus">+</button></div>
+        </div>
+      </section>`;
+    const bonusInput = form.querySelector?.('input[name="bonus"]');
+    form.querySelectorAll?.('[data-quick-skill-step]').forEach((button) => button.addEventListener('click', () => {
+      bonusInput.value = String((Number(bonusInput.value) || 0) + Number(button.dataset.quickSkillStep));
+    }));
+    const masteryInput = form.querySelector?.('input[name="mastery"]');
+    const proficiencyInput = form.querySelector?.('input[name="proficient"]');
+    masteryInput?.addEventListener('change', () => {
+      if (masteryInput.checked && proficiencyInput) proficiencyInput.checked = true;
     });
   }
-  const result = await openFormModal({ title: attack ? (existing ? 'Modifica colpo' : 'Nuovo colpo senza armi') : 'Nuovo tiro speciale', content: form, submitLabel: existing ? 'Salva' : 'Aggiungi', cancelLabel: 'Annulla' });
+  const nameInput = form.querySelector?.('[name="name"]');
+  if (nameInput) nameInput.required = true;
+  const result = await openFormModal({
+    title: attack ? (existing ? 'Modifica colpo' : 'Nuovo colpo senza armi') : 'Aggiungi abilità speciale',
+    content: form,
+    submitLabel: existing ? 'Salva' : 'Aggiungi',
+    cancelLabel: 'Annulla',
+    cardClass: attack ? '' : 'modal-card--quick-skill-editor',
+    onOpen: attack ? undefined : () => nameInput?.focus()
+  });
   if (!result) return;
   const data = character.data || {};
   const name = String(result.get('name') || '').trim(); if (!name) return;
