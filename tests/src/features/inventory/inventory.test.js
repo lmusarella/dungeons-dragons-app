@@ -64,6 +64,10 @@ describe('src/features/inventory/inventory.js', () => {
     expect(styles).toContain('align-content: start');
     expect(picker).toContain('const syncCategoryButtons = () =>');
     expect(picker).toContain('button.blur()');
+    expect(picker).toContain('data-shared-item-category-group');
+    expect(picker).toContain('cardsByCategory.get(category)');
+    expect(picker).toContain('loading="lazy" decoding="async"');
+    expect(styles).toContain('.shared-item-picker__category-group { display: contents; }');
     expect(inventory).toContain("title: 'Loot rapido'");
     expect(inventory).toContain('openItemModal(activeCharacter, null, items');
     expect(picker).not.toContain('Aggiungi oggetto manualmente');

@@ -519,6 +519,8 @@ body .modal-card.modal-card--shortcut-size.modal-card--shortcut-size {
 .shared-item-picker__empty--error { border-color: #d5a6a6; background: #f8e8e4; }
 @keyframes shared-item-picker-spin { to { transform: rotate(360deg); } }
 .shared-item-picker__grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-auto-rows: max-content; align-content: start; align-items: start; gap: 8px; }
+.shared-item-picker__category-group { display: contents; }
+.shared-item-picker__category-group[hidden] { display: none; }
 .shared-item-picker__card { position: relative; display: grid; min-height: 112px; overflow: hidden; border: 1px solid #d7c09d; border-radius: 13px; background: #fffaf0; }
 .shared-item-picker__card[hidden] { display: none; }
 .shared-item-picker__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

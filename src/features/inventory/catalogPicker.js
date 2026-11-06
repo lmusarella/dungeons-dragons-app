@@ -167,6 +167,9 @@ export async function openSharedItemPicker({
   const categoryButtons = [...content.querySelectorAll('[data-shared-item-category]')];
   const selectedCategories = new Set();
   let cards = [];
+  let categoryGroups = [];
+  let cardsByCategory = new Map();
+  let previousFilterQuery = null;
   let submitButton = null;
   let syncSelections = () => {};
   let detailPresenter = openFormModal;
@@ -183,12 +186,24 @@ export async function openSharedItemPicker({
   const applyFilters = () => {
     const query = search.value.trim().toLowerCase();
     let visible = 0;
-    cards.forEach((card) => {
-      const matchesSearch = !query || card.dataset.searchValue.includes(query);
-      const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(card.dataset.itemCategory);
-      card.hidden = !(matchesSearch && matchesCategory);
-      if (!card.hidden) visible += 1;
+    categoryGroups.forEach((group) => {
+      const category = group.dataset.itemCategory;
+      const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(category);
+      group.hidden = !matchesCategory;
+      if (!matchesCategory) return;
+      const categoryCards = cardsByCategory.get(category) || [];
+      if (!query) {
+        visible += categoryCards.length;
+        return;
+      }
+      categoryCards.forEach((card) => {
+        const matchesSearch = card.dataset.searchValue.includes(query);
+        card.hidden = !matchesSearch;
+        if (matchesSearch) visible += 1;
+      });
     });
+    if (!query && previousFilterQuery) cards.forEach((card) => { card.hidden = false; });
+    previousFilterQuery = query;
     count.textContent = `${visible} ${visible === 1 ? 'oggetto' : 'oggetti'}`;
   };
 
@@ -201,13 +216,13 @@ export async function openSharedItemPicker({
   };
 
   const renderItems = () => {
-    results.innerHTML = `<div class="shared-item-picker__grid">
-      ${items.map((item) => {
+    const categories = [...new Set(items.map((item) => item.category || 'gear'))];
+    const renderCard = (item) => {
     const image = sanitizeImageUrl(item.image_url);
     return `<article class="shared-item-picker__card" data-shared-item-option data-shared-item-id="${escapeHtml(item.id)}" data-item-category="${escapeHtml(item.category || 'gear')}" data-search-value="${escapeHtml(`${item.name} ${getCategoryLabel(item.category)}`.toLowerCase())}">
         <input class="shared-item-picker__input" type="${inputType}" name="shared_item_ids" value="${escapeHtml(item.id)}" />
         <button class="shared-item-picker__detail" type="button" data-shared-item-detail aria-label="Apri il dettaglio di ${escapeHtml(item.name)}">
-          <span class="shared-item-picker__visual">${image ? `<img src="${image}" alt="" />` : '<i aria-hidden="true">◇</i>'}</span>
+          <span class="shared-item-picker__visual">${image ? `<img src="${image}" alt="" width="48" height="54" loading="lazy" decoding="async" />` : '<i aria-hidden="true">◇</i>'}</span>
           <span class="shared-item-picker__copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(getCategoryLabel(item.category))}${item.is_magic ? ' · Magico' : ''}</small></span>
           <span class="shared-item-picker__open-hint" aria-hidden="true">›</span>
         </button>
@@ -222,9 +237,20 @@ export async function openSharedItemPicker({
           </div>` : ''}
         </footer>
       </article>`;
-  }).join('')}
+    };
+    results.innerHTML = `<div class="shared-item-picker__grid">
+      ${categories.map((category) => `
+        <div class="shared-item-picker__category-group" data-shared-item-category-group data-item-category="${escapeHtml(category)}">
+          ${items.filter((item) => (item.category || 'gear') === category).map(renderCard).join('')}
+        </div>`).join('')}
     </div>`;
     cards = [...content.querySelectorAll('[data-shared-item-option]')];
+    categoryGroups = [...content.querySelectorAll('[data-shared-item-category-group]')];
+    cardsByCategory = new Map(categoryGroups.map((group) => [
+      group.dataset.itemCategory,
+      [...group.querySelectorAll('[data-shared-item-option]')]
+    ]));
+    previousFilterQuery = null;
     const syncCardSelection = (card) => {
       const selection = card.querySelector('input[name="shared_item_ids"]');
       if (!selection) return;
