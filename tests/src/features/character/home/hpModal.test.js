@@ -15,6 +15,9 @@ describe('src/features/character/home/hpModal.js', () => {
     const source = readFileSync('src/features/character/home/hpModal.js', 'utf8');
     expect(source).toContain('export function buildHpActionFields(');
     expect(source).toContain('data-hp-amount-preset');
+    const presetHandler = source.slice(source.indexOf("wrapper.querySelectorAll('[data-hp-amount-preset]')"), source.indexOf("const maxChoice = wrapper.querySelector"));
+    expect(presetHandler).not.toContain('amountInput.focus()');
+    expect(presetHandler).not.toContain('amountInput.select()');
     expect(source).toContain('name="healing_target"');
     expect(source).toContain('name="change_hp_max"');
     expect(source).not.toContain('Tipo di danno');

@@ -230,8 +230,6 @@ export function buildHpActionFields(character, action = 'damage') {
   wrapper.querySelectorAll('[data-hp-amount-preset]').forEach((button) => button.addEventListener('click', () => {
     amountInput.value = button.dataset.hpAmountPreset;
     amountInput.dispatchEvent(new Event('input', { bubbles: true }));
-    amountInput.focus();
-    amountInput.select();
   }));
   const maxChoice = wrapper.querySelector('input[name="change_hp_max"]');
   const maxInput = wrapper.querySelector('input[name="hp_max_override"]');
