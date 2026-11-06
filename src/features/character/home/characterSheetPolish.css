@@ -436,7 +436,7 @@ body .character-edit-form--guided .roll-adjustment-editor__empty { grid-column: 
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--receive { --footer-tone: #286760; --footer-soft: #4c8b83; }
 .app-shell[data-route='home'] > .app-main > .sheet-action-footer .sheet-action-footer__button--loot { --footer-tone: #75452e; --footer-soft: #9f684a; }
 
-body dialog.sheet-detail .play-card--spell .play-card__header { position: relative; padding-right: 108px; }
+body dialog.sheet-detail .play-card--spell .play-card__header { position: relative; }
 body dialog.sheet-detail .play-card--spell .play-card__spell-state {
   position: absolute; top: 0; right: 0; display: inline-flex; max-width: 102px; min-height: 21px; align-items: center;
   padding: 4px 7px; border: 1px solid #c9b18b; border-radius: 999px; background: #f2e5d2;
