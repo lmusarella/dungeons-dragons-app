@@ -190,7 +190,7 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-st
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--darkvision > strong { font-size: 13px; }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-label__title,
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-stat--hit-dice .combat-stat__label {
-  color: #5f3c4d !important; font-size: 10px; font-weight: 750; letter-spacing: 0; text-transform: none;
+  color: #5f3c4d !important; font-size: 12px; font-weight: 750; letter-spacing: 0; text-transform: none;
 }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-label__title { font-size: 12px; font-weight: 850; }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .hp-bar-label > .hp-bar-track {
