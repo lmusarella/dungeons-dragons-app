@@ -71,6 +71,7 @@ export function polishInventoryShortcut(host, { offline = false, wallet: balance
   const walletHeader = wallet.querySelector('.inventory-side-card__header');
   const walletActions = document.createElement('div');
   walletActions.className = 'coin-workspace-actions';
+  const actionButtons = new Map();
   [['pay', '↑', 'Paga'], ['receive', '↓', 'Ricevi']].forEach(([direction, icon, label]) => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -78,13 +79,15 @@ export function polishInventoryShortcut(host, { offline = false, wallet: balance
     button.dataset.moneyAction = direction;
     button.innerHTML = `<span aria-hidden="true">${icon}</span><strong>${label}</strong>`;
     button.disabled = offline || (direction === 'pay' && !['pp', 'gp', 'sp', 'cp'].some((coin) => Number(balance?.[coin] || 0) > 0));
-    walletActions.append(button);
+    actionButtons.set(direction, button);
   });
   const exchange = transactions.querySelector('[data-exchange-coins]');
   if (exchange) {
     exchange.className = 'ghost-button coin-exchange-button'; exchange.textContent = '⇄ Scambia monete'; exchange.disabled = offline;
-    walletActions.append(exchange);
   }
+  walletActions.append(actionButtons.get('pay'));
+  if (exchange) walletActions.append(exchange);
+  walletActions.append(actionButtons.get('receive'));
   walletHeader?.append(walletActions);
   transactions.querySelector('.inventory-side-card__header')?.remove();
 

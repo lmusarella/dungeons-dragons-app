@@ -110,6 +110,21 @@ describe('src/features/inventory/inventory.js', () => {
     expect(modal).toContain("minimum_strength: Math.max(0, Number(formData.get('minimum_strength')) || 0)");
   });
 
+  it('lays out the inventory coin actions symmetrically', () => {
+    const shortcut = readFileSync('src/features/character/home/shortcutViews.js', 'utf8');
+    const styles = readFileSync('src/features/character/home/fantasyTheme.css', 'utf8');
+    expect(shortcut).toContain("walletActions.append(actionButtons.get('pay'))");
+    expect(shortcut).toContain('if (exchange) walletActions.append(exchange)');
+    expect(shortcut).toContain("walletActions.append(actionButtons.get('receive'))");
+    expect(styles).toContain('grid-template-columns: repeat(3,minmax(0,1fr))');
+    expect(styles).toContain('.coin-workspace-action--pay { grid-column: 1; }');
+    expect(styles).toContain('.coin-workspace-action--receive { grid-column: 3; }');
+    expect(styles).toContain('.coin-exchange-button { grid-column: 2;');
+    expect(styles).toContain('grid-template-columns: 30px minmax(0,1fr); grid-template-rows: auto auto');
+    expect(styles).toContain('.wallet-card__info { display: contents; }');
+    expect(styles).toContain('grid-row: 1 / 3; width: 30px; height: 30px;');
+  });
+
   it('collects nested container contents from deepest to shallowest for deletion', () => {
     const items = [
       { id: 'bag', category: 'container' },
