@@ -1965,7 +1965,7 @@ body dialog.sheet-detail[data-sheet-panel='Lancia incantesimi'] .catalog-filter-
   padding: 6px 9px; border: 1px solid #d7bd95; border-radius: 9px; background: #fffaf0;
 }
 body dialog.sheet-detail[data-sheet-panel='Lancia incantesimi'] .catalog-filter-stats .spell-stat small {
-  max-width: none; color: #866f62; font-size: 8px; font-weight: 750; line-height: 1.15; text-transform: uppercase;
+  max-width: none; color: #866f62; font-size: 10px !important; font-weight: 750; line-height: 1.15; text-transform: uppercase;
 }
 body dialog.sheet-detail[data-sheet-panel='Lancia incantesimi'] .catalog-filter-stats .spell-stat strong {
   color: #633349; font: 700 17px/1 'Fraunces',Georgia,serif;

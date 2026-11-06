@@ -937,8 +937,7 @@ export function buildSpellSection(character, canManageSpells = false) {
     ${buildSpellStatsRow(data, { includeAttack: false })}
     <div class="detail-section">
       <div class="detail-card detail-card--text spell-summary-card">
-        <div class="spell-slots">
-          <span class="spell-slots__title">Slot rimanenti</span>
+        <div class="spell-slots">       
           <div class="spell-slots__list">
             <div class="spell-slot-row spell-slot-row--cantrips" data-spell-slot-filter="0" role="button" tabindex="0" aria-pressed="false" aria-label="Mostra trucchetti">
               <span class="spell-slot-label">Trucchetti</span>
