@@ -46,9 +46,10 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain("buildRow([weaponTypeField, weaponRangeField, meleeRangeField, weaponAbilityField, weaponMasteryField], 'compact')");
     expect(source).toContain('rangeGrid.append(thrownField, rangeNormalField, rangeDisadvantageField)');
     expect(source).toContain("const isMeleeWeapon = isWeapon && weaponRangeSelect.value === 'melee'");
+    expect(source).toContain("const usesRangedDistance = isWeapon && (weaponRangeSelect.value === 'ranged' || isThrown)");
     expect(source).toContain('toggleFieldVisibility(meleeRangeField, isMeleeWeapon)');
-    expect(source).toContain('toggleFieldVisibility(rangeNormalField, isThrown)');
-    expect(source).toContain('toggleFieldVisibility(rangeDisadvantageField, isThrown)');
+    expect(source).toContain('toggleFieldVisibility(rangeNormalField, usesRangedDistance)');
+    expect(source).toContain('toggleFieldVisibility(rangeDisadvantageField, usesRangedDistance)');
     expect(source.indexOf('proficiencySection.appendChild(rangeGrid)'))
       .toBeLessThan(source.indexOf('proficiencySection.appendChild(weaponAmmoRow)'));
     expect(source).toContain("buildRow([armorTypeField, armorClassField, armorBonusField], 'compact')");

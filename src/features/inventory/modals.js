@@ -289,7 +289,9 @@ export async function openItemModal(character, item, items = [], onSave, options
   const weaponRangeField = document.createElement('label');
   weaponRangeField.className = 'field';
   weaponRangeField.innerHTML = '<span>Uso dell’arma</span>';
-  const weaponRangeSelect = buildSelect(weaponRanges, item?.weapon_range ?? '');
+  const inferredWeaponRange = item?.weapon_range
+    ?? (item?.range_normal && !item?.is_thrown ? 'ranged' : '');
+  const weaponRangeSelect = buildSelect(weaponRanges, inferredWeaponRange);
   weaponRangeSelect.name = 'weapon_range';
   weaponRangeField.appendChild(weaponRangeSelect);
   const weaponAbilityField = document.createElement('label');
@@ -704,16 +706,17 @@ export async function openItemModal(character, item, items = [], onSave, options
     }
     const isThrown = isWeapon && Boolean(thrownInput?.checked);
     const isMeleeWeapon = isWeapon && weaponRangeSelect.value === 'melee';
+    const usesRangedDistance = isWeapon && (weaponRangeSelect.value === 'ranged' || isThrown);
     if (meleeRangeInput) {
       meleeRangeInput.disabled = !isMeleeWeapon;
       if (isMeleeWeapon && !meleeRangeInput.value) meleeRangeInput.value = '1.5';
     }
     toggleFieldVisibility(meleeRangeField, isMeleeWeapon);
     [rangeNormalInput, rangeDisadvantageInput].forEach((input) => {
-      if (input) input.disabled = !isThrown;
+      if (input) input.disabled = !usesRangedDistance;
     });
-    toggleFieldVisibility(rangeNormalField, isThrown);
-    toggleFieldVisibility(rangeDisadvantageField, isThrown);
+    toggleFieldVisibility(rangeNormalField, usesRangedDistance);
+    toggleFieldVisibility(rangeDisadvantageField, usesRangedDistance);
     armorTypeSelect.disabled = !isArmor;
     if (shieldInput) {
       shieldInput.disabled = !isArmor;
