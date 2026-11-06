@@ -310,6 +310,25 @@ export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet 
     ['sp', 'Argento', `${baseUrl}icons/moneta_argento.png`],
     ['cp', 'Rame', `${baseUrl}icons/moneta_rame.png`]
   ];
+  const reasonOptions = direction === 'pay'
+    ? [
+        ['Acquisto', 'Pagamento effettuato per un acquisto'],
+        ['Locanda', 'Pagamento per vitto e alloggio presso una locanda'],
+        ['Servizi', 'Pagamento effettuato per servizi ricevuti'],
+        ['Viaggio', 'Spesa sostenuta durante il viaggio'],
+        ['Donazione', 'Somma donata']
+      ]
+    : [
+        ['Ricompensa', 'Somma ricevuta come ricompensa'],
+        ['Bottino', 'Somma ottenuta dal bottino'],
+        ['Vendita', 'Somma ricevuta dalla vendita'],
+        ['Compenso', 'Somma ricevuta tramite compenso'],
+        ['Rimborso', 'Somma ricevuta come rimborso']
+      ];
+  const selectedOption = reasonOptions.find(([label, template]) => reason === label || reason === template)
+    || (!reason ? reasonOptions[0] : null);
+  const selectedReason = selectedOption?.[0] || '';
+  const reasonDescription = selectedOption?.[1] || reason || '';
   return `
     <div class="money-bundle money-bundle--${direction}">
       <p class="money-bundle__intro">${direction === 'pay' ? 'Indica tutte le monete da consegnare.' : 'Indica tutte le monete ricevute.'} I valori a zero verranno ignorati.</p>
@@ -324,13 +343,37 @@ export function moneyBundleFields({ direction = 'receive', amounts = {}, wallet 
   }).join('')}
       </div>
       <div class="money-bundle__details">
-        <label class="field"><span>Motivo</span><input name="reason" placeholder="Es. ricompensa, locanda, acquisto" value="${escapeHtml(reason)}" /></label>
+        <fieldset class="money-reason-picker">
+          <legend>Motivo</legend>
+          <input type="hidden" name="reason" value="${escapeHtml(reasonDescription)}" data-money-reason-value />
+          <div class="money-reason-picker__options" role="radiogroup" aria-label="Motivi frequenti">
+            ${reasonOptions.map(([label, template]) => `<label class="money-reason-option"><input type="radio" name="reason_preset" value="${escapeHtml(label)}" data-reason-template="${escapeHtml(template)}" ${selectedReason === label ? 'checked' : ''} /><span>${escapeHtml(label)}</span></label>`).join('')}
+          </div>
+          <label class="money-reason-picker__custom"><span>Descrizione del movimento</span><input type="text" data-money-reason-custom placeholder="Aggiungi dettagli al motivo" value="${escapeHtml(reasonDescription)}" /></label>
+        </fieldset>
         ${showDate
     ? `<label class="field"><span>Data</span><input name="occurred_on" type="date" value="${escapeHtml(resolvedDate)}" /></label>`
     : `<input name="occurred_on" type="hidden" value="${escapeHtml(resolvedDate)}" />`}
       </div>
     </div>
   `;
+}
+
+export function bindMoneyReasonPicker(root) {
+  const picker = root?.querySelector('.money-reason-picker');
+  if (!picker) return;
+  const valueInput = picker.querySelector('[data-money-reason-value]');
+  const customInput = picker.querySelector('[data-money-reason-custom]');
+  const presetInputs = [...picker.querySelectorAll('input[name="reason_preset"]')];
+  presetInputs.forEach((input) => input.addEventListener('change', () => {
+    if (!input.checked) return;
+    const template = input.dataset.reasonTemplate || input.value;
+    valueInput.value = template;
+    if (customInput) customInput.value = template;
+  }));
+  customInput?.addEventListener('input', () => {
+    valueInput.value = customInput.value.trim();
+  });
 }
 
 export function exchangeFields({
@@ -356,39 +399,41 @@ export function exchangeFields({
     .map((entry) => `
           <option value="${entry.key}" ${target === entry.key ? 'selected' : ''}>${entry.label}</option>
         `).join('');
+  const baseUrl = import.meta.env.BASE_URL;
+  const coinIcons = {
+    pp: `${baseUrl}icons/moneta_platino.png`,
+    gp: `${baseUrl}icons/moneta_oro.png`,
+    sp: `${baseUrl}icons/moneta_argento.png`,
+    cp: `${baseUrl}icons/moneta_rame.png`
+  };
+  const sourceEntry = entries.find((entry) => entry.key === source) || entries[1];
+  const targetEntry = entries.find((entry) => entry.key === target) || entries[0];
   return `
-    <div class="modal-section">
-      <h4 class="modal-section__title">Seleziona le monete da scambiare</h4>
-      <div class="money-grid compact-grid-fields">
-        <label class="field">
-          <span>Tipo moneta</span>
-          <select name="source" ${hasAvailable ? '' : 'disabled'}>
-            ${hasAvailable ? sourceOptions : '<option value=\"\" selected>Nessuna moneta disponibile</option>'}
-          </select>
-        </label>
-        <label class="field">
-          <span>Quantità</span>
-          <div class="field__input-row">
-            <input name="amount" type="number" value="${amount}" min="0" step="1" ${hasAvailable ? '' : 'disabled'} />
-            <button class="chip chip--small" type="button" data-exchange-max ${hasAvailable ? '' : 'disabled'}>Max</button>
+    <div class="coin-exchange-editor">
+      <header class="coin-exchange-editor__hero">
+        <span aria-hidden="true">⇄</span>
+        <div><strong>Converti le tue monete</strong><small>Scegli cosa consegnare: il controvalore viene calcolato automaticamente.</small></div>
+      </header>
+      <div class="coin-exchange-editor__flow">
+        <section class="coin-exchange-side coin-exchange-side--source">
+          <span class="coin-exchange-side__eyebrow">Da convertire</span>
+          <div class="coin-exchange-side__coin" data-exchange-source-visual>
+            <span class="coin-avatar coin-avatar--${sourceEntry.key}"><img src="${coinIcons[sourceEntry.key]}" alt="" /></span>
+            <span><strong>${sourceEntry.label}</strong><small data-exchange-available>${sourceEntry.value} disponibili</small></span>
           </div>
-          <span class="field__hint muted" data-exchange-available></span>
-        </label>
-      </div>
-    </div>
-    <div class="modal-section">
-      <h4 class="modal-section__title">Scegli la moneta di destinazione</h4>
-      <div class="money-grid compact-grid-fields">
-        <label class="field">
-          <span>Moneta di destinazione</span>
-          <select name="target">
-            ${targetOptions}
-          </select>
-        </label>
-        <label class="field">
-          <span>Controvalore</span>
-          <input name="target_amount" type="number" value="${targetAmount}" min="0" step="1" readonly />
-        </label>
+          <label class="field"><span>Moneta di partenza</span><select name="source" ${hasAvailable ? '' : 'disabled'}>${hasAvailable ? sourceOptions : '<option value=\"\" selected>Nessuna moneta disponibile</option>'}</select></label>
+          <label class="field coin-exchange-side__amount"><span>Quantità</span><div class="field__input-row"><input name="amount" type="number" value="${amount}" min="0" step="1" ${hasAvailable ? '' : 'disabled'} /><button class="ghost-button" type="button" data-exchange-max ${hasAvailable ? '' : 'disabled'}>Tutto</button></div></label>
+        </section>
+        <span class="coin-exchange-editor__arrow" aria-hidden="true">→</span>
+        <section class="coin-exchange-side coin-exchange-side--target">
+          <span class="coin-exchange-side__eyebrow">Riceverai</span>
+          <div class="coin-exchange-side__coin" data-exchange-target-visual>
+            <span class="coin-avatar coin-avatar--${targetEntry.key}"><img src="${coinIcons[targetEntry.key]}" alt="" /></span>
+            <span><strong>${targetEntry.label}</strong><small>Controvalore stimato</small></span>
+          </div>
+          <label class="field"><span>Moneta di destinazione</span><select name="target">${targetOptions}</select></label>
+          <label class="field coin-exchange-side__result"><span>Controvalore</span><input name="target_amount" type="number" value="${targetAmount}" min="0" step="1" readonly /></label>
+        </section>
       </div>
     </div>
   `;

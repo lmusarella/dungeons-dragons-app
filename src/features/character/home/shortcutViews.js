@@ -68,24 +68,25 @@ export function polishInventoryShortcut(host, { offline = false, wallet: balance
   if (!main || !wallet || !transactions) return;
   wallet.querySelector('[data-edit-wallet]')?.remove();
   wallet.querySelector('.eyebrow')?.remove();
+  const walletHeader = wallet.querySelector('.inventory-side-card__header');
+  const walletActions = document.createElement('div');
+  walletActions.className = 'coin-workspace-actions';
+  [['pay', '↑', 'Paga'], ['receive', '↓', 'Ricevi']].forEach(([direction, icon, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `coin-workspace-action coin-workspace-action--${direction}`;
+    button.dataset.moneyAction = direction;
+    button.innerHTML = `<span aria-hidden="true">${icon}</span><strong>${label}</strong>`;
+    button.disabled = offline || (direction === 'pay' && !['pp', 'gp', 'sp', 'cp'].some((coin) => Number(balance?.[coin] || 0) > 0));
+    walletActions.append(button);
+  });
   const exchange = transactions.querySelector('[data-exchange-coins]');
   if (exchange) {
     exchange.className = 'ghost-button coin-exchange-button'; exchange.textContent = '⇄ Scambia monete'; exchange.disabled = offline;
-    wallet.querySelector('.inventory-side-card__header').append(exchange);
+    walletActions.append(exchange);
   }
+  walletHeader?.append(walletActions);
   transactions.querySelector('.inventory-side-card__header')?.remove();
-  wallet.querySelectorAll('[data-wallet-coin]').forEach(card => {
-    const coin = card.dataset.walletCoin;
-    const actions = document.createElement('div'); actions.className = 'coin-card-actions';
-    [['pay','−','Sottrai'],['receive','+','Aggiungi']].forEach(([direction,symbol,label]) => {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'coin-card-action coin-card-action--' + direction;
-      button.dataset.moneyAction = direction; button.dataset.coin = coin; button.textContent = symbol;
-      button.setAttribute('aria-label',label + ' monete ' + card.querySelector('.wallet-card__info strong').textContent);
-      button.disabled = offline || (direction === 'pay' && Number(balance?.[coin] || 0) <= 0);
-      actions.append(button);
-    });
-    card.prepend(actions);
-  });
 
   const moneyPage = document.createElement('section');
   moneyPage.className = 'inventory-money-workspace';

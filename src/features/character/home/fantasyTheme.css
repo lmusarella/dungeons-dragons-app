@@ -4240,3 +4240,128 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vi
   .app-shell[data-route='home'] .sheet-dashboard .character-manual .wild-shape-card,
   body .app-shell[data-route='home'] .sheet-dashboard .character-manual .combat-vitals-grid:has(.wild-shape-card) .combat-stat--hit-dice { grid-column: 1; grid-row: auto; }
 }
+
+/* Clean character identity hero. */
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary {
+  grid-template-columns: 140px minmax(0,1fr) minmax(138px,160px); grid-template-rows: minmax(76px,auto) auto;
+  min-height: 168px; align-items: stretch; gap: 10px 18px; padding: 12px;
+  border-color: #d2b47f; background:
+    radial-gradient(circle at 92% 12%,rgba(177,129,92,.13),transparent 29%),
+    linear-gradient(135deg,rgba(255,252,245,.98),rgba(246,234,213,.88));
+  box-shadow: inset 0 1px rgba(255,255,255,.9),0 5px 16px rgba(79,48,39,.07);
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame {
+  grid-column: 1; grid-row: 1 / 3; width: 140px; height: 140px; min-height: 140px; max-height: 140px;
+  padding: 4px; border-radius: 14px; box-shadow: inset 0 0 0 3px #f8ead1,0 7px 16px rgba(81,48,32,.13);
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-profile-body {
+  grid-column: 2; grid-row: 1; display: flex; min-width: 0; align-items: center; padding: 2px 0;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity {
+  display: grid; width: 100%; height: auto; min-width: 0; align-content: center; gap: 5px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity__eyebrow {
+  color: #9b7351; font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-name {
+  margin: 0; color: #633349 !important; font-size: clamp(32px,3.3vw,48px); line-height: .98; letter-spacing: -.035em;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity__traits {
+  display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 4px 7px; margin-top: 3px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity__kicker {
+  overflow: visible; color: #806552; font-size: 8.5px; font-weight: 800; letter-spacing: .055em; text-overflow: clip; white-space: normal;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-identity__trait-separator {
+  color: #b68a65; font-size: 9px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-utility {
+  grid-column: 3; grid-row: 1; display: grid; min-width: 0; align-content: space-between; justify-items: stretch; gap: 10px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-utility .character-edit-trigger--identity {
+  width: 100%; min-height: 34px; justify-content: center;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-utility .character-identity__badges {
+  justify-self: end; align-self: end;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions {
+  grid-column: 2 / 4; grid-row: 2; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: minmax(50px,auto);
+  width: 100%; align-self: end; gap: 8px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions .profile-status-card {
+  min-height: 50px; padding: 6px 9px;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar {
+  grid-template-columns: minmax(0,1fr) minmax(138px,160px) !important;
+}
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-profile-body { grid-column: 1; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-summary-utility { grid-column: 2; }
+.app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-summary-actions { grid-column: 1 / 3; }
+
+/* Proficiencies modal: only knowledge tabs and a standard left close action. */
+body .modal-card--proficiencies .proficiency-tab-bar {
+  grid-template-columns: repeat(auto-fit,minmax(145px,1fr));
+}
+body .modal-card--proficiencies .modal-footer .modal-actions__left { display: flex; align-items: center; }
+body .modal-card--proficiencies .modal-footer .modal-actions__right:empty { display: none; }
+body .modal-card--proficiencies .proficiency-modal__close { min-width: 112px; }
+
+@media (max-width: 760px) {
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary {
+    grid-template-columns: 96px minmax(0,1fr); grid-template-rows: auto auto auto; gap: 9px 12px;
+  }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-avatar-frame {
+    grid-column: 1; grid-row: 1; width: 96px; height: 96px; min-height: 96px; max-height: 96px;
+  }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-profile-body { grid-column: 2; grid-row: 1; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-utility {
+    grid-column: 1 / 3; grid-row: 2; display: flex; align-items: center; justify-content: space-between;
+  }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-utility .character-edit-trigger--identity { width: auto; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary-actions { grid-column: 1 / 3; grid-row: 3; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-name { font-size: clamp(27px,8vw,38px); }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar { grid-template-columns: minmax(0,1fr) !important; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar :is(.character-profile-body,.character-summary-utility,.character-summary-actions) { grid-column: 1; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-profile-body { grid-row: 1; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-summary-utility { grid-row: 2; }
+  .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary--no-avatar .character-summary-actions { grid-row: 3; }
+}
+
+/* Tablet labels need a full two-line text box instead of clipping. */
+@media (max-width: 1180px) {
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .character-quick-stats .combat-stat {
+    min-height: 64px; align-content: center; padding-block: 7px;
+  }
+  body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-sheet-section--exploration .combat-stat:not(.combat-stat--defenses) .combat-stat__label {
+    display: flex; min-height: 22px; align-items: flex-end; overflow: visible; font-size: 9.5px; line-height: 1.2;
+  }
+}
+
+/* Inventory currency page: actions belong to the workspace, not each coin. */
+body .sheet-detail .inventory-money-workspace .inventory-wallet > header {
+  display: flex; min-height: 42px; align-items: center; justify-content: flex-end; margin-bottom: 8px;
+}
+body .sheet-detail .coin-workspace-actions { display: flex; width: 100%; align-items: center; justify-content: flex-end; gap: 8px; }
+body .sheet-detail .coin-workspace-action {
+  display: inline-flex; min-width: 118px; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 7px 13px;
+  border: 1px solid; border-radius: 11px; cursor: pointer; font: inherit; box-shadow: 0 3px 8px rgba(76,45,44,.08);
+}
+body .sheet-detail .coin-workspace-action > span { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 7px; color: #fff; font-size: 14px; font-weight: 900; }
+body .sheet-detail .coin-workspace-action > strong { font-size: 12px; }
+body .sheet-detail .coin-workspace-action--pay { border-color: #d5aaa7; background: #f5e4e1; color: #8e4149; }
+body .sheet-detail .coin-workspace-action--pay > span { background: #a94b53; }
+body .sheet-detail .coin-workspace-action--receive { border-color: #a8c5ad; background: #e5f0e6; color: #3f6c50; }
+body .sheet-detail .coin-workspace-action--receive > span { background: #4a8060; }
+body .sheet-detail .coin-workspace-action:disabled { cursor: not-allowed; opacity: .45; }
+body .sheet-detail .inventory-money-workspace .wallet-card {
+  display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto; min-height: 72px; align-items: center; padding: 10px 12px; gap: 10px;
+}
+body .sheet-detail .inventory-money-workspace .wallet-card__info { grid-column: 1; grid-row: 1; display: flex; align-items: center; gap: 9px; text-align: left; }
+body .sheet-detail .inventory-money-workspace .wallet-card > strong { grid-column: 2; grid-row: 1; font-size: 24px; text-align: right; }
+body .sheet-detail .inventory-money-workspace .wallet-card .coin-avatar { width: 36px; height: 36px; }
+body .sheet-detail .inventory-money-workspace .coin-exchange-button { min-height: 40px; margin-left: auto; padding: 7px 12px; font-size: 11px; }
+@media (max-width: 760px) {
+  body .sheet-detail .coin-workspace-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  body .sheet-detail .coin-workspace-action,
+  body .sheet-detail .inventory-money-workspace .coin-exchange-button { width: 100%; min-width: 0; margin: 0; }
+}

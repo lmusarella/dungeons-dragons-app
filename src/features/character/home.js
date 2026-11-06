@@ -25,7 +25,7 @@ import {
   buildSpecialSkillList,
   buildSpellSection
 } from './home/sections.js';
-import { moneyBundleFields } from '../inventory/render.js';
+import { bindMoneyReasonPicker, moneyBundleFields } from '../inventory/render.js';
 import { openItemModal } from '../inventory/modals.js';
 import { addSharedItemsToInventory, openSharedItemPicker } from '../inventory/catalogPicker.js';
 import { getWeightUnit } from '../inventory/utils.js';
@@ -1227,7 +1227,21 @@ export async function renderHome(container) {
         submitLabel: 'Chiudi',
         cancelLabel: null,
         cardClass: ['modal-card--wide', 'modal-card--proficiencies'],
-        onOpen: ({ fieldsEl }) => bindProficiencyTabs(fieldsEl)
+        onOpen: ({ modal, fieldsEl }) => {
+          bindProficiencyTabs(fieldsEl);
+          const submitButton = modal?.querySelector('[data-form-submit]');
+          const leftActions = modal?.querySelector('.modal-footer .modal-actions__left');
+          const rightActions = modal?.querySelector('.modal-footer .modal-actions__right');
+          if (!submitButton || !leftActions || !rightActions) return undefined;
+          submitButton.classList.remove('primary');
+          submitButton.classList.add('ghost-button', 'proficiency-modal__close');
+          leftActions.appendChild(submitButton);
+          return () => {
+            submitButton.classList.remove('ghost-button', 'proficiency-modal__close');
+            submitButton.classList.add('primary');
+            rightActions.appendChild(submitButton);
+          };
+        }
       });
     });
   }
@@ -2338,6 +2352,7 @@ async function handleMoneyAction(direction, container) {
     cardClass: 'modal-card--quick-action',
     content: moneyBundleFields({ direction, wallet, showDate: false }),
     onOpen: ({ fieldsEl }) => {
+      bindMoneyReasonPicker(fieldsEl);
       fieldsEl?.querySelectorAll('.money-bundle__coin input[type="number"]').forEach((input) => {
         attachModalValueStepper(input, { min: 0, max: input.max === '' ? null : Number(input.max) });
       });
@@ -3169,12 +3184,7 @@ async function handleHpAction(action, container) {
     title,
     submitLabel,
     cardClass: ['modal-card--quick-action', 'modal-card--hp-action'],
-    content: buildHpActionFields(activeCharacter, action),
-    onOpen: ({ fieldsEl }) => {
-      const amountInput = fieldsEl?.querySelector('input[name="amount"]');
-      amountInput?.focus();
-      amountInput?.select();
-    }
+    content: buildHpActionFields(activeCharacter, action)
   });
   if (!formData) return;
   const useHitDice = formData.has('use_hit_dice');

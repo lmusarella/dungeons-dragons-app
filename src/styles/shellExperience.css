@@ -383,6 +383,76 @@ body .app-shell[data-route='home'] .home-layout.sheet-dashboard .sheet-action-fo
 .money-bundle__coin input[type='number']::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .money-bundle__details { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(150px,.5fr); gap: 10px; }
 
+/* Currency operations use large tablet-friendly values and explicit reasons. */
+.modal-card.modal-card--quick-action:has(.money-bundle) { width: min(820px,calc(100vw - 28px)); }
+.money-bundle__grid { gap: 10px; }
+.money-bundle__coin { gap: 12px; padding: 14px; }
+.money-bundle__coin-heading { gap: 10px; }
+.money-bundle__coin-heading .coin-avatar { width: 40px; height: 40px; flex-basis: 40px; }
+.money-bundle__coin-heading strong { font-size: 1rem; line-height: 1.15; }
+.money-bundle__coin-heading small { margin-top: 2px; font-size: .72rem; line-height: 1.2; }
+.money-bundle__coin .modal-value-stepper,
+.money-bundle__coin .inventory-amount-stepper {
+  grid-template-columns: 38px minmax(46px,1fr) 38px; min-height: 48px; padding: 4px;
+}
+.money-bundle__coin .number-stepper__button { width: 38px; min-width: 38px; height: 38px; min-height: 38px; font-size: 1.15rem; }
+.money-bundle__coin input[type='number'] { min-height: 38px; font-size: 1.2rem; }
+.money-bundle__coin > input[type='number'] { min-height: 48px; padding: 7px; font-size: 1.2rem; }
+.money-bundle__details { grid-template-columns: minmax(0,1fr) minmax(170px,.32fr); align-items: end; }
+.money-bundle__details > .field > span,
+.money-reason-picker > legend,
+.money-reason-picker__custom > span { color: #603849; font-size: .78rem; font-weight: 850; letter-spacing: .025em; }
+.money-reason-picker { min-width: 0; margin: 0; padding: 0; border: 0; }
+.money-reason-picker > legend { margin-bottom: 8px; }
+.money-reason-picker__options { display: flex; min-width: 0; flex-wrap: wrap; gap: 7px; }
+.money-reason-option { position: relative; cursor: pointer; }
+.money-reason-option input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.money-reason-option span {
+  display: inline-flex; min-height: 35px; align-items: center; padding: 7px 11px; border: 1px solid #d6bc98; border-radius: 10px;
+  background: #fffaf0; color: #725263; font-size: .75rem; font-weight: 750; transition: .15s ease;
+}
+.money-reason-option input:checked + span { border-color: #76364b; background: #76364b; color: #fff8e9; box-shadow: 0 3px 8px rgba(84,39,56,.18); }
+.money-reason-option input:focus-visible + span { outline: 3px solid rgba(118,54,75,.2); outline-offset: 2px; }
+.money-reason-picker__custom { display: grid; gap: 5px; margin-top: 9px; }
+.money-reason-picker__custom input {
+  width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #d6c09f; border-radius: 10px;
+  background: #fffdf8; color: #553d47; font: inherit; box-sizing: border-box; box-shadow: none;
+}
+.money-reason-picker__custom input:focus { border-color: #8b5368; outline: 3px solid rgba(118,54,75,.12); }
+.money-bundle__details:has(> input[name='occurred_on'][type='hidden']) { grid-template-columns: minmax(0,1fr); }
+
+/* Coin exchange presents source and destination as one clear conversion flow. */
+.modal-card.modal-card--coin-exchange,
+.modal-card:has(.coin-exchange-editor) { width: min(840px,calc(100vw - 28px)); }
+.coin-exchange-editor { display: grid; gap: 14px; width: 100%; }
+.coin-exchange-editor__hero { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #d4bb94; border-radius: 14px; background: linear-gradient(135deg,#fff9eb,#eee0c8); }
+.coin-exchange-editor__hero > span { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 12px; background: #76364b; color: #fff8e9; font-size: 21px; }
+.coin-exchange-editor__hero > div { display: grid; gap: 2px; }
+.coin-exchange-editor__hero strong { color: #5b3344; font: 800 1rem/1.15 'Fraunces',Georgia,serif; }
+.coin-exchange-editor__hero small { color: #80695c; font-size: .72rem; line-height: 1.3; }
+.coin-exchange-editor__flow { display: grid; grid-template-columns: minmax(0,1fr) 42px minmax(0,1fr); align-items: stretch; gap: 10px; }
+.coin-exchange-side { display: grid; align-content: start; gap: 11px; min-width: 0; padding: 15px; border: 1px solid #d6bd98; border-radius: 15px; background: linear-gradient(145deg,#fffaf0,#f2e5d1); }
+.coin-exchange-side--target { border-color: #bdc8a4; background: linear-gradient(145deg,#fffaf0,#e9ecd8); }
+.coin-exchange-side__eyebrow { color: #8a6a58; font-size: .68rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.coin-exchange-side__coin { display: flex; min-width: 0; align-items: center; gap: 11px; padding-bottom: 10px; border-bottom: 1px solid rgba(159,122,87,.22); }
+.coin-exchange-side__coin .coin-avatar { width: 46px; height: 46px; flex: 0 0 46px; }
+.coin-exchange-side__coin > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.coin-exchange-side__coin strong { color: #5c3445; font: 800 1rem/1.1 'Fraunces',Georgia,serif; }
+.coin-exchange-side__coin small { color: #826c60; font-size: .72rem; }
+.coin-exchange-side .field > span { color: #603849; font-size: .76rem; font-weight: 800; }
+.coin-exchange-side :is(select,input) { min-height: 44px; font-size: .9rem; }
+.coin-exchange-side__amount .field__input-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
+.coin-exchange-side__amount .field__input-row > .inventory-amount-stepper { min-width: 0; }
+.coin-exchange-side__amount [data-exchange-max] { min-width: 68px; }
+.coin-exchange-side__result input { color: #53663d; background: #edf0df; font-size: 1.15rem; font-weight: 850; text-align: center; }
+.coin-exchange-editor__arrow { display: grid; align-self: center; width: 42px; height: 42px; place-items: center; border: 1px solid #c8ad86; border-radius: 50%; background: #fff8e9; color: #76364b; font-size: 22px; font-weight: 800; box-shadow: 0 4px 10px rgba(80,47,42,.1); }
+@media (max-width: 680px) {
+  .money-bundle__grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .money-bundle__details { grid-template-columns: 1fr; }
+  .coin-exchange-editor__flow { grid-template-columns: 1fr; }
+  .coin-exchange-editor__arrow { transform: rotate(90deg); justify-self: center; }
+}
+
 /* Quick loot uses visible category choices instead of another select. */
 .modal-card.modal-card--quick-action:has(.quick-loot-form) { width: min(700px,calc(100vw - 28px)); }
 body .modal-card.modal-card--shortcut-size.modal-card--shortcut-size {

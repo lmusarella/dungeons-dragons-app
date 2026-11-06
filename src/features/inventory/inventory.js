@@ -19,7 +19,7 @@ import { renderWalletSummary } from '../wallet/wallet.js';
 import { categories } from './constants.js';
 import { openItemModal } from './modals.js';
 import { addSharedItemsToInventory, openItemSourceModal, openSharedItemPicker } from './catalogPicker.js';
-import { buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
+import { bindMoneyReasonPicker, buildInventoryTree, buildTransactionList, exchangeFields, moneyBundleFields, moneyFields } from './render.js';
 import { getCategoryLabel, getEquipSlots, getWeightUnit, normalizeTransactionAmount } from './utils.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { showShortcutLoader } from '../character/home/shortcutViews.js';
@@ -650,12 +650,14 @@ export async function renderInventory(container) {
         const submitLabel = direction === 'pay' ? 'Paga' : 'Ricevi';
         wallet = ensureWallet(wallet, latestCharacter);
         const initialAmounts = button.dataset.coin ? { [button.dataset.coin]: 1 } : {};
+        const openedFromShortcut = Boolean(button.closest('[data-inventory-shortcut]'));
         const formData = await openFormModal({
           title,
           submitLabel,
           cardClass: 'modal-card--quick-action',
-          content: moneyBundleFields({ direction, amounts: initialAmounts, wallet }),
+          content: moneyBundleFields({ direction, amounts: initialAmounts, wallet, showDate: !openedFromShortcut }),
           onOpen: ({ fieldsEl }) => {
+            bindMoneyReasonPicker(fieldsEl);
             fieldsEl?.querySelectorAll('.money-bundle__coin input[type="number"]').forEach((input) => {
               attachInventoryAmountStepper(input, { min: 0, max: input.max === '' ? null : Number(input.max) });
             });
@@ -709,6 +711,7 @@ export async function renderInventory(container) {
       const formData = await openFormModal({
         title: 'Scambia monete',
         submitLabel: 'Scambia',
+        cardClass: 'modal-card--coin-exchange',
         content: exchangeFields({
           available,
           source: defaultSource,
@@ -723,6 +726,21 @@ export async function renderInventory(container) {
           const targetInput = fieldsEl.querySelector('input[name="target_amount"]');
           const maxButton = fieldsEl.querySelector('[data-exchange-max]');
           const availableHint = fieldsEl.querySelector('[data-exchange-available]');
+          const sourceVisual = fieldsEl.querySelector('[data-exchange-source-visual]');
+          const targetVisual = fieldsEl.querySelector('[data-exchange-target-visual]');
+
+          const syncCoinVisual = (visual, coin, detail) => {
+            if (!visual || !coin) return;
+            const avatar = visual.querySelector('.coin-avatar');
+            const image = avatar?.querySelector('img');
+            const label = visual.querySelector('strong');
+            const description = visual.querySelector('small');
+            const imageName = coin === 'pp' ? 'platino' : coin === 'gp' ? 'oro' : coin === 'sp' ? 'argento' : 'rame';
+            if (avatar) avatar.className = `coin-avatar coin-avatar--${coin}`;
+            if (image) image.src = `${import.meta.env.BASE_URL}icons/moneta_${imageName}.png`;
+            if (label) label.textContent = COIN_LABELS[coin] ?? coin;
+            if (description) description.textContent = detail;
+          };
 
           const clampExchange = (source, target, amount) => {
             const sourceValue = COIN_VALUES[source];
@@ -746,6 +764,7 @@ export async function renderInventory(container) {
             }
             const label = COIN_LABELS[source] ?? source;
             availableHint.textContent = `Disponibili: ${available[source] ?? 0} ${label}`;
+            syncCoinVisual(sourceVisual, source, `${available[source] ?? 0} disponibili`);
           };
 
           const syncValues = (nextAmount, { useAdjustedAmount = true } = {}) => {
@@ -759,18 +778,32 @@ export async function renderInventory(container) {
             targetInput.value = result.targetAmount;
           };
 
+          const keepCoinsDistinct = () => {
+            if (!sourceSelect || !targetSelect) return;
+            [...targetSelect.options].forEach((option) => {
+              option.disabled = option.value === sourceSelect.value;
+            });
+            if (targetSelect.value === sourceSelect.value) {
+              targetSelect.value = [...targetSelect.options].find((option) => !option.disabled)?.value || '';
+            }
+            syncCoinVisual(targetVisual, targetSelect.value, 'Controvalore stimato');
+          };
+
           if (sourceSelect) {
             updateAvailableHint(sourceSelect.value);
           }
+          keepCoinsDistinct();
           if (amountInput && targetInput) {
             syncValues(amountInput.value, { useAdjustedAmount: true });
           }
 
           const onSourceChange = () => {
             updateAvailableHint(sourceSelect?.value);
+            keepCoinsDistinct();
             syncValues(amountInput?.value ?? 0, { useAdjustedAmount: true });
           };
           const onTargetChange = () => {
+            syncCoinVisual(targetVisual, targetSelect?.value, 'Controvalore stimato');
             syncValues(amountInput?.value ?? 0, { useAdjustedAmount: true });
           };
           const onAmountInput = () => {

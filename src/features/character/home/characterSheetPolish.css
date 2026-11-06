@@ -3,8 +3,8 @@
   width: 100%; margin-left: 0 !important;
 }
 .app-shell[data-route='home'] .home-layout.sheet-dashboard {
-  width: 100%; max-width: none; height: 100%; min-height: 0; margin: 0; padding: 18px 20px 12px;
-  grid-template-columns: clamp(220px,17vw,246px) minmax(0,1fr); gap: 18px; overflow-x: hidden; overflow-y: auto;
+  width: 100%; max-width: none; height: 100%; min-height: 0; margin: 0; padding: 12px 12px 12px;
+  grid-template-columns: clamp(220px,17vw,246px) minmax(0,1fr); gap: 10px; overflow-x: hidden; overflow-y: auto;
   align-items: start; scrollbar-gutter: auto; scrollbar-width: none; overscroll-behavior-y: auto; touch-action: pan-y;
 }
 .app-shell[data-route='home'] .home-layout.sheet-dashboard::-webkit-scrollbar { display: none; }
@@ -13,7 +13,7 @@
   overflow: visible; padding: 0; scrollbar-gutter: auto;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-sheet-card {
-  display: block; width: 100%; max-width: none; height: auto; min-height: 0; margin: 0; padding: 16px !important; overflow: visible;
+  display: block; width: 100%; max-width: none; height: auto; min-height: 0; margin: 0; padding: 10px !important; overflow: visible;
   border-radius: 20px !important; background: linear-gradient(145deg,rgba(255,251,242,.98),rgba(246,234,214,.98)) !important;
   box-shadow: 0 18px 42px rgba(25,14,24,.2), inset 0 0 0 4px rgba(255,247,229,.86) !important;
 }
@@ -38,7 +38,7 @@
   flex: 0 0 auto; min-height: 36px; padding: 7px 12px; background: rgba(255,250,240,.9); box-shadow: none;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-sheet-card > .character-manual {
-  display: grid; width: 100%; height: auto; min-height: 0; gap: 12px; padding: 0; overflow: visible;
+  display: grid; width: 100%; height: auto; min-height: 0; padding: 0; overflow: visible;
 }
 .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-summary {
   position: relative; display: grid; grid-template-columns: 160px minmax(300px,1fr); grid-template-rows: auto auto; align-content: start; align-items: start;
