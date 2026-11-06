@@ -526,6 +526,17 @@ export async function openItemModal(character, item, items = [], onSave, options
     value: item?.armor_bonus ?? 0
   });
   const armorBonusInput = armorBonusField.querySelector('input');
+  const minimumStrengthField = buildInput({
+    label: 'Requisito di Forza',
+    name: 'minimum_strength',
+    type: 'number',
+    value: item?.minimum_strength ?? 0
+  });
+  const minimumStrengthInput = minimumStrengthField.querySelector('input');
+  if (minimumStrengthInput) {
+    minimumStrengthInput.min = '0';
+    minimumStrengthInput.step = '1';
+  }
   const shieldBonusField = buildInput({
     label: 'Bonus scudo',
     name: 'shield_bonus',
@@ -533,15 +544,21 @@ export async function openItemModal(character, item, items = [], onSave, options
     value: item?.shield_bonus ?? 2
   });
   const shieldBonusInput = shieldBonusField.querySelector('input');
+  const { field: stealthDisadvantageField, input: stealthDisadvantageInput } = buildToggleField({
+    name: 'stealth_disadvantage',
+    label: 'Svantaggio alle prove di Furtività',
+    checked: item?.stealth_disadvantage ?? item?.armor_type === 'heavy'
+  });
+  stealthDisadvantageField.classList.add('item-modal-toggle-field--compact');
 
   const weaponPrimaryRow = buildRow([weaponTypeField, weaponRangeField, meleeRangeField, weaponAbilityField, weaponMasteryField], 'compact');
   weaponPrimaryRow.classList.add('item-modal-row--weapon-primary');
   const weaponDamageRow = buildRow([damageDieField, damageTypeField, attackModifierField, damageModifierField], 'compact');
   const weaponAmmoRow = buildRow([consumesAmmoField, weaponAmmoTypeField], 'compact');
   weaponAmmoRow.classList.add('item-modal-row--conditional-control');
-  const armorPrimaryRow = buildRow([armorTypeField, armorClassField, armorBonusField], 'compact');
+  const armorPrimaryRow = buildRow([armorTypeField, armorClassField, armorBonusField, minimumStrengthField], 'compact');
   armorPrimaryRow.classList.add('item-modal-row--armor-primary');
-  const armorShieldRow = buildRow([shieldField, shieldBonusField], 'compact');
+  const armorShieldRow = buildRow([shieldField, shieldBonusField, stealthDisadvantageField], 'compact');
   armorShieldRow.classList.add('item-modal-row--conditional-control', 'item-modal-row--armor-shield');
   proficiencySection.appendChild(weaponPrimaryRow);
   proficiencySection.appendChild(weaponDamageRow);
@@ -734,8 +751,15 @@ export async function openItemModal(character, item, items = [], onSave, options
     if (armorBonusInput) {
       armorBonusInput.disabled = !isArmor;
     }
+    if (minimumStrengthInput) {
+      minimumStrengthInput.disabled = !isArmor;
+    }
     if (shieldBonusInput) {
       shieldBonusInput.disabled = !isArmor || !(shieldInput?.checked ?? false);
+    }
+    if (stealthDisadvantageInput) {
+      stealthDisadvantageInput.disabled = !isArmor;
+      stealthDisadvantageInput.closest('.condition-modal__item')?.classList.toggle('is-selected', stealthDisadvantageInput.checked);
     }
     toggleFieldVisibility(shieldBonusField, isArmor && Boolean(shieldInput?.checked));
 
@@ -914,7 +938,9 @@ export async function openItemModal(character, item, items = [], onSave, options
     is_shield: formData.get('is_shield') === 'on',
     armor_class: Number(formData.get('armor_class')) || null,
     armor_bonus: Number(formData.get('armor_bonus')) || 0,
-    shield_bonus: Number(formData.get('shield_bonus')) || 0
+    shield_bonus: Number(formData.get('shield_bonus')) || 0,
+    stealth_disadvantage: formData.get('stealth_disadvantage') === 'on',
+    minimum_strength: Math.max(0, Number(formData.get('minimum_strength')) || 0)
   };
 
   setGlobalLoading(true);

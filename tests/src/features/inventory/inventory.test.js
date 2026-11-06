@@ -90,6 +90,22 @@ describe('src/features/inventory/inventory.js', () => {
     expect(home).toContain('openItemDetails(item, { attackDetail: Boolean');
   });
 
+  it('preserves the stealth disadvantage rule when copying armor into inventory', () => {
+    const picker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
+    const modal = readFileSync('src/features/inventory/modals.js', 'utf8');
+    expect(picker).not.toContain("'armor_dexterity_cap', 'minimum_strength', 'stealth_disadvantage'");
+    expect(modal).toContain("name: 'stealth_disadvantage'");
+    expect(modal).toContain("stealth_disadvantage: formData.get('stealth_disadvantage') === 'on'");
+  });
+
+  it('preserves and edits the armor Strength requirement', () => {
+    const picker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
+    const modal = readFileSync('src/features/inventory/modals.js', 'utf8');
+    expect(picker).not.toContain("'armor_dexterity_cap', 'minimum_strength'");
+    expect(modal).toContain("name: 'minimum_strength'");
+    expect(modal).toContain("minimum_strength: Math.max(0, Number(formData.get('minimum_strength')) || 0)");
+  });
+
   it('collects nested container contents from deepest to shallowest for deletion', () => {
     const items = [
       { id: 'bag', category: 'container' },

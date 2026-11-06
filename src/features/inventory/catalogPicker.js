@@ -416,7 +416,7 @@ export function sharedItemToInventoryPayload(item, character, overrides = {}) {
     'id', 'created_at', 'updated_at', 'created_by', 'rules_version', 'item_data', 'description',
     'original_name', 'source_id', 'source_label', 'source_edition', 'source_url', 'source_kind',
     'original_category', 'cost', 'armor_uses_dexterity',
-    'armor_dexterity_cap', 'minimum_strength', 'stealth_disadvantage', 'tool_subcategory',
+    'armor_dexterity_cap', 'tool_subcategory',
     'gear_category', 'bundle_contents'
   ].forEach((key) => delete payload[key]);
   return payload;

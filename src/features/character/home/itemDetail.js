@@ -4,7 +4,7 @@ import { getEquipSlots, getBodyPartLabels, getCategoryLabel } from '../../invent
 import { mountEquipmentMannequin } from './equipmentMannequin.js';
 import { getWeaponDamageModes } from './utils.js';
 import { attachUnifiedDetailActions } from './detailManagement.js';
-import { ammunitionTypeLabels, damageTypeLabels } from '../../inventory/constants.js';
+import { ammunitionTypeLabels, armorTypes, damageTypeLabels } from '../../inventory/constants.js';
 import { normalizeWeaponProperties, weaponPropertyOptions } from '../../inventory/weaponProperties.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
 
@@ -37,6 +37,45 @@ function getItemValueCp(item) {
   const factor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
   return Number.isFinite(quantity) && factor ? quantity * factor : 0;
 }
+
+export function getArmorDetailDisplay(item) {
+  if (item?.category !== 'armor') return null;
+
+  if (item.is_shield) {
+    const shieldBonus = Number(item.shield_bonus);
+    const bonus = Number.isFinite(shieldBonus) && shieldBonus !== 0 ? shieldBonus : 2;
+    return {
+      typeLabel: 'Scudo',
+      armorClassLabel: `${bonus > 0 ? '+' : ''}${bonus} alla CA`,
+      description: 'Il bonus dello scudo si somma alla Classe Armatura.',
+      stealthDisadvantage: Boolean(item.stealth_disadvantage),
+      minimumStrength: Math.max(0, Number(item.minimum_strength) || 0)
+    };
+  }
+
+  const typeLabel = armorTypes.find((type) => type.value === item.armor_type)?.label || 'Armatura';
+  const baseArmorClass = Number(item.armor_class ?? item.ac);
+  const baseLabel = Number.isFinite(baseArmorClass) ? String(baseArmorClass) : '—';
+  const armorClassByType = {
+    light: `CA ${baseLabel} + Destrezza`,
+    medium: `CA ${baseLabel} + Destrezza (massimo +2)`,
+    heavy: `CA ${baseLabel}`
+  };
+  const descriptionByType = {
+    light: 'Aggiunge alla CA l’intero modificatore di Destrezza.',
+    medium: 'Aggiunge alla CA il modificatore di Destrezza fino a un massimo di +2.',
+    heavy: 'Il modificatore di Destrezza non modifica la CA fornita.'
+  };
+
+  return {
+    typeLabel,
+    armorClassLabel: armorClassByType[item.armor_type] || `CA ${baseLabel}`,
+    description: descriptionByType[item.armor_type] || 'Classe Armatura fornita dall’oggetto.',
+    stealthDisadvantage: item.stealth_disadvantage ?? item.armor_type === 'heavy',
+    minimumStrength: Math.max(0, Number(item.minimum_strength) || 0)
+  };
+}
+
 export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', onEdit = null, onRemove = null, removeLabel = 'Rimuovi', onModeChange = null, catalogMode = false, present = openFormModal, shortcutSize = false } = {}) {
   if (!item) return;
   const slots = getEquipSlots(item);
@@ -56,6 +95,7 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
     ? getWeaponMasteryLabel(item.weapon_mastery)
     : '';
   const masterySummary = masteryLabel ? getWeaponMasterySummary(item.weapon_mastery) : '';
+  const armorDetail = getArmorDetailDisplay(item);
   const hasThrownOrRange = item.category === 'weapon' && (
     weaponProperties.some((property) => ['lancio', 'gittata'].includes(property.value))
     || item.range_normal != null
@@ -73,7 +113,7 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
     ['Peso',item.weight != null ? item.weight + ' ' + weightUnit : null],
     ['Equipaggiato',catalogMode ? null : (slots.length ? getBodyPartLabels(slots) : 'Non equipaggiato')],
     ['Sintonia',item.attunement_active ? 'Attiva' : null],
-    ['Classe armatura',item.armor_class ?? item.ac],
+    ['Classe armatura',armorDetail ? null : (item.armor_class ?? item.ac)],
     ['Danni',item.damage_die ? `${item.damage_die}${item.damage_type ? ` · ${damageTypeLabels.get(item.damage_type) || item.damage_type}` : ''}` : item.damage],
     ['Gittata',rangeValue],
   ].filter(([,value]) => value != null && value !== '');
@@ -90,6 +130,29 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
       <span>Maestria dell’arma · 2024</span>
       <strong>${escapeHtml(masteryLabel)}</strong>
       ${masterySummary ? `<p>${escapeHtml(masterySummary)}</p>` : ''}
+    </section>` : '';
+  const armorMarkup = armorDetail ? `
+    <section class="equipment-armor-summary" aria-label="Dettagli armatura">
+      <article class="equipment-rule-card equipment-armor-card equipment-armor-card--type">
+        <span>Tipologia</span>
+        <strong>${escapeHtml(armorDetail.typeLabel)}</strong>
+        <p>${item.is_shield ? 'Protezione impugnata.' : `Armatura ${escapeHtml(armorDetail.typeLabel.toLocaleLowerCase('it'))}.`}</p>
+      </article>
+      <article class="equipment-rule-card equipment-armor-card equipment-armor-card--defense">
+        <span>Classe armatura</span>
+        <strong>${escapeHtml(armorDetail.armorClassLabel)}</strong>
+        <p>${escapeHtml(armorDetail.description)}</p>
+      </article>
+      <article class="equipment-rule-card equipment-armor-card equipment-armor-card--stealth ${armorDetail.stealthDisadvantage ? 'has-disadvantage' : ''}">
+        <span>Prove di Furtività</span>
+        <strong>${armorDetail.stealthDisadvantage ? 'Svantaggio' : 'Nessuno svantaggio'}</strong>
+        <p>${armorDetail.stealthDisadvantage ? 'Indossare questa armatura impone svantaggio alle prove di Furtività.' : 'Questa armatura non penalizza le prove di Furtività.'}</p>
+      </article>
+      <article class="equipment-rule-card equipment-armor-card equipment-armor-card--strength ${armorDetail.minimumStrength ? 'has-requirement' : ''}">
+        <span>Requisito di Forza</span>
+        <strong>${armorDetail.minimumStrength ? `Forza ${escapeHtml(armorDetail.minimumStrength)}` : 'Nessun requisito'}</strong>
+        <p>${armorDetail.minimumStrength ? `Richiede un punteggio di Forza pari o superiore a ${escapeHtml(armorDetail.minimumStrength)}.` : 'Non richiede un punteggio minimo di Forza.'}</p>
+      </article>
     </section>` : '';
   const propertiesMarkup = weaponProperties.length ? `
     <section class="equipment-weapon-properties">
@@ -112,6 +175,7 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
     (image ? '<img class="equipment-item-detail__image" src="'+image+'" alt="'+escapeHtml(item.name)+'" />' : '') +
     '<dl class="power-detail-facts">' + facts.map(([label,value])=>'<div><dt>'+escapeHtml(label)+'</dt><dd>'+escapeHtml(value)+'</dd></div>').join('') + costMarkup + '</dl>' +
     (damageModes.length > 1 && onModeChange ? '<section class="weapon-grip-picker"><span class="eyebrow">Impugnatura</span><div class="weapon-grip-picker__options">' + damageModes.map(mode => '<button type="button" data-weapon-mode="'+escapeHtml(mode.id)+'" aria-pressed="'+String(mode.id === selectedModeId)+'"><strong>'+escapeHtml(mode.label)+'</strong><small>'+escapeHtml(mode.damageDie)+'</small></button>').join('') + '</div><p>Seleziona la modalità usata per calcolare tiro per colpire e danni.</p></section>' : '') +
+    armorMarkup +
     masteryMarkup +
     propertiesMarkup +
     (description ? '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(description)+'</p></section>' : '') + '</section>' +

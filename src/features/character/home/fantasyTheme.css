@@ -2075,6 +2075,19 @@ body .modal-card--equipment-item-detail .equipment-rule-card > span { color: #94
 body .modal-card--equipment-item-detail .equipment-rule-card > strong { color: #633349; font: 700 16px/1.25 'Fraunces',Georgia,serif; }
 body .modal-card--equipment-item-detail .equipment-rule-card > p { margin: 0; color: #6f5b51; font-size: 12.5px; line-height: 1.5; }
 body .modal-card--equipment-item-detail .equipment-rule-card > small { color: #94703b; font-size: 11px; font-weight: 750; }
+body .modal-card--equipment-item-detail .equipment-armor-summary {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); clear: both; gap: 7px; padding-top: 12px;
+}
+body .modal-card--equipment-item-detail .equipment-armor-card { align-content: start; margin-top: 0; }
+body .modal-card--equipment-item-detail .equipment-armor-card--type {
+  border-color: #b9a5ca; background: linear-gradient(135deg,#faf5ff,#eee5f4);
+}
+body .modal-card--equipment-item-detail .equipment-armor-card--stealth.has-disadvantage {
+  border-color: #c88d87; background: linear-gradient(135deg,#fff5f1,#f4ddd7);
+}
+body .modal-card--equipment-item-detail .equipment-armor-card--strength.has-requirement {
+  border-color: #c7a367; background: linear-gradient(135deg,#fff9eb,#f2e4c7);
+}
 body .modal-card--equipment-item-detail .equipment-weapon-properties { clear: both; padding-top: 12px; }
 body .modal-card--equipment-item-detail .equipment-weapon-properties__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 body .modal-card--equipment-item-detail .equipment-weapon-property { margin-top: 0; }
@@ -2083,6 +2096,9 @@ body .modal-card--equipment-item-detail .equipment-item-lore h3 { margin: 0 0 5p
 body .modal-card--equipment-item-detail .equipment-item-detail__description { margin: 0; color: #59453d; font-size: 13px; line-height: 1.5; }
 body .modal-card--equipment-item-detail .equipment-item-detail__body {
   width: min(100%,290px); justify-self: end; padding: 10px; border: 1px solid #d7c1a0; border-radius: 16px; background: linear-gradient(145deg,#f2e6cf,#faf3e5);
+}
+@media (max-width: 720px) {
+  body .modal-card--equipment-item-detail .equipment-armor-summary { grid-template-columns: 1fr; }
 }
 body .modal-card--equipment-item-detail [data-item-body-view] .equipment-mannequin__viewer { height: 330px; min-height: 330px; }
 body .sheet-detail .equipment-item-detail__body { width: min(100%,300px); justify-self: end; }

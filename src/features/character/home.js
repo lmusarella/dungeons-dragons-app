@@ -2453,6 +2453,13 @@ function hasEquippedHeavyArmor(items = []) {
     && getEquipSlots(item).length);
 }
 
+function hasEquippedStealthDisadvantage(items = []) {
+  return (items || []).some((item) => item.category === 'armor'
+    && (item.stealth_disadvantage ?? item.armor_type === 'heavy')
+    && item.equipable
+    && getEquipSlots(item).length);
+}
+
 function getAttackRollAdjustmentEntries(character, items = []) {
   const data = character?.data || {};
   const equippedWeapons = (items || []).filter((item) => item.category === 'weapon' && item.equipable && getEquipSlots(item).length);
@@ -2495,13 +2502,13 @@ function getAutomaticAttackRollEffects(character) {
 function getAutomaticSkillRollEffects(character, items, skill) {
   const conditionState = getConditionState(character);
   const poisonedConditions = conditionState.includes('avvelenato') ? ['avvelenato'] : [];
-  const hasHeavyArmor = hasEquippedHeavyArmor(items);
+  const hasStealthDisadvantage = hasEquippedStealthDisadvantage(items);
   const effects = [];
   if (poisonedConditions.length) {
     effects.push({ mode: 'disadvantage', source: 'condition', reason: `Svantaggio: condizioni ${formatConditionList(poisonedConditions).join(', ')}.` });
   }
-  if (skill.key === 'stealth' && hasHeavyArmor) {
-    effects.push({ mode: 'disadvantage', source: 'armor', reason: 'Svantaggio automatico: armatura pesante su Furtività.' });
+  if (skill.key === 'stealth' && hasStealthDisadvantage) {
+    effects.push({ mode: 'disadvantage', source: 'armor', reason: 'Svantaggio automatico: l’armatura equipaggiata penalizza le prove di Furtività.' });
   }
   return effects;
 }
