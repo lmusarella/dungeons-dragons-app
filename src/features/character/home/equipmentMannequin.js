@@ -2,7 +2,7 @@ import { openFormModal } from '../../../ui/components.js';
 import { bodyPartLabels } from '../../inventory/constants.js';
 import { getCategoryLabel, getCompatibleEquipSlots } from '../../inventory/utils.js';
 import { ensureLegacyThree } from '../../../lib/legacyThree.js';
-import { calcTotalWeight } from '../../../lib/calc.js';
+import { calcCarriedWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
 import { getEquipSlots } from './utils.js';
 
@@ -536,7 +536,7 @@ function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
   const loadLabel = document.createElement('small');
   loadLabel.textContent = 'Carico trasportato';
   const loadValue = document.createElement('strong');
-  loadValue.textContent = formatWeight(calcTotalWeight(items), weightUnit);
+  loadValue.textContent = formatWeight(calcCarriedWeight(items), weightUnit);
   const loadCount = document.createElement('span');
   loadCount.textContent = `${carriedUnits} ${carriedUnits === 1 ? 'oggetto' : 'oggetti'}`;
   load.append(loadLabel, loadValue, loadCount);

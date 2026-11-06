@@ -11,15 +11,16 @@ export async function openItemSourceModal({
   manualLabel = 'Crea nuovo oggetto',
   manualHint = 'Inserisci tutte le proprietà manualmente.',
   catalogLabel = 'Scegli dall’archivio',
-  catalogHint = 'Riusa uno o più oggetti già completi del compendio.'
+  catalogHint = 'Riusa uno o più oggetti già completi del compendio.',
+  defaultSource = 'catalog'
 } = {}) {
   const content = document.createElement('div');
   content.className = 'item-source-picker';
   content.innerHTML = `
     <p class="item-source-picker__intro">Scegli il flusso più rapido per questa operazione.</p>
     <div class="item-source-picker__options">
-      <label><input type="radio" name="item_source" value="catalog" checked /><span><i aria-hidden="true">☷</i><strong>${escapeHtml(catalogLabel)}</strong><small>${escapeHtml(catalogHint)}</small></span></label>
-      <label><input type="radio" name="item_source" value="manual" /><span><i aria-hidden="true">＋</i><strong>${escapeHtml(manualLabel)}</strong><small>${escapeHtml(manualHint)}</small></span></label>
+      <label><input type="radio" name="item_source" value="catalog" ${defaultSource === 'catalog' ? 'checked' : ''} /><span><i aria-hidden="true">☷</i><strong>${escapeHtml(catalogLabel)}</strong><small>${escapeHtml(catalogHint)}</small></span></label>
+      <label><input type="radio" name="item_source" value="manual" ${defaultSource === 'manual' ? 'checked' : ''} /><span><i aria-hidden="true">＋</i><strong>${escapeHtml(manualLabel)}</strong><small>${escapeHtml(manualHint)}</small></span></label>
     </div>`;
   const formData = await openFormModal({ title, submitLabel: 'Continua', cancelLabel: 'Annulla', content, cardClass: 'modal-card--item-source' });
   return formData?.get('item_source') || null;
@@ -448,7 +449,7 @@ export function sharedItemToInventoryPayload(item, character, overrides = {}) {
   return payload;
 }
 
-export async function addSharedItemsToInventory(sharedItems = [], character) {
+export async function addSharedItemsToInventory(sharedItems = [], character, overrides = {}) {
   if (!character || !Array.isArray(sharedItems) || !sharedItems.length) return [];
   const bundledItems = sharedItems.filter((item) => {
     const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item;
@@ -481,15 +482,16 @@ export async function addSharedItemsToInventory(sharedItems = [], character) {
   const getSelectedQuantity = (item) => Math.min(999, Math.max(1, Number(item?.selected_quantity) || 1));
   const loosePayloads = sharedItems
     .filter((item) => !resolvedBundles.has(String(item.id)))
-    .map((item) => sharedItemToInventoryPayload(item, character, { qty: getSelectedQuantity(item) }));
+    .map((item) => sharedItemToInventoryPayload(item, character, { ...overrides, qty: getSelectedQuantity(item) }));
   if (loosePayloads.length) created.push(...await createItems(loosePayloads));
 
   for (const bundle of bundledItems) {
     const bundleQuantity = getSelectedQuantity(bundle);
     for (let copy = 0; copy < bundleQuantity; copy += 1) {
-      const container = await createItem(sharedItemToInventoryPayload(bundle, character, { category: 'container', qty: 1 }));
+      const container = await createItem(sharedItemToInventoryPayload(bundle, character, { ...overrides, category: 'container', qty: 1 }));
       created.push(container);
       const childPayloads = resolvedBundles.get(String(bundle.id)).map(({ entry, item }) => sharedItemToInventoryPayload(item, character, {
+        ...overrides,
         qty: Math.max(1, Number(entry.quantity) || 1),
         container_item_id: container.id
       }));

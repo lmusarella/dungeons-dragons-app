@@ -1,6 +1,6 @@
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { buildCompactItemList } from './compactTables.js';
-import { calcItemWeight } from '../../lib/calc.js';
+import { calcItemWeight, calcSelectionCarriedWeight } from '../../lib/calc.js';
 import { formatWeight } from '../../lib/format.js';
 import { getEquipSlots } from './utils.js';
 
@@ -94,7 +94,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
     name: 'Equipaggiati',
     category: 'virtual',
     isVirtual: true,
-    totalWeight: equippedItems.reduce((total, item) => total + calcItemWeight(item, items), 0),
+    totalWeight: calcSelectionCarriedWeight(equippedItems, items),
     childCount: items.filter(isEquippedItem).length,
     matchingCount: equippedItems.length
   };
@@ -124,7 +124,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
       };
     })
     .filter((location) => location.matchingCount > 0);
-  const visibleContainers = virtualEquipped ? [] : entries
+  const visibleContainers = entries
     .filter(item => item.category === 'container' && matchesBelow(item))
     .map(item => ({ ...item, totalWeight: calcItemWeight(item, items), childCount: children(item.id).filter((child) => !isEquippedItem(child)).length, matchingCount: children(item.id).filter((child) => !isEquippedItem(child) && matchesBelow(child)).length }));
   const hasActiveFilters = Boolean(filters.term?.trim() || filters.category || filters.categories?.length || filters.equipableOnly || filters.magicOnly);
@@ -136,7 +136,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
     container: current, trail, allItems: items,
     containers: visibleContainers,
     items: entries
-      .filter(item => (virtualEquipped || item.category !== 'container') && (matchesInventoryFilter(item, filters) || (virtualEquipped && item.category === 'container' && matchesBelow(item))))
+      .filter(item => matchesInventoryFilter(item, filters) || (item.category === 'container' && matchesBelow(item)))
       .map((item) => {
         if (item.category !== 'container') return item;
         const contained = descendants(item);
@@ -165,7 +165,7 @@ export function buildContainerCatalog(view, weightUnit = 'kg') {
     const modifier = item.isLocation ? 'inventory-container-card--location' : item.isVirtual ? 'inventory-container-card--equipped' : '';
     return '<button type="button" class="inventory-container-card '+modifier+'" data-open-container="'+escapeHtml(item.id)+'">'+(image ? '<img src="'+image+'" alt="">' : '<span class="container-card-symbol" aria-hidden="true">'+symbol+'</span>')+'<span><strong>'+escapeHtml(item.name)+'</strong><small>'+item.childCount+' oggetti'+(item.matchingCount < item.childCount ? ' · '+item.matchingCount+' corrispondenti' : '')+' · '+escapeHtml(formatWeight(item.totalWeight, weightUnit))+'</small></span><span aria-hidden="true">›</span></button>';
   }).join('')+'</div>' : '';
-  const table = view.items.length ? buildCompactItemList(view.items, weightUnit, { allowExtract: Boolean(current && !current.isVirtual), allowEquip: !current, allowUnequip: Boolean(current?.isVirtual && !current.isLocation), allowContainerNavigation: Boolean(current?.isVirtual), allItems: view.allItems }) : !view.containers.length ? '<p class="compact-table-empty muted">Nessun oggetto corrisponde ai filtri in questa posizione.</p>' : '';
+  const table = view.items.length ? buildCompactItemList(view.items, weightUnit, { allowExtract: Boolean(current && !current.isVirtual), allowEquip: !current, allowUnequip: Boolean(current?.isVirtual && !current.isLocation), allowContainerNavigation: Boolean(current), allItems: view.allItems }) : !view.containers.length ? '<p class="compact-table-empty muted">Nessun oggetto corrisponde ai filtri in questa posizione.</p>' : '';
   const locationLabel = current?.isLocation ? `Oggetti in ${escapeHtml(current.name)}` : current?.isVirtual ? 'Oggetti equipaggiati' : current ? 'Contenuto' : 'Oggetti sfusi';
   return (current ? breadcrumb : '') + tools + cards + (view.items.length ? '<p class="inventory-location-label">'+locationLabel+'</p>' : '') + table;
 }

@@ -118,9 +118,14 @@ export async function openItemModal(character, item, items = [], onSave, options
     valueInput.min = '0';
     valueInput.step = '1';
   }
+  const { field: ignoreContentsWeightField, input: ignoreContentsWeightInput } = buildToggleField({
+    name: 'ignore_contents_weight',
+    label: 'Ignora il peso del contenuto nel carico',
+    checked: item?.ignore_contents_weight ?? false
+  });
   const logisticsSection = buildSection(
     'Quantità, peso e valore',
-    [buildRow([qtyField, weightField, valueField], 'compact')],
+    [buildRow([qtyField, weightField, valueField], 'compact'), ignoreContentsWeightField],
     { icon: '⚖️', description: 'Numeri essenziali per carico, scorte e tesoro.' }
   );
   const categorySelect = buildSelect(itemCategories, item?.category ?? 'loot');
@@ -704,6 +709,12 @@ export async function openItemModal(character, item, items = [], onSave, options
     const isWeapon = categorySelect.value === 'weapon';
     const isArmor = categorySelect.value === 'armor';
     const isConsumable = categorySelect.value === 'consumable';
+    const isContainer = categorySelect.value === 'container';
+    if (ignoreContentsWeightInput) {
+      ignoreContentsWeightInput.disabled = !isContainer;
+      ignoreContentsWeightField.classList.toggle('is-selected', ignoreContentsWeightInput.checked);
+    }
+    toggleFieldVisibility(ignoreContentsWeightField, isContainer);
     weaponTypeSelect.disabled = !isWeapon;
     weaponRangeSelect.disabled = !isWeapon;
     weaponAbilitySelect.disabled = !isWeapon;
@@ -940,7 +951,8 @@ export async function openItemModal(character, item, items = [], onSave, options
     armor_bonus: Number(formData.get('armor_bonus')) || 0,
     shield_bonus: Number(formData.get('shield_bonus')) || 0,
     stealth_disadvantage: formData.get('stealth_disadvantage') === 'on',
-    minimum_strength: Math.max(0, Number(formData.get('minimum_strength')) || 0)
+    minimum_strength: Math.max(0, Number(formData.get('minimum_strength')) || 0),
+    ignore_contents_weight: category === 'container' && formData.get('ignore_contents_weight') === 'on'
   };
 
   setGlobalLoading(true);

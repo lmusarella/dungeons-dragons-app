@@ -9,10 +9,10 @@ const items = [
   { id: 'armor', name: 'Corazza', category: 'armor', equipped: true, equip_slots: ['torso'] }
 ];
 describe('container navigation and persistent filters', () => {
-  it('shows containers as cards and keeps their contents out of the loose table', () => {
+  it('shows containers as navigable cards and keeps them present in the table', () => {
     const view = getContainerView(items);
     expect(view.containers.map(item => item.id)).toEqual([EQUIPPED_CONTAINER_ID, 'bag']);
-    expect(view.items.map(item => item.id)).toEqual(['sword']);
+    expect(view.items.map(item => item.id)).toEqual(['bag', 'sword']);
     expect(buildContainerCatalog(view)).toContain('data-open-container="bag"');
   });
   it('groups equipped items in a virtual container and removes them from loose locations', () => {
@@ -49,14 +49,14 @@ describe('container navigation and persistent filters', () => {
   it('keeps an ancestor visible when a nested item matches the search', () => {
     expect(getContainerView(items, { term: 'cristallo' }).containers.map(item => item.id)).toEqual(['bag']);
     const bag = getContainerView(items, { term: 'cristallo' }, 'bag');
-    expect(bag.items).toEqual([]); expect(bag.containers.map(item => item.id)).toEqual(['pouch']);
+    expect(bag.items.map(item => item.id)).toEqual(['pouch']); expect(bag.containers.map(item => item.id)).toEqual(['pouch']);
     expect(getContainerView(items, { term: 'cristallo' }, 'pouch').items.map(item => item.id)).toEqual(['focus']);
   });
   it('applies category and magic filters inside the current container', () => {
     expect(getContainerView(items, { category: 'consumable' }, 'bag').items.map(item => item.id)).toEqual(['potion']);
     expect(getContainerView(items, { category: 'weapon' }, 'bag').items).toEqual([]);
     expect(getContainerView(items, { magicOnly: true }, 'pouch').items.map(item => item.id)).toEqual(['focus']);
-    expect(getContainerView(items, { magicOnly: true }, 'bag').items).toEqual([]);
+    expect(getContainerView(items, { magicOnly: true }, 'bag').items.map(item => item.id)).toEqual(['pouch']);
   });
   it('builds nested breadcrumbs and exposes extraction only inside a container', () => {
     const nested = getContainerView(items, {}, 'pouch');
@@ -87,18 +87,29 @@ describe('container navigation and persistent filters', () => {
     expect(html.indexOf('>Equipaggiati</button>')).toBeLessThan(html.indexOf('>Zaino equipaggiato</button>'));
     expect(html.indexOf('>Zaino equipaggiato</button>')).toBeLessThan(html.indexOf('>Tasca</button>'));
   });
-  it('keeps an equipped container in the table instead of duplicating it as a card', () => {
+  it('keeps an equipped container both in the table and as a navigation card', () => {
     const equippedHierarchy = [
       { id: 'pack', name: 'Zaino equipaggiato', category: 'container', equipable: true, equip_slots: ['back'], qty: 1 },
       { id: 'gem', name: 'Gemma', category: 'gear', container_item_id: 'pack', qty: 1 }
     ];
     const view = getContainerView(equippedHierarchy, {}, EQUIPPED_CONTAINER_ID);
-    expect(view.containers).toEqual([]);
+    expect(view.containers.map((item) => item.id)).toEqual(['pack']);
     expect(view.items.map((item) => item.id)).toEqual(['pack']);
     const html = buildContainerCatalog(view);
     expect(html).toContain('data-item-preview="pack"');
     expect(html).toContain('data-open-container="pack"');
-    expect(html).not.toContain('inventory-container-card');
+    expect(html).toContain('inventory-container-card');
+  });
+  it('shows real container weight while excluding ignored contents from equipped load', () => {
+    const equippedHierarchy = [
+      { id: 'pack', name: 'Zaino magico', category: 'container', equip_slots: ['back'], qty: 1, weight: 2, ignore_contents_weight: true },
+      { id: 'stone', name: 'Pietra', category: 'loot', container_item_id: 'pack', qty: 1, weight: 8 }
+    ];
+    const root = getContainerView(equippedHierarchy);
+    const equipped = root.containers.find((item) => item.id === EQUIPPED_CONTAINER_ID);
+    const equippedView = getContainerView(equippedHierarchy, {}, EQUIPPED_CONTAINER_ID);
+    expect(equipped.totalWeight).toBe(2);
+    expect(equippedView.containers[0].totalWeight).toBe(10);
   });
   it('groups top-level objects by place and preserves the place in nested breadcrumbs', () => {
     const located = [

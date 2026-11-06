@@ -448,7 +448,12 @@ export async function renderInventory(container) {
       if (!view.container) delete container.dataset.inventoryContainer;
       listEl.innerHTML = buildContainerCatalog(view, weightUnit);
       listEl.querySelectorAll('[data-open-container]').forEach(button => button.addEventListener('click', () => {
-        container.dataset.inventoryContainer = button.dataset.openContainer; renderList();
+        container.dataset.inventoryContainer = button.dataset.openContainer;
+        renderList();
+        window.requestAnimationFrame(() => {
+          const scrollSurface = container.closest('.modal-body') || listEl;
+          scrollSurface.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        });
       }));
       listEl.querySelectorAll('[data-extract-item]').forEach(button => button.addEventListener('click', async () => {
         await runWithGlobalLoader(async () => {
@@ -501,15 +506,46 @@ export async function renderInventory(container) {
         event.stopPropagation();
         const containerItem = items.find((item) => String(item.id) === button.dataset.insertContainer);
         if (!containerItem) return;
-        const selectedIds = await openLooseItemsPicker(containerItem, items);
-        if (!selectedIds.length) return;
+        const source = await openItemSourceModal({
+          title: `Inserisci in ${containerItem.name}`,
+          manualLabel: 'Dal mio inventario',
+          manualHint: 'Sposta nel contenitore uno o più oggetti sfusi già presenti.',
+          catalogLabel: 'Dal compendio',
+          catalogHint: 'Aggiungi al contenitore nuove copie degli oggetti del compendio.',
+          defaultSource: 'manual'
+        });
+        if (source === 'manual') {
+          const selectedIds = await openLooseItemsPicker(containerItem, items);
+          if (!selectedIds.length) return;
+          await runWithGlobalLoader(async () => {
+            try {
+              await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id, inventory_location: null })));
+              createToast(`${selectedIds.length} ${selectedIds.length === 1 ? 'oggetto inserito' : 'oggetti inseriti'} in ${containerItem.name}`);
+              await refreshAfterMutation();
+            } catch (error) {
+              createToast('Errore durante l’inserimento degli oggetti', 'error');
+            }
+          });
+          return;
+        }
+        if (source !== 'catalog') return;
+        const selectedItems = await openSharedItemPicker({
+          title: `Aggiungi dal compendio · ${containerItem.name}`,
+          allowQuantities: true,
+          shortcutSize: container.hasAttribute('data-inventory-shortcut')
+        });
+        if (!selectedItems.length) return;
         await runWithGlobalLoader(async () => {
           try {
-            await Promise.all(selectedIds.map((id) => updateItem(id, { container_item_id: containerItem.id, inventory_location: null })));
-            createToast(`${selectedIds.length} ${selectedIds.length === 1 ? 'oggetto inserito' : 'oggetti inseriti'} in ${containerItem.name}`);
-            refreshAfterMutation();
+            await addSharedItemsToInventory(selectedItems, activeCharacter, {
+              container_item_id: containerItem.id,
+              inventory_location: null
+            });
+            const totalQuantity = selectedItems.reduce((total, item) => total + Math.max(1, Number(item.selected_quantity) || 1), 0);
+            createToast(`${totalQuantity} ${totalQuantity === 1 ? 'unità aggiunta' : 'unità aggiunte'} in ${containerItem.name}`, 'success');
+            await refreshAfterMutation();
           } catch (error) {
-            createToast('Errore durante l’inserimento degli oggetti', 'error');
+            createToast('Errore durante l’aggiunta dal compendio', 'error');
           }
         });
       }));

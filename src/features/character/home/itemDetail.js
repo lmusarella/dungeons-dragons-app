@@ -7,6 +7,8 @@ import { attachUnifiedDetailActions } from './detailManagement.js';
 import { ammunitionTypeLabels, armorTypes, damageTypeLabels } from '../../inventory/constants.js';
 import { normalizeWeaponProperties, weaponPropertyOptions } from '../../inventory/weaponProperties.js';
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
+import { calcItemWeight } from '../../../lib/calc.js';
+import { formatWeight } from '../../../lib/format.js';
 
 const COIN_DENOMINATIONS = [
   { key: 'gp', factor: 100, name: 'oro', icon: 'moneta_oro.png' },
@@ -106,11 +108,13 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
       .map((value) => value != null && value !== '' ? `${value} m` : '—')
       .join(' / ')
     : null;
+  const displayedWeight = item.category === 'container' ? calcItemWeight(item, items) : item.weight;
   const facts = [
     ['Categoria',getCategoryLabel(item.category)],
     ['Luogo',item.inventory_location],
     ['Quantità',item.qty ?? 1],
-    ['Peso',item.weight != null ? item.weight + ' ' + weightUnit : null],
+    [item.category === 'container' ? 'Peso totale' : 'Peso',displayedWeight != null ? formatWeight(displayedWeight, weightUnit) : null],
+    ['Carico',item.category === 'container' && item.ignore_contents_weight ? 'Il contenuto non viene conteggiato' : null],
     ['Equipaggiato',catalogMode ? null : (slots.length ? getBodyPartLabels(slots) : 'Non equipaggiato')],
     ['Sintonia',item.attunement_active ? 'Attiva' : null],
     ['Classe armatura',armorDetail ? null : (item.armor_class ?? item.ac)],

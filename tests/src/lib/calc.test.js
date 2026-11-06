@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { calcItemWeight, calcSelectionWeight, calcTotalWeight } from '../../../src/lib/calc.js';
+import { calcCarriedItemWeight, calcCarriedWeight, calcItemWeight, calcSelectionCarriedWeight, calcSelectionWeight, calcTotalWeight } from '../../../src/lib/calc.js';
 
 function extractNamedExports(source) {
   const names = new Set();
@@ -49,5 +49,18 @@ describe('src/lib/calc.js', () => {
       { id: 'b', container_item_id: 'a', qty: 1, weight: 2 }
     ];
     expect(calcItemWeight(items[0], items)).toBe(3);
+  });
+
+  it('keeps the real container weight but can ignore its contents in carried load', () => {
+    const items = [
+      { id: 'pack', category: 'container', qty: 1, weight: 2, ignore_contents_weight: true },
+      { id: 'pouch', category: 'container', container_item_id: 'pack', qty: 1, weight: 0.5 },
+      { id: 'coin', container_item_id: 'pouch', qty: 10, weight: 0.2 },
+      { id: 'sword', qty: 1, weight: 3 }
+    ];
+    expect(calcItemWeight(items[0], items)).toBeCloseTo(4.5);
+    expect(calcCarriedItemWeight(items[0], items)).toBe(2);
+    expect(calcSelectionCarriedWeight([items[0], items[2]], items)).toBe(2);
+    expect(calcCarriedWeight(items)).toBe(5);
   });
 });

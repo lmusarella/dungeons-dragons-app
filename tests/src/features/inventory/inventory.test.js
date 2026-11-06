@@ -144,4 +144,24 @@ describe('src/features/inventory/inventory.js', () => {
     expect(source).toContain("containerDeleteMode === 'delete'");
     expect(styles).toContain('grid-template-columns: repeat(2,minmax(0,1fr))');
   });
+
+  it('allows inserting existing or compendium items into a container', () => {
+    const inventory = readFileSync('src/features/inventory/inventory.js', 'utf8');
+    const picker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');
+    expect(inventory).toContain("manualLabel: 'Dal mio inventario'");
+    expect(inventory).toContain("catalogLabel: 'Dal compendio'");
+    expect(inventory).toContain("defaultSource: 'manual'");
+    expect(inventory).toContain('addSharedItemsToInventory(selectedItems, activeCharacter, {');
+    expect(inventory).toContain('container_item_id: containerItem.id');
+    expect(picker).toContain('addSharedItemsToInventory(sharedItems = [], character, overrides = {})');
+    expect(picker).toContain('{ ...overrides, qty: getSelectedQuantity(item) }');
+  });
+
+  it('scrolls to the top when navigating into a container and persists its load rule', () => {
+    const inventory = readFileSync('src/features/inventory/inventory.js', 'utf8');
+    const modal = readFileSync('src/features/inventory/modals.js', 'utf8');
+    expect(inventory).toContain("scrollSurface.scrollTo({ top: 0, left: 0, behavior: 'auto' })");
+    expect(modal).toContain("name: 'ignore_contents_weight'");
+    expect(modal).toContain("formData.get('ignore_contents_weight') === 'on'");
+  });
 });
