@@ -147,7 +147,7 @@ body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character
 }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat__icon { width: 28px; height: 28px; }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat__label {
-  overflow: hidden; font-size: 7.5px; line-height: 1.12; text-overflow: ellipsis;
+  overflow: hidden; font-size: 8.5px; line-height: 1.12; text-overflow: ellipsis;
 }
 body .app-shell[data-route='home'] .sheet-dashboard .character-manual .character-quick-stats .combat-stat > strong {
   overflow: hidden; font-size: clamp(17px,1.55vw,23px); text-overflow: ellipsis; white-space: nowrap;
