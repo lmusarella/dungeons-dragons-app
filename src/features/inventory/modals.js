@@ -489,6 +489,12 @@ export async function openItemModal(character, item, items = [], onSave, options
     value: item?.range_disadvantage ?? ''
   });
   const rangeDisadvantageInput = rangeDisadvantageField.querySelector('input');
+  [rangeNormalInput, rangeDisadvantageInput].forEach((input) => {
+    if (!input) return;
+    input.min = '0';
+    input.step = 'any';
+    input.inputMode = 'decimal';
+  });
   rangeGrid.append(thrownField, rangeNormalField, rangeDisadvantageField);
   rangeGrid.classList.add('item-modal-row--conditional-control');
 
@@ -821,6 +827,12 @@ export async function openItemModal(character, item, items = [], onSave, options
     }
   });
   if (!formData) return;
+  const parseDecimalOrNull = (value) => {
+    const normalized = String(value ?? '').trim().replace(',', '.');
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
   const equipableEnabled = formData.get('equipable') === 'on';
   const compatibleEquipSlots = equipableEnabled ? formData.getAll('compatible_equip_slots') : [];
   const equippedSlots = equipableEnabled && item ? getEquipSlots(item) : [];
@@ -895,14 +907,9 @@ export async function openItemModal(character, item, items = [], onSave, options
     alternate_attack_modifier: Number(weaponDamageModes[0]?.attack_modifier) || 0,
     alternate_damage_type: weaponDamageModes[0]?.damage_type || null,
     is_thrown: formData.get('is_thrown') === 'on' || weaponProperties.includes('lancio'),
-    melee_range: (() => {
-      const meleeRange = String(formData.get('melee_range') ?? '').trim().replace(',', '.');
-      if (!meleeRange) return null;
-      const parsed = Number(meleeRange);
-      return Number.isNaN(parsed) ? null : parsed;
-    })(),
-    range_normal: Number(formData.get('range_normal')) || null,
-    range_disadvantage: Number(formData.get('range_disadvantage')) || null,
+    melee_range: parseDecimalOrNull(formData.get('melee_range')),
+    range_normal: parseDecimalOrNull(formData.get('range_normal')),
+    range_disadvantage: parseDecimalOrNull(formData.get('range_disadvantage')),
     armor_type: formData.get('armor_type') || null,
     is_shield: formData.get('is_shield') === 'on',
     armor_class: Number(formData.get('armor_class')) || null,
