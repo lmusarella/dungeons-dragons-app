@@ -96,6 +96,7 @@ describe('src/features/inventory/inventory.js', () => {
     expect(styles).toContain('.catalog-pagination');
     expect(picker).not.toContain('form.classList.add(...detailClasses)');
     expect(readFileSync('src/styles/base.css', 'utf8')).toContain('.picker-nested-detail');
+    expect(readFileSync('src/styles/base.css', 'utf8')).toContain('.sheet-inline-detail.modal-card--shared-item-picker');
   });
 
   it('preserves weapon properties when copying a compendium weapon into inventory', () => {
