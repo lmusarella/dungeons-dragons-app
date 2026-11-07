@@ -69,7 +69,6 @@ function presentPickerDetail(modal, options = {}) {
     modal.querySelector('.modal-header__top')?.append(headerActions);
     const form = document.createElement('form');
     form.className = 'modal-form picker-nested-detail';
-    if (detailClasses.length) form.classList.add(...detailClasses);
     const fields = document.createElement('div');
     fields.className = 'modal-body';
     fields.dataset.formFields = '';

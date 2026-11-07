@@ -4,7 +4,7 @@ const items = [
   { id: 'bag', name: 'Zaino', category: 'container' },
   { id: 'pouch', name: 'Borsa piccola', category: 'container', container_item_id: 'bag' },
   { id: 'potion', name: 'Pozione', category: 'consumable', container_item_id: 'bag', qty: 2 },
-  { id: 'focus', name: 'Cristallo', category: 'gear', is_magic: true, container_item_id: 'pouch' },
+  { id: 'focus', name: 'Cristallo', category: 'gear', is_magic: true, attunement_active: true, container_item_id: 'pouch' },
   { id: 'sword', name: 'Spada', category: 'weapon' },
   { id: 'armor', name: 'Corazza', category: 'armor', equipped: true, equip_slots: ['torso'] }
 ];
@@ -57,6 +57,10 @@ describe('container navigation and persistent filters', () => {
     expect(getContainerView(items, { category: 'weapon' }, 'bag').items).toEqual([]);
     expect(getContainerView(items, { magicOnly: true }, 'pouch').items.map(item => item.id)).toEqual(['focus']);
     expect(getContainerView(items, { magicOnly: true }, 'bag').items.map(item => item.id)).toEqual(['pouch']);
+  });
+  it('filters attuned items and keeps their ancestor containers navigable', () => {
+    expect(getContainerView(items, { attunementOnly: true }, 'pouch').items.map(item => item.id)).toEqual(['focus']);
+    expect(getContainerView(items, { attunementOnly: true }, 'bag').items.map(item => item.id)).toEqual(['pouch']);
   });
   it('builds nested breadcrumbs and exposes extraction only inside a container', () => {
     const nested = getContainerView(items, {}, 'pouch');

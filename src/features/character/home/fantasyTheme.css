@@ -3013,7 +3013,7 @@ body .sheet-detail .inventory-container-card--equipped .container-card-symbol { 
     grid-row: 1; width: 30px; height: 30px; border-radius: 9px; font-size: 17px;
   }
   .home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right) .sheet-shortcut strong {
-    align-self: center; overflow: hidden; font: 700 11px/1.15 'Segoe UI',Arial,sans-serif; text-overflow: ellipsis; white-space: normal;
+    align-self: center; overflow: hidden; font: 800 12.5px/1.2 'Segoe UI',Arial,sans-serif; letter-spacing: .01em; text-overflow: ellipsis; white-space: normal;
   }
   .home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right) .sheet-shortcut small { display: none; }
   .home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right) .sheet-shortcut:hover,
@@ -3076,7 +3076,7 @@ body :is(.sheet-detail,.modal-card--prepared-spells,.modal-card--shared-item-pic
 
 /* Inventory shortcut: one compact item toolbar and one financial workspace. */
 body .sheet-detail .sheet-inventory-host .inventory-toolbar {
-  display: grid !important; grid-template-columns: minmax(0,1fr) auto auto auto; align-items: stretch; gap: 7px;
+  display: grid !important; grid-template-columns: minmax(0,1fr) auto auto auto auto; align-items: stretch; gap: 7px;
   grid-auto-flow: column; white-space: nowrap;
 }
 body .sheet-detail .sheet-inventory-host .inventory-toolbar .inventory-filter-card { align-self: stretch; }
@@ -3094,7 +3094,7 @@ body .sheet-detail .inventory-category-pills button[aria-pressed='true'] {
   border-color: #76364b; background: #76364b; color: #fff8e9; box-shadow: 0 2px 6px rgba(73,43,64,.18);
 }
 body .sheet-detail .inventory-category-pills button[aria-pressed='true']::before { content: '✓ '; font-weight: 900; }
-body .sheet-detail .inventory-filter-reset { align-self: stretch; min-width: 76px; min-height: 44px; padding: 6px 9px; font-size: 10px; }
+body .sheet-detail .inventory-filter-reset { align-self: stretch; min-width: 70px; min-height: 36px; padding: 5px 8px; font-size: 10px; }
 body .sheet-detail .inventory-filter-reset:disabled { opacity: .4; cursor: default; }
 body .sheet-detail .sheet-inline-detail.modal-card--inventory-insert {
   display: flex; width: 100% !important; height: 100% !important; min-height: 0; max-height: none;
@@ -3131,7 +3131,7 @@ body .sheet-detail .equipment-summary__item--attunement[aria-pressed='true'] { b
 body .sheet-detail .equipment-filter-empty { padding: 24px; text-align: center; }
 
 @media (max-width: 760px) {
-  body .sheet-detail .sheet-inventory-host .inventory-toolbar { grid-template-columns: minmax(0,1fr) auto auto auto; }
+  body .sheet-detail .sheet-inventory-host .inventory-toolbar { grid-template-columns: minmax(0,1fr) repeat(4,auto); }
   body .sheet-detail .sheet-inventory-host .inventory-toolbar .inventory-filter-card { min-width: 0; }
   body .sheet-detail .inventory-money-workspace .wallet-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }

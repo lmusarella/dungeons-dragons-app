@@ -34,6 +34,8 @@ describe('src/features/inventory/inventory.js', () => {
     expect(source).toContain('data-category-option');
     expect(source).toContain('activeCategories.add(nextCategory)');
     expect(source).toContain('data-reset-filters');
+    expect(source).toContain('data-attunement-filter');
+    expect(source).toContain('attunementOnly');
     expect(source).toContain('resetFiltersButton.disabled');
     expect(source).toContain('categories.filter((category) => category.value)');
     expect(source).toContain('openItemSourceModal');
@@ -83,6 +85,8 @@ describe('src/features/inventory/inventory.js', () => {
     expect(picker).toContain("headerActionHost.dataset.formHeaderActions = ''");
     expect(picker).toContain('sheetActions.prepend(headerActionHost)');
     expect(styles).toContain('.modal-card--shortcut-size');
+    expect(picker).not.toContain('form.classList.add(...detailClasses)');
+    expect(readFileSync('src/styles/base.css', 'utf8')).toContain('.picker-nested-detail');
   });
 
   it('preserves weapon properties when copying a compendium weapon into inventory', () => {

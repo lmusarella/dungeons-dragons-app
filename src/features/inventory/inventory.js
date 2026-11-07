@@ -297,11 +297,15 @@ export async function renderInventory(container) {
           ` : '<label class="inventory-category-filter"><span>Categoria</span><select data-category></select></label>'}
           <label class="inventory-filter-card">
             <input type="checkbox" data-equipable-filter />
-            <span><i aria-hidden="true">♙</i><strong>Equipaggiabili</strong></span>
+            <span><strong>Equipaggiabili</strong></span>
           </label>
           <label class="inventory-filter-card">
             <input type="checkbox" data-magic-filter />
-            <span><i aria-hidden="true">✦</i><strong>Magici</strong></span>
+            <span><strong>Magici</strong></span>
+          </label>
+          <label class="inventory-filter-card">
+            <input type="checkbox" data-attunement-filter />
+            <span><strong>In sintonia</strong></span>
           </label>
           <button type="button" class="ghost-button inventory-filter-reset" data-reset-filters disabled>Reimposta</button>
         </div>
@@ -337,6 +341,7 @@ export async function renderInventory(container) {
   const categoryButtons = [...container.querySelectorAll('[data-category-option]')];
   const equipableFilter = container.querySelector('[data-equipable-filter]');
   const magicFilter = container.querySelector('[data-magic-filter]');
+  const attunementFilter = container.querySelector('[data-attunement-filter]');
   const resetFiltersButton = container.querySelector('[data-reset-filters]');
   const openInventoryEquipmentPicker = async () => {
     const result = await openEquipmentPicker({
@@ -376,6 +381,7 @@ export async function renderInventory(container) {
   syncCategoryButtons();
   if (equipableFilter) equipableFilter.checked = Boolean(previousFilters.equipableOnly);
   if (magicFilter) magicFilter.checked = Boolean(previousFilters.magicOnly);
+  if (attunementFilter) attunementFilter.checked = Boolean(previousFilters.attunementOnly);
   function renderList() {
     const term = '';
     const category = categorySelect?.value || '';
@@ -384,16 +390,18 @@ export async function renderInventory(container) {
       : [...activeCategories];
     const equipableOnly = equipableFilter?.checked ?? false;
     const magicOnly = magicFilter?.checked ?? false;
-    container.inventoryFilters = { term, category, categories: selectedCategories, equipableOnly, magicOnly };
+    const attunementOnly = attunementFilter?.checked ?? false;
+    container.inventoryFilters = { term, category, categories: selectedCategories, equipableOnly, magicOnly, attunementOnly };
     if (resetFiltersButton) {
-      resetFiltersButton.disabled = !(term || selectedCategories.length || equipableOnly || magicOnly);
+      resetFiltersButton.disabled = !(term || selectedCategories.length || equipableOnly || magicOnly || attunementOnly);
     }
     const directlyMatched = items.filter((item) => {
       const matchesTerm = item.name.toLowerCase().includes(term);
       const matchesCategory = !selectedCategories.length || selectedCategories.includes(item.category);
       const matchesEquipable = !equipableOnly || item.equipable;
       const matchesMagic = !magicOnly || item.is_magic;
-      return matchesTerm && matchesCategory && matchesEquipable && matchesMagic;
+      const matchesAttunement = !attunementOnly || item.attunement_active;
+      return matchesTerm && matchesCategory && matchesEquipable && matchesMagic && matchesAttunement;
     });
 
     const itemById = new Map(items.map((item) => [String(item.id), item]));
@@ -655,11 +663,13 @@ export async function renderInventory(container) {
   }));
   equipableFilter?.addEventListener('change', renderList);
   magicFilter?.addEventListener('change', renderList);
+  attunementFilter?.addEventListener('change', renderList);
   resetFiltersButton?.addEventListener('click', () => {
     if (categorySelect) categorySelect.value = '';
     activeCategories.clear();
     if (equipableFilter) equipableFilter.checked = false;
     if (magicFilter) magicFilter.checked = false;
+    if (attunementFilter) attunementFilter.checked = false;
     syncCategoryButtons();
     renderList();
   });

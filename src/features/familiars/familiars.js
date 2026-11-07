@@ -24,6 +24,7 @@ const KIND_OPTIONS = [
 
 const SPEED_LABELS = {
   walk: { label: 'Terra', icon: '🏃' },
+  swim: { label: 'Nuoto', icon: '🌊' },
   fly: { label: 'Volo', icon: '🪽' },
   climb: { label: 'Scalata', icon: '🧗' },
   burrow: { label: 'Scavare', icon: '⛏️' }
@@ -61,7 +62,7 @@ function getDefaultStatBlock() {
     initiative: null,
     darkvision_range_m: null,
     hp: { current: 1, max: 1, temp: 0 },
-    speeds: { walk: 9, fly: null, climb: null, burrow: null },
+    speeds: { walk: 9, swim: null, fly: null, climb: null, burrow: null },
     attacks: []
   };
 }
@@ -170,8 +171,7 @@ function buildCompanionCard(companion, isSelected = false) {
   const hpTemp = Math.max(Number(statBlock.hp.temp) || 0, 0);
   const hpPercent = Math.min(Math.max((hpCurrent / hpMax) * 100, 0), 100);
   const hasTempHp = hpTemp > 0;
-  const hpTrackFlex = hasTempHp ? hpMax : 1;
-  const tempTrackFlex = hasTempHp ? hpTemp : 0;
+  const tempHpPercent = Math.min(Math.max((hpTemp / hpMax) * 100, 0), 100);
 
   return `
     <article class="card home-card home-section familiar-sheet familiar-sheet--refined ${isSelected ? 'is-active' : ''}" data-familiar-panel="${escapeHtml(companion.id)}" ${isSelected ? '' : 'hidden'}>
@@ -245,12 +245,16 @@ function buildCompanionCard(companion, isSelected = false) {
                     <span aria-hidden="true">−</span><strong>Danno</strong>
                   </button>
                 </span>
-                ${hpTemp ? `<span class="hp-bar-label__temp-group familiar-temp-hp-label is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></span>` : ''}
               </div>
               <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}">
-                <div class="hp-bar" style="flex: ${hpTrackFlex};"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
-                ${hasTempHp ? `<div class="hp-bar hp-bar--temp is-active" style="flex: ${tempTrackFlex};"><div class="hp-bar__fill hp-bar__fill--temp" style="width: 100%;"></div></div>` : ''}
+                <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
               </div>
+              ${hasTempHp ? `
+              <div class="hp-vitals-card__temp-label familiar-temp-hp-label is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></div>
+              <div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="Punti ferita temporanei" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpTemp}">
+                <div class="hp-bar hp-bar--temp is-active"><div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div></div>
+              </div>
+              ` : ''}
               <div class="familiar-vitals-info" aria-label="Movimento e sensi">
                 <div class="familiar-movement-grid">${speeds}</div>
                 <span class="vital-mini-chip vital-mini-chip--darkvision familiar-darkvision-chip">
@@ -463,6 +467,7 @@ export async function renderFamiliars(container) {
       { label: 'Iniziativa', name: 'initiative', value: current.initiative ?? (getAbilityModifier(Number(current.abilities.dex) || 10) ?? 0), allowNegative: true },
       { label: 'Scurovisione (m)', name: 'darkvision_range_m', value: current.darkvision_range_m ?? '' },
       { label: 'Terra (m)', name: 'speed_walk', value: current.speeds.walk ?? 9 },
+      { label: 'Nuoto (m)', name: 'speed_swim', value: current.speeds.swim ?? '' },
       { label: 'Volo (m)', name: 'speed_fly', value: current.speeds.fly ?? '' },
       { label: 'Scalata (m)', name: 'speed_climb', value: current.speeds.climb ?? '' },
       { label: 'Scavare (m)', name: 'speed_burrow', value: current.speeds.burrow ?? '' }
@@ -721,6 +726,7 @@ export async function renderFamiliars(container) {
         },
         speeds: {
           walk: Number(formData.get('speed_walk') || 0),
+          swim: toNumberOrNull(formData.get('speed_swim')),
           fly: toNumberOrNull(formData.get('speed_fly')),
           climb: toNumberOrNull(formData.get('speed_climb')),
           burrow: toNumberOrNull(formData.get('speed_burrow'))

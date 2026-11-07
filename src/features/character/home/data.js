@@ -19,7 +19,7 @@ export async function saveCharacterData(character, data, message, onRender) {
       createToast(message);
     }
     if (onRender) {
-      onRender();
+      await onRender();
     }
   } catch (error) {
     createToast('Errore aggiornamento personaggio', 'error');

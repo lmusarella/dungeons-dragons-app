@@ -3293,7 +3293,7 @@ async function handleHpAction(action, container) {
     : `Danno ${amount}${wildShapeLabel}${normalHpLabel}`;
   const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
   const saveOnComplete = async () => {
-    if (container) renderHome(container);
+    if (container) await renderHome(container);
     if (!shouldOpenConcentrationSave) return;
     const concentrationCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
     const options = buildSavingThrowRollOptions(concentrationCharacter || activeCharacter);

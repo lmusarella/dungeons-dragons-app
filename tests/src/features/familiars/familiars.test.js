@@ -23,12 +23,20 @@ describe('src/features/familiars/familiars.js', () => {
     expect(source).toContain('data-companion-hp-action="damage"');
     expect(source).toContain('<span aria-hidden="true">+</span><strong>Cura</strong>');
     expect(source).toContain('<span aria-hidden="true">−</span><strong>Danno</strong>');
-    expect(source.indexOf('class="familiar-hp-actions"')).toBeLessThan(source.indexOf('class="hp-bar-label__temp-group familiar-temp-hp-label'));
+    expect(source).toContain('class="hp-vitals-card__temp-label familiar-temp-hp-label is-active"');
+    expect(source).toContain('class="hp-bar-track hp-bar-track--temp-secondary"');
     expect(source).toContain("allowTempHp: action === 'heal'");
     expect(source).toContain("allowMaxOverride: action === 'damage'");
     expect(source).toContain('temp: hpTemp + amount');
     expect(source).toContain('hp-bar hp-bar--temp is-active');
     expect(source).toContain('const absorbed = Math.min(hpTemp, amount)');
+  });
+
+  it('supports swimming speed in creation, persistence and the familiar summary', () => {
+    const source = readFileSync('src/features/familiars/familiars.js', 'utf8');
+    expect(source).toContain("swim: { label: 'Nuoto'");
+    expect(source).toContain("name: 'speed_swim'");
+    expect(source).toContain("swim: toNumberOrNull(formData.get('speed_swim'))");
   });
 
   it('opens the shared image preview from the familiar portrait', () => {

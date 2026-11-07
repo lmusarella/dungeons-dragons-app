@@ -764,7 +764,7 @@ button:focus-visible,
 .inventory-filter-card {
   position: relative;
   display: block;
-  min-width: 104px;
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -780,14 +780,14 @@ button:focus-visible,
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  min-height: 44px;
-  padding: 7px 10px;
+  min-height: 36px;
+  padding: 5px 10px;
   border: 1px solid #d8cab6;
-  border-radius: 11px;
+  border-radius: 9px;
   background: #fffefa;
   color: #735064;
-  font-size: .7rem;
+  font-size: .68rem;
+  font-weight: 750;
   transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 
@@ -799,20 +799,17 @@ button:focus-visible,
 }
 
 .inventory-filter-card > input:checked + span::before {
-  content: '✓';
-  display: grid;
-  place-items: center;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.2);
-  font-size: .62rem;
-  font-weight: 900;
+  content: none;
 }
 
 .inventory-filter-card > input:focus-visible + span {
   outline: 2px solid rgba(118,54,75,.35);
   outline-offset: 2px;
+}
+
+.picker-nested-detail {
+  width: 100%;
+  min-width: 0;
 }
 
 .equip-slot-field {

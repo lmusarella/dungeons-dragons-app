@@ -26,12 +26,13 @@ function isEquippedItem(item) {
   return Boolean(item?.equipped) || getEquipSlots(item).length > 0;
 }
 
-export function matchesInventoryFilter(item, { term = '', category = '', categories = [], equipableOnly = false, magicOnly = false } = {}) {
+export function matchesInventoryFilter(item, { term = '', category = '', categories = [], equipableOnly = false, magicOnly = false, attunementOnly = false } = {}) {
   const selectedCategories = categories.length ? categories : (category ? [category] : []);
   return String(item.name || '').toLocaleLowerCase('it').includes(term.trim().toLocaleLowerCase('it'))
     && (!selectedCategories.length || selectedCategories.includes(item.category))
     && (!equipableOnly || item.equipable)
-    && (!magicOnly || item.is_magic);
+    && (!magicOnly || item.is_magic)
+    && (!attunementOnly || item.attunement_active);
 }
 
 export function getContainerView(items, filters = {}, containerId = '') {
@@ -127,7 +128,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
   const visibleContainers = entries
     .filter(item => item.category === 'container' && matchesBelow(item))
     .map(item => ({ ...item, totalWeight: calcItemWeight(item, items), childCount: children(item.id).filter((child) => !isEquippedItem(child)).length, matchingCount: children(item.id).filter((child) => !isEquippedItem(child) && matchesBelow(child)).length }));
-  const hasActiveFilters = Boolean(filters.term?.trim() || filters.category || filters.categories?.length || filters.equipableOnly || filters.magicOnly);
+  const hasActiveFilters = Boolean(filters.term?.trim() || filters.category || filters.categories?.length || filters.equipableOnly || filters.magicOnly || filters.attunementOnly);
   if (!current) {
     visibleContainers.unshift(...locationContainers);
     if (!hasActiveFilters || equippedItems.length) visibleContainers.unshift(virtualContainer);
