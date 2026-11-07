@@ -58,7 +58,7 @@ describe('src/features/inventory/inventory.js', () => {
     const styles = readFileSync('src/styles/shellExperience.css', 'utf8');
     expect(home).toContain('allowQuantities: true');
     expect(picker).toContain('selected_quantity: Math.max(1');
-    expect(picker).toContain('shared_item_qty_${item.id}');
+    expect(picker).toContain('shared_item_qty_${escapeHtml(item.id)}');
     expect(picker).toContain('qty: getSelectedQuantity(item)');
     expect(picker).toContain('for (let copy = 0; copy < bundleQuantity; copy += 1)');
     expect(styles).toContain('.shared-item-picker__stepper');
@@ -67,7 +67,6 @@ describe('src/features/inventory/inventory.js', () => {
     expect(picker).toContain('const syncCategoryButtons = () =>');
     expect(picker).toContain('button.blur()');
     expect(picker).toContain('data-shared-item-category-group');
-    expect(picker).toContain('cardsByCategory.get(category)');
     expect(picker).toContain('loading="lazy" decoding="async"');
     expect(styles).toContain('.shared-item-picker__category-group { display: contents; }');
     expect(inventory).toContain("title: 'Loot rapido'");
@@ -78,6 +77,15 @@ describe('src/features/inventory/inventory.js', () => {
     expect(inventory).toContain("headerActionLabel: 'Nuovo oggetto'");
     expect(picker).toContain('data-shared-item-detail');
     expect(picker).toContain('data-shared-item-select');
+    expect(picker).toContain('data-shared-item-pagination');
+    expect(picker).toContain('class="shared-item-picker__collection"');
+    expect(picker).toContain('<legend>Raccolta oggetti</legend>');
+    expect(picker).not.toContain('data-shared-item-pagination aria-label="Pagine oggetti" hidden');
+    expect(picker).toContain('categories: [...selectedCategories]');
+    expect(picker).toContain('pageSize: PAGE_SIZE');
+    expect(picker).toContain('const selectedItems = new Map()');
+    expect(picker).toContain('return [...selectedItems.values()]');
+    expect(picker).not.toContain('void loadAllSharedItems()');
     expect(picker).toContain("label.textContent = selection.checked ? 'Selezionato' : 'Seleziona'");
     expect(picker).toContain('openEquipmentItemDetail({ ...template, ...item');
     expect(styles).toContain('.shared-item-picker__select');
@@ -85,6 +93,7 @@ describe('src/features/inventory/inventory.js', () => {
     expect(picker).toContain("headerActionHost.dataset.formHeaderActions = ''");
     expect(picker).toContain('sheetActions.prepend(headerActionHost)');
     expect(styles).toContain('.modal-card--shortcut-size');
+    expect(styles).toContain('.catalog-pagination');
     expect(picker).not.toContain('form.classList.add(...detailClasses)');
     expect(readFileSync('src/styles/base.css', 'utf8')).toContain('.picker-nested-detail');
   });

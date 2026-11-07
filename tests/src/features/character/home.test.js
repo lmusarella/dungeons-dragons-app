@@ -80,10 +80,11 @@ describe('src/features/character/home.js', () => {
     expect(picker).toContain("openArrow.className = 'shared-spell-picker__spell-arrow'");
     expect(picker).toContain("createButton.innerHTML = '<span aria-hidden=\"true\">＋</span><strong>Crea incantesimo</strong>'");
     expect(picker).toContain("pageSize: PAGE_SIZE");
-    expect(picker).toContain('loadedSpells.push(...(result.items || []))');
-    expect(picker).toContain('while (loadedSpells.length < total)');
-    expect(picker).not.toContain('data-next-page');
-    expect(picker).not.toContain('data-prev-page');
+    expect(picker).toContain('data-spell-pagination');
+    expect(picker).toContain('data-spell-page="previous"');
+    expect(picker).toContain('data-spell-page="next"');
+    expect(picker).toContain('searchSharedSpells({ ...request, page: currentPage })');
+    expect(picker).not.toContain('while (loadedSpells.length < total)');
     expect(picker).toContain("cardClass: ['modal-card--form', 'modal-card--shared-spell-picker']");
     expect(picker).toContain('const selectedSpells = new Map()');
     expect(picker).toContain('submitButtons.forEach((button) => { button.disabled = count === 0; })');

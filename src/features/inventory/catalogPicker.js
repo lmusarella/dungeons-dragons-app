@@ -140,6 +140,7 @@ export async function openSharedItemPicker({
   shortcutSize = false,
   onLoadingChange = null
 } = {}) {
+  const PAGE_SIZE = 24;
   let items = [];
   const inputType = multiple ? 'checkbox' : 'radio';
   const content = document.createElement('div');
@@ -153,23 +154,39 @@ export async function openSharedItemPicker({
       <button class="shared-item-picker__clear-selection" type="button" data-clear-shared-item-selection hidden>Deseleziona tutti</button>
       <output data-shared-item-count aria-live="polite">Caricamento…</output>
     </div>
-    <div class="shared-item-picker__results" data-shared-item-results>
-      <div class="shared-item-picker__loader" role="status" aria-live="polite">
-        <span class="shared-item-picker__spinner" aria-hidden="true"></span>
-        <strong>Caricamento archivio…</strong>
-        <small>Sto recuperando gli oggetti disponibili.</small>
+    <fieldset class="shared-item-picker__collection">
+      <legend>Raccolta oggetti</legend>
+      <div class="shared-item-picker__results" data-shared-item-results>
+        <div class="shared-item-picker__loader" role="status" aria-live="polite">
+          <span class="shared-item-picker__spinner" aria-hidden="true"></span>
+          <strong>Caricamento archivio…</strong>
+          <small>Sto recuperando gli oggetti disponibili.</small>
+        </div>
       </div>
-    </div>`;
+      <nav class="catalog-pagination shared-item-picker__pagination" data-shared-item-pagination aria-label="Pagine oggetti">
+        <button type="button" data-shared-item-page="previous" disabled>‹ Precedente</button>
+        <span><strong data-shared-item-page-label>Pagina 1 di 1</strong><small data-shared-item-page-range>Caricamento…</small></span>
+        <button type="button" data-shared-item-page="next" disabled>Successiva ›</button>
+      </nav>
+    </fieldset>`;
   const search = content.querySelector('[data-shared-item-search]');
   const clearSelectionButton = content.querySelector('[data-clear-shared-item-selection]');
   const count = content.querySelector('[data-shared-item-count]');
   const results = content.querySelector('[data-shared-item-results]');
+  const pagination = content.querySelector('[data-shared-item-pagination]');
+  const pageLabel = content.querySelector('[data-shared-item-page-label]');
+  const pageRange = content.querySelector('[data-shared-item-page-range]');
+  const previousPageButton = content.querySelector('[data-shared-item-page="previous"]');
+  const nextPageButton = content.querySelector('[data-shared-item-page="next"]');
   const categoryButtons = [...content.querySelectorAll('[data-shared-item-category]')];
   const selectedCategories = new Set();
+  const selectedItems = new Map();
+  let currentPage = 1;
+  let totalItems = 0;
+  let totalPages = 1;
+  let loadSequence = 0;
+  let searchTimer = null;
   let cards = [];
-  let categoryGroups = [];
-  let cardsByCategory = new Map();
-  let previousFilterQuery = null;
   let submitButton = null;
   let syncSelections = () => {};
   let detailPresenter = openFormModal;
@@ -183,32 +200,20 @@ export async function openSharedItemPicker({
     });
   };
 
-  const applyFilters = () => {
-    const query = search.value.trim().toLowerCase();
-    let visible = 0;
-    categoryGroups.forEach((group) => {
-      const category = group.dataset.itemCategory;
-      const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(category);
-      group.hidden = !matchesCategory;
-      if (!matchesCategory) return;
-      const categoryCards = cardsByCategory.get(category) || [];
-      if (!query) {
-        visible += categoryCards.length;
-        return;
-      }
-      categoryCards.forEach((card) => {
-        const matchesSearch = card.dataset.searchValue.includes(query);
-        card.hidden = !matchesSearch;
-        if (matchesSearch) visible += 1;
-      });
-    });
-    if (!query && previousFilterQuery) cards.forEach((card) => { card.hidden = false; });
-    previousFilterQuery = query;
-    count.textContent = `${visible} ${visible === 1 ? 'oggetto' : 'oggetti'}`;
+  const syncPagination = () => {
+    totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+    pagination.hidden = false;
+    pageLabel.textContent = `Pagina ${currentPage} di ${totalPages}`;
+    const first = totalItems ? ((currentPage - 1) * PAGE_SIZE) + 1 : 0;
+    const last = Math.min(currentPage * PAGE_SIZE, totalItems);
+    pageRange.textContent = totalItems ? `${first}–${last} di ${totalItems}` : 'Nessun risultato';
+    previousPageButton.disabled = currentPage <= 1;
+    nextPageButton.disabled = currentPage >= totalPages;
   };
 
   const syncSubmitState = () => {
     if (!submitButton) return;
+    selectedCount = selectedItems.size;
     submitButton.disabled = selectedCount === 0;
     submitButton.textContent = multiple
       ? (selectedCount ? `Aggiungi ${selectedCount} ${selectedCount === 1 ? 'oggetto' : 'oggetti'}` : 'Aggiungi selezionati')
@@ -231,7 +236,7 @@ export async function openSharedItemPicker({
           ${allowQuantities ? `<div class="shared-item-picker__quantity" data-shared-item-quantity>
             <span class="shared-item-picker__stepper">
               <button type="button" data-quantity-step="-1" aria-label="Riduci quantità di ${escapeHtml(item.name)}">−</button>
-              <input type="number" name="shared_item_qty_${escapeHtml(item.id)}" value="1" min="1" max="999" step="1" aria-label="Quantità di ${escapeHtml(item.name)}" disabled />
+              <input type="number" name="shared_item_qty_${escapeHtml(item.id)}" value="${selectedItems.get(String(item.id))?.selected_quantity || 1}" min="1" max="999" step="1" aria-label="Quantità di ${escapeHtml(item.name)}" disabled />
               <button type="button" data-quantity-step="1" aria-label="Aumenta quantità di ${escapeHtml(item.name)}">+</button>
             </span>
           </div>` : ''}
@@ -245,15 +250,10 @@ export async function openSharedItemPicker({
         </div>`).join('')}
     </div>`;
     cards = [...content.querySelectorAll('[data-shared-item-option]')];
-    categoryGroups = [...content.querySelectorAll('[data-shared-item-category-group]')];
-    cardsByCategory = new Map(categoryGroups.map((group) => [
-      group.dataset.itemCategory,
-      [...group.querySelectorAll('[data-shared-item-option]')]
-    ]));
-    previousFilterQuery = null;
     const syncCardSelection = (card) => {
       const selection = card.querySelector('input[name="shared_item_ids"]');
       if (!selection) return;
+        selection.checked = selectedItems.has(String(selection.value));
         const quantityInput = card.querySelector('[data-shared-item-quantity] input');
         const selectButton = card.querySelector('[data-shared-item-select]');
         card.classList.toggle('is-selected', selection.checked);
@@ -263,12 +263,11 @@ export async function openSharedItemPicker({
         if (quantityInput) quantityInput.disabled = !selection.checked;
     };
     syncSelections = () => {
-      selectedCount = 0;
       cards.forEach((card) => {
         const selection = card.querySelector('input[name="shared_item_ids"]');
         syncCardSelection(card);
-        if (selection?.checked) selectedCount += 1;
       });
+      selectedCount = selectedItems.size;
       clearSelectionButton.hidden = selectedCount === 0;
       syncSubmitState();
     };
@@ -276,18 +275,17 @@ export async function openSharedItemPicker({
       const selection = card.querySelector('input[name="shared_item_ids"]');
       const quantityInput = card.querySelector('[data-shared-item-quantity] input');
       selection.addEventListener('change', () => {
-        const wasSelected = card.classList.contains('is-selected');
         if (!multiple && selection.checked) {
-          cards.filter((entry) => entry !== card).forEach((entry) => {
-            const otherSelection = entry.querySelector('input[name="shared_item_ids"]');
-            if (!otherSelection?.checked) return;
-            otherSelection.checked = false;
-            syncCardSelection(entry);
-          });
-          selectedCount = 1;
-        } else if (selection.checked !== wasSelected) {
-          selectedCount += selection.checked ? 1 : -1;
+          selectedItems.clear();
         }
+        const item = items.find((entry) => String(entry.id) === String(selection.value));
+        if (selection.checked && item) selectedItems.set(String(item.id), {
+          ...item,
+          selected_quantity: Math.max(1, Number(quantityInput?.value) || 1)
+        });
+        else selectedItems.delete(String(selection.value));
+        selectedCount = selectedItems.size;
+        if (!multiple) cards.forEach(syncCardSelection);
         syncCardSelection(card);
         clearSelectionButton.hidden = selectedCount === 0;
         syncSubmitState();
@@ -315,23 +313,66 @@ export async function openSharedItemPicker({
           const direction = Number(button.dataset.quantityStep) || 0;
           const current = Math.max(1, Number(quantityInput.value) || 1);
           quantityInput.value = String(Math.min(999, Math.max(1, current + direction)));
+          const selectedItem = selectedItems.get(String(selection.value));
+          if (selectedItem) selectedItems.set(String(selection.value), { ...selectedItem, selected_quantity: Number(quantityInput.value) });
         });
       });
       quantityInput?.addEventListener('input', () => {
         quantityInput.value = String(Math.min(999, Math.max(1, Number(quantityInput.value) || 1)));
+        const selectedItem = selectedItems.get(String(selection.value));
+        if (selectedItem) selectedItems.set(String(selection.value), { ...selectedItem, selected_quantity: Number(quantityInput.value) });
       });
     });
     syncSelections();
-    applyFilters();
+    count.textContent = `${totalItems} ${totalItems === 1 ? 'oggetto' : 'oggetti'}`;
+    syncPagination();
     syncSubmitState();
   };
 
-  search.addEventListener('input', applyFilters);
+  const loadPage = async (page = 1) => {
+    const sequence = ++loadSequence;
+    currentPage = Math.max(1, Number(page) || 1);
+    results.innerHTML = '<div class="shared-item-picker__loader" role="status"><span class="shared-item-picker__spinner" aria-hidden="true"></span><strong>Caricamento pagina…</strong></div>';
+    pagination.setAttribute('aria-busy', 'true');
+    previousPageButton.disabled = true;
+    nextPageButton.disabled = true;
+    try {
+      const result = await searchSharedItems({
+        query: search.value.trim(),
+        categories: [...selectedCategories],
+        page: currentPage,
+        pageSize: PAGE_SIZE
+      });
+      if (sequence !== loadSequence) return;
+      items = result.items || [];
+      totalItems = Number(result.total) || 0;
+      totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+      if (currentPage > totalPages) return loadPage(totalPages);
+      if (!items.length) {
+        results.innerHTML = '<div class="shared-item-picker__empty"><strong>Nessun oggetto trovato</strong><span>Prova a modificare ricerca o categorie.</span></div>';
+        count.textContent = '0 oggetti';
+        syncPagination();
+        return;
+      }
+      renderItems();
+      results.scrollTop = 0;
+    } catch (error) {
+      if (sequence !== loadSequence) return;
+      results.innerHTML = '<div class="shared-item-picker__empty shared-item-picker__empty--error"><strong>Archivio non disponibile</strong><span>Riprova tra qualche istante.</span></div>';
+      count.textContent = 'Errore';
+      pageRange.textContent = 'Caricamento non riuscito';
+      createToast('Impossibile caricare l’archivio degli oggetti', 'error');
+    } finally {
+      if (sequence === loadSequence) pagination.removeAttribute('aria-busy');
+    }
+  };
+  const refreshFromFirstPage = () => { void loadPage(1); };
+  search.addEventListener('input', () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(refreshFromFirstPage, 250);
+  });
   clearSelectionButton.addEventListener('click', () => {
-    cards.forEach((card) => {
-      const selection = card.querySelector('input[name="shared_item_ids"]');
-      if (selection) selection.checked = false;
-    });
+    selectedItems.clear();
     syncSelections();
   });
   categoryButtons.forEach((button) => button.addEventListener('click', () => {
@@ -339,9 +380,11 @@ export async function openSharedItemPicker({
     if (selectedCategories.has(category)) selectedCategories.delete(category);
     else selectedCategories.add(category);
     syncCategoryButtons();
-    applyFilters();
+    refreshFromFirstPage();
     button.blur();
   }));
+  previousPageButton.addEventListener('click', () => void loadPage(currentPage - 1));
+  nextPageButton.addEventListener('click', () => void loadPage(currentPage + 1));
 
   const formData = await openFormModal({
     title, submitLabel: multiple ? 'Aggiungi selezionati' : 'Aggiungi oggetto', cancelLabel: 'Annulla', content,
@@ -383,26 +426,11 @@ export async function openSharedItemPicker({
       }
       const loadingContext = { modal, fieldsEl, content };
       onLoadingChange?.(true, loadingContext);
-      void loadAllSharedItems()
-        .then((loadedItems) => {
-          if (!mounted) return;
-          items = loadedItems;
-          if (!items.length) {
-            results.innerHTML = '<div class="shared-item-picker__empty"><strong>Archivio vuoto</strong><span>Non ci sono ancora oggetti disponibili.</span></div>';
-            count.textContent = '0 oggetti';
-            return;
-          }
-          renderItems();
-        })
-        .catch(() => {
-          if (!mounted) return;
-          results.innerHTML = '<div class="shared-item-picker__empty shared-item-picker__empty--error"><strong>Archivio non disponibile</strong><span>Riprova tra qualche istante.</span></div>';
-          count.textContent = 'Errore';
-          createToast('Impossibile caricare l’archivio degli oggetti', 'error');
-        })
-        .finally(() => onLoadingChange?.(false, loadingContext));
+      void loadPage(1).finally(() => onLoadingChange?.(false, loadingContext));
       return () => {
         mounted = false;
+        loadSequence += 1;
+        window.clearTimeout(searchTimer);
         headerActionButton?.remove();
         headerActionHost?.remove();
         onLoadingChange?.(false, loadingContext);
@@ -410,15 +438,10 @@ export async function openSharedItemPicker({
     }
   });
   if (!formData) return [];
-  const selected = new Set(formData.getAll('shared_item_ids').map(String));
-  return items
-    .filter((item) => selected.has(String(item.id)))
-    .map((item) => ({
-      ...item,
-      ...(allowQuantities ? {
-        selected_quantity: Math.max(1, Number(formData.get(`shared_item_qty_${item.id}`)) || 1)
-      } : {})
-    }));
+  return [...selectedItems.values()].map((item) => ({
+    ...item,
+    ...(allowQuantities ? { selected_quantity: Math.max(1, Number(item.selected_quantity) || 1) } : {})
+  }));
 }
 
 export function sharedItemToInventoryPayload(item, character, overrides = {}) {

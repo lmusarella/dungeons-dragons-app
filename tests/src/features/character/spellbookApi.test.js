@@ -26,4 +26,12 @@ describe('src/features/character/spellbookApi.js', () => {
       'removeSharedSpellAndAssignments'
     ]);
   });
+
+  it('paginates shared spells on Supabase before returning results', () => {
+    const source = readFileSync('src/features/character/spellbookApi.js', 'utf8');
+    expect(source).toContain(".select('*', { count: 'exact' })");
+    expect(source).toContain('.range(from, to)');
+    expect(source).toContain('page: safePage');
+    expect(source).toContain('pageSize: safePageSize');
+  });
 });

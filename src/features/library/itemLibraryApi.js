@@ -36,7 +36,7 @@ function buildSharedItemPayload(payload = {}) {
   };
 }
 
-export async function searchSharedItems({ query = '', category = '', rulesVersion = '', page = 1, pageSize = 50 } = {}) {
+export async function searchSharedItems({ query = '', category = '', categories = [], rulesVersion = '', page = 1, pageSize = 50 } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(100, Math.max(1, Number(pageSize) || 50));
   const from = (safePage - 1) * safePageSize;
@@ -48,7 +48,11 @@ export async function searchSharedItems({ query = '', category = '', rulesVersio
     .range(from, to);
 
   if (query.trim()) request = request.ilike('name', `%${query.trim()}%`);
-  if (category) request = request.eq('category', category);
+  const normalizedCategories = Array.isArray(categories)
+    ? [...new Set(categories.map((entry) => String(entry).trim()).filter(Boolean))]
+    : [];
+  if (normalizedCategories.length) request = request.in('category', normalizedCategories);
+  else if (category) request = request.eq('category', category);
   if (rulesVersion) request = request.eq('rules_version', rulesVersion);
 
   const { data, error, count } = await request;

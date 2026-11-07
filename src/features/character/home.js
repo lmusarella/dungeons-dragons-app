@@ -341,7 +341,7 @@ function mapCharacterSpellRowToSpell(row) {
 export async function openSharedSpellPicker(present = openFormModal, { defaultRulesVersion = '2014', canPrepare = true, onCreateSpell = null } = {}) {
   const SCHOOLS = ['', 'Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'];
   const CASTER_CLASSES = ['mago', 'warlock', 'stregone', 'chierico', 'druido', 'ranger', 'artefice', 'paladino', 'bardo'];
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 24;
   const initialRulesVersion = ['2014', '2024'].includes(String(defaultRulesVersion)) ? String(defaultRulesVersion) : '2014';
   const content = document.createElement('div');
   content.className = 'shared-spell-picker';
@@ -413,6 +413,11 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
           </div>
         </div>
         <div class="shared-spell-picker__list" data-spell-results aria-live="polite"></div>
+        <nav class="catalog-pagination shared-spell-picker__paging" data-spell-pagination aria-label="Pagine incantesimi" hidden>
+          <button type="button" data-spell-page="previous">‹ Precedente</button>
+          <span><strong data-spell-page-label>Pagina 1</strong><small data-spell-page-range></small></span>
+          <button type="button" data-spell-page="next">Successiva ›</button>
+        </nav>
       </section>
     </div>
   `;
@@ -425,11 +430,19 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   const resultsCountEl = content.querySelector('[data-spell-results-count]');
   const selectedCountEl = content.querySelector('[data-spell-selected-count]');
   const clearSelectionButton = content.querySelector('[data-clear-spell-selection]');
+  const pagination = content.querySelector('[data-spell-pagination]');
+  const pageLabel = content.querySelector('[data-spell-page-label]');
+  const pageRange = content.querySelector('[data-spell-page-range]');
+  const previousPageButton = content.querySelector('[data-spell-page="previous"]');
+  const nextPageButton = content.querySelector('[data-spell-page="next"]');
   let loadSequence = 0;
   let searchTimer = null;
   let submitButtons = [];
   let selectedLevel = '';
   let selectedRulesVersion = initialRulesVersion;
+  let currentPage = 1;
+  let totalResults = 0;
+  let totalPages = 1;
   const selectedProperties = new Set();
   const selectedSpells = new Map();
   const selectedSourceKeys = new Set();
@@ -437,6 +450,16 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   let sourceLoadSequence = 0;
 
   const formatSpellLevel = (level) => Number(level) === 0 ? 'Trucchetto' : `Livello ${level}`;
+  const syncPagination = () => {
+    totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
+    pagination.hidden = totalResults <= PAGE_SIZE;
+    pageLabel.textContent = `Pagina ${currentPage} di ${totalPages}`;
+    const first = totalResults ? ((currentPage - 1) * PAGE_SIZE) + 1 : 0;
+    const last = Math.min(currentPage * PAGE_SIZE, totalResults);
+    pageRange.textContent = totalResults ? `${first}–${last} di ${totalResults}` : 'Nessun risultato';
+    previousPageButton.disabled = currentPage <= 1;
+    nextPageButton.disabled = currentPage >= totalPages;
+  };
   const setSubmitState = () => {
     const count = selectedSpells.size;
     submitButtons.forEach((button) => { button.disabled = count === 0; });
@@ -504,7 +527,9 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
 
   const renderResults = (items, total) => {
     resultsEl.innerHTML = '';
+    totalResults = Number(total) || 0;
     resultsCountEl.textContent = `${total} ${total === 1 ? 'risultato' : 'risultati'}`;
+    syncPagination();
     if (!items.length) {
       resultsEl.innerHTML = `
         <div class="shared-spell-picker__state">
@@ -556,8 +581,10 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
     });
   };
 
-  const loadResults = async () => {
+  const loadResults = async (page = currentPage) => {
     const sequence = ++loadSequence;
+    currentPage = Math.max(1, Number(page) || 1);
+    pagination.hidden = true;
     resultsEl.innerHTML = `
       <div class="shared-spell-picker__state shared-spell-picker__state--loading">
         <span class="shared-spell-picker__spinner" aria-hidden="true"></span>
@@ -578,18 +605,12 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
         ritual: selectedProperties.has('ritual') ? true : '',
         pageSize: PAGE_SIZE
       };
-      const loadedSpells = [];
-      let page = 1;
-      let total = 0;
-      do {
-        const result = await searchSharedSpells({ ...request, page });
-        if (sequence !== loadSequence) return;
-        loadedSpells.push(...(result.items || []));
-        total = Number(result.total) || loadedSpells.length;
-        if (!result.items?.length) break;
-        page += 1;
-      } while (loadedSpells.length < total);
-      renderResults(loadedSpells, total);
+      const result = await searchSharedSpells({ ...request, page: currentPage });
+      if (sequence !== loadSequence) return;
+      totalResults = Number(result.total) || 0;
+      totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
+      if (currentPage > totalPages) return loadResults(totalPages);
+      renderResults(result.items || [], totalResults);
       resultsEl.scrollTop = 0;
     } catch (error) {
       if (sequence !== loadSequence) return;
@@ -607,7 +628,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   };
 
   const refreshFromFirstPage = () => {
-    void loadResults();
+    void loadResults(1);
   };
   queryInput.addEventListener('input', () => {
     window.clearTimeout(searchTimer);
@@ -657,6 +678,8 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
   }));
   content.querySelectorAll('input[name="spell_caster_filter"]').forEach((control) => control.addEventListener('change', refreshFromFirstPage));
   clearSelectionButton?.addEventListener('click', clearSelection);
+  previousPageButton?.addEventListener('click', () => void loadResults(currentPage - 1));
+  nextPageButton?.addEventListener('click', () => void loadResults(currentPage + 1));
   content.querySelector('[data-reset-spell-filters]')?.addEventListener('click', () => {
     queryInput.value = '';
     selectedLevel = '';
@@ -729,7 +752,7 @@ export async function openSharedSpellPicker(present = openFormModal, { defaultRu
       setSubmitState();
       queryInput.focus();
       void loadSourceOptions();
-      void loadResults();
+      void loadResults(1);
       return () => {
         window.clearTimeout(searchTimer);
         preparedButton?.remove();
