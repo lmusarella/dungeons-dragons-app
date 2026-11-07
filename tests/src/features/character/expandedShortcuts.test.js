@@ -165,12 +165,16 @@ describe('expanded shortcut reference',()=>{
     expect(journal).toContain("container.dataset.shortcutChanged = 'true'");
   });
   it('keeps preparation scrollable and restores tablet recovery gestures',()=>{
+    const home=readFileSync('src/features/character/home.js','utf8');
     const detail=readFileSync('src/features/character/home/sheetDetail.js','utf8');
     const layout=readFileSync('src/features/character/home/tabletLayout.js','utf8');
     const styles=readFileSync('src/features/character/home/fantasyTheme.css','utf8');
     const diceStyles=readFileSync('src/features/dice-roller/styles.css','utf8');
     expect(detail).toContain("detailClasses.includes('modal-card--prepared-spells')");
     expect(detail).toContain("dialog.classList.toggle('sheet-detail--preparing', isPreparationView)");
+    expect(home).toContain("container?.querySelector(\"dialog.sheet-detail[data-sheet-panel='Lancia incantesimi']\")");
+    expect(home).toContain('spellShortcut.showModal()');
+    expect(home.indexOf('spellShortcut.showModal()')).toBeLessThan(home.lastIndexOf('await openPreparedSpellsModal(afterMastery'));
     expect(styles).toContain(".sheet-detail--preparing .sheet-modal-actions > [data-add-spell] { display: none !important; }");
     expect(styles).toContain('.sheet-detail--preparing .prepared-spells-modal__catalog');
     expect(styles).toContain('touch-action: pan-y; -webkit-overflow-scrolling: touch;');

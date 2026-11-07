@@ -3124,6 +3124,10 @@ async function handleRestAction(resetOn, container) {
       }
       const afterMastery = getState().characters.find((char) => char.id === activeCharacter.id) || refreshed;
       if (afterMastery?.data?.spellcasting?.can_prepare) {
+        const spellShortcut = container?.querySelector("dialog.sheet-detail[data-sheet-panel='Lancia incantesimi']");
+        if (spellShortcut?.isConnected && !spellShortcut.open && typeof spellShortcut.showModal === 'function') {
+          spellShortcut.showModal();
+        }
         await openPreparedSpellsModal(afterMastery, container ? () => renderHome(container) : null);
       }
     }
