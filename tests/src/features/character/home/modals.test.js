@@ -116,7 +116,10 @@ describe('src/features/character/home/modals.js', () => {
     expect(optionModal).toContain('const formData = await present({');
     expect(optionModal).not.toContain('data-resource-child-roll');
     expect(preparedModal).toContain('data-prepared-visible-count');
-    expect(preparedModal).toContain("visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'");
+    expect(preparedModal).toContain('data-prepared-visible-total');
+    expect(preparedModal).toContain('data-prepared-current-total');
+    expect(preparedModal).toContain('data-prepared-pending-total');
+    expect(preparedModal).toContain('currentSpellIds.length - preparedCount');
     expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__sticky-filters\s*\{[^}]*position:\s*sticky;/s);
     expect(styles).toMatch(/\.modal-card--prepared-spells \.prepared-spells-modal__catalog\s*\{[^}]*overflow:\s*hidden;/s);
     expect(styles).toMatch(/:is\(\.sheet-detail,\.modal-card--prepared-spells\) \.prepared-spells-modal__list\s*\{[^}]*overflow-y:\s*auto;/s);

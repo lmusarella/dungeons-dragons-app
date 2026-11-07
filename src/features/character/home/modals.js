@@ -1417,7 +1417,11 @@ async function openPreparedSpellsModalAsync(character, onSave) {
   }).join('')}
         </div>
       </aside>
-      <output class="prepared-spells-modal__visible-count" data-prepared-visible-count aria-live="polite"></output>
+      <output class="prepared-spells-modal__visible-count" data-prepared-visible-count aria-live="polite">
+        <span><strong data-prepared-visible-total>0</strong><small data-prepared-visible-label>visibili</small></span>
+        <span class="is-prepared"><strong data-prepared-current-total>0</strong><small data-prepared-current-label>preparati</small></span>
+        <span><strong data-prepared-pending-total>0</strong><small>da preparare</small></span>
+      </output>
       </div>
       <section class="prepared-spells-modal__catalog" aria-label="Incantesimi preparabili">
         <div class="prepared-spells-modal__list" data-prepared-list>
@@ -1491,8 +1495,26 @@ async function openPreparedSpellsModalAsync(character, onSave) {
     });
     const emptyState = content.querySelector('[data-prepared-empty]');
     if (emptyState) emptyState.hidden = visibleCount > 0;
-    const visibleLabel = content.querySelector('[data-prepared-visible-count]');
-    if (visibleLabel) visibleLabel.textContent = `${visibleCount} ${visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'}`;
+    const currentSpellIds = selectable
+      .map((entry) => entry.id)
+      .filter((spellId) => !deletedIds.has(spellId));
+    const preparedCount = currentSpellIds.filter((spellId) => preparedIds.has(spellId)).length;
+    const pendingCount = Math.max(0, currentSpellIds.length - preparedCount);
+    const visibleTotal = content.querySelector('[data-prepared-visible-total]');
+    const preparedTotal = content.querySelector('[data-prepared-current-total]');
+    const pendingTotal = content.querySelector('[data-prepared-pending-total]');
+    const visibleCounter = content.querySelector('[data-prepared-visible-count]');
+    if (visibleTotal) visibleTotal.textContent = String(visibleCount);
+    if (preparedTotal) preparedTotal.textContent = String(preparedCount);
+    if (pendingTotal) pendingTotal.textContent = String(pendingCount);
+    const visibleLabel = content.querySelector('[data-prepared-visible-label]');
+    const preparedLabel = content.querySelector('[data-prepared-current-label]');
+    if (visibleLabel) visibleLabel.textContent = visibleCount === 1 ? 'visibile' : 'visibili';
+    if (preparedLabel) preparedLabel.textContent = preparedCount === 1 ? 'preparato' : 'preparati';
+    visibleCounter?.setAttribute(
+      'aria-label',
+      `${visibleCount} ${visibleCount === 1 ? 'incantesimo visibile' : 'incantesimi visibili'}, ${preparedCount} ${preparedCount === 1 ? 'preparato' : 'preparati'}, ${pendingCount} da preparare`
+    );
   };
 
   const markSpellForDeletion = async (spell) => {

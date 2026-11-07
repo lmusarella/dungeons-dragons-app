@@ -2337,7 +2337,21 @@ body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__sta
 }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__status-filters button { min-height: 32px; }
 body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count {
-  grid-column: auto; justify-self: end; margin: 0 2px 0 0;
+  grid-column: auto; display: flex; justify-self: end; flex-wrap: wrap; justify-content: flex-end;
+  gap: 5px; margin: 0 2px 0 0;
+}
+body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count > span {
+  display: inline-flex; align-items: baseline; gap: 4px; min-height: 28px; padding: 5px 8px;
+  border: 1px solid #d5bea0; border-radius: 999px; background: rgba(255,249,239,.92); color: #795165;
+}
+body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count > span.is-prepared {
+  border-color: #9f7181; background: #ead9df; color: #633349;
+}
+body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count strong {
+  font-size: 13px; font-variant-numeric: tabular-nums;
+}
+body :is(.sheet-detail,.modal-card--prepared-spells) .prepared-spells-modal__visible-count small {
+  font-size: 10px; font-weight: 800; white-space: nowrap;
 }
 
 /* Spell creation uses the same parchment-and-wine language as spell details. */
