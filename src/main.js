@@ -107,6 +107,24 @@ const bootstrapApp = async () => {
   }
 };
 
-registerSW({ immediate: true });
+const hadServiceWorkerController = Boolean(navigator.serviceWorker?.controller);
+let updateServiceWorker = null;
+if (hadServiceWorkerController) {
+  let reloadingForServiceWorkerUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadingForServiceWorkerUpdate) return;
+    reloadingForServiceWorkerUpdate = true;
+    window.location.reload();
+  });
+}
+updateServiceWorker = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    void updateServiceWorker?.(true);
+  },
+  onRegisterError(error) {
+    console.error('Registrazione aggiornamenti app non riuscita', error);
+  }
+});
 
 bootstrapApp();

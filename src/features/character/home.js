@@ -73,6 +73,7 @@ import {
   rollDie
 } from './home/utils.js';
 
+const homeRenderSequences = new WeakMap();
 
 function normalizeWildShapeStatBlock(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
@@ -814,12 +815,15 @@ async function chooseSpellSlotLevel(character, spell) {
 }
 
 export async function renderHome(container) {
+  const renderSequence = (homeRenderSequences.get(container) || 0) + 1;
+  homeRenderSequences.set(container, renderSequence);
   const scrollState = captureHomeScrollState(container);
   const panelContext = captureSheetPanel(container);
 
   lastHomeContainer = container;
   const state = getState();
   const { user, offline } = state;
+  const loadingErrors = [];
 
   setGlobalLoading(true);
   try {
@@ -830,7 +834,8 @@ export async function renderHome(container) {
       setState({ characters });
       await cacheSnapshot({ characters });
       } catch (error) {
-        createToast('Errore caricamento personaggi', 'error');
+        console.warn('Aggiornamento personaggi non riuscito, uso i dati locali', error);
+        if (!characters.length) loadingErrors.push('Errore caricamento personaggi');
       }
     }
 
@@ -846,9 +851,9 @@ export async function renderHome(container) {
   const canManageResources = Boolean(user) && !offline;
   const canEditCharacter = Boolean(user) && !offline;
 
-  let resources = state.cache.resources;
-  let items = state.cache.items;
-  let companions = [];
+  let resources = Array.isArray(state.cache.resources) ? state.cache.resources : [];
+  let items = Array.isArray(state.cache.items) ? state.cache.items : [];
+  let companions = Array.isArray(state.cache.companions) ? state.cache.companions : [];
   if (!offline && activeCharacter) {
     const [resourcesResult, itemsResult, characterSpellsResult, companionsResult] = await Promise.allSettled([
       fetchResources(activeCharacter.id),
@@ -862,20 +867,23 @@ export async function renderHome(container) {
       updateCache('resources', resources);
       snapshot.resources = resources;
     } else {
-      createToast('Errore caricamento risorse', 'error');
+      console.warn('Aggiornamento risorse non riuscito, uso i dati locali', resourcesResult.reason);
+      if (!resources.length) loadingErrors.push('Errore caricamento risorse');
     }
     if (itemsResult.status === 'fulfilled') {
       items = itemsResult.value;
       updateCache('items', items);
       snapshot.items = items;
     } else {
-      createToast('Errore caricamento equip', 'error');
+      console.warn('Aggiornamento equipaggiamento non riuscito, uso i dati locali', itemsResult.reason);
+      if (!items.length) loadingErrors.push('Errore caricamento equip');
     }
     if (companionsResult.status === 'fulfilled') {
       companions = companionsResult.value || [];
       updateCache('companions', companions);
     } else {
-      createToast('Errore caricamento forme animali', 'error');
+      console.warn('Aggiornamento forme animali non riuscito, uso i dati locali', companionsResult.reason);
+      if (!companions.length) loadingErrors.push('Errore caricamento forme animali');
     }
     if (characterSpellsResult.status === 'fulfilled') {
       const linkedSpells = (characterSpellsResult.value || [])
@@ -899,6 +907,10 @@ export async function renderHome(container) {
       await cacheSnapshot(snapshot);
     }
   }
+
+  // A newer refresh owns the screen. The stale one must never rebuild shortcuts or footer.
+  if (homeRenderSequences.get(container) !== renderSequence) return;
+  loadingErrors.forEach((message) => createToast(message, 'error'));
 
   const sheetCharacter = buildWildShapeAdjustedCharacter(activeCharacter, companions);
 

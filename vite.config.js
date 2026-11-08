@@ -9,6 +9,11 @@ export default defineConfig(({ command }) => {
     plugins: [
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
         includeAssets: [
           'icons/icon.svg',
           'icons/*.png',

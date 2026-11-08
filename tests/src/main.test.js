@@ -7,7 +7,10 @@ describe('main bootstrap flow', () => {
     expect(source).toContain("registerRoute('login'");
     expect(source).toContain("registerRoute('home'");
     expect(source).toContain('initRouter()');
-    expect(source).toContain('registerSW({ immediate: true })');
+    expect(source).toContain('const hadServiceWorkerController = Boolean(navigator.serviceWorker?.controller)');
+    expect(source).toContain("navigator.serviceWorker.addEventListener('controllerchange'");
+    expect(source).toContain('window.location.reload()');
+    expect(source).toContain('onNeedRefresh()');
     expect(source).toContain('bootstrapApp()');
   });
 });

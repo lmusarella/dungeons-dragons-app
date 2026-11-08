@@ -12,6 +12,17 @@ function extractNamedExports(source) {
 }
 
 describe('src/features/character/home.js', () => {
+  it('lets only the latest refresh rebuild shortcuts and the footer', () => {
+    const source = readFileSync('src/features/character/home.js', 'utf8');
+    expect(source).toContain('const homeRenderSequences = new WeakMap()');
+    expect(source).toContain('homeRenderSequences.set(container, renderSequence)');
+    expect(source).toContain('homeRenderSequences.get(container) !== renderSequence');
+    expect(source.indexOf('homeRenderSequences.get(container) !== renderSequence'))
+      .toBeLessThan(source.indexOf('retainOpenSheetPanel(container)'));
+    expect(source.indexOf('homeRenderSequences.get(container) !== renderSequence'))
+      .toBeLessThan(source.indexOf("loadingErrors.forEach((message) => createToast(message, 'error'))"));
+  });
+
   it('adds catalog spells with the assignment state explicitly chosen by the user', () => {
     const source = readFileSync('src/features/character/home.js', 'utf8');
     const catalogPicker = readFileSync('src/features/inventory/catalogPicker.js', 'utf8');

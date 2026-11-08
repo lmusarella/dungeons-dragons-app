@@ -4,26 +4,38 @@ import { cacheSnapshot } from '../../../lib/offline/cache.js';
 import { createToast } from '../../../ui/components.js';
 
 export async function saveCharacterData(character, data, message, onRender) {
-  if (!character) return;
+  if (!character) return null;
   const payload = {
     name: character.name,
     system: character.system ?? null,
     data
   };
+  let updated;
   try {
-    const updated = await updateCharacter(character.id, payload);
-    const nextCharacters = getState().characters.map((char) => (char.id === updated.id ? updated : char));
-    setState({ characters: nextCharacters });
-    await cacheSnapshot({ characters: nextCharacters });
-    if (message) {
-      createToast(message);
-    }
-    if (onRender) {
-      await onRender();
-    }
+    updated = await updateCharacter(character.id, payload);
   } catch (error) {
+    console.error('Aggiornamento personaggio non riuscito', error);
     createToast('Errore aggiornamento personaggio', 'error');
+    return null;
   }
+
+  const nextCharacters = getState().characters.map((char) => (char.id === updated.id ? updated : char));
+  setState({ characters: nextCharacters });
+  try {
+    await cacheSnapshot({ characters: nextCharacters });
+  } catch (error) {
+    console.warn('Salvataggio locale del personaggio non riuscito', error);
+  }
+  if (message) createToast(message);
+  if (onRender) {
+    try {
+      await onRender();
+    } catch (error) {
+      console.error('Aggiornamento schermata dopo il salvataggio non riuscito', error);
+      createToast('Dati salvati. Aggiornamento della schermata non riuscito.', 'warning');
+    }
+  }
+  return updated;
 }
 
 export async function consumeSpellSlot(character, level, onRender) {
@@ -42,7 +54,7 @@ export async function consumeSpellSlot(character, level, onRender) {
     slotsMax[level] = current;
   }
   slots[level] = Math.max(0, current - 1);
-  await saveCharacterData(character, {
+  const saved = await saveCharacterData(character, {
     ...data,
     spellcasting: {
       ...spellcasting,
@@ -50,7 +62,7 @@ export async function consumeSpellSlot(character, level, onRender) {
       slots_max: slotsMax
     }
   }, 'Slot incantesimo consumato', onRender);
-  return true;
+  return Boolean(saved);
 }
 
 
@@ -71,7 +83,7 @@ export async function restoreSpellSlot(character, level, onRender) {
     return false;
   }
   slots[level] = Math.min(current + 1, currentMax);
-  await saveCharacterData(character, {
+  const saved = await saveCharacterData(character, {
     ...data,
     spellcasting: {
       ...spellcasting,
@@ -79,5 +91,5 @@ export async function restoreSpellSlot(character, level, onRender) {
       slots_max: slotsMax
     }
   }, 'Slot incantesimo ripristinato', onRender);
-  return true;
+  return Boolean(saved);
 }
