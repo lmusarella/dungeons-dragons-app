@@ -195,6 +195,7 @@ function buildMenuContent() {
   const userName = user?.user_metadata?.display_name || user?.email || 'Utente';
   const menuEntries = [
     { route: 'characters', icon: '♙', label: 'Personaggi', description: 'Seleziona o crea un personaggio' },
+    { route: 'game-rooms', icon: '⌗', label: 'Stanze di gioco', description: 'Crea o raggiungi una sessione multiplayer' },
     { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci incantesimi e oggetti condivisi' }
   ];
 

@@ -73,6 +73,10 @@ registerRoute('library', async (container) => {
   const { renderLibrary } = await import('./features/library/library.js');
   await renderLibrary(container);
 });
+registerRoute('game-rooms', async (container) => {
+  const { renderGameRooms } = await import('./features/gameRooms/gameRooms.js');
+  await renderGameRooms(container);
+});
 
 subscribe(() => {
   updateOfflineBanner();
