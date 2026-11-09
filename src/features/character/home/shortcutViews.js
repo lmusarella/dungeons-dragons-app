@@ -119,8 +119,35 @@ export function polishJournalShortcut(host) {
 export function polishFamiliarsShortcut(host) {
   const layout = host.querySelector('.familiars-layout');
   const roster = host.querySelector('.familiars-quick-panel');
+  const detailArea = host.querySelector('.familiars-detail-area');
+  const hasCompanions = Boolean(roster && detailArea?.querySelector('[data-familiar-panel]'));
+  const showsDetail = hasCompanions && host.dataset.familiarDetailOpen === 'true';
+  const footer = host.closest('dialog')?.querySelector(':scope > .sheet-view-footer');
   layout?.classList.add('companion-shortcut-layout');
+  layout?.classList.toggle('is-choosing-companion', hasCompanions && !showsDetail);
+  layout?.classList.toggle('is-viewing-companion', showsDetail);
   roster?.classList.add('companion-roster');
+  if (roster) roster.hidden = showsDetail;
+  if (detailArea && hasCompanions) detailArea.hidden = !showsDetail;
+  let back = footer?.querySelector('[data-familiar-list-back]');
+  if (footer && !back) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'ghost-button sheet-detail-back';
+    back.dataset.familiarListBack = '';
+    back.textContent = '‹ Indietro';
+    back.addEventListener('click', () => {
+      delete host.dataset.familiarDetailOpen;
+      host.querySelectorAll('[data-select-companion]').forEach(card => {
+        card.classList.remove('is-active');
+        card.setAttribute('aria-pressed', 'false');
+      });
+      polishFamiliarsShortcut(host);
+    });
+    footer.prepend(back);
+  }
+  back = footer?.querySelector('[data-familiar-list-back]');
+  if (back) back.hidden = !showsDetail;
   host.querySelectorAll('[data-toggle-familiar-sheet]').forEach(toggle => {
     const identity = document.createElement('div');
     identity.className = 'familiar-sheet__identity';
@@ -130,19 +157,13 @@ export function polishFamiliarsShortcut(host) {
   host.querySelectorAll('.familiar-sheet__header').forEach(header => header.classList.add('companion-sheet-hero'));
   host.querySelectorAll('[data-familiar-content]').forEach(dashboard => {
     const abilities = dashboard.querySelector('.familiar-detail-panel--abilities');
-    const vitals = dashboard.querySelector('.familiar-detail-panel--vitals');
+    const operations = dashboard.querySelector('.familiar-detail-panel--operations');
+    const combat = dashboard.querySelector('.familiar-detail-panel--combat');
     const attacks = dashboard.querySelector('.familiar-detail-panel--attacks');
-    const notes = dashboard.querySelector('.familiar-detail-panel--notes');
-    if (!abilities || !vitals || !attacks || !notes) return;
+    if (!abilities || !operations || !combat || !attacks) return;
     const overview = document.createElement('div'); overview.className = 'companion-shortcut-overview';
-    overview.append(abilities, vitals);
-    dashboard.replaceChildren(overview, attacks, notes);
-    dashboard.dataset.shortcutKind = dashboard.id;
-    tabShortcutViews(dashboard, [
-      { key: 'overview', label: 'Scheda', node: overview },
-      { key: 'attacks', label: 'Attacchi', node: attacks },
-      { key: 'notes', label: 'Note', node: notes }
-    ], 'Sezioni della creatura');
+    overview.append(abilities, operations, combat, attacks);
+    dashboard.replaceChildren(overview);
   });
 }
 
@@ -181,6 +202,10 @@ export function createCharacterShortcuts(addPanel, configuration = {}) {
     };
     shortcut.addEventListener('click', dialog.loadShortcut);
     dialog.addEventListener('close', () => {
+      if (definition.key === 'familiars') {
+        delete host.dataset.familiarDetailOpen;
+        delete host.dataset.selectedCompanion;
+      }
       if (host.dataset.shortcutChanged !== 'true') return;
       delete host.dataset.shortcutChanged;
       configuration.onRefresh?.();

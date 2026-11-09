@@ -500,6 +500,22 @@ body dialog.sheet-detail--familiars .companion-shortcut-layout {
   display: grid; grid-template-columns: minmax(225px,27%) minmax(0,1fr); grid-template-areas: 'quick detail';
   width: 100%; height: 100%; min-height: 0; gap: 12px;
 }
+body dialog.sheet-detail--familiars .companion-shortcut-layout.is-choosing-companion {
+  grid-template-columns: minmax(0,1fr); grid-template-areas: 'quick';
+}
+body dialog.sheet-detail--familiars .companion-shortcut-layout.is-viewing-companion {
+  grid-template-columns: minmax(0,1fr); grid-template-areas: 'detail';
+}
+body dialog.sheet-detail--familiars .companion-shortcut-layout.is-choosing-companion .companion-roster {
+  width: min(900px,100%); justify-self: center; padding: 16px;
+}
+body dialog.sheet-detail--familiars .companion-shortcut-layout.is-choosing-companion .familiars-quick-list {
+  grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); align-content: start; gap: 10px;
+}
+body dialog.sheet-detail--familiars .companion-shortcut-layout.is-choosing-companion .familiar-quick-card {
+  min-height: 82px; transform: none;
+}
+body dialog.sheet-detail--familiars .companion-shortcut-layout :is(.companion-roster,.familiars-detail-area)[hidden] { display: none !important; }
 body dialog.sheet-detail--familiars .companion-roster {
   grid-area: quick; display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 9px; margin: 0; padding: 11px;
   overflow: hidden; border: 1px solid #ccb189; border-radius: 16px; background: linear-gradient(165deg,#f4e8d7,#ead7bb);
@@ -547,6 +563,7 @@ body dialog.sheet-detail--familiars .familiars-detail-area {
   grid-area: detail; width: 100%; min-width: 0; min-height: 0; padding: 0 4px 2px 0; overflow-x: hidden; overflow-y: auto;
   scrollbar-color: #a77c66 transparent; scrollbar-width: thin;
 }
+body dialog.sheet-detail--familiars > .sheet-view-footer > [data-familiar-list-back][hidden] { display: none !important; }
 body dialog.sheet-detail--familiars .familiar-sheet--refined { width: 100%; min-height: 100%; margin: 0; border: 1px solid #cfb38b !important; border-radius: 16px; }
 body dialog.sheet-detail--familiars .companion-sheet-hero {
   position: sticky; z-index: 3; top: 0; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 13px;
@@ -739,10 +756,145 @@ body .journal-file-card__cta {
 body .journal-file-card__cta:hover { border-color: #76364b; background: #f2e3df; }
 body .journal-file-card__cta--danger { border-color: #d9aaa3; background: #faece8; color: #8a3c3c; }
 
-/* Keep the active familiar card readable regardless of theme import order. */
+/* Familiar shortcut: one compact character-sheet dashboard. */
+body dialog.sheet-detail--familiars .familiar-sheet--refined {
+  min-height: 0; overflow: visible; background: linear-gradient(145deg,rgba(255,251,243,.98),rgba(244,232,213,.98));
+  box-shadow: inset 0 0 0 3px rgba(255,248,235,.75);
+}
+body dialog.sheet-detail--familiars .companion-sheet-hero {
+  grid-template-columns: 76px minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 12px 14px;
+  border: 1px solid #d2b98f; border-radius: 14px; background: linear-gradient(115deg,#f4e6d0,#fffaf1 68%,#eedfc7);
+}
+body dialog.sheet-detail--familiars .companion-sheet-hero .familiar-avatar { width: 72px; height: 72px; border-radius: 13px; }
+body dialog.sheet-detail--familiars .familiar-sheet__identity { display: flex; min-width: 0; align-items: center; }
+body dialog.sheet-detail--familiars .familiar-sheet__title {
+  display: grid; min-width: 0; width: 100%; grid-template-columns: minmax(0,max-content) minmax(0,1fr);
+  grid-template-areas: 'kicker notes' 'name notes'; align-items: center; column-gap: 16px; row-gap: 4px;
+}
+body dialog.sheet-detail--familiars .familiar-sheet__kicker { grid-area: kicker; }
+body dialog.sheet-detail--familiars .familiar-sheet__title > strong { grid-area: name; font-size: 25px; line-height: 1; }
+body dialog.sheet-detail--familiars .familiar-sheet__notes {
+  grid-area: notes; overflow: hidden; padding-left: 14px; border-left: 1px solid #dac5a6;
+  color: #725f57; font-size: 10px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap;
+}
+body dialog.sheet-detail--familiars .familiar-sheet__menu { position: relative; align-self: start; }
+body dialog.sheet-detail--familiars .familiar-sheet__menu > summary {
+  display: grid; width: 38px; height: 34px; place-items: center; border: 1px solid #c7a77d; border-radius: 10px;
+  background: #fff9ed; color: #653449; font-size: 15px; font-weight: 900; cursor: pointer; list-style: none;
+}
+body dialog.sheet-detail--familiars .familiar-sheet__menu > summary::-webkit-details-marker { display: none; }
+body dialog.sheet-detail--familiars .familiar-sheet__menu-popover {
+  position: absolute; z-index: 8; top: 40px; right: 0; display: grid; width: 150px; gap: 4px; padding: 6px;
+  border: 1px solid #cdb28c; border-radius: 11px; background: #fffaf1; box-shadow: 0 12px 25px rgba(56,35,39,.2);
+}
+body dialog.sheet-detail--familiars .familiar-sheet__menu-popover button { min-height: 34px; border: 0; border-radius: 8px; background: transparent; color: #603448; font-weight: 800; text-align: left; cursor: pointer; }
+body dialog.sheet-detail--familiars .familiar-sheet__menu-popover button:hover { background: #f0e2d0; }
+body dialog.sheet-detail--familiars .familiar-sheet__menu-popover .familiar-sheet__menu-delete { color: #984448; }
+body dialog.sheet-detail--familiars .familiar-dashboard { padding: 9px 0 0; }
+body dialog.sheet-detail--familiars .companion-shortcut-overview {
+  display: grid !important; grid-template-columns: minmax(0,1fr) !important;
+  grid-template-areas: 'abilities' 'operations' 'combat' 'attacks'; gap: 8px; align-items: start;
+}
+body dialog.sheet-detail--familiars .familiar-detail-panel--abilities { grid-area: abilities !important; }
+body dialog.sheet-detail--familiars .familiar-detail-panel--operations { grid-area: operations !important; }
+body dialog.sheet-detail--familiars .familiar-detail-panel--combat { grid-area: combat !important; }
+body dialog.sheet-detail--familiars .familiar-detail-panel--attacks { grid-area: attacks !important; }
+body dialog.sheet-detail--familiars .familiar-detail-panel {
+  display: grid !important; grid-template-columns: 132px minmax(0,1fr); min-width: 0; min-height: 0; align-items: stretch; gap: 10px;
+  padding: 7px 9px; border: 1px solid #dcc5a3; border-radius: 13px; background: rgba(255,250,241,.72); box-shadow: none;
+}
+body dialog.sheet-detail--familiars .familiar-panel-title { display: grid; min-width: 0; align-content: center; margin: 0; padding: 3px 10px 3px 2px; border-right: 1px solid #dfcdb2; }
+body dialog.sheet-detail--familiars .familiar-panel-title > div { display: grid; gap: 2px; }
+body dialog.sheet-detail--familiars .familiar-panel-title strong { color: #5e3545; font: 800 13px/1.15 'Fraunces',Georgia,serif; }
+body dialog.sheet-detail--familiars .familiar-panel-title small { color: #88736a; font-size: 9px; }
+body dialog.sheet-detail--familiars .familiar-characteristics-panel .stat-panel { min-width: 0; align-self: center; padding: 0; border: 0; background: transparent; }
+body dialog.sheet-detail--familiars .familiar-ability-grid { grid-template-columns: repeat(6,minmax(0,1fr)) !important; gap: 6px; }
+body dialog.sheet-detail--familiars .familiar-ability-card { min-height: 58px; padding-block: 7px; }
+body dialog.sheet-detail--familiars .familiar-operational-stats {
+  display: grid; grid-template-columns: repeat(9,minmax(78px,1fr)); align-self: center; gap: 6px; min-width: 0;
+  overflow-x: auto; scrollbar-width: thin;
+}
+body dialog.sheet-detail--familiars .familiar-operational-stats > .combat-stat,
+body dialog.sheet-detail--familiars .familiar-operation-card {
+  display: grid; min-width: 0; min-height: 54px; grid-template-columns: minmax(0,1fr); grid-template-rows: 18px auto;
+  align-content: center; justify-items: start; gap: 3px; padding: 7px 8px; border: 1px solid #dcc5a3; border-radius: 11px;
+  background: linear-gradient(145deg,#fffaf0,#f2e6d5); box-shadow: none;
+}
+body dialog.sheet-detail--familiars .familiar-operational-movement,
+body dialog.sheet-detail--familiars .familiar-movement-grid { display: contents; }
+body dialog.sheet-detail--familiars .familiar-operational-stats .combat-stat__label {
+  display: block; width: 100%; overflow: hidden; color: #765c4f; font-size: 7.5px; font-weight: 800; line-height: 18px;
+  letter-spacing: .025em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap;
+}
+body dialog.sheet-detail--familiars .familiar-operational-stats .combat-stat > strong {
+  overflow: hidden; color: #4f303a; font: 800 17px/1 'Fraunces',Georgia,serif; text-overflow: ellipsis; white-space: nowrap;
+}
+body dialog.sheet-detail--familiars .familiar-health-combat-grid {
+  display: grid; grid-template-columns: minmax(0,1fr); align-items: stretch; gap: 10px; min-width: 0; padding: 2px;
+}
+body dialog.sheet-detail--familiars .familiar-hp-card { width: 100%; min-width: 0; height: 100%; padding: 0; overflow: hidden; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__controls { display: grid; grid-template-columns: 64px minmax(0,1fr) 64px; min-height: 92px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__action-zone { display: grid; place-items: center; padding: 6px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__life-zone { display: grid; align-content: center; gap: 6px; min-width: 0; padding: 9px 8px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__heading,
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__values { display: flex; align-items: center; gap: 6px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__bars { display: grid; gap: 4px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-bar-track { height: 10px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action { display: grid; min-width: 48px; min-height: 48px; place-items: center; gap: 2px; padding: 5px; border-radius: 12px; font-size: 9px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action > span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 8px; color: #fff; font-size: 18px; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action--damage { border-color: #d8a6a6; background: #f8e4e2; color: #8f3d43; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action--damage > span { background: #a94349; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action--heal { border-color: #9fc4aa; background: #e3f0e6; color: #356c50; }
+body dialog.sheet-detail--familiars .familiar-hp-card .hp-inline-action--heal > span { background: #3f7f5e; }
+body dialog.sheet-detail--familiars .familiar-attacks-panel { min-width: 0; align-items: center; }
+body dialog.sheet-detail--familiars .familiar-attacks-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-content: start; gap: 8px; }
+body dialog.sheet-detail--familiars .familiar-attack-card {
+  display: grid; width: 100%; min-width: 0; height: auto; min-height: 0; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto;
+  gap: 7px; padding: 9px 10px;
+}
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__header { min-height: 0; gap: 2px; padding: 0; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__title { font-size: 15px !important; line-height: 1.15 !important; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__eyebrow { font-size: 8px; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__footer { margin-top: 0; padding-top: 7px; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__button { min-height: 31px !important; padding: 5px 8px !important; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__footer > * { flex: 1 1 0; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__damage-actions,
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__damage-actions > button { width: 100%; }
+body dialog.sheet-detail--familiars .familiar-attack-card .play-card__damage-actions { margin-left: 0 !important; }
+body dialog.sheet-detail--familiars .familiar-quick-card { position: relative; padding-right: 9px; }
+body dialog.sheet-detail--familiars .familiar-quick-card__selected { display: none; position: absolute; top: 7px; right: 7px; padding: 3px 6px; border-radius: 999px; background: #71364c; color: #fff8ec; font-size: 7px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+
+/* Keep the selected familiar explicit and readable regardless of import order. */
 body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active {
-  border-color: #71364c !important; background: linear-gradient(135deg,#71364c,#8c4b62) !important;
-  color: #fff8ec !important; box-shadow: inset 3px 0 0 #f0ca72,0 5px 14px rgba(78,37,54,.18) !important;
+  border-color: #71364c !important; background: linear-gradient(135deg,#f6e8e8,#eed9de) !important;
+  color: #56333f !important; box-shadow: inset 4px 0 0 #71364c,0 5px 14px rgba(78,37,54,.13) !important;
 }
 body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body > :is(strong,span,small),
-body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body small b { color: #fff8ec !important; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body small b { color: #56333f !important; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__body > strong { padding-right: 42px; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__selected { display: inline-flex; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card__health { height: 6px; overflow: hidden; border-radius: 999px; background: #dfd0c8; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card__health i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#a94349,#cf6963); }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__health { background: #d9c5c7; }
+body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.is-active .familiar-quick-card__health i { background: linear-gradient(90deg,#a94349,#cf6963); }
+
+@media (max-width: 1050px) and (min-width: 521px) {
+  body dialog.sheet-detail--familiars .companion-shortcut-layout {
+    grid-template-columns: minmax(190px,23%) minmax(0,1fr); grid-template-rows: minmax(0,1fr); grid-template-areas: 'quick detail';
+  }
+  body dialog.sheet-detail--familiars .companion-roster { max-height: none; }
+  body dialog.sheet-detail--familiars .familiars-quick-list { display: grid; overflow-x: hidden; overflow-y: auto; }
+  body dialog.sheet-detail--familiars .familiar-quick-card { width: 100%; min-width: 0; min-height: 66px; }
+}
+@media (max-width: 800px) {
+  body dialog.sheet-detail--familiars .familiar-detail-panel { grid-template-columns: 112px minmax(0,1fr); }
+  body dialog.sheet-detail--familiars .familiar-health-combat-grid { grid-template-columns: 1fr; }
+  body dialog.sheet-detail--familiars .familiar-attacks-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  body dialog.sheet-detail--familiars .companion-sheet-hero { grid-template-columns: 58px minmax(0,1fr) auto; }
+  body dialog.sheet-detail--familiars .companion-sheet-hero .familiar-avatar { width: 54px; height: 54px; }
+  body dialog.sheet-detail--familiars .familiar-sheet__title > strong { font-size: 19px; }
+  body dialog.sheet-detail--familiars .familiar-hp-card .hp-vitals-card__controls { grid-template-columns: 56px minmax(0,1fr) 56px; }
+}

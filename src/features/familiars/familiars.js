@@ -3,17 +3,10 @@ import { getState, normalizeCharacterId } from '../../app/state.js';
 import { attachNumberSteppers, buildInput, buildTextarea, createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { openDiceOverlay } from '../dice-roller/overlay/dice.js';
 import { getAbilityModifier } from '../character/home/utils.js';
-import { buildHpShortcutFields } from '../character/home/hpModal.js';
+import { buildHpActionFields } from '../character/home/hpModal.js';
 import { openAvatarModal } from '../character/home/modals.js';
 
-const DAMAGE_ACTION_ICON = `
-  <svg class="attack-action-button__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>
-    <circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="9" r="1"></circle>
-    <circle cx="12" cy="12" r="1"></circle><circle cx="9" cy="15" r="1"></circle><circle cx="15" cy="15" r="1"></circle>
-  </svg>`;
-
-const ABILITY_KEYS = ['str', 'dex', 'con', 'wis', 'int', 'cha'];
+const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const ABILITY_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', wis: 'SAG', int: 'INT', cha: 'CAR' };
 const KIND_OPTIONS = [
   { value: 'familiar', label: 'Famiglio' },
@@ -111,6 +104,7 @@ function buildCompanionQuickButton(companion, isSelected = false) {
         <small><b>${hpCurrent}/${hpMax}</b> PF · <b>${armorClass}</b> CA</small>
         <span class="familiar-quick-card__health" role="meter" aria-label="Punti ferita ${hpCurrent} su ${hpMax}" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}"><i style="width:${hpPercent}%"></i></span>
       </span>
+      <span class="familiar-quick-card__selected" aria-hidden="true">✓ Attivo</span>
     </button>
   `;
 }
@@ -132,12 +126,13 @@ function buildCompanionCard(companion, isSelected = false) {
       </button>
     `;
   }).join('');
-  const speeds = Object.entries(SPEED_LABELS).map(([key, config]) => `
-    <span class="vital-mini-chip familiar-movement-chip">
-      <span><span aria-hidden="true">${config.icon}</span> ${config.label}</span>
-      <strong>${formatSpeed(statBlock.speeds?.[key])}</strong>
-    </span>
-  `).join('');
+  const speeds = Object.entries(SPEED_LABELS)
+    .map(([key, config]) => `
+      <div class="combat-stat familiar-operation-card familiar-operation-card--speed">
+        <span class="combat-stat__label"><span aria-hidden="true">${config.icon}</span> ${config.label}</span>
+        <strong>${formatSpeed(statBlock.speeds?.[key])}</strong>
+      </div>
+    `).join('');
   const initiative = statBlock.initiative === null || statBlock.initiative === undefined || statBlock.initiative === ''
     ? (getAbilityModifier(Number(statBlock.abilities?.dex) || 10) ?? 0)
     : Number(statBlock.initiative) || 0;
@@ -150,22 +145,27 @@ function buildCompanionCard(companion, isSelected = false) {
       const damageModifier = Number(attack.damage_modifier) || 0;
       const damageLabel = `${attack.damage || '-'}${damageModifier ? ` (${formatSigned(damageModifier)})` : ''}`;
       return `
-      <div class="weapon-card familiar-attack-card" data-roll-attack-card="${escapeHtml(companion.id)}:${index}" role="button" tabindex="0" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">
-        <div class="weapon-card__main">
-          <strong>${escapeHtml(attack.name || `Attacco ${index + 1}`)}</strong>
-          <p class="muted">Colpire ${formatSigned(attack.to_hit || 0)} · Danni ${escapeHtml(damageLabel)}</p>
+      <article class="play-card play-card--attack familiar-attack-card" aria-label="Attacco ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">
+        <div class="play-card__header">
+          <div class="play-card__metadata play-card__metadata--heading">
+            <span class="play-card__eyebrow">Mischia · ${escapeHtml(formatKind(companion.kind))}</span>
+          </div>
+          <h3 class="play-card__title">${escapeHtml(attack.name || `Attacco ${index + 1}`)}</h3>
         </div>
-        <div class="familiar-attack-actions">
-          <button class="resource-cta-button resource-cta-button--label familiar-hit-button" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tira per colpire ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">Colpire</button>
-          <button class="attack-action-button attack-action-button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Tira danni ${escapeHtml(attack.name || `Attacco ${index + 1}`)}" title="Tira i danni">${DAMAGE_ACTION_ICON}</button>
+        <div class="play-card__footer">
+          <button class="play-card__button play-card__button--with-value play-card__button--primary" type="button" data-roll-attack="${escapeHtml(companion.id)}:${index}" aria-label="Tiro per colpire con ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">
+            <span class="play-card__button-label">Tiro per colpire</span>
+            <strong class="play-card__button-value">${formatSigned(attack.to_hit || 0)}</strong>
+          </button>
+          <span class="play-card__damage-actions">
+            <button class="play-card__button play-card__button--damage familiar-damage-button" type="button" data-roll-damage="${escapeHtml(companion.id)}:${index}" aria-label="Danni con ${escapeHtml(attack.name || `Attacco ${index + 1}`)}">${escapeHtml(damageLabel)}</button>
+          </span>
         </div>
-      </div>
+      </article>
     `;
     }).join('')
     : '<p class="muted">Nessun attacco configurato.</p>';
-  const notes = companion.notes?.trim()
-    ? `<div class="detail-card detail-card--text familiar-notes"><p>${escapeHtml(companion.notes)}</p></div>`
-    : '<p class="muted">Nessuna nota aggiunta.</p>';
+  const notes = companion.notes?.trim() ? escapeHtml(companion.notes) : '';
   const hpCurrent = Number(statBlock.hp.current) || 0;
   const hpMax = Math.max(Number(statBlock.hp.max) || hpCurrent || 1, 1);
   const hpTemp = Math.max(Number(statBlock.hp.temp) || 0, 0);
@@ -189,92 +189,79 @@ function buildCompanionCard(companion, isSelected = false) {
           <span class="familiar-sheet__title">
             <span class="familiar-sheet__kicker">Compagno attivo · ${escapeHtml(formatKind(companion.kind))}</span>
             <strong>${escapeHtml(companion.name)}</strong>
-            <span class="character-meta">
-              <span class="meta-tag"><small>PF</small><strong>${hpCurrent}/${hpMax}</strong></span>
-              <span class="meta-tag"><small>CA</small><strong>${armorClass}</strong></span>
-              <span class="meta-tag"><small>Iniziativa</small><strong>${formatSigned(initiative)}</strong></span>
-            </span>
+             ${notes ? `<span class="familiar-sheet__notes">${notes}</span>` : ''}
           </span>
         </button>
-        <div class="button-row familiar-sheet__actions">
-          <button class="ghost-button familiar-sheet__action familiar-sheet__action--edit" data-edit-companion="${escapeHtml(companion.id)}" type="button" aria-label="Modifica ${escapeHtml(companion.name)}"><span aria-hidden="true">✎</span> Modifica</button>
-          <button class="ghost-button familiar-sheet__action familiar-sheet__action--delete" data-delete-companion="${escapeHtml(companion.id)}" type="button" aria-label="Elimina ${escapeHtml(companion.name)}"><span aria-hidden="true">×</span></button>
-        </div>
+        <details class="familiar-sheet__menu">
+          <summary aria-label="Azioni per ${escapeHtml(companion.name)}">•••</summary>
+          <div class="familiar-sheet__menu-popover">
+            <button data-edit-companion="${escapeHtml(companion.id)}" type="button"><span aria-hidden="true">✎</span> Modifica</button>
+            <button class="familiar-sheet__menu-delete" data-delete-companion="${escapeHtml(companion.id)}" type="button"><span aria-hidden="true">×</span> Elimina</button>
+          </div>
+        </details>
       </header>
       <div class="familiar-dashboard" id="familiar-content-${escapeHtml(companion.id)}" data-familiar-content>
-        <section class="home-section familiar-detail-panel familiar-characteristics-panel familiar-detail-panel--abilities">
-          <header class="familiar-panel-title">
-            <p class="eyebrow">Caratteristiche</p>
+        <section class="character-sheet-section familiar-detail-panel familiar-characteristics-panel familiar-detail-panel--abilities">
+          <header class="character-sheet-section__header familiar-panel-title">
+            <div><strong>Caratteristiche</strong><small>Valori e modificatori principali</small></div>
           </header>
-          <div class="stat-grid stat-grid--compact stat-grid--abilities familiar-characteristics-grid familiar-ability-grid">${abilities}</div>
+          <div class="stat-panel"><div class="stat-grid stat-grid--compact stat-grid--abilities familiar-characteristics-grid familiar-ability-grid">${abilities}</div></div>
         </section>
-        <section class="hp-panel familiar-vitals-panel familiar-detail-panel--vitals" aria-label="Statistiche principali di ${escapeHtml(companion.name)}">
-          <div class="combat-vitals-grid familiar-combat-vitals-grid">
+        <section class="character-sheet-section familiar-detail-panel familiar-operations-panel familiar-detail-panel--operations" aria-label="Statistiche operative di ${escapeHtml(companion.name)}">
+          <header class="character-sheet-section__header familiar-panel-title">
+            <div><strong>Statistiche operative</strong><small>Iniziativa, difesa, movimento e sensi</small></div>
+          </header>
+          <div class="character-quick-stats familiar-operational-stats">
             <div class="combat-stat combat-stat--armor" title="Classe armatura" aria-label="Classe armatura ${armorClass}">
-              <span class="combat-stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 3 5.5 5.5v5.2c0 4.2 2.6 8 6.5 10.3 3.9-2.3 6.5-6.1 6.5-10.3V5.5L12 3Z"/></svg>
-              </span>
               <span class="combat-stat__label">Classe armatura</span>
               <strong>${armorClass}</strong>
             </div>
             <div class="combat-stat combat-stat--initiative" title="Iniziativa" aria-label="Iniziativa ${formatSigned(initiative)}">
-              <span class="combat-stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="m13.5 2-8 11h6l-1 9 8-12h-6l1-8Z"/></svg>
-              </span>
               <span class="combat-stat__label">Iniziativa</span>
               <strong>${formatSigned(initiative)}</strong>
             </div>
             <div class="combat-stat combat-stat--proficiency" title="Bonus competenza" aria-label="Bonus competenza ${formatSigned(statBlock.proficiency_bonus)}">
-              <span class="combat-stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="m12 3 2.5 5.1 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3Z"/></svg>
-              </span>
               <span class="combat-stat__label">Bonus competenza</span>
               <strong>${formatSigned(statBlock.proficiency_bonus)}</strong>
             </div>
+            <div class="familiar-operational-movement" aria-label="Movimento e sensi">
+              <div class="familiar-movement-grid">${speeds}</div>
+              <div class="combat-stat familiar-operation-card familiar-operation-card--darkvision"><span class="combat-stat__label">Scurovisione</span><strong>${darkvisionLabel}</strong></div>
+            </div>
+          </div>
+        </section>
+        <section class="character-sheet-section familiar-detail-panel familiar-combat-panel familiar-detail-panel--combat" aria-label="Salute e combattimento di ${escapeHtml(companion.name)}">
+          <header class="character-sheet-section__header familiar-panel-title">
+            <div><strong>Salute e combattimento</strong><small>Punti ferita e stato corrente</small></div>
+          </header>
+          <div class="familiar-health-combat-grid">
             <div class="hp-vitals-card familiar-hp-card">
-              <div class="hp-bar-label">
-                <span class="hp-vitals-card__icon" aria-hidden="true">♥</span>
-                <span class="hp-bar-label__title">Punti ferita</span>
-                <strong class="hp-bar-label__value">${hpCurrent}/${hpMax}</strong>
-                <span class="hp-bar-label__percent" aria-label="Percentuale vita ${Math.round(hpPercent)}%">${Math.round(hpPercent)}%</span>
-                <span class="familiar-hp-actions" aria-label="Azioni sui punti ferita">
-                  <button class="familiar-hp-action familiar-hp-action--heal" type="button" data-companion-hp-action="heal" data-companion-id="${escapeHtml(companion.id)}" aria-label="Cura o assegna punti ferita temporanei a ${escapeHtml(companion.name)}">
-                    <span aria-hidden="true">+</span><strong>Cura</strong>
-                  </button>
-                  <button class="familiar-hp-action familiar-hp-action--damage" type="button" data-companion-hp-action="damage" data-companion-id="${escapeHtml(companion.id)}" aria-label="Fai subire danno a ${escapeHtml(companion.name)}">
-                    <span aria-hidden="true">−</span><strong>Danno</strong>
-                  </button>
-                </span>
-              </div>
-              <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}">
-                <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
-              </div>
-              ${hasTempHp ? `
-              <div class="hp-vitals-card__temp-label familiar-temp-hp-label is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></div>
-              <div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="Punti ferita temporanei" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpTemp}">
-                <div class="hp-bar hp-bar--temp is-active"><div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div></div>
-              </div>
-              ` : ''}
-              <div class="familiar-vitals-info" aria-label="Movimento e sensi">
-                <div class="familiar-movement-grid">${speeds}</div>
-                <span class="vital-mini-chip vital-mini-chip--darkvision familiar-darkvision-chip">
-                  <span>Scurovisione</span><strong>${darkvisionLabel}</strong>
-                </span>
+              <div class="hp-vitals-card__controls">
+                <div class="hp-vitals-card__action-zone hp-vitals-card__action-zone--damage">
+                  <button class="hp-inline-action hp-inline-action--damage familiar-hp-action" type="button" data-companion-hp-action="damage" data-companion-id="${escapeHtml(companion.id)}" aria-label="Fai subire danno a ${escapeHtml(companion.name)}"><span aria-hidden="true">−</span><strong>Danno</strong></button>
+                </div>
+                <div class="hp-vitals-card__life-zone">
+                  <div class="hp-vitals-card__header">
+                    <span class="hp-vitals-card__heading"><span class="hp-vitals-card__icon" aria-hidden="true">♥</span><strong class="hp-bar-label__title">Punti ferita</strong></span>
+                    <span class="hp-vitals-card__values"><strong class="hp-bar-label__value">${hpCurrent}/${hpMax}</strong><span class="hp-bar-label__percent" aria-label="Percentuale vita ${Math.round(hpPercent)}%">${Math.round(hpPercent)}%</span></span>
+                  </div>
+                  <div class="hp-vitals-card__bars">
+                    <div class="hp-bar-track" role="meter" aria-label="Punti ferita attuali" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpCurrent}"><div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div></div>
+                    ${hasTempHp ? `<div class="hp-vitals-card__temp-label familiar-temp-hp-label is-active"><span>PF temporanei</span><strong>${hpTemp}</strong></div><div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="Punti ferita temporanei" aria-valuemin="0" aria-valuemax="${hpMax}" aria-valuenow="${hpTemp}"><div class="hp-bar hp-bar--temp is-active"><div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div></div></div>` : ''}
+                  </div>
+                </div>
+                <div class="hp-vitals-card__action-zone hp-vitals-card__action-zone--heal">
+                  <button class="hp-inline-action hp-inline-action--heal familiar-hp-action" type="button" data-companion-hp-action="heal" data-companion-id="${escapeHtml(companion.id)}" aria-label="Cura o assegna punti ferita temporanei a ${escapeHtml(companion.name)}"><span aria-hidden="true">+</span><strong>Cura</strong></button>
+                </div>
               </div>
             </div>
           </div>
         </section>
-        <section class="home-section home-scroll-panel familiar-detail-panel familiar-attacks-panel familiar-detail-panel--attacks">
-          <header class="familiar-panel-title">
-            <p class="eyebrow">Attacchi</p>
+        <section class="character-sheet-section familiar-detail-panel familiar-attacks-panel familiar-detail-panel--attacks" aria-label="Attacchi di ${escapeHtml(companion.name)}">
+          <header class="character-sheet-section__header familiar-panel-title">
+            <div><strong>Attacchi</strong><small>Tiri per colpire e danni</small></div>
           </header>
-          <div class="home-scroll-body">${attacks}</div>
-        </section>
-        <section class="home-section familiar-detail-panel familiar-notes-panel familiar-detail-panel--notes">
-          <header class="familiar-panel-title">
-            <p class="eyebrow">Note</p>
-          </header>
-          ${notes}
+          <div class="detail-grid detail-grid--compact familiar-attacks-grid">${attacks}</div>
         </section>
       </div>
     </article>
@@ -313,6 +300,7 @@ export async function renderFamiliars(container) {
   }
 
   const selectedCompanionId = companions.find(companion => String(companion.id) === container.dataset.selectedCompanion)?.id || companions[0]?.id;
+  const showsShortcutDetail = !usesContextualLoader || container.dataset.familiarDetailOpen === 'true';
   container.innerHTML = `
     <div class="home-layout familiars-layout familiars-layout--refined ${companions.length ? '' : 'is-empty'}">
       ${companions.length ? `<aside class="card home-card home-section familiars-quick-panel familiars-quick-panel--refined" aria-label="Seleziona famiglio">
@@ -321,10 +309,10 @@ export async function renderFamiliars(container) {
             <p class="eyebrow">Compagni</p>
             <span class="muted">${companions.length} ${companions.length === 1 ? 'scheda' : 'schede'}</span>
           </div>
-          <button class="familiar-add-button" type="button" data-add-companion aria-label="Aggiungi famiglio o evocazione"><span aria-hidden="true">+</span><strong>Aggiungi</strong></button>
+          <button class="familiar-add-button" type="button" data-add-companion aria-label="Aggiungi famiglio o evocazione"><span aria-hidden="true">+</span><strong>Nuovo</strong></button>
         </div>
         <div class="familiars-quick-list">
-          ${companions.map((companion) => buildCompanionQuickButton(companion, companion.id === selectedCompanionId)).join('')}
+          ${companions.map((companion) => buildCompanionQuickButton(companion, showsShortcutDetail && companion.id === selectedCompanionId)).join('')}
         </div>
       </aside>` : ''}
       <main class="familiars-detail-area">
@@ -750,6 +738,7 @@ export async function renderFamiliars(container) {
   container.querySelectorAll('[data-select-companion]').forEach((btn) => btn.addEventListener('click', () => {
     const companionId = btn.dataset.selectCompanion;
     container.dataset.selectedCompanion = companionId;
+    if (usesContextualLoader) container.dataset.familiarDetailOpen = 'true';
     container.querySelectorAll('[data-select-companion]').forEach((entry) => {
       const isActive = entry.dataset.selectCompanion === companionId;
       entry.classList.toggle('is-active', isActive);
@@ -760,6 +749,8 @@ export async function renderFamiliars(container) {
       panel.hidden = !isActive;
       panel.classList.toggle('is-active', isActive);
     });
+    container.polishShortcut?.();
+    container.querySelector('.familiars-detail-area')?.scrollTo({ top: 0, behavior: 'instant' });
   }));
   container.querySelectorAll('[data-toggle-familiar-sheet]').forEach((btn) => btn.addEventListener('click', () => {
     const panel = btn.closest('[data-familiar-panel]');
@@ -780,12 +771,9 @@ export async function renderFamiliars(container) {
     const current = normalizeStatBlock(companion.stat_block);
     const formData = await openFormModal({
       title: action === 'heal' ? `Cura PF · ${companion.name}` : `Subisci danno · ${companion.name}`,
-      submitLabel: action === 'heal' ? 'Applica' : 'Danno',
-      content: buildHpShortcutFields({ data: { hp: current.hp } }, {
-        allowHitDice: false,
-        allowTempHp: action === 'heal',
-        allowMaxOverride: action === 'damage'
-      })
+      submitLabel: action === 'heal' ? 'Cura' : 'Danno',
+      cardClass: ['modal-card--quick-action', 'modal-card--hp-action'],
+      content: buildHpActionFields({ data: { hp: current.hp } }, action)
     });
     if (!formData) return;
     const amount = Number(formData.get('amount'));
@@ -797,7 +785,8 @@ export async function renderFamiliars(container) {
     const hpMax = Math.max(Number(current.hp.max) || hpCurrent || 1, 1);
     const hpTemp = Math.max(Number(current.hp.temp) || 0, 0);
     let nextHp;
-    if (action === 'heal' && formData.has('temp_hp')) {
+    const useTempHp = action === 'heal' && formData.get('healing_target') === 'temp';
+    if (useTempHp) {
       nextHp = { ...current.hp, temp: hpTemp + amount };
     } else if (action === 'heal') {
       nextHp = { ...current.hp, current: Math.min(hpCurrent + amount, hpMax) };
@@ -821,7 +810,7 @@ export async function renderFamiliars(container) {
       await updateCompanion(companion.id, { stat_block: { ...current, hp: nextHp } });
       const message = action === 'damage'
         ? `${companion.name} subisce ${amount} danni`
-        : (formData.has('temp_hp') ? `PF temporanei +${amount} a ${companion.name}` : `${companion.name} curato di ${amount} PF`);
+        : (useTempHp ? `PF temporanei +${amount} a ${companion.name}` : `${companion.name} curato di ${amount} PF`);
       createToast(message);
       await refreshAfterMutation();
     } catch {
