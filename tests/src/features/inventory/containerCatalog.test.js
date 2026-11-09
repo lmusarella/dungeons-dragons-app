@@ -15,6 +15,23 @@ describe('container navigation and persistent filters', () => {
     expect(view.items.map(item => item.id)).toEqual(['bag', 'sword']);
     expect(buildContainerCatalog(view)).toContain('data-open-container="bag"');
   });
+  it('shows the total value of recursively transported contents on container cards', () => {
+    const valued = [
+      { id: 'bag', name: 'Zaino', category: 'container', value_cp: 500, qty: 1 },
+      { id: 'pouch', name: 'Borsa', category: 'container', container_item_id: 'bag', value_cp: 20, qty: 1 },
+      { id: 'gem', name: 'Gemma', category: 'loot', container_item_id: 'pouch', value_cp: 150, qty: 2 }
+    ];
+    const view = getContainerView(valued);
+    const bag = view.containers.find((item) => item.id === 'bag');
+    expect(bag.totalContentValue).toBe(320);
+    const html = buildContainerCatalog(view);
+    expect(html).toContain('Valore totale');
+    expect(html).toContain('coin-avatar--gp');
+    expect(html).toContain('coin-avatar--sp');
+    expect(html).toContain('>3</b><small>monete d\'oro</small>');
+    expect(html).toContain('>2</b><small>monete d\'argento</small>');
+    expect(html).toContain('inventory-container-card__coin');
+  });
   it('groups equipped items in a virtual container and removes them from loose locations', () => {
     const root = getContainerView(items);
     const equipped = getContainerView(items, {}, EQUIPPED_CONTAINER_ID);

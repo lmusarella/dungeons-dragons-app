@@ -2,7 +2,7 @@ import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { buildCompactItemList } from './compactTables.js';
 import { calcItemWeight, calcSelectionCarriedWeight } from '../../lib/calc.js';
 import { formatWeight } from '../../lib/format.js';
-import { getEquipSlots } from './utils.js';
+import { getEquipSlots, getInventoryItemValueDisplay, splitCopperValue } from './utils.js';
 
 export const EQUIPPED_CONTAINER_ID = '__equipped__';
 export const LOCATION_CONTAINER_PREFIX = '__location__:';
@@ -62,6 +62,16 @@ export function getContainerView(items, filters = {}, containerId = '') {
     }
     return result;
   };
+  const totalValue = (valueItems) => {
+    const visited = new Set();
+    return valueItems.reduce((total, item) => {
+      const id = String(item?.id ?? '');
+      if (id && visited.has(id)) return total;
+      if (id) visited.add(id);
+      return total + getInventoryItemValueDisplay(item).copper;
+    }, 0);
+  };
+  const withContainerContents = (rootItems) => rootItems.flatMap((item) => item?.category === 'container' ? [item, ...descendants(item)] : [item]);
   const matchesBelow = (item, seen = new Set()) => {
     const id = String(item.id);
     if (seen.has(id)) return false;
@@ -96,6 +106,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
     category: 'virtual',
     isVirtual: true,
     totalWeight: calcSelectionCarriedWeight(equippedItems, items),
+    totalContentValue: totalValue(withContainerContents(equippedItems)),
     childCount: items.filter(isEquippedItem).length,
     matchingCount: equippedItems.length
   };
@@ -120,6 +131,7 @@ export function getContainerView(items, filters = {}, containerId = '') {
       return {
         id: getLocationContainerId(name), name, category: 'virtual', isVirtual: true, isLocation: true,
         totalWeight: locationItems.reduce((total, item) => total + calcItemWeight(item, items), 0),
+        totalContentValue: totalValue(groupedItems),
         childCount: groupedItems.length,
         matchingCount: matchingItems.length
       };
@@ -127,7 +139,13 @@ export function getContainerView(items, filters = {}, containerId = '') {
     .filter((location) => location.matchingCount > 0);
   const visibleContainers = entries
     .filter(item => item.category === 'container' && matchesBelow(item))
-    .map(item => ({ ...item, totalWeight: calcItemWeight(item, items), childCount: children(item.id).filter((child) => !isEquippedItem(child)).length, matchingCount: children(item.id).filter((child) => !isEquippedItem(child) && matchesBelow(child)).length }));
+    .map(item => ({
+      ...item,
+      totalWeight: calcItemWeight(item, items),
+      totalContentValue: totalValue(descendants(item)),
+      childCount: children(item.id).filter((child) => !isEquippedItem(child)).length,
+      matchingCount: children(item.id).filter((child) => !isEquippedItem(child) && matchesBelow(child)).length
+    }));
   const hasActiveFilters = Boolean(filters.term?.trim() || filters.category || filters.categories?.length || filters.equipableOnly || filters.magicOnly || filters.attunementOnly);
   if (!current) {
     visibleContainers.unshift(...locationContainers);
@@ -164,7 +182,18 @@ export function buildContainerCatalog(view, weightUnit = 'kg') {
     const image = sanitizeImageUrl(item.image_url);
     const symbol = item.isLocation ? '⌂' : item.isVirtual ? '♙' : '▱';
     const modifier = item.isLocation ? 'inventory-container-card--location' : item.isVirtual ? 'inventory-container-card--equipped' : '';
-    return '<button type="button" class="inventory-container-card '+modifier+'" data-open-container="'+escapeHtml(item.id)+'">'+(image ? '<img src="'+image+'" alt="">' : '<span class="container-card-symbol" aria-hidden="true">'+symbol+'</span>')+'<span><strong>'+escapeHtml(item.name)+'</strong><small>'+item.childCount+' oggetti'+(item.matchingCount < item.childCount ? ' · '+item.matchingCount+' corrispondenti' : '')+' · '+escapeHtml(formatWeight(item.totalWeight, weightUnit))+'</small></span><span aria-hidden="true">›</span></button>';
+    const coinParts = splitCopperValue(item.totalContentValue);
+    const coinMeta = {
+      gp: { icon: 'moneta_oro.png', singular: "moneta d'oro", plural: "monete d'oro" },
+      sp: { icon: 'moneta_argento.png', singular: "moneta d'argento", plural: "monete d'argento" },
+      cp: { icon: 'moneta_rame.png', singular: 'moneta di rame', plural: 'monete di rame' }
+    };
+    const visibleCoins = ['gp', 'sp', 'cp'].filter((key) => coinParts[key] > 0);
+    if (!visibleCoins.length) visibleCoins.push('cp');
+    const valueLabel = visibleCoins.map((key) => coinParts[key]+' '+(coinParts[key] === 1 ? coinMeta[key].singular : coinMeta[key].plural)).join(', ');
+    const valueCoins = visibleCoins.map((key) => '<span class="inventory-container-card__denomination"><span class="inventory-container-card__coin coin-avatar coin-avatar--'+key+'" aria-hidden="true"><img src="'+import.meta.env.BASE_URL+'icons/'+coinMeta[key].icon+'" alt="" loading="lazy"></span><span><b>'+coinParts[key]+'</b><small>'+(coinParts[key] === 1 ? coinMeta[key].singular : coinMeta[key].plural)+'</small></span></span>').join('');
+    const valueMarkup = '<span class="inventory-container-card__value" aria-label="Valore totale: '+escapeHtml(valueLabel)+'"><small class="inventory-container-card__value-label">Valore totale</small><span class="inventory-container-card__breakdown">'+valueCoins+'</span></span>';
+    return '<button type="button" class="inventory-container-card '+modifier+'" data-open-container="'+escapeHtml(item.id)+'">'+(image ? '<img src="'+image+'" alt="">' : '<span class="container-card-symbol" aria-hidden="true">'+symbol+'</span>')+'<span><strong>'+escapeHtml(item.name)+'</strong><small>'+item.childCount+' oggetti'+(item.matchingCount < item.childCount ? ' · '+item.matchingCount+' corrispondenti' : '')+' · '+escapeHtml(formatWeight(item.totalWeight, weightUnit))+'</small>'+valueMarkup+'</span><span aria-hidden="true">›</span></button>';
   }).join('')+'</div>' : '';
   const table = view.items.length ? buildCompactItemList(view.items, weightUnit, { allowExtract: Boolean(current && !current.isVirtual), allowEquip: !current, allowUnequip: Boolean(current?.isVirtual && !current.isLocation), allowContainerNavigation: Boolean(current), allItems: view.allItems }) : !view.containers.length ? '<p class="compact-table-empty muted">Nessun oggetto corrisponde ai filtri in questa posizione.</p>' : '';
   const locationLabel = current?.isLocation ? `Oggetti in ${escapeHtml(current.name)}` : current?.isVirtual ? 'Oggetti equipaggiati' : current ? 'Contenuto' : 'Oggetti sfusi';
