@@ -12,6 +12,41 @@ import './characterSheetPolish.css?v=sheet-polish10';
 
 const retainedDialogs = new WeakMap();
 
+// `Element.moveBefore()` only guarantees an atomic, state-preserving move for
+// hierarchies accepted by the browser. In particular, moving an open dialog
+// between the document body and a freshly rendered layout can throw a
+// HierarchyRequestError and leave the dashboard half rebuilt. Cross-parent
+// transfers do not need to preserve state here: renderHome captures the panel
+// context before rebuilding it and restores it afterwards.
+export function relocateSheetNode(parent, node) {
+  if (!parent || !node || parent === node || node.contains?.(parent)) return false;
+
+  if (node.parentElement === parent) {
+    if (!node.nextSibling) return true;
+    try {
+      if (typeof parent.moveBefore === 'function') parent.moveBefore(node, null);
+      else parent.append(node);
+      return true;
+    } catch (error) {
+      console.warn('Riordino del pannello non riuscito, uso il fallback DOM', error);
+    }
+  }
+
+  try {
+    // An open modal dialog belongs to the top layer. Remove that transient
+    // state before adopting it into another hierarchy; restoreSheetPanel will
+    // reopen the same panel after the new layout has been mounted.
+    if (node.open || node.matches?.('dialog[open]')) {
+      node.removeAttribute?.('open');
+    }
+    parent.append(node);
+    return true;
+  } catch (error) {
+    console.error('Spostamento del pannello non riuscito', error);
+    return false;
+  }
+}
+
 function installTabletPullToRefresh(scroller) {
   if (!scroller) return;
   const indicator = document.createElement('div');
@@ -55,16 +90,16 @@ function installTabletPullToRefresh(scroller) {
 }
 
 export function retainOpenSheetPanel(container) {
-  if (!document.body.moveBefore) return;
   const dialog = container.querySelector('dialog.sheet-detail[open]');
   if (!dialog) return;
-  retainedDialogs.set(container, dialog);
-  document.body.moveBefore(dialog, null);
+  if (relocateSheetNode(document.body, dialog)) retainedDialogs.set(container, dialog);
 }
 // Move the original nodes so their controls and subsequent event bindings survive.
 export function mountTabletLayout(container, configuration = {}) {
   const layout = container.querySelector('.home-layout');
   if (!layout?.querySelector('.character-overview')) return;
+  if (layout.dataset.tabletLayoutMounted === 'true') return;
+  layout.dataset.tabletLayoutMounted = 'true';
   layout.classList.add('sheet-dashboard');
   mergeSkillRolls(layout);
   const shortcuts = document.createElement('nav');
@@ -86,7 +121,11 @@ export function mountTabletLayout(container, configuration = {}) {
     button.innerHTML = `<span aria-hidden="true">${icon}</span><strong>${title}</strong><small>${hint}</small>`;
     const panelIdentifier = node.matches('.home-feature-panel--spells') ? 'Lancia incantesimi' : title;
     const retained = retainedDialogs.get(container);
-    const dialog = retained?.dataset.sheetPanel === panelIdentifier ? retained : document.createElement('dialog');
+    const canReuseRetained = retained?.dataset.sheetPanel === panelIdentifier
+      && retained !== layout
+      && !retained.contains?.(layout);
+    const dialog = canReuseRetained ? retained : document.createElement('dialog');
+    if (canReuseRetained) retainedDialogs.delete(container);
     const characterName = String(configuration.characterName || '').trim();
     const dialogTitle = characterName ? `${title} di ${characterName}` : title;
     const dice = dialog.querySelector('#dice-overlay');
@@ -168,8 +207,7 @@ export function mountTabletLayout(container, configuration = {}) {
     installResourceFilters(dialog);
     if (title === 'Tiri Abilità') installSkillRankFilters(node, configuration.proficiencyBonus, configuration.abilityModifiers);
     if (title === 'Tiri salvezza') installSavingThrowFilters(node, configuration.proficiencyBonus, configuration.abilityModifiers);
-    if (dialog.parentElement && layout.moveBefore) layout.moveBefore(dialog, null);
-    else layout.append(dialog);
+    relocateSheetNode(layout, dialog);
     if (dice) dialog.append(dice);
     button.addEventListener('click', () => { delete dialog.dataset.resumePanel; dialog.showModal(); });
     dialog.addEventListener('click', (event) => {
@@ -222,6 +260,11 @@ export function mountTabletLayout(container, configuration = {}) {
   addPanel(layout.querySelector('.home-column--center > :nth-child(2)'), '♙', 'Equipaggiamento', 'Oggetti e dotazioni');
   createInventoryShortcut(addPanel, configuration);
   createCharacterShortcuts(addPanel, configuration);
+  const unusedRetainedDialog = retainedDialogs.get(container);
+  if (unusedRetainedDialog) {
+    retainedDialogs.delete(container);
+    unusedRetainedDialog.remove?.();
+  }
   const skillsTitle = layout.querySelector('.home-feature-panel--skills .eyebrow');
   if (skillsTitle) skillsTitle.textContent = 'Tiri Abilità';
   layout.querySelector('.home-column--left')?.remove();

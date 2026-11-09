@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { captureSheetPanel, restoreSheetPanel } from '../../../../src/features/character/home/tabletLayout.js';
+import { captureSheetPanel, relocateSheetNode, restoreSheetPanel } from '../../../../src/features/character/home/tabletLayout.js';
 import { readFileSync } from 'node:fs';
 
 function fixture({ open = true, pending = false, resource = true } = {}) {
@@ -16,6 +16,33 @@ function fixture({ open = true, pending = false, resource = true } = {}) {
 }
 
 describe('sheet context after operations', () => {
+  it('moves a retained open dialog across parents without using atomic moveBefore', () => {
+    const oldParent = {};
+    const dialog = {
+      open: true,
+      parentElement: oldParent,
+      dataset: {},
+      contains: () => false,
+      matches: () => true,
+      removeAttribute: vi.fn(function removeOpen() { this.open = false; })
+    };
+    const layout = {
+      moveBefore: vi.fn(() => { throw new DOMException('invalid hierarchy', 'HierarchyRequestError'); }),
+      append: vi.fn((node) => { node.parentElement = layout; })
+    };
+
+    expect(relocateSheetNode(layout, dialog)).toBe(true);
+    expect(layout.moveBefore).not.toHaveBeenCalled();
+    expect(dialog.removeAttribute).toHaveBeenCalledWith('open');
+    expect(layout.append).toHaveBeenCalledWith(dialog);
+  });
+
+  it('rejects a move that would create a DOM cycle', () => {
+    const parent = {};
+    const node = { contains: candidate => candidate === parent };
+    expect(relocateSheetNode(parent, node)).toBe(false);
+  });
+
   it('captures an open catalog and its selected resource', () => {
     const f = fixture();
     expect(captureSheetPanel(f.container)).toEqual({ panel: 'Risorse', resourceId: 'r1', scroll: 87, expanded: [true, false] });
