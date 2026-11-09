@@ -35,8 +35,15 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain('type="radio" name="item_category_card"');
     expect(source).toContain('categorySelect.value = input.value');
     expect(source).toContain("[buildRow([containerField, locationField], 'balanced')]");
-    expect(source).toContain("buildRow([qtyField, weightField, valueField], 'compact')");
-    expect(source).toContain("label: 'Valore (monete rame)'");
+    expect(source).toContain("buildRow([qtyField, weightField], 'balanced')");
+    expect(source).toContain("valueField.className = 'money-bundle item-value-bundle'");
+    expect(source).toContain('name="value_${key}"');
+    expect(source).toContain("['gp', 'Oro', 'moneta_oro.png', itemCoinValue.gp]");
+    expect(source).toContain("['sp', 'Argento', 'moneta_argento.png', itemCoinValue.sp]");
+    expect(source).toContain("['cp', 'Rame', 'moneta_rame.png', itemCoinValue.cp]");
+    expect(source).toContain('const itemCoinValue = splitCopperValue(item?.value_cp)');
+    expect(source).toContain('value_cp: combineCoinValue({');
+    expect(source).not.toContain("label: 'Valore (monete rame)'");
     expect(source).not.toContain("label: 'Volume', name: 'volume'");
     expect(source).toContain('volume: Number(item?.volume) || 0');
     expect(source).not.toContain("name: 'max_volume'");
@@ -52,8 +59,8 @@ describe('src/features/inventory/modals.js', () => {
     expect(source).toContain('toggleFieldVisibility(rangeDisadvantageField, usesRangedDistance)');
     expect(source.indexOf('proficiencySection.appendChild(rangeGrid)'))
       .toBeLessThan(source.indexOf('proficiencySection.appendChild(weaponAmmoRow)'));
-    expect(source).toContain("buildRow([armorTypeField, armorClassField, armorBonusField], 'compact')");
-    expect(source).toContain("buildRow([shieldField, shieldBonusField], 'compact')");
+    expect(source).toContain("buildRow([armorTypeField, armorClassField, armorBonusField, minimumStrengthField], 'compact')");
+    expect(source).toContain("buildRow([shieldField, shieldBonusField, stealthDisadvantageField], 'compact')");
     expect(source).toContain('toggleFieldVisibility(shieldBonusField, isArmor && Boolean(shieldInput?.checked))');
     expect(source).toContain("ammunitionTypeField.innerHTML = '<span>Tipo munizione</span>'");
     expect(source).toContain("const isConsumable = categorySelect.value === 'consumable'");
@@ -115,6 +122,7 @@ describe('src/features/inventory/modals.js', () => {
     expect(styles).toContain('grid-template-rows: auto minmax(360px, 1fr)');
     expect(styles).toContain('.item-editor-wizard__panel[data-item-editor-panel="4"] .field textarea');
     expect(styles).toContain('min-height: 260px');
+    expect(styles).toContain('grid-template-columns: minmax(92px, .8fr) minmax(122px, 1fr)');
     expect(source).toContain("equipSlotsField.querySelector('.item-equip-3d__summary')");
     expect(source).toContain("removeButton.innerHTML = '<span aria-hidden=\"true\">×</span>'");
     expect(theme).toContain('grid-template-areas: "name die damage attack type remove"');

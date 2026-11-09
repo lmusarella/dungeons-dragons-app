@@ -1058,14 +1058,13 @@ export async function renderHome(container) {
             createToast('Non hai la competenza per equipaggiare questa arma', 'error');
             return false;
           }
-          if (!item.sovrapponibile) {
-            const conflicting = currentItems
-              .filter((entry) => String(entry.id) !== String(item.id))
-              .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
-            if (conflicting.length) {
-              createToast('Lo slot selezionato è già occupato', 'error');
-              return false;
-            }
+          const conflicting = currentItems
+            .filter((entry) => String(entry.id) !== String(item.id))
+            .filter((entry) => !entry.sovrapponibile)
+            .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+          if (conflicting.length) {
+            createToast('Lo slot selezionato è già occupato', 'error');
+            return false;
           }
           try {
             const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });
@@ -1073,6 +1072,16 @@ export async function renderHome(container) {
             return updated;
           } catch (error) {
             createToast('Errore durante la configurazione dell’arma', 'error');
+            return false;
+          }
+        },
+        onUnequip: async (item) => {
+          try {
+            const updated = await updateItem(item.id, { equip_slot: null, equip_slots: [] });
+            createToast('Oggetto disequipaggiato');
+            return updated;
+          } catch (error) {
+            createToast('Errore durante il disequipaggiamento', 'error');
             return false;
           }
         }

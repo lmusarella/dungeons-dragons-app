@@ -898,8 +898,9 @@ body .sheet-detail .compact-item-magic { color: #8b4d61; }
 body .sheet-detail .compact-row-actions { display: flex; gap: 5px; align-items: center; justify-content: flex-end; }
 body .sheet-detail .compact-row-actions .icon-button { width: 36px; height: 36px; min-height: 36px; padding: 0; border: 1px solid #ddc9ae; border-radius: 9px; background: #f6ebda; color: #795165; font-size: 19px; }
 body .sheet-detail .compact-row-actions .ghost-button { min-height: 36px; padding: 6px 9px; border-radius: 9px; font-size: 12px; }
-body .sheet-detail .shortcut-table--items .item-col-name { width: 36%; }
-body .sheet-detail .shortcut-table--items .item-col-actions { width: 17%; }
+body .sheet-detail .shortcut-table--items .item-col-name { width: 32%; }
+body .sheet-detail .shortcut-table--items .item-col-value { width: 11%; }
+body .sheet-detail .shortcut-table--items .item-col-actions { width: 18%; }
 body .sheet-detail .inventory-group__children:has(.shortcut-table) { padding: 6px 0 0; border: 0; }
 body .sheet-detail .inventory-loose-accordion:has(.shortcut-table),
 body .sheet-detail .inventory-container-accordion:has(.shortcut-table) { padding: 0; background: transparent; border: 0; box-shadow: none; }
@@ -935,7 +936,9 @@ body .sheet-detail .equipment-picker-option small { display: block; font-size: 1
 body .sheet-detail .equipment-mannequin--assign .equipment-mannequin__wardrobe { display: none; }
 body .sheet-detail .equipment-mannequin--assign .equipment-mannequin__controls > .equipment-mannequin__equip-action { display: none; }
 body .sheet-detail .equipment-mannequin--assign { max-width: none; }
-body .sheet-detail .equipment-mannequin--assign .equipment-mannequin__viewer { min-height: 390px; }
+body .sheet-detail .equipment-mannequin--assign { height: 100%; min-height: 520px; grid-template-columns: minmax(320px,.72fr) minmax(460px,1.28fr); }
+body .sheet-detail .equipment-mannequin--assign .equipment-mannequin__viewer { min-height: 520px; height: 100%; }
+body .sheet-detail .equipment-mannequin--assign .equipment-mannequin__focus-controls { display: none; }
 @media(max-width: 900px) {
  body .sheet-detail .equipment-picker-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
  body .sheet-detail .shortcut-table td, body .sheet-detail .shortcut-table th { padding-left: 8px; padding-right: 8px; }
@@ -969,7 +972,10 @@ body .sheet-detail .container-content-heading { display: flex; align-items: cent
 body .sheet-detail .container-content-heading h3 { margin: 0 0 4px; font-size: 20px; color: #633349; }
 body .sheet-detail .container-content-heading small { font-size: 12px; color: #8b725a; }
 body .sheet-detail .inventory-location-label { margin: 0 0 8px; color: #8b725a; font-size: 12px; }
-body .sheet-detail .shortcut-table--items .item-col-actions { width: 21%; }
+body .sheet-detail .shortcut-table--items .item-col-actions { width: 20%; }
+body .sheet-detail .shortcut-table--items .inventory-item-value__coin { width: 28px; height: 28px; flex-basis: 28px; }
+body .sheet-detail .shortcut-table--items .inventory-item-value strong { font-size: 12px; }
+body .sheet-detail .shortcut-table--items .inventory-item-value small { font-size: 9px; }
 body .sheet-detail .spell-launch-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 body .sheet-detail .play-card--spell { padding: 14px; gap: 10px; min-height: 0; }
 body .sheet-detail .play-card--spell .play-card__facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 12px; }

@@ -84,6 +84,9 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).toContain('data-edit-conditions');
     expect(source).toContain('weaknessLevelList.filter');
     expect(source).toContain('Punti ferita temporanei');
+    expect(source).toContain('wildShapeBufferValue');
+    expect(source).toContain("'PF temporanei · Forma selvatica'");
+    expect(source).toContain('characterTempHpValue + wildShapeBufferValue');
     expect(source).toContain('Percezione passiva');
     expect(source).toContain('Scurovisione');
     expect(source).toContain('Dadi vita');

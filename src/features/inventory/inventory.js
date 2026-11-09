@@ -160,14 +160,13 @@ async function equipInventoryItem(character, item, equipSlots, currentItems) {
       }
     }
   }
-  if (!item.sovrapponibile) {
-    const conflicting = currentItems
-      .filter((entry) => String(entry.id) !== String(item.id))
-      .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
-    if (conflicting.length) {
-      createToast('Lo slot selezionato è già occupato', 'error');
-      return false;
-    }
+  const conflicting = currentItems
+    .filter((entry) => String(entry.id) !== String(item.id))
+    .filter((entry) => !entry.sovrapponibile)
+    .filter((entry) => getEquipSlots(entry).some((slot) => equipSlots.includes(slot)));
+  if (conflicting.length) {
+    createToast('Lo slot selezionato è già occupato', 'error');
+    return false;
   }
   try {
     const updated = await updateItem(item.id, { equip_slot: equipSlots[0] || null, equip_slots: equipSlots });

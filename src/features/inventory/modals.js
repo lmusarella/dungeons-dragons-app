@@ -2,7 +2,7 @@ import { createItem, updateItem } from './inventoryApi.js';
 import { buildInput, buildSelect, buildTextarea, createToast, openFormModal, setGlobalLoading, attachNumberStepper } from '../../ui/components.js';
 import { ammunitionTypes, armorTypes, damageTypeOptions, itemCategories, weaponAbilities, weaponRanges, weaponTypes } from './constants.js';
 import { weaponMasteryOptions } from '../rules/weaponMasteries.js';
-import { getCompatibleEquipSlots, getEquipSlots } from './utils.js';
+import { combineCoinValue, getCompatibleEquipSlots, getEquipSlots, splitCopperValue } from './utils.js';
 import { buildEquipmentCompatibilityPicker3D } from '../character/home/equipmentMannequin.js';
 import { normalizeWeaponProperties, weaponPropertyOptions } from './weaponProperties.js';
 
@@ -112,12 +112,30 @@ export async function openItemModal(character, item, items = [], onSave, options
     weightInput.min = '0';
     weightInput.step = 'any';
   }
-  const valueField = buildInput({ label: 'Valore (monete rame)', name: 'value_cp', type: 'number', value: item?.value_cp ?? 0 });
-  const valueInput = valueField.querySelector('input');
-  if (valueInput) {
-    valueInput.min = '0';
-    valueInput.step = '1';
-  }
+  const itemCoinValue = splitCopperValue(item?.value_cp);
+  const valueField = document.createElement('div');
+  valueField.className = 'money-bundle item-value-bundle';
+  valueField.innerHTML = `
+    <div class="item-value-bundle__header">
+      <strong>Valore dell’oggetto</strong>
+      <span>Inserisci la combinazione di monete che preferisci.</span>
+    </div>
+    <div class="money-bundle__grid item-value-bundle__grid">
+      ${[
+    ['gp', 'Oro', 'moneta_oro.png', itemCoinValue.gp],
+    ['sp', 'Argento', 'moneta_argento.png', itemCoinValue.sp],
+    ['cp', 'Rame', 'moneta_rame.png', itemCoinValue.cp]
+  ].map(([key, label, icon, value]) => `
+        <label class="money-bundle__coin item-value-bundle__coin money-bundle__coin--${key}">
+          <span class="money-bundle__coin-heading">
+            <span class="coin-avatar coin-avatar--${key}" aria-hidden="true"><img src="${import.meta.env.BASE_URL}icons/${icon}" alt="" /></span>
+            <span><strong>${label}</strong><small>${key === 'gp' ? '100 rame' : key === 'sp' ? '10 rame' : '1 rame'}</small></span>
+          </span>
+          <input name="value_${key}" type="number" value="${value}" min="0" step="1" inputmode="numeric" aria-label="Valore in monete di ${label.toLowerCase()}" />
+        </label>
+      `).join('')}
+    </div>
+  `;
   const { field: ignoreContentsWeightField, input: ignoreContentsWeightInput } = buildToggleField({
     name: 'ignore_contents_weight',
     label: 'Ignora il peso del contenuto nel carico',
@@ -125,7 +143,7 @@ export async function openItemModal(character, item, items = [], onSave, options
   });
   const logisticsSection = buildSection(
     'Quantità, peso e valore',
-    [buildRow([qtyField, weightField, valueField], 'compact'), ignoreContentsWeightField],
+    [buildRow([qtyField, weightField], 'balanced'), valueField, ignoreContentsWeightField],
     { icon: '⚖️', description: 'Numeri essenziali per carico, scorte e tesoro.' }
   );
   const categorySelect = buildSelect(itemCategories, item?.category ?? 'loot');
@@ -906,7 +924,11 @@ export async function openItemModal(character, item, items = [], onSave, options
     qty: Number(formData.get('qty')),
     weight: Number(formData.get('weight')),
     volume: Number(item?.volume) || 0,
-    value_cp: Number(formData.get('value_cp')),
+    value_cp: combineCoinValue({
+      gp: formData.get('value_gp'),
+      sp: formData.get('value_sp'),
+      cp: formData.get('value_cp')
+    }),
     category,
     container_item_id: catalogMode ? null : (formData.get('container_item_id') || null),
     ...(catalogMode ? {} : { inventory_location: formData.get('inventory_location')?.trim() || null }),

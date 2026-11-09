@@ -1,6 +1,47 @@
 import { bodyPartLabels, categoryLabels } from './constants.js';
 import { formatCoin } from '../../lib/format.js';
 
+const ITEM_VALUE_DENOMINATIONS = [
+  { key: 'gp', factor: 100, name: 'oro', singular: "moneta d'oro", plural: "monete d'oro", icon: 'moneta_oro.png' },
+  { key: 'sp', factor: 10, name: 'argento', singular: "moneta d'argento", plural: "monete d'argento", icon: 'moneta_argento.png' },
+  { key: 'cp', factor: 1, name: 'rame', singular: 'moneta di rame', plural: 'monete di rame', icon: 'moneta_rame.png' }
+];
+
+export function splitCopperValue(valueCp = 0) {
+  const total = Math.max(0, Math.round(Number(valueCp) || 0));
+  const gp = Math.floor(total / 100);
+  const afterGold = total % 100;
+  return {
+    gp,
+    sp: Math.floor(afterGold / 10),
+    cp: afterGold % 10
+  };
+}
+
+export function combineCoinValue({ gp = 0, sp = 0, cp = 0 } = {}) {
+  const normalize = (value) => Math.max(0, Math.trunc(Number(value) || 0));
+  return (normalize(gp) * 100) + (normalize(sp) * 10) + normalize(cp);
+}
+
+export function getInventoryItemValueDisplay(item) {
+  const directValue = Number(item?.value_cp);
+  const legacyFactors = { mr: 1, cp: 1, ma: 10, sp: 10, mo: 100, gp: 100, mp: 1000, pp: 1000 };
+  const legacyQuantity = Number(item?.cost?.quantita ?? item?.cost?.quantity);
+  const legacyFactor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
+  const copper = Math.max(0, Math.round(Number.isFinite(directValue)
+    ? directValue
+    : Number.isFinite(legacyQuantity) && legacyFactor ? legacyQuantity * legacyFactor : 0));
+  const denomination = ITEM_VALUE_DENOMINATIONS.find((coin) => copper > 0 && copper % coin.factor === 0)
+    || ITEM_VALUE_DENOMINATIONS[ITEM_VALUE_DENOMINATIONS.length - 1];
+  const amount = copper / denomination.factor;
+  return {
+    ...denomination,
+    amount,
+    unitLabel: amount === 1 ? denomination.singular : denomination.plural,
+    copper
+  };
+}
+
 export function formatTransactionAmount(amount) {
   const normalized = normalizeTransactionAmount(amount);
   const entries = ['pp', 'gp', 'sp', 'cp']

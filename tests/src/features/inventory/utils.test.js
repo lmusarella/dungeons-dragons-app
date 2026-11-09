@@ -1,17 +1,31 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatTransactionAmount,
+  combineCoinValue,
   normalizeTransactionAmount,
   formatTransactionDate,
   getCategoryLabel,
   getCompatibleEquipSlots,
   getEquipSlots,
+  getInventoryItemValueDisplay,
+  splitCopperValue,
   getWeightUnit,
   getBodyPartLabels,
   hasProficiencyForItem
 } from '../../../../src/features/inventory/utils.js';
 
 describe('src/features/inventory/utils.js', () => {
+  it('converts item values up to gold without using platinum', () => {
+    expect(getInventoryItemValueDisplay({ value_cp: 20 })).toMatchObject({ key: 'sp', amount: 2, unitLabel: "monete d'argento" });
+    expect(getInventoryItemValueDisplay({ value_cp: 100 })).toMatchObject({ key: 'gp', amount: 1, unitLabel: "moneta d'oro" });
+    expect(getInventoryItemValueDisplay({ value_cp: 300 })).toMatchObject({ key: 'gp', amount: 3, unitLabel: "monete d'oro" });
+    expect(getInventoryItemValueDisplay({ value_cp: 3000 })).toMatchObject({ key: 'gp', amount: 30, unitLabel: "monete d'oro" });
+  });
+  it('splits and combines the gold, silver and copper editor values', () => {
+    expect(splitCopperValue(1234)).toEqual({ gp: 12, sp: 3, cp: 4 });
+    expect(combineCoinValue({ gp: 12, sp: 3, cp: 4 })).toBe(1234);
+    expect(combineCoinValue({ gp: 1, sp: 15, cp: 25 })).toBe(275);
+  });
   it('formats and normalizes transaction amount', () => {
     expect(normalizeTransactionAmount('{"gp":2}')).toEqual({ gp: 2 });
     expect(normalizeTransactionAmount('{bad')).toEqual({});

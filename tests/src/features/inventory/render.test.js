@@ -61,6 +61,19 @@ describe('src/features/inventory/render.js', () => {
     expect(markup).not.toContain('data-edit="sword-1"');
   });
 
+  it('adds the converted value and coin image to inventory item tables', () => {
+    const markup = buildInventoryTree([{
+      id: 'treasure-1', name: 'Tesoro', category: 'gear', qty: 1, value_cp: 20
+    }]);
+    expect(markup).toContain('<span>Valore</span>');
+    expect(markup).toContain('inventory-item-value');
+    expect(markup).toContain('coin-avatar coin-avatar--sp');
+    expect(markup).toContain('moneta_argento.png');
+    expect(markup).toContain('<strong>2</strong>');
+    expect(markup).toContain("monete d'argento");
+    expect(markup).not.toContain('<small>SP</small>');
+  });
+
   it('renders the refined inventory item hierarchy and empty state', () => {
     const styles = readFileSync('src/styles/base.css', 'utf8');
     const itemMarkup = buildInventoryTree([{

@@ -6,6 +6,16 @@ describe('compact shortcut tables', () => {
     expect(html).toContain('<table'); expect(html).toContain('&lt;Arma&gt;');
     expect(html).toContain('data-item-preview="item"'); expect(html).not.toContain('data-edit="item"'); expect(html).not.toContain('<Arma>');
     expect(html).not.toContain('<th>Vol.</th>');
+    expect(html).toContain('<th>Valore</th>');
+  });
+  it('shows the converted item value with its coin image', () => {
+    const html = buildCompactItemList([{ id: 'item', name: 'Oggetto', category: 'gear', qty: 1, value_cp: 300 }]);
+    expect(html).toContain('inventory-item-value');
+    expect(html).toContain('coin-avatar coin-avatar--gp');
+    expect(html).toContain('moneta_oro.png');
+    expect(html).toContain('<strong>3</strong>');
+    expect(html).toContain("monete d'oro");
+    expect(html).not.toContain('<small>GP</small>');
   });
   it('puts the consume action before every other available row action', () => {
     const html = buildCompactItemList([{ id: 'potion', name: 'Pozione', category: 'consumable', qty: 2 }], 'lb', { allowExtract: true });

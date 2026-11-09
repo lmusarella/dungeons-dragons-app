@@ -121,7 +121,7 @@ body {
 
 .inventory-table__header,
 .inventory-table__row {
-  grid-template-columns: minmax(190px, 2.6fr) minmax(74px, 0.75fr) minmax(44px, 0.45fr) minmax(72px, 0.65fr) minmax(56px, 0.55fr) minmax(118px, 0.9fr);
+  grid-template-columns: minmax(180px, 2.6fr) minmax(70px, 0.75fr) minmax(42px, 0.4fr) minmax(68px, 0.65fr) minmax(52px, 0.5fr) minmax(76px, 0.65fr) minmax(112px, 0.9fr);
   gap: 6px;
 }
 

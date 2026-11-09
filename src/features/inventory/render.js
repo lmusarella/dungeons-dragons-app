@@ -5,6 +5,7 @@ import { calcItemWeight } from '../../lib/calc.js';
 import {
   getCategoryLabel,
   getEquipSlots,
+  getInventoryItemValueDisplay,
   getItemStatusLabels,
   normalizeTransactionAmount
 } from './utils.js';
@@ -42,6 +43,11 @@ function buildTransactionAmountLabel(amount) {
     .filter((entry) => entry.value !== 0);
   if (!entries.length) return '0 gp';
   return entries.map((entry) => `${entry.value} ${entry.coin}`).join(' · ');
+}
+
+function buildInventoryItemValue(item) {
+  const value = getInventoryItemValueDisplay(item);
+  return `<span class="inventory-item-value" title="${value.amount} ${value.unitLabel}"><span class="inventory-item-value__coin coin-avatar coin-avatar--${value.key}" aria-hidden="true"><img src="${import.meta.env.BASE_URL}icons/${value.icon}" alt="" loading="lazy"></span><span class="inventory-item-value__text"><strong>${value.amount}</strong><small>${value.unitLabel}</small></span></span>`;
 }
 
 const TRANSACTION_SCROLL_THRESHOLD = 8;
@@ -164,6 +170,7 @@ export function buildInventoryTree(items, weightUnit = 'kg', { compact = false }
           <div class="inventory-table__cell" data-label="Quantità">${escapeHtml(container.qty)}</div>
           <div class="inventory-table__cell" data-label="Peso">${escapeHtml(formatWeight(calcItemWeight(container, items), weightUnit))}</div>
           <div class="inventory-table__cell" data-label="Volume">${escapeHtml(container.max_volume ?? '-')}</div>
+          <div class="inventory-table__cell" data-label="Valore">${buildInventoryItemValue(container)}</div>
           <div class="inventory-table__cell inventory-table__cell--actions">
             <button class="resource-action-button inventory-container-insert-button" type="button" data-insert-container="${escapeHtml(container.id)}" aria-label="Inserisci oggetti sfusi in ${escapeHtml(container.name)}">
               <span aria-hidden="true">＋</span>
@@ -209,6 +216,7 @@ export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyL
         <span>Qtà</span>
         <span>Peso</span>
         <span>Vol.</span>
+        <span>Valore</span>
         <span>Azioni</span>
       </div>
       <div class="inventory-table__body">
@@ -238,6 +246,7 @@ export function buildItemList(items, weightUnit = 'kg', { nested = false, emptyL
             <div class="inventory-table__cell inventory-table__metric" data-label="Quantità"><small>Qtà</small><strong>${escapeHtml(item.qty)}</strong></div>
             <div class="inventory-table__cell inventory-table__metric" data-label="Peso"><small>Peso</small><strong>${escapeHtml(formatWeight(calcItemWeight(item, allItems), weightUnit))}</strong></div>
             <div class="inventory-table__cell inventory-table__metric" data-label="Volume"><small>Vol.</small><strong>${escapeHtml(volumeValue)}</strong></div>
+            <div class="inventory-table__cell" data-label="Valore">${buildInventoryItemValue(item)}</div>
             <div class="inventory-table__cell inventory-table__cell--actions">
               ${item.category === 'consumable' ? `<button class="resource-action-button" data-use="${safeId}">Consuma</button>` : ''}
               ${allowEquip && item.equipable && !getEquipSlots(item).length ? `<button class="resource-action-button" data-equip-item="${safeId}">Equipaggia</button>` : ''}

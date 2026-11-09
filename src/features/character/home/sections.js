@@ -133,13 +133,20 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
   const deathSaveSuccesses = Math.max(0, Math.min(3, Number(deathSaves.successes) || 0));
   const deathSaveFailures = Math.max(0, Math.min(3, Number(deathSaves.failures) || 0));
   const hpPercent = maxHp ? Math.min(Math.max((Number(currentHp) / maxHp) * 100, 0), 100) : 0;
-  const tempHpValue = Math.max(0, Number(tempHp) || 0);
+  const characterTempHpValue = Math.max(0, Number(tempHp) || 0);
+  const wildShapeBufferValue = activeWildShape ? activeWildShape.hpCurrent : 0;
+  const tempHpValue = characterTempHpValue + wildShapeBufferValue;
   const hpPool = Math.max(0, Number(maxHp ?? currentHp ?? 0));
   const hasTempHp = tempHpValue > 0;
-  const tempHpPercent = hasTempHp && hpPool ? Math.min((tempHpValue / hpPool) * 100, 100) : 0;
+  const tempHpPool = activeWildShape
+    ? Math.max(characterTempHpValue + activeWildShape.hpMax, tempHpValue, 1)
+    : hpPool;
+  const tempHpPercent = hasTempHp && tempHpPool ? Math.min((tempHpValue / tempHpPool) * 100, 100) : 0;
   const hpLabel = maxHp ? `${currentHp ?? '-'}/${maxHp}` : `${currentHp ?? '-'}`;
   const hpPercentLabel = maxHp ? `${Math.round(hpPercent)}%` : '-';
-  const tempHpLabel = tempHp ?? '-';
+  const tempHpLabel = tempHpValue || '-';
+  const tempHpTitle = activeWildShape ? 'PF temporanei · Forma selvatica' : 'PF temporanei';
+  const tempHpAriaTitle = activeWildShape ? 'Punti ferita temporanei e forma selvatica' : 'Punti ferita temporanei';
   const weakPoints = Math.max(0, Math.min(6, Number(hp.weak_points) || 0));
   const conditionState = Array.isArray(data.conditions)
     ? data.conditions
@@ -320,8 +327,8 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
                     <div class="hp-bar"><div class="hp-bar__fill" style="width: ${hpPercent}%;"></div></div>
                   </div>
                   ${hasTempHp ? `
-                  <div class="hp-vitals-card__temp-label"><span>PF temporanei</span><strong>${tempHpLabel}</strong></div>
-                  <div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="Punti ferita temporanei" aria-valuemin="0" aria-valuemax="${maxHp ?? tempHpValue}" aria-valuenow="${tempHpValue}">
+                  <div class="hp-vitals-card__temp-label"><span>${tempHpTitle}</span><strong>${tempHpLabel}</strong></div>
+                  <div class="hp-bar-track hp-bar-track--temp-secondary" role="meter" aria-label="${tempHpAriaTitle}" aria-valuemin="0" aria-valuemax="${tempHpPool || tempHpValue}" aria-valuenow="${tempHpValue}">
                     <div class="hp-bar hp-bar--temp is-active"><div class="hp-bar__fill hp-bar__fill--temp" style="width: ${tempHpPercent}%;"></div></div>
                   </div>
                   ` : ''}

@@ -48,19 +48,29 @@ describe('equipment mannequin slot mapping', () => {
     expect(getCompatibleMannequinPartIds({ category: 'container' })).toContain('back');
   });
 
-  it('shows only free destinations for non-overlayable items', () => {
+  it('keeps non-overlayable occupied destinations blocked for every incoming item', () => {
     const equippedItems = [{ id: 'equipped', category: 'weapon', equip_slots: ['main-hand'] }];
     const weapon = { id: 'new', category: 'weapon', sovrapponibile: false };
     expect(getAvailableCompatibleMannequinPartIds(weapon, equippedItems)).toEqual(['hand-left']);
     expect(getAvailableCompatibleMannequinPartIds({ ...weapon, sovrapponibile: true }, equippedItems))
+      .toEqual(['hand-left']);
+  });
+
+  it('keeps a destination valid when every equipped item there is overlayable', () => {
+    const equippedItems = [
+      { id: 'ring', category: 'jewelry', equip_slots: ['main-hand'], sovrapponibile: true }
+    ];
+    const weapon = { id: 'new', category: 'weapon', sovrapponibile: false };
+    expect(getAvailableCompatibleMannequinPartIds(weapon, equippedItems))
       .toEqual(['hand-left', 'hand-right']);
   });
 
-  it('keeps destination selection on the 3D mannequin and supports item images and load info', () => {
+  it('keeps destination selection clear and supports replacing equipped items in place', () => {
     const source = readFileSync('src/features/character/home/equipmentMannequin.js', 'utf8');
     expect(source).not.toContain("slotTitle.textContent = 'Parti del corpo'");
     expect(source).toContain("image.className = 'equipment-mannequin__item-image'");
-    expect(source).toContain("loadLabel.textContent = 'Carico trasportato'");
+    expect(source).not.toContain("loadLabel.textContent = 'Carico trasportato'");
+    expect(source).not.toContain("legend.className = 'equipment-mannequin__legend'");
     expect(source).toContain('let selectedId = null');
     expect(source).toContain("id: 'nose'");
     expect(source).toContain("id: 'mouth'");
@@ -72,6 +82,20 @@ describe('equipment mannequin slot mapping', () => {
     expect(source).toContain("camera.position.set(0, viewMode === 'head' ? 1.9 : 0.24, cameraDistance)");
     expect(source).toContain("id: 'hand-right', label: 'Mano destra', slots: ['hand-right', 'hands', 'main-hand'");
     expect(source).toContain('const pendingPartIds = new Set()');
+    expect(source).not.toContain('seedOccupiedCompatibleParts');
+    expect(source).toContain("'blocked-static'");
+    expect(source).toContain("'compatible-static'");
+    expect(source).toContain("button.classList.toggle('is-blocked-compatible'");
+    expect(source).toContain("card.className = `equipment-mannequin__pending-part");
+    expect(source).toContain("state.textContent = isBlocked ? 'Da liberare'");
+    expect(source).toContain("remove.textContent = 'Rimuovi'");
+    expect(source).toContain('preservePending: true');
+    expect(source).toContain('freedPartId: partId');
+    expect(source).toContain('onChanged?.({ close: false })');
+    expect(source).toContain('if (options.singleItem && close) formEl?.requestSubmit()');
+    expect(source).toContain('Tocca una zona verde per equipaggiare');
+    expect(source).toContain("pendingPartIds.has(partId) ? '✓ Selezionata' : 'Seleziona'");
+    expect(source).toContain('data-mannequin-pending-parts');
     expect(source).toContain('const equipSlots = [...new Set(partIds.map');
     expect(source).toContain("equipButtonLabel.textContent = pendingPartIds.size");
     expect(source).toContain("equipAction.className = 'equipment-mannequin__equip-action'");

@@ -2,8 +2,6 @@ import { openFormModal } from '../../../ui/components.js';
 import { bodyPartLabels } from '../../inventory/constants.js';
 import { getCategoryLabel, getCompatibleEquipSlots } from '../../inventory/utils.js';
 import { ensureLegacyThree } from '../../../lib/legacyThree.js';
-import { calcCarriedWeight } from '../../../lib/calc.js';
-import { formatWeight } from '../../../lib/format.js';
 import { getEquipSlots } from './utils.js';
 
 const node = (shape, size, position, rotation = null, color = null) => ({
@@ -92,7 +90,7 @@ const BASE_COLOR = 0x86a88d;
 const EQUIPPED_COLOR = 0xb66f67;
 const HOVER_COLOR = 0x8291a0;
 const SELECTED_COLOR = 0x6d8fb6;
-const COMPATIBLE_COLOR = 0xd2b85f;
+const COMPATIBLE_COLOR = 0x45a477;
 const INACTIVE_COLOR = 0xa4a19b;
 
 const CATEGORY_COMPATIBLE_PARTS = {
@@ -149,10 +147,11 @@ export function getCompatibleMannequinPartIds(item) {
 
 export function getAvailableCompatibleMannequinPartIds(item, items = []) {
   const compatiblePartIds = getCompatibleMannequinPartIds(item);
-  if (item?.sovrapponibile) return compatiblePartIds;
   return compatiblePartIds.filter((partId) => {
     const part = PART_DEFINITIONS.find((definition) => definition.id === partId);
-    return getItemsForMannequinPart(items, part).length === 0;
+    const equippedItems = getItemsForMannequinPart(items, part)
+      .filter((entry) => String(entry.id) !== String(item?.id));
+    return equippedItems.length === 0 || equippedItems.every((entry) => Boolean(entry.sovrapponibile));
   });
 }
 
@@ -176,9 +175,13 @@ function setPartMaterialState(mesh, state) {
   const color = state === 'compatible-on'
     ? COMPATIBLE_COLOR
     : state === 'compatible-off'
-      ? 0xac954e
+      ? 0x397a5d
+      : state === 'compatible-static'
+        ? COMPATIBLE_COLOR
       : state === 'inactive'
         ? INACTIVE_COLOR
+        : state === 'blocked-static'
+          ? 0xc7424f
         : state === 'selected-on'
           ? SELECTED_COLOR
           : state === 'selected-off'
@@ -187,7 +190,7 @@ function setPartMaterialState(mesh, state) {
             ? HOVER_COLOR
             : mesh.userData.itemCount > 0 ? EQUIPPED_COLOR : baseColor;
   const emissive = state === 'compatible-on'
-    ? 0x1a1504
+    ? 0x082719
     : state === 'compatible-off'
       ? 0x000000
       : state === 'selected-on'
@@ -494,7 +497,7 @@ export function buildEquipmentCompatibilityPicker3D(selectedSlots = []) {
   return { field, inputs: [...inputByPartId.values()], sync, mount };
 }
 
-function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
+function buildMannequinContent({ canEdit }) {
   const content = document.createElement('div');
   content.className = 'equipment-mannequin equipment-mannequin--studio';
 
@@ -510,39 +513,6 @@ function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
   guidance.textContent = canEdit
     ? 'Scegli un oggetto, poi tocca una parte del corpo'
     : 'Tocca una parte del corpo per vedere cosa indossa';
-  const legend = document.createElement('div');
-  legend.className = 'equipment-mannequin__legend';
-  legend.setAttribute('aria-label', 'Legenda colori del manichino');
-  const legendEntries = [
-    ['free', 'Libero'],
-    ['equipped', 'Equipaggiato'],
-    ['selected', 'Selezionato'],
-    ...(canEdit ? [['compatible', 'Compatibile']] : [])
-  ];
-  legendEntries.forEach(([state, label]) => {
-    const entry = document.createElement('span');
-    const swatch = document.createElement('i');
-    swatch.className = `equipment-mannequin__legend-swatch equipment-mannequin__legend-swatch--${state}`;
-    swatch.setAttribute('aria-hidden', 'true');
-    entry.append(swatch, document.createTextNode(label));
-    legend.appendChild(entry);
-  });
-  const carriedUnits = (items || []).reduce((total, item) => {
-    const qty = Number(item?.qty ?? 1);
-    return total + (Number.isFinite(qty) ? Math.max(0, qty) : 0);
-  }, 0);
-  const load = document.createElement('div');
-  load.className = 'equipment-mannequin__load';
-  const loadLabel = document.createElement('small');
-  loadLabel.textContent = 'Carico trasportato';
-  const loadValue = document.createElement('strong');
-  loadValue.textContent = formatWeight(calcCarriedWeight(items), weightUnit);
-  const loadCount = document.createElement('span');
-  loadCount.textContent = `${carriedUnits} ${carriedUnits === 1 ? 'oggetto' : 'oggetti'}`;
-  load.append(loadLabel, loadValue, loadCount);
-  const hud = document.createElement('div');
-  hud.className = 'equipment-mannequin__hud';
-  hud.append(legend, load);
   const focusControls = document.createElement('div');
   focusControls.className = 'equipment-mannequin__focus-controls';
   focusControls.setAttribute('aria-label', 'Inquadrature rapide');
@@ -553,21 +523,24 @@ function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
   headFocusButton.setAttribute('aria-pressed', 'false');
   headFocusButton.innerHTML = '<span aria-hidden="true">◯</span><strong>Testa</strong>';
   focusControls.appendChild(headFocusButton);
-  viewer.append(loading, guidance, hud, focusControls);
+  viewer.append(loading, guidance, focusControls);
 
   const panel = document.createElement('aside');
   panel.className = 'equipment-mannequin__panel';
 
   const selected = document.createElement('section');
   selected.className = 'equipment-mannequin__selection';
-  const selectionEyebrow = document.createElement('small');
-  selectionEyebrow.textContent = 'Punto selezionato';
   const selectionTitle = document.createElement('strong');
   selectionTitle.dataset.mannequinPartLabel = '';
+  selectionTitle.textContent = 'Scegli una zona';
   const itemList = document.createElement('ul');
   itemList.className = 'equipment-mannequin__items';
   itemList.dataset.mannequinItems = '';
-  selected.append(selectionEyebrow, selectionTitle, itemList);
+  const pendingParts = document.createElement('div');
+  pendingParts.className = 'equipment-mannequin__pending-parts';
+  pendingParts.dataset.mannequinPendingParts = '';
+  pendingParts.hidden = true;
+  selected.append(selectionTitle, pendingParts, itemList);
   panel.appendChild(selected);
 
   if (canEdit) {
@@ -596,39 +569,21 @@ function buildMannequinContent({ canEdit, items = [], weightUnit = 'kg' }) {
 
   const controls = document.createElement('div');
   controls.className = 'equipment-mannequin__controls';
-  const hint = document.createElement('span');
-  hint.textContent = 'Trascina il manichino per ruotarlo · rotella per zoom';
-  controls.append(hint);
   if (canEdit) {
     const equipAction = document.createElement('div');
     equipAction.className = 'equipment-mannequin__equip-action';
     equipAction.dataset.mannequinEquipAction = '';
     equipAction.hidden = true;
-    const actionIcon = document.createElement('span');
-    actionIcon.className = 'equipment-mannequin__equip-action-icon';
-    actionIcon.setAttribute('aria-hidden', 'true');
-    actionIcon.innerHTML = '<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>';
-    const actionCopy = document.createElement('div');
-    actionCopy.className = 'equipment-mannequin__equip-action-copy';
-    const actionEyebrow = document.createElement('small');
-    actionEyebrow.textContent = 'Assegnazione';
-    const actionTitle = document.createElement('strong');
-    actionTitle.dataset.mannequinEquipTitle = '';
-    actionTitle.textContent = 'Scegli le parti del corpo';
-    const actionDetail = document.createElement('span');
-    actionDetail.dataset.mannequinEquipDetail = '';
-    actionDetail.textContent = 'Puoi selezionare più zone compatibili';
-    actionCopy.append(actionEyebrow, actionTitle, actionDetail);
     const equipButton = document.createElement('button');
     equipButton.type = 'button';
     equipButton.className = 'equipment-mannequin__equip-button';
     equipButton.dataset.mannequinEquip = '';
     equipButton.innerHTML = `
-      <span class="equipment-mannequin__equip-button-copy"><small>Conferma</small><strong data-mannequin-equip-button-label>Equipaggia</strong></span>
+      <strong data-mannequin-equip-button-label>Equipaggia</strong>
       <span class="equipment-mannequin__equip-button-arrow" aria-hidden="true">→</span>
     `;
     equipButton.disabled = true;
-    equipAction.append(actionIcon, actionCopy, equipButton);
+    equipAction.appendChild(equipButton);
     controls.appendChild(equipAction);
   }
   panel.appendChild(controls);
@@ -652,14 +607,13 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   const canvasHost = root.querySelector('[data-mannequin-canvas]');
   const detailLabel = root.querySelector('[data-mannequin-part-label]');
   const detailItems = root.querySelector('[data-mannequin-items]');
+  const pendingParts = root.querySelector('[data-mannequin-pending-parts]');
   const wardrobe = root.querySelector('[data-mannequin-wardrobe]');
   const wardrobeCount = root.querySelector('[data-mannequin-wardrobe-count]');
   const guidance = root.querySelector('[data-mannequin-guidance]');
   const status = root.querySelector('[data-mannequin-status]');
   const equipButton = root.querySelector('[data-mannequin-equip]');
   const equipAction = root.querySelector('[data-mannequin-equip-action]');
-  const equipActionTitle = root.querySelector('[data-mannequin-equip-title]');
-  const equipActionDetail = root.querySelector('[data-mannequin-equip-detail]');
   const equipButtonLabel = root.querySelector('[data-mannequin-equip-button-label]');
   const focusButtons = [...root.querySelectorAll('[data-mannequin-focus]')];
   if (!canvasHost || !detailLabel || !detailItems || !guidance || !status) return () => {};
@@ -738,7 +692,8 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
 
   const getItem = (itemId) => workingItems.find((item) => String(item.id) === String(itemId));
   const getPart = (partId) => PART_DEFINITIONS.find((part) => part.id === partId);
-
+  const getPartItems = (partId, pendingItem = null) => getItemsForMannequinPart(workingItems, getPart(partId))
+    .filter((entry) => String(entry.id) !== String(pendingItem?.id));
   const render = () => {
     if (disposed || frame) return;
     frame = window.requestAnimationFrame(() => {
@@ -774,15 +729,22 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
 
   const updatePartStates = () => {
     const pendingItem = getItem(pendingItemId);
-    const compatibleIds = new Set(pendingItem ? getAvailableCompatibleMannequinPartIds(pendingItem, workingItems) : []);
+    const compatibleIds = new Set(pendingItem ? getCompatibleMannequinPartIds(pendingItem) : []);
+    const availableIds = new Set(pendingItem ? getAvailableCompatibleMannequinPartIds(pendingItem, workingItems) : []);
     partMeshes.forEach((mesh) => {
-      const isCompatible = compatibleIds.has(mesh.userData.partId);
+      const partId = mesh.userData.partId;
+      const isCompatible = compatibleIds.has(partId);
+      const isAvailable = availableIds.has(partId);
+      const occupants = pendingItem ? getPartItems(partId, pendingItem) : [];
+      const isBlocked = Boolean(pendingItem && isCompatible && occupants.length && !isAvailable);
       const isPendingSelection = pendingItem && pendingPartIds.has(mesh.userData.partId);
       const state = pendingItem
-        ? isPendingSelection
-          ? compatibilityPulseOn ? 'selected-on' : 'selected-off'
-          : isCompatible
-          ? compatibilityPulseOn ? 'compatible-on' : 'compatible-off'
+        ? isBlocked
+          ? 'blocked-static'
+          : isPendingSelection
+            ? compatibilityPulseOn ? 'compatible-on' : 'compatible-off'
+            : isAvailable
+              ? 'compatible-static'
           : 'inactive'
         : options.focusItemId != null
           ? (itemMap.get(mesh.userData.partId) || []).some(item => String(item.id) === String(options.focusItemId))
@@ -797,9 +759,15 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       const partId = button.dataset.mannequinPart;
       const isSelected = pendingItem ? pendingPartIds.has(partId) : partId === selectedId;
       const isCompatible = compatibleIds.has(partId);
+      const isAvailable = availableIds.has(partId);
       const isEquipped = Boolean(itemMap.get(partId)?.length);
+      const occupants = pendingItem ? getPartItems(partId, pendingItem) : [];
+      const isBlocked = Boolean(pendingItem && isCompatible && occupants.length && !isAvailable);
+      const isOverlayCompatible = Boolean(pendingItem && isAvailable && occupants.length);
       button.classList.toggle('is-selected', isSelected);
-      button.classList.toggle('is-compatible', Boolean(pendingItem && isCompatible));
+      button.classList.toggle('is-blocked-compatible', isBlocked);
+      button.classList.toggle('is-overlay-compatible', isOverlayCompatible);
+      button.classList.toggle('is-compatible', Boolean(pendingItem && isAvailable));
       button.classList.toggle('is-incompatible', Boolean(pendingItem && !isCompatible));
       button.classList.toggle('is-equipped', isEquipped);
       button.classList.toggle('is-free', !isEquipped);
@@ -807,21 +775,72 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       button.setAttribute('aria-pressed', String(isSelected));
     });
     root.classList.toggle('has-pending-item', Boolean(pendingItem));
+    if (pendingParts) {
+      pendingParts.hidden = !pendingItem;
+      pendingParts.replaceChildren();
+      const visiblePartIds = [...compatibleIds];
+      visiblePartIds.forEach((partId) => {
+        const occupants = getPartItems(partId, pendingItem);
+        const isAvailable = availableIds.has(partId);
+        const isBlocked = occupants.length > 0 && !isAvailable;
+        const card = document.createElement('article');
+        card.className = `equipment-mannequin__pending-part ${isBlocked ? 'is-blocked' : occupants.length ? 'is-overlayable' : ''} ${pendingPartIds.has(partId) ? 'is-selected' : ''}`;
+
+        const heading = document.createElement('button');
+        heading.type = 'button';
+        heading.className = 'equipment-mannequin__pending-part-heading';
+        heading.setAttribute('aria-pressed', String(pendingPartIds.has(partId)));
+        if (isAvailable) heading.dataset.pendingPart = partId;
+        else heading.disabled = true;
+        const label = document.createElement('strong');
+        label.textContent = getPart(partId)?.label || partId;
+        const state = document.createElement('small');
+        state.textContent = isBlocked ? 'Da liberare' : pendingPartIds.has(partId) ? '✓ Selezionata' : 'Seleziona';
+        heading.append(label, state);
+        card.appendChild(heading);
+
+        occupants.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'equipment-mannequin__pending-item';
+          if (item.image_url) {
+            row.classList.add('has-image');
+            const image = document.createElement('img');
+            image.src = item.image_url;
+            image.alt = '';
+            row.appendChild(image);
+          }
+          const name = document.createElement('span');
+          name.textContent = item.name || 'Oggetto senza nome';
+          row.appendChild(name);
+          if (canEdit && onUnequip) {
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'equipment-mannequin__pending-remove';
+            remove.textContent = 'Rimuovi';
+            remove.setAttribute('aria-label', `Rimuovi ${item.name || 'oggetto'} da ${getPart(partId)?.label || partId}`);
+            remove.addEventListener('click', () => void removeEquippedItem(item, {
+              preservePending: true,
+              freedPartId: partId
+            }));
+            row.appendChild(remove);
+          }
+          card.appendChild(row);
+        });
+        pendingParts.appendChild(card);
+      });
+      if (!visiblePartIds.length) {
+        const empty = document.createElement('span');
+        empty.className = 'equipment-mannequin__pending-empty';
+        empty.textContent = 'Nessuna zona selezionata';
+        pendingParts.appendChild(empty);
+      }
+      pendingParts.querySelectorAll('[data-pending-part]').forEach((control) => {
+        control.addEventListener('click', () => togglePendingPart(control.dataset.pendingPart));
+      });
+    }
     if (equipAction) equipAction.hidden = !pendingItem;
     if (equipButton) {
       equipButton.disabled = busy || !pendingPartIds.size;
-    }
-    if (equipActionTitle) {
-      equipActionTitle.textContent = pendingPartIds.size
-        ? `${pendingPartIds.size} ${pendingPartIds.size === 1 ? 'parte pronta' : 'parti pronte'}`
-        : 'Scegli le parti del corpo';
-    }
-    if (equipActionDetail) {
-      equipActionDetail.textContent = pendingItem
-        ? pendingPartIds.size
-          ? `${pendingItem.name} verrà assegnato solo alle zone selezionate`
-          : `Tocca una o più zone compatibili per ${pendingItem.name}`
-        : '';
     }
     if (equipButtonLabel) {
       equipButtonLabel.textContent = pendingPartIds.size
@@ -829,7 +848,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
         : 'Seleziona una zona';
     }
     guidance.textContent = options.focusItemId != null ? 'La parte evidenziata indica dove è equipaggiato questo oggetto. Trascina per ruotare.' : pendingItem
-      ? `${pendingItem.name}: seleziona una o più parti lampeggianti, poi conferma`
+      ? 'Tocca una zona verde per equipaggiare'
       : canEdit
         ? 'Scegli un oggetto, poi tocca una parte del corpo'
         : 'Tocca una parte del corpo per vedere cosa indossa';
@@ -852,20 +871,32 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     updatePartStates();
   };
 
-  const removeEquippedItem = async (item) => {
+  const removeEquippedItem = async (item, { preservePending = false, freedPartId = null } = {}) => {
     if (!canEdit || !onUnequip || busy) return;
+    const preservedPendingId = preservePending ? pendingItemId : null;
     setBusy(true);
     status.textContent = `Rimozione di ${item.name}…`;
     try {
       const updated = await onUnequip(item);
       if (updated === false || updated === null) return;
       Object.assign(item, updated || {}, { equip_slot: null, equip_slots: [] });
-      pendingItemId = String(item.id);
       pendingPartIds.clear();
-      onChanged?.();
+      if (preservedPendingId && String(preservedPendingId) !== String(item.id)) {
+        pendingItemId = String(preservedPendingId);
+        const pendingItem = getItem(pendingItemId);
+        if (pendingItem && freedPartId && getAvailableCompatibleMannequinPartIds(pendingItem, workingItems).includes(freedPartId)) {
+          pendingPartIds.add(freedPartId);
+          selectedId = freedPartId;
+        }
+      } else {
+        pendingItemId = String(item.id);
+      }
+      onChanged?.({ close: false });
       refreshEquipment();
       syncCompatibilityPulse();
-      status.textContent = `${item.name} rimosso: scegli una nuova destinazione se vuoi riequipaggiarlo.`;
+      status.textContent = preservedPendingId
+        ? `${item.name} rimosso. La zona è pronta per l’oggetto che stavi equipaggiando.`
+        : `${item.name} rimosso: scegli una nuova destinazione se vuoi riequipaggiarlo.`;
     } finally {
       setBusy(false);
     }
@@ -874,7 +905,11 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
   const renderDetail = () => {
     const definition = getPart(selectedId);
     const selectedItems = itemMap.get(selectedId) || [];
-    detailLabel.textContent = definition?.label || 'Nessuna parte selezionata';
+    const pendingItem = getItem(pendingItemId);
+    detailLabel.textContent = pendingItem
+      ? `Dove vuoi equipaggiare ${pendingItem.name}?`
+      : (definition?.label || 'Nessuna parte selezionata');
+    detailItems.hidden = Boolean(pendingItem);
     detailItems.innerHTML = '';
     if (!definition) {
       const empty = document.createElement('li');
@@ -934,6 +969,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
     pendingItemId = nextItemId && nextItemId !== String(pendingItemId) ? nextItemId : null;
     pendingPartIds.clear();
     renderWardrobe();
+    renderDetail();
     syncCompatibilityPulse();
     const item = getItem(pendingItemId);
     status.textContent = item
@@ -987,6 +1023,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       card.addEventListener('dragstart', (event) => {
         if (String(pendingItemId) !== String(item.id)) pendingPartIds.clear();
         pendingItemId = String(item.id);
+        renderDetail();
         event.dataTransfer?.setData('text/plain', String(item.id));
         if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
         card.classList.add('is-dragging');
@@ -1047,7 +1084,7 @@ function initializeEquipmentManager(root, workingItems, THREE, options) {
       selectedId = partIds[partIds.length - 1] || null;
       hoveredId = null;
       syncCompatibilityPulse();
-      onChanged?.();
+      onChanged?.({ close: true });
       refreshEquipment();
       const labels = partIds.map((partId) => getPart(partId)?.label || partId).join(', ');
       status.textContent = `${item.name} equipaggiato su: ${labels}.`;
@@ -1284,7 +1321,10 @@ export function openEquipmentMannequin(configuration = {}) {
           dispose = initializeEquipmentManager(content, workingItems, THREE, {
             ...options,
             resetButton,
-            onChanged: () => { changed = true; if (options.singleItem) formEl?.requestSubmit(); }
+            onChanged: ({ close = false } = {}) => {
+              changed = true;
+              if (options.singleItem && close) formEl?.requestSubmit();
+            }
           });
           if (options.singleItem) {
             const equipButton = content.querySelector('[data-mannequin-equip]');
