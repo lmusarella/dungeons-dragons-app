@@ -28,9 +28,12 @@ export function getInventoryItemValueDisplay(item) {
   const legacyFactors = { mr: 1, cp: 1, ma: 10, sp: 10, mo: 100, gp: 100, mp: 1000, pp: 1000 };
   const legacyQuantity = Number(item?.cost?.quantita ?? item?.cost?.quantity);
   const legacyFactor = legacyFactors[String(item?.cost?.moneta ?? item?.cost?.coin ?? '').toLowerCase()];
-  const copper = Math.max(0, Math.round(Number.isFinite(directValue)
+  const unitCopper = Math.max(0, Number.isFinite(directValue)
     ? directValue
-    : Number.isFinite(legacyQuantity) && legacyFactor ? legacyQuantity * legacyFactor : 0));
+    : Number.isFinite(legacyQuantity) && legacyFactor ? legacyQuantity * legacyFactor : 0);
+  const rawQuantity = item?.qty === null || item?.qty === undefined ? 1 : Number(item.qty);
+  const quantity = Number.isFinite(rawQuantity) ? Math.max(0, rawQuantity) : 1;
+  const copper = Math.round(unitCopper * quantity);
   const denomination = ITEM_VALUE_DENOMINATIONS.find((coin) => copper > 0 && copper % coin.factor === 0)
     || ITEM_VALUE_DENOMINATIONS[ITEM_VALUE_DENOMINATIONS.length - 1];
   const amount = copper / denomination.factor;

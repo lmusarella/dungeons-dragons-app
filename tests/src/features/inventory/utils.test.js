@@ -20,6 +20,8 @@ describe('src/features/inventory/utils.js', () => {
     expect(getInventoryItemValueDisplay({ value_cp: 100 })).toMatchObject({ key: 'gp', amount: 1, unitLabel: "moneta d'oro" });
     expect(getInventoryItemValueDisplay({ value_cp: 300 })).toMatchObject({ key: 'gp', amount: 3, unitLabel: "monete d'oro" });
     expect(getInventoryItemValueDisplay({ value_cp: 3000 })).toMatchObject({ key: 'gp', amount: 30, unitLabel: "monete d'oro" });
+    expect(getInventoryItemValueDisplay({ value_cp: 20, qty: 3 })).toMatchObject({ key: 'sp', amount: 6, copper: 60 });
+    expect(getInventoryItemValueDisplay({ value_cp: 150, qty: 2 })).toMatchObject({ key: 'gp', amount: 3, copper: 300 });
   });
   it('splits and combines the gold, silver and copper editor values', () => {
     expect(splitCopperValue(1234)).toEqual({ gp: 12, sp: 3, cp: 4 });
