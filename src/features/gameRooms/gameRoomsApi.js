@@ -1,8 +1,20 @@
 import { supabase } from '../../lib/supabase.js';
 
+const signedMapUrlCache = new Map();
+
 function unwrap({ data, error }) {
   if (error) throw error;
   return data;
+}
+
+async function getSignedMapUrl(path) {
+  const cached = signedMapUrlCache.get(path);
+  if (cached?.expiresAt > Date.now()) return cached.url;
+  const { data, error } = await supabase.storage.from('game-maps').createSignedUrl(path, 3600);
+  if (error) throw error;
+  const url = data?.signedUrl || '';
+  signedMapUrlCache.set(path, { url, expiresAt: Date.now() + 50 * 60 * 1000 });
+  return url;
 }
 
 export async function fetchGameRooms(userId) {
@@ -49,17 +61,36 @@ export async function fetchGameRoom(roomId) {
     .eq('room_id', roomId)
     .eq('membership_status', 'joined')
     .order('joined_at')) || [];
+  const { data: participantProfiles, error: profilesError } = await supabase.rpc('get_game_room_participants', { p_room_id: roomId });
+  let characters = [];
+  if (!profilesError) {
+    characters = (participantProfiles || []).filter((profile) => profile.character_id).map((profile) => ({
+      id: profile.character_id,
+      user_id: profile.user_id,
+      name: profile.character_name || profile.display_name,
+      data: { avatar_url: profile.avatar_url || '' }
+    }));
+  } else {
+    const characterIds = members.map((member) => member.character_id).filter(Boolean);
+    characters = characterIds.length
+      ? (unwrap(await supabase.from('characters').select('id,user_id,name,data').in('id', characterIds)) || [])
+      : [];
+  }
+  const charactersById = new Map(characters.map((character) => [String(character.id), character]));
+  const enrichedMembers = members.map((member) => ({
+    ...member,
+    character: member.character_id ? charactersById.get(String(member.character_id)) || null : null
+  }));
   const rawMaps = unwrap(await supabase.from('game_maps').select('*').eq('room_id', roomId).order('created_at')) || [];
   const maps = await Promise.all(rawMaps.map(async (map) => {
     if (!map.image_storage_path) return { ...map, imageUrl: '' };
-    const { data } = await supabase.storage.from('game-maps').createSignedUrl(map.image_storage_path, 3600);
-    return { ...map, imageUrl: data?.signedUrl || '' };
+    return { ...map, imageUrl: await getSignedMapUrl(map.image_storage_path) };
   }));
   const activeMap = maps.find((map) => map.is_active);
   const tokens = activeMap
     ? (unwrap(await supabase.from('game_map_tokens').select('*').eq('room_id', roomId).eq('map_id', activeMap.id).eq('is_removed', false).order('created_at')) || [])
     : [];
-  return { room, members, maps, tokens };
+  return { room, members: enrichedMembers, maps, tokens };
 }
 
 export async function leaveGameRoom(roomId) {
@@ -103,6 +134,63 @@ export async function createGameMap({ roomId, title, file, width, height, gridCe
   }
 }
 
+export async function updateGameMapSettings(roomId, mapId, settings) {
+  return unwrap(await supabase.from('game_maps').update({
+    grid_cell_size_px: Number(settings.gridCellSize),
+    grid_color: settings.gridColor,
+    grid_visible: Boolean(settings.gridVisible)
+  }).eq('id', mapId).eq('room_id', roomId).select().single());
+}
+
+export async function deleteGameMap(roomId, mapId) {
+  const map = unwrap(await supabase.from('game_maps')
+    .select('image_storage_path')
+    .eq('id', mapId)
+    .eq('room_id', roomId)
+    .single());
+  if (map.image_storage_path) unwrap(await supabase.storage.from('game-maps').remove([map.image_storage_path]));
+  if (map.image_storage_path) signedMapUrlCache.delete(map.image_storage_path);
+  unwrap(await supabase.from('game_maps').delete().eq('id', mapId).eq('room_id', roomId));
+}
+
+export async function createCharacterMapToken({ roomId, mapId, participant, gridX, gridY }) {
+  return unwrap(await supabase.from('game_map_tokens').insert({
+    room_id: roomId,
+    map_id: mapId,
+    token_type: 'character',
+    character_id: participant.characterId,
+    owner_user_id: participant.userId,
+    name: participant.name,
+    image_url: participant.imageUrl || null,
+    grid_x: gridX,
+    grid_y: gridY
+  }).select().single());
+}
+
+export async function moveGameMapToken(roomId, mapId, tokenId, gridX, gridY) {
+  return unwrap(await supabase.from('game_map_tokens').update({
+    grid_x: gridX,
+    grid_y: gridY
+  }).eq('id', tokenId).eq('room_id', roomId).eq('map_id', mapId).select().single());
+}
+
+export async function deleteGameMapToken(roomId, mapId, tokenId) {
+  return unwrap(await supabase.rpc('remove_game_map_token', {
+    p_room_id: roomId,
+    p_map_id: mapId,
+    p_token_id: tokenId
+  }));
+}
+
+export async function placeOwnGameMapToken(roomId, mapId, gridX, gridY) {
+  return unwrap(await supabase.rpc('place_own_game_token', {
+    p_room_id: roomId,
+    p_map_id: mapId,
+    p_grid_x: gridX,
+    p_grid_y: gridY
+  }));
+}
+
 export async function deleteGameRoom(roomId) {
   const maps = unwrap(await supabase.from('game_maps').select('image_storage_path').eq('room_id', roomId)) || [];
   const paths = maps.map((map) => map.image_storage_path).filter(Boolean);
@@ -111,6 +199,7 @@ export async function deleteGameRoom(roomId) {
 }
 
 export function subscribeToGameRoom(roomId, handlers = {}) {
+  let presencePayload = { userId: handlers.userId, displayName: handlers.displayName || 'Giocatore', selectedTokenId: null };
   const channel = supabase.channel(`game-room:${roomId}`, {
     config: { private: true, presence: { key: handlers.userId } }
   });
@@ -121,8 +210,13 @@ export function subscribeToGameRoom(roomId, handlers = {}) {
     .on('presence', { event: 'sync' }, () => handlers.onPresence?.(channel.presenceState()))
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED' && handlers.userId) {
-        await channel.track({ userId: handlers.userId, displayName: handlers.displayName || 'Giocatore' });
+        await channel.track(presencePayload);
       }
     });
-  return () => { void supabase.removeChannel(channel); };
+  const cleanup = () => { void supabase.removeChannel(channel); };
+  cleanup.updatePresence = async (patch = {}) => {
+    presencePayload = { ...presencePayload, ...patch };
+    await channel.track(presencePayload);
+  };
+  return cleanup;
 }

@@ -424,6 +424,71 @@ BEGIN
   RETURN v_code;
 END; $$;
 
+CREATE FUNCTION public.get_game_room_participants(p_room_id uuid)
+RETURNS TABLE(
+  user_id uuid,
+  character_id uuid,
+  display_name text,
+  character_name text,
+  avatar_url text
+) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT member.user_id,member.character_id,member.display_name,character.name,
+         nullif(character.data->>'avatar_url','')
+  FROM public.game_room_members AS member
+  LEFT JOIN public.characters AS character ON character.id=member.character_id
+  WHERE member.room_id=p_room_id AND member.membership_status='joined'
+    AND dnd_game_private.is_game_participant(p_room_id)
+  ORDER BY member.joined_at;
+$$;
+
+CREATE FUNCTION public.place_own_game_token(
+  p_room_id uuid,p_map_id uuid,p_grid_x integer,p_grid_y integer
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_uid uuid := (SELECT auth.uid());
+  v_character public.characters%ROWTYPE;
+  v_token_id uuid;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+  SELECT character.* INTO v_character
+  FROM public.game_room_members AS member
+  JOIN public.characters AS character ON character.id=member.character_id
+  WHERE member.room_id=p_room_id AND member.user_id=v_uid
+    AND member.membership_status='joined' AND character.user_id=v_uid;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Nessun personaggio associato alla stanza'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.game_maps WHERE id=p_map_id AND room_id=p_room_id) THEN
+    RAISE EXCEPTION 'Mappa non valida'; END IF;
+  SELECT id INTO v_token_id FROM public.game_map_tokens
+  WHERE room_id=p_room_id AND map_id=p_map_id
+    AND token_type='character' AND character_id=v_character.id
+  ORDER BY created_at LIMIT 1;
+  IF v_token_id IS NOT NULL THEN
+    UPDATE public.game_map_tokens SET grid_x=p_grid_x,grid_y=p_grid_y,is_removed=false
+    WHERE id=v_token_id;
+    RETURN v_token_id;
+  END IF;
+  INSERT INTO public.game_map_tokens(
+    room_id,map_id,token_type,character_id,owner_user_id,name,image_url,
+    grid_x,grid_y,created_by
+  ) VALUES(
+    p_room_id,p_map_id,'character',v_character.id,v_uid,v_character.name,
+    nullif(v_character.data->>'avatar_url',''),p_grid_x,p_grid_y,v_uid
+  ) RETURNING id INTO v_token_id;
+  RETURN v_token_id;
+END; $$;
+
+CREATE FUNCTION public.remove_game_map_token(
+  p_room_id uuid,p_map_id uuid,p_token_id uuid
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF NOT dnd_game_private.is_game_master(p_room_id) THEN
+    RAISE EXCEPTION 'Solo il Dungeon Master può rimuovere una pedina';
+  END IF;
+  DELETE FROM public.game_map_tokens
+  WHERE id=p_token_id AND room_id=p_room_id AND map_id=p_map_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pedina non trovata'; END IF;
+END; $$;
+
 REVOKE ALL ON FUNCTION public.create_game_room(text,text,integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.join_game_room(text,uuid,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_game_room_character(uuid,uuid) FROM PUBLIC;
@@ -431,6 +496,9 @@ REVOKE ALL ON FUNCTION public.leave_game_room(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.kick_game_room_member(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.activate_game_map(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rotate_game_room_invite(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_game_room_participants(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.place_own_game_token(uuid,uuid,integer,integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.remove_game_map_token(uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_game_room(text,text,integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.join_game_room(text,uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_game_room_character(uuid,uuid) TO authenticated;
@@ -438,6 +506,9 @@ GRANT EXECUTE ON FUNCTION public.leave_game_room(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.kick_game_room_member(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.activate_game_map(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rotate_game_room_invite(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_game_room_participants(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.place_own_game_token(uuid,uuid,integer,integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remove_game_map_token(uuid,uuid,uuid) TO authenticated;
 
 -- 9. STORAGE: bucket privato; path = room_uuid/map_uuid/filename.png
 INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)

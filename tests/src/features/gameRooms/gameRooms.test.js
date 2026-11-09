@@ -23,11 +23,20 @@ describe('game rooms entry point and Supabase integration', () => {
     expect(api).toContain('export async function createGameMap');
     expect(api).toContain("storage.from('game-maps').upload");
     expect(api).toContain("rpc('activate_game_map'");
+    expect(api).toContain("rpc('get_game_room_participants'");
+    expect(api).toContain('export async function updateGameMapSettings');
+    expect(api).toContain('export async function deleteGameMap');
+    expect(api).toContain('export async function createCharacterMapToken');
+    expect(api).toContain('export async function moveGameMapToken');
+    expect(api).toContain('export async function deleteGameMapToken');
+    expect(api).toContain("rpc('remove_game_map_token'");
+    expect(api).toContain("rpc('place_own_game_token'");
+    expect(api).toContain('cleanup.updatePresence');
     expect(api).toContain('config: { private: true');
     expect(api).toContain("table: 'game_room_members'");
     expect(api).toContain("table: 'game_maps'");
     expect(api).toContain("table: 'game_map_tokens'");
-    expect(api).toContain("createSignedUrl(map.image_storage_path");
+    expect(api).toContain("createSignedUrl(path");
     expect(api).not.toContain("master_user_id: userId");
   });
 
@@ -46,5 +55,15 @@ describe('game rooms entry point and Supabase integration', () => {
     expect(view).toContain('data-rotate-invite');
     expect(view).toContain('openMapUpload');
     expect(view).not.toContain('Editor mappe: prossimo passaggio');
+    expect(view).toContain('game-map-color-picker');
+    expect(view).toContain('game-map-participant-picker');
+    expect(view).toContain('data-delete-map');
+    expect(view).toContain('game-room-member-avatar');
+    expect(view).toContain('game-map-drop-target');
+    expect(view).toContain('game-map-token-actions');
+    expect(view).toContain('game-map-scale-legend');
+    expect(view).toContain('data-position-token');
+    expect(view).toContain('data-remove-map-token');
+    expect(view).toContain('is-token-source');
   });
 });
