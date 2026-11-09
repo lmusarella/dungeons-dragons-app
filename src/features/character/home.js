@@ -178,29 +178,59 @@ function getWildShapeForms(companions = []) {
 async function openWildShapePicker(character, companions, container) {
   if (!character?.data?.wild_shape_enabled) return;
   const forms = getWildShapeForms(companions);
+  const activeWildShape = getActiveWildShapeDetails(character, companions);
+  if (activeWildShape) {
+    const content = document.createElement('div');
+    content.className = 'wild-shape-picker wild-shape-picker--active';
+    content.innerHTML = `
+      <section class="wild-shape-picker__active-card">
+        <span class="wild-shape-picker__icon" aria-hidden="true">♞</span>
+        <span class="wild-shape-picker__copy">
+          <small>Trasformazione attiva</small>
+          <strong>${escapeHtml(activeWildShape.companion.name)}</strong>
+          <span>PF ${activeWildShape.hpCurrent}/${activeWildShape.hpMax}</span>
+        </span>
+        <span class="wild-shape-picker__health" role="meter" aria-label="Punti ferita forma selvatica ${activeWildShape.hpCurrent} su ${activeWildShape.hpMax}" aria-valuemin="0" aria-valuemax="${activeWildShape.hpMax}" aria-valuenow="${activeWildShape.hpCurrent}"><i style="width:${Math.min((activeWildShape.hpCurrent / activeWildShape.hpMax) * 100, 100)}%"></i></span>
+      </section>
+      <p class="wild-shape-picker__active-hint">Termina la trasformazione per tornare alle statistiche del personaggio.</p>`;
+    const confirmed = await openFormModal({
+      title: 'Forma selvatica attiva',
+      submitLabel: 'Termina trasformazione',
+      content,
+      cardClass: ['modal-card--form', 'modal-card--wild-shape']
+    });
+    if (confirmed) await endWildShape(character, container);
+    return;
+  }
   if (!forms.length) {
     createToast('Crea prima una forma nella sezione Famigli', 'error');
     return;
   }
   const currentWildShape = character.data?.wild_shape || {};
   const content = document.createElement('div');
-  content.className = 'modal-form-grid wild-shape-picker';
-  const field = document.createElement('label');
-  field.className = 'field';
-  field.innerHTML = '<span>Forma animale</span>';
-  const select = buildSelect(forms.map((form) => {
+  content.className = 'wild-shape-picker';
+  content.innerHTML = `
+    <p class="wild-shape-picker__intro">Scegli la forma da assumere. La trasformazione partirà con tutti i suoi punti ferita.</p>
+    <div class="wild-shape-picker__grid" role="radiogroup" aria-label="Forme selvatiche disponibili">
+      ${forms.map((form, index) => {
     const statBlock = normalizeWildShapeStatBlock(form.stat_block);
     const hpMax = Math.max(Number(statBlock.hp.max) || Number(statBlock.hp.current) || 1, 1);
-    return { value: form.id, label: `${form.name} · HP ${hpMax}` };
-  }), currentWildShape.active_companion_id || forms[0]?.id || '');
-  select.name = 'wild_shape_companion_id';
-  field.appendChild(select);
-  content.appendChild(field);
+    const armorClass = statBlock.armor_class ?? (10 + (getAbilityModifier(statBlock.abilities.dex) || 0));
+    const selected = String(currentWildShape.active_companion_id || forms[0]?.id || '') === String(form.id);
+    return `
+        <label class="wild-shape-picker__choice">
+          <input type="radio" name="wild_shape_companion_id" value="${escapeHtml(form.id)}" ${selected || (!currentWildShape.active_companion_id && index === 0) ? 'checked' : ''} />
+          <span class="wild-shape-picker__icon" aria-hidden="true">♞</span>
+          <span class="wild-shape-picker__copy"><strong>${escapeHtml(form.name)}</strong><small>${hpMax} PF · CA ${armorClass}</small></span>
+          <i aria-hidden="true">✓</i>
+        </label>`;
+  }).join('')}
+    </div>`;
   const formData = await openFormModal({
     title: 'Scegli forma selvatica',
     submitLabel: 'Trasformati',
     content,
-    cardClass: 'modal-card--form'
+    cardClass: ['modal-card--form', 'modal-card--wild-shape']
   });
   if (!formData) return;
   const companionId = String(formData.get('wild_shape_companion_id') || '');
@@ -1333,12 +1363,6 @@ export async function renderHome(container) {
     .forEach((button) => button.addEventListener('click', () => {
       if (!activeCharacter || !canEditCharacter) return;
       void openWildShapePicker(activeCharacter, companions, container);
-    }));
-
-  container.querySelectorAll('[data-end-wild-shape]')
-    .forEach((button) => button.addEventListener('click', () => {
-      if (!activeCharacter || !canEditCharacter) return;
-      void endWildShape(activeCharacter, container);
     }));
 
   container.querySelectorAll('[data-open-dice]')
@@ -3239,11 +3263,15 @@ async function handleHpAction(action, container) {
     title,
     submitLabel,
     cardClass: ['modal-card--quick-action', 'modal-card--hp-action'],
-    content: buildHpActionFields(activeCharacter, action)
+    content: buildHpActionFields(activeCharacter, action, {
+      wildShape: getActiveWildShapeDetails(activeCharacter, companions)
+    })
   });
   if (!formData) return;
   const useHitDice = formData.has('use_hit_dice');
-  const useTempHp = formData.get('healing_target') === 'temp';
+  const healingTarget = formData.get('healing_target');
+  const useTempHp = healingTarget === 'temp';
+  const useWildShapeHp = healingTarget === 'wild_shape';
   const hitDice = activeCharacter.data?.hit_dice || {};
   const abilities = activeCharacter.data?.abilities || {};
   const hitDiceUsed = Number(hitDice.used) || 0;
@@ -3279,9 +3307,7 @@ async function handleHpAction(action, container) {
   const currentHp = Number(activeCharacter.data?.hp?.current) || 0;
   const currentTempHp = Number(activeCharacter.data?.hp?.temp) || 0;
   const maxHp = activeCharacter.data?.hp?.max;
-  const activeWildShape = action === 'damage'
-    ? getActiveWildShapeDetails(activeCharacter, companions)
-    : null;
+  const activeWildShape = getActiveWildShapeDetails(activeCharacter, companions);
   const maxOverrideRaw = formData.get('hp_max_override');
   const maxOverrideValue = maxOverrideRaw === null || maxOverrideRaw === '' ? null : Number(maxOverrideRaw);
   if (action === 'damage' && maxOverrideValue !== null && (!Number.isFinite(maxOverrideValue) || maxOverrideValue <= 0)) {
@@ -3295,6 +3321,12 @@ async function handleHpAction(action, container) {
   let normalDamageTaken = 0;
   if (action === 'heal' && useTempHp) {
     nextTemp = currentTempHp + amount;
+  } else if (action === 'heal' && useWildShapeHp && activeWildShape) {
+    nextWildShape = {
+      ...(activeCharacter.data?.wild_shape || {}),
+      active_companion_id: activeWildShape.companion.id,
+      hp_current: Math.min(activeWildShape.hpCurrent + amount, activeWildShape.hpMax)
+    };
   } else if (action === 'heal') {
     nextCurrent = currentHp + amount;
   } else {
@@ -3337,7 +3369,7 @@ async function handleHpAction(action, container) {
     ? ` · PF -${normalDamageTaken}`
     : '';
   const message = action === 'heal'
-    ? `${useTempHp ? 'HP temporanei +' : 'PF curati +'}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
+    ? `${useWildShapeHp ? 'Forma selvatica curata +' : (useTempHp ? 'HP temporanei +' : 'PF curati +')}${amount}${useHitDice ? ` (${diceCount}d${hitDiceSides})` : ''}`
     : `Danno ${amount}${wildShapeLabel}${normalHpLabel}`;
   const shouldOpenConcentrationSave = action === 'damage' && Number(amount) > 0 && Boolean(activeCharacter.data?.concentration_active);
   const saveOnComplete = async () => {

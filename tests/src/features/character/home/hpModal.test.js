@@ -19,6 +19,8 @@ describe('src/features/character/home/hpModal.js', () => {
     expect(presetHandler).not.toContain('amountInput.focus()');
     expect(presetHandler).not.toContain('amountInput.select()');
     expect(source).toContain('name="healing_target"');
+    expect(source).toContain('value="wild_shape"');
+    expect(source).toContain("{ wildShape = null }");
     expect(source).toContain('name="change_hp_max"');
     expect(source).not.toContain('Tipo di danno');
   });

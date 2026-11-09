@@ -1,4 +1,5 @@
 import { attachNumberStepper, buildInput } from '../../../ui/components.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { getHitDiceSides } from './utils.js';
 
 export function attachModalValueStepper(input, {
@@ -164,7 +165,7 @@ export function buildHpShortcutFields(
   return wrapper;
 }
 
-export function buildHpActionFields(character, action = 'damage') {
+export function buildHpActionFields(character, action = 'damage', { wildShape = null } = {}) {
   const healing = action === 'heal';
   const hp = character?.data?.hp || {};
   const current = Math.max(0, Number(hp.current) || 0);
@@ -198,7 +199,7 @@ export function buildHpActionFields(character, action = 'damage') {
     ${healing ? `
       <section class="hp-action-editor__selection-section">
         <span class="hp-action-editor__section-label">Dove applicare la cura</span>
-        <div class="hp-action-editor__choices" aria-label="Destinazione della cura">
+        <div class="hp-action-editor__choices ${wildShape ? 'has-wild-shape' : ''}" aria-label="Destinazione della cura">
           <label class="hp-action-editor__choice">
             <input type="radio" name="healing_target" value="hp" checked />
             <span aria-hidden="true">♥</span><strong>Punti ferita</strong><small>Recupera PF fino al massimo.</small><i aria-hidden="true">✓</i>
@@ -207,6 +208,11 @@ export function buildHpActionFields(character, action = 'damage') {
             <input type="radio" name="healing_target" value="temp" />
             <span aria-hidden="true">◇</span><strong>PF temporanei</strong><small>Aggiunge protezione temporanea.</small><i aria-hidden="true">✓</i>
           </label>
+          ${wildShape ? `
+          <label class="hp-action-editor__choice hp-action-editor__choice--wild-shape">
+            <input type="radio" name="healing_target" value="wild_shape" />
+            <span aria-hidden="true">♞</span><strong>Forma selvatica</strong><small>Cura ${escapeHtml(wildShape.companion?.name || 'la forma')} · ${wildShape.hpCurrent}/${wildShape.hpMax} PF.</small><i aria-hidden="true">✓</i>
+          </label>` : ''}
         </div>
       </section>` : `
       <section class="hp-action-editor__selection-section">

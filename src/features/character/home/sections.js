@@ -342,12 +342,11 @@ export function buildCharacterOverview(character, canEditCharacter, items = [], 
           <div class="combat-vitals-side-stack ${data.wild_shape_enabled ? 'has-wild-shape' : ''}">
             ${data.wild_shape_enabled ? `
             <div class="wild-shape-card ${activeWildShape ? 'is-active' : ''}">
-              <button class="wild-shape-card__main" type="button" data-open-wild-shape ${canEditCharacter && wildShapeForms.length ? '' : 'disabled'}>
+              <button class="wild-shape-card__main" type="button" data-open-wild-shape ${canEditCharacter && (wildShapeForms.length || activeWildShape) ? '' : 'disabled'}>
                 <span class="wild-shape-card__icon" aria-hidden="true">♞</span>
                 <span class="wild-shape-card__copy"><strong>${activeWildShape ? escapeHtml(activeWildShape.companion.name) : 'Trasformati'}</strong>${activeWildShape ? `<span>PF ${activeWildShape.hpCurrent}/${activeWildShape.hpMax} · ${Math.round(wildShapeHpPercent)}%</span>` : `<span>${wildShapeForms.length} forme disponibili</span>`}</span>
                 <span class="wild-shape-card__arrow" aria-hidden="true">›</span>
               </button>
-              ${activeWildShape ? `<button class="wild-shape-card__end" type="button" data-end-wild-shape ${canEditCharacter ? '' : 'disabled'}>Termina</button>` : ''}
             </div>` : ''}
             <button class="combat-stat combat-stat--hit-dice combat-stat--interactive" type="button" data-roll-hit-dice ${canEditCharacter ? '' : 'disabled'} title="Usa un dado vita" aria-label="Dadi vita disponibili ${formatHitDice(hitDice)}">
               <span class="combat-stat__icon" aria-hidden="true">◆</span>
