@@ -30,17 +30,19 @@ BEGIN
 
   IF v_token_id IS NOT NULL THEN
     UPDATE public.game_map_tokens
-    SET grid_x=p_grid_x,grid_y=p_grid_y,is_removed=false
+    SET grid_x=p_grid_x,grid_y=p_grid_y,is_removed=false,
+        token_data=jsonb_build_object('hp',coalesce(v_character.data->'hp','{}'::jsonb))
     WHERE id=v_token_id;
     RETURN v_token_id;
   END IF;
 
   INSERT INTO public.game_map_tokens(
     room_id,map_id,token_type,character_id,owner_user_id,name,
-    image_url,grid_x,grid_y,created_by
+    image_url,grid_x,grid_y,created_by,token_data
   ) VALUES(
     p_room_id,p_map_id,'character',v_character.id,v_uid,v_character.name,
-    nullif(v_character.data->>'avatar_url',''),p_grid_x,p_grid_y,v_uid
+    nullif(v_character.data->>'avatar_url',''),p_grid_x,p_grid_y,v_uid,
+    jsonb_build_object('hp',coalesce(v_character.data->'hp','{}'::jsonb))
   ) RETURNING id INTO v_token_id;
   RETURN v_token_id;
 END; $$;

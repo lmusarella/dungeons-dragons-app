@@ -21,6 +21,7 @@ CREATE TABLE public.game_rooms (
     UNIQUE CHECK (invite_code ~ '^[0-9]{6}$'),
   status text NOT NULL DEFAULT 'lobby' CHECK (status IN ('lobby','active','closed')),
   max_players smallint NOT NULL DEFAULT 8 CHECK (max_players BETWEEN 1 AND 20),
+  rules_version text NOT NULL DEFAULT '2014' CHECK (rules_version IN ('2014','2024')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -304,7 +305,8 @@ CREATE POLICY gtoken_update ON public.game_map_tokens FOR UPDATE TO authenticate
 CREATE FUNCTION public.create_game_room(
   p_title text,
   p_description text,
-  p_max_players integer
+  p_max_players integer,
+  p_rules_version text DEFAULT '2014'
 ) RETURNS public.game_rooms LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_uid uuid := (SELECT auth.uid());
@@ -317,8 +319,11 @@ BEGIN
   IF p_max_players NOT BETWEEN 1 AND 20 THEN
     RAISE EXCEPTION 'Il numero massimo di giocatori deve essere compreso tra 1 e 20';
   END IF;
-  INSERT INTO public.game_rooms(master_user_id,title,description,max_players)
-  VALUES(v_uid,btrim(p_title),nullif(btrim(coalesce(p_description,'')),''),p_max_players::smallint)
+  IF p_rules_version NOT IN ('2014','2024') THEN
+    RAISE EXCEPTION 'Edizione delle regole non valida';
+  END IF;
+  INSERT INTO public.game_rooms(master_user_id,title,description,max_players,rules_version)
+  VALUES(v_uid,btrim(p_title),nullif(btrim(coalesce(p_description,'')),''),p_max_players::smallint,p_rules_version)
   RETURNING * INTO v_room;
   RETURN v_room;
 END; $$;
@@ -430,10 +435,13 @@ RETURNS TABLE(
   character_id uuid,
   display_name text,
   character_name text,
-  avatar_url text
+  avatar_url text,
+  hp_current text,
+  hp_max text
 ) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT member.user_id,member.character_id,member.display_name,character.name,
-         nullif(character.data->>'avatar_url','')
+         nullif(character.data->>'avatar_url',''),
+         character.data#>>'{hp,current}',character.data#>>'{hp,max}'
   FROM public.game_room_members AS member
   LEFT JOIN public.characters AS character ON character.id=member.character_id
   WHERE member.room_id=p_room_id AND member.membership_status='joined'
@@ -463,16 +471,18 @@ BEGIN
     AND token_type='character' AND character_id=v_character.id
   ORDER BY created_at LIMIT 1;
   IF v_token_id IS NOT NULL THEN
-    UPDATE public.game_map_tokens SET grid_x=p_grid_x,grid_y=p_grid_y,is_removed=false
+    UPDATE public.game_map_tokens SET grid_x=p_grid_x,grid_y=p_grid_y,is_removed=false,
+      token_data=jsonb_build_object('hp',coalesce(v_character.data->'hp','{}'::jsonb))
     WHERE id=v_token_id;
     RETURN v_token_id;
   END IF;
   INSERT INTO public.game_map_tokens(
     room_id,map_id,token_type,character_id,owner_user_id,name,image_url,
-    grid_x,grid_y,created_by
+    grid_x,grid_y,created_by,token_data
   ) VALUES(
     p_room_id,p_map_id,'character',v_character.id,v_uid,v_character.name,
-    nullif(v_character.data->>'avatar_url',''),p_grid_x,p_grid_y,v_uid
+    nullif(v_character.data->>'avatar_url',''),p_grid_x,p_grid_y,v_uid,
+    jsonb_build_object('hp',coalesce(v_character.data->'hp','{}'::jsonb))
   ) RETURNING id INTO v_token_id;
   RETURN v_token_id;
 END; $$;
@@ -489,7 +499,7 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'Pedina non trovata'; END IF;
 END; $$;
 
-REVOKE ALL ON FUNCTION public.create_game_room(text,text,integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_game_room(text,text,integer,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.join_game_room(text,uuid,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_game_room_character(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.leave_game_room(uuid) FROM PUBLIC;
@@ -499,7 +509,7 @@ REVOKE ALL ON FUNCTION public.rotate_game_room_invite(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_game_room_participants(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.place_own_game_token(uuid,uuid,integer,integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remove_game_map_token(uuid,uuid,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_game_room(text,text,integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_game_room(text,text,integer,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.join_game_room(text,uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_game_room_character(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.leave_game_room(uuid) TO authenticated;

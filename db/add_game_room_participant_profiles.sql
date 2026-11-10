@@ -1,20 +1,26 @@
 -- Profili minimi dei partecipanti, leggibili soltanto da chi appartiene alla stanza.
 BEGIN;
 
-CREATE OR REPLACE FUNCTION public.get_game_room_participants(p_room_id uuid)
+DROP FUNCTION IF EXISTS public.get_game_room_participants(uuid);
+
+CREATE FUNCTION public.get_game_room_participants(p_room_id uuid)
 RETURNS TABLE(
   user_id uuid,
   character_id uuid,
   display_name text,
   character_name text,
-  avatar_url text
+  avatar_url text,
+  hp_current text,
+  hp_max text
 ) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT
     member.user_id,
     member.character_id,
     member.display_name,
     character.name,
-    nullif(character.data->>'avatar_url','')
+    nullif(character.data->>'avatar_url',''),
+    character.data#>>'{hp,current}',
+    character.data#>>'{hp,max}'
   FROM public.game_room_members AS member
   LEFT JOIN public.characters AS character ON character.id=member.character_id
   WHERE member.room_id=p_room_id

@@ -1,9 +1,10 @@
 import './gameRooms.css';
 import { getState } from '../../app/state.js';
-import { createToast, openConfirmModal, openFormModal } from '../../ui/components.js';
+import { createToast, openConfirmModal, openFormModal, setGlobalLoading } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import {
   createCharacterMapToken,
+  createCreatureMapToken,
   createGameMap,
   createGameRoom,
   deleteGameMap,
@@ -11,6 +12,7 @@ import {
   deleteGameRoom,
   fetchGameRoom,
   fetchGameRooms,
+  fetchSharedGameCreatures,
   joinGameRoom,
   kickGameRoomMember,
   leaveGameRoom,
@@ -37,10 +39,10 @@ function characterOptions(characters, selectedId) {
 async function openCreateRoom() {
   const data = await openFormModal({
     title: 'Crea stanza di gioco', submitLabel: 'Crea stanza', cardClass: 'modal-card--game-room',
-    content: `<div class="game-room-form"><label class="field"><span>Nome della stanza</span><input name="title" maxlength="120" required placeholder="Es. Sessione del venerdì"></label><label class="field"><span>Descrizione <small>facoltativa</small></span><textarea name="description" rows="4" maxlength="1000" placeholder="Tema, appuntamento o indicazioni per i giocatori"></textarea></label><label class="field"><span>Numero massimo di giocatori</span><input name="max_players" type="number" min="1" max="20" value="8" required></label></div>`
+    content: `<div class="game-room-form"><label class="field"><span>Nome della stanza</span><input name="title" maxlength="120" required placeholder="Es. Sessione del venerdì"></label><fieldset class="game-room-rules-picker"><legend>Regole della sessione</legend><div><label><input type="radio" name="rules_version" value="2014" checked><span><strong>2014</strong><small>Regole classiche</small></span></label><label><input type="radio" name="rules_version" value="2024"><span><strong>2024</strong><small>Regole aggiornate</small></span></label></div></fieldset><label class="field"><span>Descrizione <small>facoltativa</small></span><textarea name="description" rows="4" maxlength="1000" placeholder="Tema, appuntamento o indicazioni per i giocatori"></textarea></label><label class="field"><span>Numero massimo di giocatori</span><input name="max_players" type="number" min="1" max="20" value="8" required></label></div>`
   });
   if (!data) return null;
-  return createGameRoom({ title: data.get('title'), description: data.get('description'), maxPlayers: data.get('max_players') });
+  return createGameRoom({ title: data.get('title'), description: data.get('description'), maxPlayers: data.get('max_players'), rulesVersion: data.get('rules_version') });
 }
 
 async function openJoinRoom(state) {
@@ -58,7 +60,12 @@ async function openJoinRoom(state) {
     }
   });
   if (!data) return null;
-  return joinGameRoom({ inviteCode: data.get('invite_code'), characterId: data.get('character_id'), displayName: data.get('display_name') });
+  setGlobalLoading(true);
+  try {
+    return await joinGameRoom({ inviteCode: data.get('invite_code'), characterId: data.get('character_id'), displayName: data.get('display_name') });
+  } finally {
+    setGlobalLoading(false);
+  }
 }
 
 function readMapDimensions(file) {
@@ -155,9 +162,10 @@ async function openMapSettings(roomId, map, participants = []) {
 
 function roomTokenParticipants(lobby, state) {
   const activeCharacter = state.characters.find((character) => String(character.id) === String(state.activeCharacterId)) || state.characters[0] || null;
+  const isMaster = String(lobby.room.master_user_id) === String(state.user.id);
   return [
-    activeCharacter ? { userId: state.user.id, characterId: activeCharacter.id, name: activeCharacter.name || 'Dungeon Master', imageUrl: sanitizeImageUrl(activeCharacter.data?.avatar_url || ''), isMaster: true } : null,
-    ...lobby.members.map((member) => member.character ? ({ userId: member.user_id, characterId: member.character.id, name: member.character.name || member.display_name, imageUrl: sanitizeImageUrl(member.character.data?.avatar_url || ''), isMaster: false }) : null)
+    isMaster && activeCharacter ? { userId: state.user.id, characterId: activeCharacter.id, name: activeCharacter.name || 'Dungeon Master', imageUrl: sanitizeImageUrl(activeCharacter.data?.avatar_url || ''), hpCurrent: activeCharacter.data?.hp?.current, hpMax: activeCharacter.data?.hp?.max, isMaster: true } : null,
+    ...lobby.members.map((member) => member.character ? ({ userId: member.user_id, characterId: member.character.id, name: member.character.name || member.display_name, imageUrl: sanitizeImageUrl(member.character.data?.avatar_url || ''), hpCurrent: member.character.data?.hp?.current, hpMax: member.character.data?.hp?.max, isMaster: false }) : null)
   ].filter(Boolean);
 }
 
@@ -190,7 +198,7 @@ function buildTacticalMap(activeMap, tokens = []) {
     const tokenWidth = ((Number(token.size_columns) || 1) * cell / width) * 100;
     const tokenHeight = ((Number(token.size_rows) || 1) * cell / height) * 100;
     const image = sanitizeImageUrl(token.image_url);
-    return `<span class="game-map-token game-map-token--${escapeHtml(token.token_type)}" style="left:${left}%;top:${top}%;width:${tokenWidth}%;height:${tokenHeight}%" title="${escapeHtml(token.name)}">${image ? `<img src="${image}" alt="">` : `<b>${escapeHtml(String(token.name || '?').slice(0, 2).toUpperCase())}</b>`}<small>${escapeHtml(token.name)}</small></span>`;
+    return `<span class="game-map-token game-map-token--${escapeHtml(token.token_type)}" style="left:${left}%;top:${top}%;width:${tokenWidth}%;height:${tokenHeight}%" title="${escapeHtml(token.name)}">${image ? `<img src="${image}" alt="" draggable="false">` : `<b>${escapeHtml(String(token.name || '?').slice(0, 2).toUpperCase())}</b>`}<small>${escapeHtml(token.name)}</small></span>`;
   }).join('');
   return `<div class="game-map-viewport" data-map-viewport><div class="game-map-canvas" data-map-canvas style="aspect-ratio:${width}/${height};${activeMap.imageUrl ? `background-image:url('${escapeHtml(activeMap.imageUrl)}')` : ''}">${activeMap.grid_visible ? `<span class="game-map-grid" style="${gridStyle}"></span>` : ''}<span class="game-map-tokens">${tokenMarkup}</span></div></div>`;
 }
@@ -208,12 +216,57 @@ function mapGridPosition(event, canvas, map) {
   return { gridX, gridY, valid, nativeWidth, nativeHeight, cell };
 }
 
-function renderLobby(container, data, userId, onlineUsers = new Set(), masterCharacter = null, tokenSelections = new Map()) {
+function numberCreatureTokens(tokens = []) {
+  const groupTotals = new Map();
+  tokens.forEach((token) => {
+    if (token.token_type !== 'creature') return;
+    const key = String(token.shared_creature_id || token.name || '').toLowerCase();
+    groupTotals.set(key, (groupTotals.get(key) || 0) + 1);
+  });
+  const groupIndexes = new Map();
+  return tokens.map((token) => {
+    if (token.token_type !== 'creature') return token;
+    const key = String(token.shared_creature_id || token.name || '').toLowerCase();
+    if ((groupTotals.get(key) || 0) < 2) return token;
+    const index = (groupIndexes.get(key) || 0) + 1;
+    groupIndexes.set(key, index);
+    return { ...token, name: `${token.name} ${index}` };
+  });
+}
+
+function healthBarMarkup(currentValue, maxValue, className) {
+  const current = Number(currentValue);
+  const max = Number(maxValue);
+  if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return '';
+  const percentage = Math.max(0, Math.min(100, (current / max) * 100));
+  const color = percentage > 50 ? '#3f9564' : percentage > 25 ? '#d4872d' : '#c64d52';
+  return `<span class="${className}" style="--hp:${percentage}%;--hp-color:${color}"><i></i><b>${current}/${max} PF</b></span>`;
+}
+
+function renderLobby(container, data, userId, onlineUsers = new Set(), masterCharacter = null, tokenSelections = new Map(), options = {}) {
   const { room, members, maps, tokens = [] } = data;
+  const { creaturePaletteOpen = false, sharedCreatures = [], selectedLobbyUserId = null, selectedCreatureId = null, creatureSearch = '' } = options;
+  const roomRulesVersion = String(room.rules_version || '2014').includes('2024') ? '2024' : '2014';
+  const normalizedCreatureSearch = creatureSearch.trim().toLocaleLowerCase('it');
+  const visibleCreatures = sharedCreatures.filter((creature) => creature.rules === roomRulesVersion && (!normalizedCreatureSearch || creature.name.toLocaleLowerCase('it').includes(normalizedCreatureSearch)));
   const isMaster = String(room.master_user_id) === String(userId);
   const activeMap = maps.find((map) => map.is_active);
-  const players = [{ user_id: room.master_user_id, display_name: 'Dungeon Master', isMaster: true, character: masterCharacter }, ...members];
-  container.innerHTML = `<section class="game-room-lobby"><header class="game-room-sessionbar"><div class="game-room-sessionbar__identity"><button class="game-room-back" type="button" data-room-list aria-label="Torna alle stanze">‹</button><span><small>Sessione multiplayer</small><strong>${escapeHtml(room.title)}</strong></span><span class="game-room-status game-room-status--${room.status}">${STATUS_LABELS[room.status] || room.status}</span></div><div class="game-room-sessionbar__actions">${isMaster ? '<button class="ghost-button game-room-delete" type="button" data-delete-room>Elimina sessione</button>' : '<button class="ghost-button game-room-danger" type="button" data-leave-room>Esci</button>'}</div></header><div class="game-room-workspace"><main class="game-room-map-panel"><header><div class="game-room-map-title"><span class="eyebrow">Mappa attiva</span><h1>${activeMap ? escapeHtml(activeMap.title) : 'Tavolo di gioco'}</h1></div><div class="game-map-toolbar"><button type="button" data-map-zoom-out aria-label="Riduci zoom">−</button><output data-map-zoom>100%</output><button type="button" data-map-zoom-in aria-label="Aumenta zoom">+</button><button type="button" data-map-fit>Adatta</button></div><div class="game-room-map-actions">${isMaster ? '<button class="primary" type="button" data-manage-maps>Mappe</button>' : ''}</div></header>${buildTacticalMap(activeMap, tokens)}</main><aside class="game-room-sidebar"><section class="game-room-panel game-room-members"><header><div><span class="eyebrow">Lobby</span><h2>Partecipanti</h2></div><strong>${players.length}/${room.max_players}</strong></header><div>${players.map((member) => { const online = onlineUsers.has(String(member.user_id)) || String(member.user_id) === String(userId); return `<article><span class="game-room-presence ${online ? 'is-online' : ''}" title="${online ? 'Online' : 'Offline'}"></span><span><strong>${escapeHtml(member.display_name || 'Giocatore')}</strong><small>${member.isMaster ? 'Dungeon Master' : member.character_id ? 'Personaggio selezionato' : 'Nessun personaggio'}</small></span>${isMaster && !member.isMaster ? `<button class="icon-button" type="button" data-kick-member="${escapeHtml(member.user_id)}" aria-label="Espelli ${escapeHtml(member.display_name)}">×</button>` : ''}</article>`; }).join('')}</div></section>${isMaster ? `<section class="game-room-panel game-room-invite"><header><div><span class="eyebrow">Invito</span><h2>Codice stanza</h2></div><div class="game-room-invite__actions"><button class="game-room-icon-action" type="button" data-copy-invite aria-label="Copia codice" title="Copia codice">⧉</button><button class="game-room-icon-action" type="button" data-rotate-invite aria-label="Genera un nuovo codice" title="Nuovo codice">↻</button></div></header><code>${escapeHtml(room.invite_code)}</code></section>` : ''}<section class="game-room-panel game-room-session-note"><span class="eyebrow">Sessione</span><p>${escapeHtml(room.description || 'Nessuna nota della sessione.')}</p></section></aside></div></section>`;
+  const players = members;
+  const displayTokens = numberCreatureTokens(tokens);
+  const placedCreatureTokens = displayTokens.filter((token) => token.token_type === 'creature' && (!activeMap || String(token.map_id) === String(activeMap.id)));
+  container.innerHTML = `<section class="game-room-lobby"><header class="game-room-sessionbar"><div class="game-room-sessionbar__identity"><button class="game-room-back" type="button" data-room-list aria-label="Torna alle stanze">‹</button><span><small>Sessione multiplayer</small><strong>${escapeHtml(room.title)}</strong></span></div><div class="game-room-sessionbar__actions">${isMaster ? '<button class="ghost-button game-room-delete" type="button" data-delete-room>Elimina sessione</button>' : '<button class="ghost-button game-room-danger" type="button" data-leave-room>Esci</button>'}</div></header><div class="game-room-workspace"><main class="game-room-map-panel"><header><div class="game-room-map-title"><span class="eyebrow">Mappa attiva</span><h1>${activeMap ? escapeHtml(activeMap.title) : 'Tavolo di gioco'}</h1></div><div class="game-map-toolbar"><button type="button" data-map-zoom-out aria-label="Riduci zoom">−</button><output data-map-zoom>100%</output><button type="button" data-map-zoom-in aria-label="Aumenta zoom">+</button><button type="button" data-map-fit>Adatta</button></div><div class="game-room-map-actions">${isMaster ? '<button class="primary" type="button" data-manage-maps>Mappe</button>' : ''}</div></header>${buildTacticalMap(activeMap, displayTokens)}</main><aside class="game-room-sidebar"><section class="game-room-panel game-room-members"><header><div><span class="eyebrow">Lobby</span><h2>Partecipanti</h2></div><strong>${players.length}/${room.max_players}</strong></header><div>${players.length ? players.map((member) => { const online = onlineUsers.has(String(member.user_id)) || String(member.user_id) === String(userId); return `<article><span class="game-room-presence ${online ? 'is-online' : ''}" title="${online ? 'Online' : 'Offline'}"></span><span><strong>${escapeHtml(member.display_name || 'Giocatore')}${String(member.user_id) === String(userId) ? '<em class="game-room-member-self">Tu</em>' : ''}</strong></span>${isMaster ? `<button class="icon-button" type="button" data-kick-member="${escapeHtml(member.user_id)}" aria-label="Espelli ${escapeHtml(member.display_name)}">×</button>` : ''}</article>`; }).join('') : '<p class="game-room-members-empty">Nessun partecipante collegato.</p>'}</div></section>${isMaster ? `<section class="game-room-panel game-room-invite"><header><div><span class="eyebrow">Invito</span><h2>Codice stanza</h2></div><div class="game-room-invite__actions"><button class="game-room-icon-action" type="button" data-copy-invite aria-label="Copia codice" title="Copia codice">⧉</button><button class="game-room-icon-action" type="button" data-rotate-invite aria-label="Genera un nuovo codice" title="Nuovo codice">↻</button></div></header><code>${escapeHtml(room.invite_code)}</code></section>` : ''}<section class="game-room-panel game-room-legend"><span class="eyebrow">Legenda</span><p><i aria-hidden="true"></i><strong>1 casella</strong><span>= 1,5 m</span></p></section></aside></div></section>`;
+  const invite = container.querySelector('.game-room-invite');
+  const sessionbar = container.querySelector('.game-room-sessionbar');
+  const sessionActions = container.querySelector('.game-room-sessionbar__actions');
+  if (invite && sessionbar) {
+    invite.classList.add('game-room-invite--inline');
+    sessionbar.insertBefore(invite, sessionActions);
+  }
+  const workspace = container.querySelector('.game-room-workspace');
+  if (isMaster && creaturePaletteOpen && workspace) {
+    workspace.classList.add('has-creature-palette');
+    workspace.insertAdjacentHTML('afterbegin', `<aside class="game-room-creature-palette"><header><span><small>Bestiario ${roomRulesVersion}</small><strong>Pedine</strong></span><button type="button" data-close-creature-palette aria-label="Chiudi bestiario">×</button></header><label class="game-room-creature-search"><input type="search" data-creature-search aria-label="Cerca pedina" value="${escapeHtml(creatureSearch)}" placeholder="Cerca una pedina…" autocomplete="off"></label><div class="game-room-creature-catalog">${visibleCreatures.length ? visibleCreatures.map((creature) => `<button class="game-room-creature-card ${String(creature.id) === String(selectedCreatureId) ? 'is-selected' : ''}" type="button" data-creature-id="${escapeHtml(creature.id)}">${creature.imageUrl ? `<img src="${escapeHtml(sanitizeImageUrl(creature.imageUrl))}" alt="" draggable="false">` : '<i aria-hidden="true">♞</i>'}<strong>${escapeHtml(creature.name)}</strong></button>`).join('') : `<p class="game-room-creature-empty">Nessuna creatura trovata.</p>`}</div><section class="game-room-placed-creatures"><header><strong>Pedine sulla mappa</strong><small>${placedCreatureTokens.length}</small></header><div>${placedCreatureTokens.length ? placedCreatureTokens.map((token) => { const source = sharedCreatures.find((creature) => String(creature.id) === String(token.shared_creature_id)); const hp = token.token_data?.hp || { current: source?.hpCurrent, max: source?.hpMax }; return `<button type="button" class="game-room-placed-creature ${String(token.id) === String(options.selectedMapTokenId) ? 'is-selected' : ''}" data-placed-token-id="${escapeHtml(token.id)}">${token.image_url ? `<img src="${escapeHtml(sanitizeImageUrl(token.image_url))}" alt="" draggable="false">` : '<i aria-hidden="true">♞</i>'}<span><strong>${escapeHtml(token.name)}</strong>${healthBarMarkup(hp.current, hp.max, 'game-room-creature-hp')}</span></button>`; }).join('') : '<p>Nessuna pedina inserita.</p>'}</div></section></aside>`);
+  }
   container.querySelectorAll('.game-room-members article').forEach((article, index) => {
     const player = players[index];
     const info = article.children[1];
@@ -224,20 +277,27 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
     if (avatarUrl) {
       avatar.src = avatarUrl;
       avatar.alt = '';
+      avatar.draggable = false;
     } else {
       avatar.textContent = String(player?.display_name || '?').slice(0, 1).toUpperCase();
       avatar.setAttribute('aria-hidden', 'true');
     }
     article.insertBefore(avatar, info);
+    info?.querySelector(':scope > small')?.remove();
+    const hpCurrent = Number(player?.character?.data?.hp?.current);
+    const hpMax = Number(player?.character?.data?.hp?.max);
+    info?.insertAdjacentHTML('beforeend', healthBarMarkup(hpCurrent, hpMax, 'game-room-member-hp'));
+    if (player?.character) {
+      article.dataset.lobbyUserId = String(player.user_id);
+      if (isMaster) article.classList.add('is-master-selectable');
+      if (String(player.user_id) === String(selectedLobbyUserId)) article.classList.add('is-lobby-selected');
+    }
     if (player?.character && String(player.user_id) === String(userId)) {
       article.classList.add('is-own-character', 'is-token-source');
-      article.draggable = true;
-      article.dataset.lobbyUserId = String(player.user_id);
-      article.title = 'Trascina il personaggio sulla mappa';
     }
   });
   container.querySelectorAll('.game-map-token').forEach((tokenElement, index) => {
-    const token = tokens[index];
+    const token = displayTokens[index];
     if (!token) return;
     tokenElement.dataset.mapTokenId = token.id;
     if (isMaster) {
@@ -252,11 +312,10 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
       if (isMaster) tokenElement.insertAdjacentHTML('beforeend', '<span class="game-map-token__selected-actions"><button type="button" data-remove-map-token>Rimuovi dalla griglia</button></span>');
     }
   });
-  if (activeMap) container.querySelector('.game-room-map-title')?.insertAdjacentHTML('beforeend', '<span class="game-map-scale-legend"><i aria-hidden="true"></i>1 casella = 1,5 m</span>');
   const mapActions = container.querySelector('.game-room-map-actions');
   if (isMaster && mapActions) {
     mapActions.innerHTML = activeMap
-      ? `<button class="game-map-action game-map-action--token" type="button" data-position-token><span aria-hidden="true">♟</span> Posiziona pedina</button><button class="game-map-action game-map-action--settings" type="button" data-map-settings><span aria-hidden="true">✎</span> Modifica</button><button class="game-map-action game-map-action--danger" type="button" data-delete-map aria-label="Elimina ${escapeHtml(activeMap.title)}" title="Elimina mappa">×</button>`
+      ? `<button class="game-map-action game-map-action--token" type="button" data-position-token><span aria-hidden="true">♟</span> Pedine</button><button class="game-map-action game-map-action--settings" type="button" data-map-settings><span aria-hidden="true">✎</span> Modifica</button><button class="game-map-action game-map-action--danger" type="button" data-delete-map aria-label="Elimina ${escapeHtml(activeMap.title)}" title="Elimina mappa">×</button>`
       : '<button class="game-map-action game-map-action--primary" type="button" data-manage-maps>Carica mappa</button>';
   }
 }
@@ -288,19 +347,32 @@ export async function renderGameRooms(container) {
     }
   };
   const showLobby = async (roomId) => {
+    setGlobalLoading(true);
     cleanupRealtime?.();
     try {
       let lobby = await fetchGameRoom(roomId);
+      let sharedCreatures = [];
+      if (String(lobby.room.master_user_id) === String(state.user.id)) {
+        try { sharedCreatures = await fetchSharedGameCreatures(); }
+        catch (error) { createToast(`Bestiario non disponibile: ${formatError(error)}`, 'error'); }
+      }
       const online = new Set();
       const tokenSelections = new Map();
       let localSelectedTokenId = null;
       let mapZoom = 1;
       let pendingToken = null;
+      let creaturePaletteOpen = false;
+      let selectedLobbyUserId = null;
+      let selectedCreatureId = null;
+      let creatureSearch = '';
+      let focusTokenId = null;
       const paint = () => {
         const previousViewport = container.querySelector('[data-map-viewport]');
         const previousScroll = previousViewport ? { left: previousViewport.scrollLeft, top: previousViewport.scrollTop } : null;
         const activeCharacter = state.characters.find((character) => String(character.id) === String(state.activeCharacterId)) || state.characters[0] || null;
-        renderLobby(container, lobby, state.user.id, online, activeCharacter, tokenSelections);
+        const masterCharacter = String(lobby.room.master_user_id) === String(state.user.id) ? activeCharacter : null;
+        document.querySelectorAll('.game-room-member-drag-ghost,.game-room-creature-drag-ghost,.game-room-avatar-drag-preview').forEach((ghost) => ghost.remove());
+        renderLobby(container, lobby, state.user.id, online, masterCharacter, tokenSelections, { creaturePaletteOpen, sharedCreatures, selectedLobbyUserId, selectedCreatureId, selectedMapTokenId: localSelectedTokenId, creatureSearch });
         const syncMapZoom = () => {
           const canvas = container.querySelector('[data-map-canvas]');
           const output = container.querySelector('[data-map-zoom]');
@@ -327,9 +399,13 @@ export async function renderGameRooms(container) {
             try {
               const participant = pendingToken;
               pendingToken = null;
-              const existingToken = lobby.tokens.find((token) => String(token.character_id) === String(participant.characterId));
-              if (existingToken) await moveGameMapToken(roomId, currentMap.id, existingToken.id, gridX, gridY);
-              else await createCharacterMapToken({ roomId, mapId: currentMap.id, participant, gridX, gridY });
+              if (participant.tokenType === 'creature') {
+                await createCreatureMapToken({ roomId, mapId: currentMap.id, creature: participant, gridX, gridY });
+              } else {
+                const existingToken = lobby.tokens.find((token) => String(token.character_id) === String(participant.characterId));
+                if (existingToken) await moveGameMapToken(roomId, currentMap.id, existingToken.id, gridX, gridY);
+                else await createCharacterMapToken({ roomId, mapId: currentMap.id, participant, gridX, gridY });
+              }
               lobby = await fetchGameRoom(roomId);
               paint();
               createToast(`Pedina di ${participant.name} posizionata`);
@@ -415,43 +491,22 @@ export async function renderGameRooms(container) {
               lobbyDropTarget.style.height = `${(position.cell / position.nativeHeight) * 100}%`;
               mapCanvas.append(lobbyDropTarget);
             };
-            let nativeDragPreview = null;
-            lobbySource.addEventListener('dragstart', (event) => {
-              clearSelectionForDrag();
-              event.dataTransfer.effectAllowed = 'move';
-              event.dataTransfer.setData('text/x-dnd-character', ownParticipant.characterId);
-              const sourceAvatar = lobbySource.querySelector('.game-room-member-avatar');
-              nativeDragPreview = sourceAvatar?.cloneNode(true) || document.createElement('span');
-              nativeDragPreview.className = 'game-room-avatar-drag-preview';
-              document.body.append(nativeDragPreview);
-              event.dataTransfer.setDragImage(nativeDragPreview, 22, 22);
-              lobbySource.classList.add('is-dragging-character');
-            });
-            lobbySource.addEventListener('dragend', () => { lobbySource.classList.remove('is-dragging-character'); lobbyDropTarget.remove(); nativeDragPreview?.remove(); nativeDragPreview = null; });
-            mapCanvas.addEventListener('dragover', (event) => {
-              if (!event.dataTransfer.types.includes('text/x-dnd-character')) return;
-              event.preventDefault();
-              showLobbyDropTarget(mapGridPosition(event, mapCanvas, currentMapForDrag));
-            });
-            mapCanvas.addEventListener('drop', (event) => {
-              if (!event.dataTransfer.types.includes('text/x-dnd-character')) return;
-              event.preventDefault();
-              const position = mapGridPosition(event, mapCanvas, currentMapForDrag);
-              lobbyDropTarget.remove();
-              void placeLobbyParticipant(position);
-            });
             let touchDrag = null;
             lobbySource.addEventListener('pointerdown', (event) => {
-              if (!['touch', 'pen'].includes(event.pointerType) || event.target.closest('button')) return;
-              touchDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, active: false, ghost: null, position: null };
+              if (event.button !== 0 || event.target.closest('button')) return;
+              touchDrag = { pointerId: event.pointerId, pointerType: event.pointerType, startedAt: performance.now(), startX: event.clientX, startY: event.clientY, active: false, ghost: null, position: null };
               lobbySource.setPointerCapture(event.pointerId);
             });
             lobbySource.addEventListener('pointermove', (event) => {
               if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
               const distance = Math.hypot(event.clientX - touchDrag.startX, event.clientY - touchDrag.startY);
-              if (!touchDrag.active && distance > 10 && Math.abs(event.clientX - touchDrag.startX) > Math.abs(event.clientY - touchDrag.startY)) {
+              const horizontalIntent = Math.abs(event.clientX - touchDrag.startX) > Math.abs(event.clientY - touchDrag.startY);
+              const heldLongEnough = performance.now() - touchDrag.startedAt > 180;
+              if (!touchDrag.active && distance > 8 && (touchDrag.pointerType === 'mouse' || horizontalIntent || heldLongEnough)) {
                 touchDrag.active = true;
+                lobbySource.dataset.suppressLobbyClick = 'true';
                 clearSelectionForDrag();
+                document.querySelectorAll('.game-room-member-drag-ghost,.game-room-avatar-drag-preview').forEach((ghost) => ghost.remove());
                 touchDrag.ghost = lobbySource.querySelector('.game-room-member-avatar')?.cloneNode(true) || document.createElement('span');
                 touchDrag.ghost.className = 'game-room-member-drag-ghost';
                 document.body.append(touchDrag.ghost);
@@ -466,6 +521,7 @@ export async function renderGameRooms(container) {
             const finishTouchDrag = (event) => {
               if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
               const completed = touchDrag.active && touchDrag.position?.valid ? touchDrag.position : null;
+              if (touchDrag.active) lobbySource.dataset.suppressLobbyClick = 'true';
               touchDrag.ghost?.remove();
               lobbyDropTarget.remove();
               touchDrag = null;
@@ -474,6 +530,83 @@ export async function renderGameRooms(container) {
             lobbySource.addEventListener('pointerup', finishTouchDrag);
             lobbySource.addEventListener('pointercancel', finishTouchDrag);
           }
+          const placeCreatureFromPalette = async (creature, position) => {
+            if (!creature || !position?.valid) return;
+            const optimisticToken = {
+              id: `pending-creature-${Date.now()}`,
+              room_id: roomId,
+              map_id: currentMapForDrag.id,
+              token_type: 'creature',
+              shared_creature_id: creature.id,
+              name: creature.name,
+              image_url: creature.imageUrl,
+              grid_x: position.gridX,
+              grid_y: position.gridY,
+              size_columns: 1,
+              size_rows: 1,
+              token_data: { hp: { current: creature.hpCurrent, max: creature.hpMax } }
+            };
+            lobby.tokens.push(optimisticToken);
+            paint();
+            try {
+              const created = await createCreatureMapToken({ roomId, mapId: currentMapForDrag.id, creature, gridX: position.gridX, gridY: position.gridY });
+              optimisticToken.id = created.id;
+            } catch (error) {
+              lobby.tokens = lobby.tokens.filter((token) => token !== optimisticToken);
+              paint();
+              createToast(formatError(error), 'error');
+            }
+          };
+          container.querySelectorAll('.game-room-creature-card').forEach((creatureCard) => {
+            const creature = sharedCreatures.find((entry) => String(entry.id) === String(creatureCard.dataset.creatureId));
+            if (!creature) return;
+            let creatureDrag = null;
+            const creatureDropTarget = document.createElement('span');
+            creatureDropTarget.className = 'game-map-drop-target';
+            const showCreatureTarget = (position) => {
+              if (!position.valid) { creatureDropTarget.remove(); return; }
+              const offsetX = Number(currentMapForDrag.grid_offset_x_px) || 0;
+              const offsetY = Number(currentMapForDrag.grid_offset_y_px) || 0;
+              creatureDropTarget.style.left = `${((offsetX + position.gridX * position.cell) / position.nativeWidth) * 100}%`;
+              creatureDropTarget.style.top = `${((offsetY + position.gridY * position.cell) / position.nativeHeight) * 100}%`;
+              creatureDropTarget.style.width = `${(position.cell / position.nativeWidth) * 100}%`;
+              creatureDropTarget.style.height = `${(position.cell / position.nativeHeight) * 100}%`;
+              mapCanvas.append(creatureDropTarget);
+            };
+            creatureCard.addEventListener('pointerdown', (event) => {
+              if (event.button !== 0) return;
+              creatureDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, active: false, ghost: null, position: null };
+              creatureCard.setPointerCapture(event.pointerId);
+            });
+            creatureCard.addEventListener('pointermove', (event) => {
+              if (!creatureDrag || creatureDrag.pointerId !== event.pointerId) return;
+              if (!creatureDrag.active && Math.hypot(event.clientX - creatureDrag.startX, event.clientY - creatureDrag.startY) > 8) {
+                creatureDrag.active = true;
+                creatureCard.dataset.suppressCreatureClick = 'true';
+                document.querySelectorAll('.game-room-creature-drag-ghost').forEach((ghost) => ghost.remove());
+                creatureDrag.ghost = creatureCard.querySelector('img')?.cloneNode(true) || creatureCard.querySelector('i')?.cloneNode(true) || document.createElement('span');
+                creatureDrag.ghost.className = 'game-room-creature-drag-ghost';
+                document.body.append(creatureDrag.ghost);
+              }
+              if (!creatureDrag.active) return;
+              event.preventDefault();
+              creatureDrag.ghost.style.left = `${event.clientX + 12}px`;
+              creatureDrag.ghost.style.top = `${event.clientY + 12}px`;
+              creatureDrag.position = mapGridPosition(event, mapCanvas, currentMapForDrag);
+              showCreatureTarget(creatureDrag.position);
+            });
+            const finishCreatureDrag = (event) => {
+              if (!creatureDrag || creatureDrag.pointerId !== event.pointerId) return;
+              const completed = creatureDrag.active && creatureDrag.position?.valid ? creatureDrag.position : null;
+              if (creatureDrag.active) creatureCard.dataset.suppressCreatureClick = 'true';
+              creatureDrag.ghost?.remove();
+              creatureDropTarget.remove();
+              creatureDrag = null;
+              if (completed) void placeCreatureFromPalette(creature, completed);
+            };
+            creatureCard.addEventListener('pointerup', finishCreatureDrag);
+            creatureCard.addEventListener('pointercancel', finishCreatureDrag);
+          });
           container.querySelectorAll('.game-map-token').forEach((tokenElement) => {
             let pressTimer = null;
             let pressStart = null;
@@ -603,9 +736,15 @@ export async function renderGameRooms(container) {
           });
         }
         syncMapZoom();
-        if (previousScroll) requestAnimationFrame(() => {
+        if (previousScroll || focusTokenId) requestAnimationFrame(() => {
           const nextViewport = container.querySelector('[data-map-viewport]');
-          if (nextViewport) nextViewport.scrollTo({ left: previousScroll.left, top: previousScroll.top, behavior: 'auto' });
+          const focusedToken = focusTokenId ? container.querySelector(`[data-map-token-id="${CSS.escape(focusTokenId)}"]`) : null;
+          if (nextViewport && focusedToken) {
+            const viewportRect = nextViewport.getBoundingClientRect();
+            const tokenRect = focusedToken.getBoundingClientRect();
+            nextViewport.scrollBy({ left: tokenRect.left + tokenRect.width / 2 - viewportRect.left - viewportRect.width / 2, top: tokenRect.top + tokenRect.height / 2 - viewportRect.top - viewportRect.height / 2, behavior: 'smooth' });
+            focusTokenId = null;
+          } else if (nextViewport && previousScroll) nextViewport.scrollTo({ left: previousScroll.left, top: previousScroll.top, behavior: 'auto' });
         });
         container.querySelector('[data-room-list]')?.addEventListener('click', () => { void showList(); });
         container.querySelector('[data-copy-invite]')?.addEventListener('click', async () => { await navigator.clipboard.writeText(lobby.room.invite_code); createToast('Codice copiato'); });
@@ -617,13 +756,75 @@ export async function renderGameRooms(container) {
         });
         container.querySelector('[data-leave-room]')?.addEventListener('click', async () => { if (!await openConfirmModal({ title: 'Uscire dalla stanza?', message: 'Potrai rientrare soltanto usando nuovamente il codice.', confirmLabel: 'Esci' })) return; await leaveGameRoom(roomId); await showList(); });
         container.querySelectorAll('[data-kick-member]').forEach((button) => button.addEventListener('click', async () => { if (!await openConfirmModal({ title: 'Espelli giocatore?', message: 'Il giocatore non potrà rientrare con lo stesso codice.', confirmLabel: 'Espelli' })) return; await kickGameRoomMember(roomId, button.dataset.kickMember); lobby = await fetchGameRoom(roomId); paint(); }));
-        container.querySelector('[data-position-token]')?.addEventListener('click', async () => {
-          const participant = await openTokenPicker(roomTokenParticipants(lobby, state));
-          if (!participant) return;
-          pendingToken = participant;
+        container.querySelector('[data-position-token]')?.addEventListener('click', () => {
+          creaturePaletteOpen = !creaturePaletteOpen;
+          selectedCreatureId = null;
+          if (!creaturePaletteOpen && pendingToken?.tokenType === 'creature') pendingToken = null;
           paint();
-          createToast('Tocca una casella per posizionare la pedina');
         });
+        container.querySelector('[data-close-creature-palette]')?.addEventListener('click', () => {
+          creaturePaletteOpen = false;
+          selectedCreatureId = null;
+          if (pendingToken?.tokenType === 'creature') pendingToken = null;
+          paint();
+        });
+        container.querySelector('[data-creature-search]')?.addEventListener('input', (event) => {
+          creatureSearch = event.currentTarget.value;
+          const query = creatureSearch.trim().toLocaleLowerCase('it');
+          container.querySelectorAll('.game-room-creature-card').forEach((card) => {
+            card.hidden = Boolean(query) && !card.textContent.toLocaleLowerCase('it').includes(query);
+          });
+        });
+        container.querySelectorAll('[data-placed-token-id]').forEach((button) => button.addEventListener('click', () => {
+          const tokenId = String(button.dataset.placedTokenId);
+          const nextTokenId = localSelectedTokenId === tokenId ? null : tokenId;
+          localSelectedTokenId = nextTokenId;
+          tokenSelections.clear();
+          if (nextTokenId) {
+            tokenSelections.set(nextTokenId, ['Dungeon Master']);
+            focusTokenId = nextTokenId;
+          }
+          void cleanupRealtime?.updatePresence?.({ selectedTokenId: nextTokenId, selectedAt: Date.now() });
+          paint();
+        }));
+        container.querySelectorAll('[data-creature-id]').forEach((button) => button.addEventListener('click', () => {
+          if (button.dataset.suppressCreatureClick === 'true') { delete button.dataset.suppressCreatureClick; return; }
+          const creature = sharedCreatures.find((entry) => String(entry.id) === String(button.dataset.creatureId));
+          if (!creature) return;
+          const isSameCreature = String(selectedCreatureId) === String(creature.id);
+          selectedCreatureId = isSameCreature ? null : String(creature.id);
+          selectedLobbyUserId = null;
+          pendingToken = isSameCreature ? null : { ...creature, sharedCreatureId: creature.id, tokenType: 'creature' };
+          paint();
+          if (!isSameCreature) createToast(`Tocca una casella per posizionare ${creature.name}`);
+        }));
+        container.querySelectorAll('.game-room-members article.is-master-selectable').forEach((article) => article.addEventListener('click', (event) => {
+          if (event.target.closest('button')) return;
+          if (article.dataset.suppressLobbyClick === 'true') { delete article.dataset.suppressLobbyClick; return; }
+          const userId = article.dataset.lobbyUserId;
+          const participant = roomTokenParticipants(lobby, state).find((entry) => String(entry.userId) === String(userId));
+          if (!participant) return;
+          const isSame = String(selectedLobbyUserId) === String(userId);
+          selectedLobbyUserId = isSame ? null : userId;
+          selectedCreatureId = null;
+          const characterToken = lobby.tokens.find((token) => String(token.character_id) === String(participant.characterId));
+          if (isSame) {
+            pendingToken = null;
+            localSelectedTokenId = null;
+            tokenSelections.clear();
+            void cleanupRealtime?.updatePresence?.({ selectedTokenId: null, selectedAt: Date.now() });
+          } else if (characterToken) {
+            pendingToken = null;
+            localSelectedTokenId = String(characterToken.id);
+            tokenSelections.clear();
+            tokenSelections.set(String(characterToken.id), ['Dungeon Master']);
+            focusTokenId = String(characterToken.id);
+            void cleanupRealtime?.updatePresence?.({ selectedTokenId: characterToken.id, selectedAt: Date.now() });
+          } else {
+            pendingToken = participant;
+          }
+          paint();
+        }));
         container.querySelector('[data-map-settings]')?.addEventListener('click', async () => {
           try {
             const currentMap = lobby.maps.find((map) => map.is_active);
@@ -697,6 +898,7 @@ export async function renderGameRooms(container) {
         }
       });
     } catch (error) { createToast(formatError(error), 'error'); await showList(); }
+    finally { setGlobalLoading(false); }
   };
   await showList();
   window.addEventListener('hashchange', () => cleanupRealtime?.(), { once: true });

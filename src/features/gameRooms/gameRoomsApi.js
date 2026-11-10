@@ -20,7 +20,7 @@ async function getSignedMapUrl(path) {
 export async function fetchGameRooms(userId) {
   const rooms = unwrap(await supabase
     .from('game_rooms')
-    .select('id,master_user_id,title,description,invite_code,status,max_players,created_at,updated_at')
+    .select('id,master_user_id,title,description,invite_code,status,max_players,rules_version,created_at,updated_at')
     .order('updated_at', { ascending: false })) || [];
   if (!rooms.length) return [];
   const members = unwrap(await supabase
@@ -36,11 +36,12 @@ export async function fetchGameRooms(userId) {
   }));
 }
 
-export async function createGameRoom({ title, description, maxPlayers }) {
+export async function createGameRoom({ title, description, maxPlayers, rulesVersion = '2014' }) {
   const room = unwrap(await supabase.rpc('create_game_room', {
     p_title: String(title || '').trim(),
     p_description: String(description || '').trim() || null,
-    p_max_players: Number(maxPlayers) || 8
+    p_max_players: Number(maxPlayers) || 8,
+    p_rules_version: String(rulesVersion).includes('2024') ? '2024' : '2014'
   }));
   return Array.isArray(room) ? room[0] : room;
 }
@@ -68,7 +69,13 @@ export async function fetchGameRoom(roomId) {
       id: profile.character_id,
       user_id: profile.user_id,
       name: profile.character_name || profile.display_name,
-      data: { avatar_url: profile.avatar_url || '' }
+      data: {
+        avatar_url: profile.avatar_url || '',
+        hp: {
+          current: profile.hp_current === null ? null : Number(profile.hp_current),
+          max: profile.hp_max === null ? null : Number(profile.hp_max)
+        }
+      }
     }));
   } else {
     const characterIds = members.map((member) => member.character_id).filter(Boolean);
@@ -91,6 +98,26 @@ export async function fetchGameRoom(roomId) {
     ? (unwrap(await supabase.from('game_map_tokens').select('*').eq('room_id', roomId).eq('map_id', activeMap.id).eq('is_removed', false).order('created_at')) || [])
     : [];
   return { room, members: enrichedMembers, maps, tokens };
+}
+
+export async function fetchSharedGameCreatures() {
+  const rows = unwrap(await supabase.from('shared_creatures').select('*').limit(250)) || [];
+  return rows.map((row) => {
+    const data = row.data || row.creature_data || row.stat_block || {};
+    const hpSource = data.hp ?? data.hit_points ?? data.hitPoints ?? row.hit_points ?? row.hp ?? {};
+    const hp = typeof hpSource === 'number' || typeof hpSource === 'string'
+      ? { current: Number(hpSource), max: Number(hpSource) }
+      : hpSource;
+    return {
+      id: row.id,
+      name: row.name || data.name || 'Creatura',
+      imageUrl: row.image_url || row.avatar_url || data.image_url || data.avatar_url || '',
+      type: row.type || data.type || data.creature_type || 'Creatura',
+      rules: String(row.rules_version || row.rules || row.edition || data.rules_version || data.rules || data.edition || data.source_year || '2014').includes('2024') ? '2024' : '2014',
+      hpCurrent: Number(hp.current ?? row.hp_current ?? hp.max ?? row.hp_max ?? 0),
+      hpMax: Number(hp.max ?? row.hp_max ?? hp.current ?? row.hp_current ?? 0)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'it'));
 }
 
 export async function leaveGameRoom(roomId) {
@@ -163,7 +190,22 @@ export async function createCharacterMapToken({ roomId, mapId, participant, grid
     name: participant.name,
     image_url: participant.imageUrl || null,
     grid_x: gridX,
-    grid_y: gridY
+    grid_y: gridY,
+    token_data: { hp: { current: participant.hpCurrent ?? null, max: participant.hpMax ?? null } }
+  }).select().single());
+}
+
+export async function createCreatureMapToken({ roomId, mapId, creature, gridX, gridY }) {
+  return unwrap(await supabase.from('game_map_tokens').insert({
+    room_id: roomId,
+    map_id: mapId,
+    token_type: 'creature',
+    shared_creature_id: creature.id,
+    name: creature.name,
+    image_url: creature.imageUrl || null,
+    grid_x: gridX,
+    grid_y: gridY,
+    token_data: { hp: { current: creature.hpCurrent, max: creature.hpMax } }
   }).select().single());
 }
 
