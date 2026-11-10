@@ -247,20 +247,33 @@ export function tacticalRangeCells(map, token, radius, mapCells = [], movement =
   const rows = Math.max(Number(map.grid_rows) || 0, Math.ceil(Number(map.image_height_px || 1) / Number(map.grid_cell_size_px || 64)));
   const obstacles = new Set(mapCells.filter((cell) => cell.cell_type === 'obstacle').map((cell) => `${cell.grid_x}:${cell.grid_y}`));
   const difficult = new Set(mapCells.filter((cell) => cell.cell_type === 'difficult').map((cell) => `${cell.grid_x}:${cell.grid_y}`));
-  const start = { x: Number(token.grid_x), y: Number(token.grid_y), cost: 0 };
+  const start = { x: Number(token.grid_x), y: Number(token.grid_y), cost: 0, diagonalParity: 0 };
   const queue = [start];
-  const best = new Map([[`${start.x}:${start.y}`, 0]]);
+  const best = new Map([[`${start.x}:${start.y}:0`, 0]]);
+  const reached = new Set();
   const result = [];
   while (queue.length) {
+    queue.sort((a, b) => a.cost - b.cost);
     const current = queue.shift();
-    if (current.cost > 0) result.push({ gridX: current.x, gridY: current.y });
+    const currentStateKey = `${current.x}:${current.y}:${current.diagonalParity}`;
+    if (best.get(currentStateKey) !== current.cost) continue;
+    const positionKey = `${current.x}:${current.y}`;
+    if (current.cost > 0 && !reached.has(positionKey)) {
+      reached.add(positionKey);
+      result.push({ gridX: current.x, gridY: current.y });
+    }
     for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
       if (!dx && !dy) continue;
       const x = current.x + dx; const y = current.y + dy; const key = `${x}:${y}`;
       if (x < 0 || y < 0 || x >= columns || y >= rows || obstacles.has(key)) continue;
-      const cost = current.cost + (movement && difficult.has(key) ? 2 : 1);
-      if (cost > radius || (best.has(key) && best.get(key) <= cost)) continue;
-      best.set(key, cost); queue.push({ x, y, cost });
+      const isDiagonal = dx !== 0 && dy !== 0;
+      const diagonalStepCost = isDiagonal && movement ? (current.diagonalParity === 0 ? 1 : 2) : 1;
+      const terrainMultiplier = movement && difficult.has(key) ? 2 : 1;
+      const cost = current.cost + diagonalStepCost * terrainMultiplier;
+      const diagonalParity = isDiagonal && movement ? 1 - current.diagonalParity : current.diagonalParity;
+      const stateKey = `${x}:${y}:${diagonalParity}`;
+      if (cost > radius || (best.has(stateKey) && best.get(stateKey) <= cost)) continue;
+      best.set(stateKey, cost); queue.push({ x, y, cost, diagonalParity });
     }
   }
   return result;
@@ -319,6 +332,10 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
   const tacticalActions = canControlSelected && selectedToken.token_type === 'character' ? `<div class="game-map-tactical-actions" data-tactical-actions><button type="button" data-tactical-mode="attack" class="${tacticalMode === 'attack' ? 'is-active' : ''}"><span>⚔</span>Attacco</button><button type="button" data-tactical-mode="movement" class="${tacticalMode === 'movement' ? 'is-active' : ''}"><span>➜</span>Movimento</button>${tacticalMode === 'attack' ? `<label><span>Arma</span><select data-tactical-weapon>${controlledWeapons.length ? controlledWeapons.map((weapon) => `<option value="${escapeHtml(weapon.id)}" ${String(options.selectedWeaponId) === String(weapon.id) ? 'selected' : ''}>${escapeHtml(weapon.name)}</option>`).join('') : '<option value="melee">Attacco in mischia</option>'}</select></label>` : ''}</div>` : '';
   const terrainActions = isMaster && activeMap && !tacticalActions ? `<div class="game-map-terrain-actions"><small>Strumenti DM</small><button type="button" data-terrain-mode="difficult" class="${terrainMode === 'difficult' ? 'is-active' : ''}">Terreno difficile</button><button type="button" data-terrain-mode="obstacle" class="${terrainMode === 'obstacle' ? 'is-active' : ''}">Ostacolo</button><button type="button" data-terrain-mode="erase" class="${terrainMode === 'erase' ? 'is-active' : ''}">Cancella</button></div>` : '';
   container.innerHTML = `<section class="game-room-lobby"><header class="game-room-sessionbar"><div class="game-room-sessionbar__identity"><button class="game-room-back" type="button" data-room-list aria-label="Torna alle stanze">‹</button><span><small>Sessione multiplayer</small><strong>${escapeHtml(room.title)}</strong></span></div><div class="game-room-sessionbar__actions">${isMaster ? '<button class="ghost-button game-room-delete" type="button" data-delete-room>Elimina sessione</button>' : '<button class="ghost-button game-room-danger" type="button" data-leave-room>Esci</button>'}</div></header><div class="game-room-workspace"><main class="game-room-map-panel"><header><div class="game-room-map-title"><span class="eyebrow">Mappa attiva</span><h1>${activeMap ? escapeHtml(activeMap.title) : 'Tavolo di gioco'}</h1></div><div class="game-map-toolbar"><button type="button" data-map-zoom-out aria-label="Riduci zoom">−</button><output data-map-zoom>100%</output><button type="button" data-map-zoom-in aria-label="Aumenta zoom">+</button><button type="button" data-map-fit>Adatta</button></div><div class="game-room-map-actions">${isMaster ? '<button class="primary" type="button" data-manage-maps>Mappe</button>' : ''}</div></header>${buildTacticalMap(activeMap, displayTokens, mapCells)}${terrainActions}${tacticalActions}</main><aside class="game-room-sidebar"><section class="game-room-panel game-room-members"><header><div><span class="eyebrow">Lobby</span><h2>Partecipanti</h2></div><strong>${players.length}/${room.max_players}</strong></header><div>${players.length ? players.map((member) => { const online = onlineUsers.has(String(member.user_id)) || String(member.user_id) === String(userId); return `<article><span class="game-room-presence ${online ? 'is-online' : ''}" title="${online ? 'Online' : 'Offline'}"></span><span><strong>${escapeHtml(member.display_name || 'Giocatore')}${String(member.user_id) === String(userId) ? '<em class="game-room-member-self">Tu</em>' : ''}</strong></span>${isMaster ? `<button class="icon-button" type="button" data-kick-member="${escapeHtml(member.user_id)}" aria-label="Espelli ${escapeHtml(member.display_name)}">×</button>` : ''}</article>`; }).join('') : '<p class="game-room-members-empty">Nessun partecipante collegato.</p>'}</div></section>${isMaster ? `<section class="game-room-panel game-room-invite"><header><div><span class="eyebrow">Invito</span><h2>Codice stanza</h2></div><div class="game-room-invite__actions"><button class="game-room-icon-action" type="button" data-copy-invite aria-label="Copia codice" title="Copia codice">⧉</button><button class="game-room-icon-action" type="button" data-rotate-invite aria-label="Genera un nuovo codice" title="Nuovo codice">↻</button></div></header><code>${escapeHtml(room.invite_code)}</code></section>` : ''}<section class="game-room-panel game-room-legend"><span class="eyebrow">Legenda</span><p><i aria-hidden="true"></i><strong>1 casella</strong><span>= 1,5 m</span></p></section></aside></div></section>`;
+  const legend = container.querySelector('.game-room-legend');
+  if (legend) {
+    legend.innerHTML = `<span class="eyebrow">Legenda</span><div class="game-room-legend__items"><p><i class="game-room-legend__cell" aria-hidden="true"></i><strong>1 casella</strong><span>= 1,5 m</span></p><p><i class="game-room-legend__difficult" aria-hidden="true"></i><strong>Terreno difficile</strong><span>Costo ×2</span></p><p><i class="game-room-legend__obstacle" aria-hidden="true"></i><strong>Ostacolo</strong><span>Non attraversabile</span></p><p><i class="game-room-legend__attack" aria-hidden="true"></i><strong>Portata in mischia</strong><span>Area di attacco</span></p><p><i class="game-room-legend__movement" aria-hidden="true"></i><strong>Movimento</strong><span>Area raggiungibile</span></p></div>`;
+  }
   const invite = container.querySelector('.game-room-invite');
   const sessionbar = container.querySelector('.game-room-sessionbar');
   const sessionActions = container.querySelector('.game-room-sessionbar__actions');

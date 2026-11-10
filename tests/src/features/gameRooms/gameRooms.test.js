@@ -107,7 +107,7 @@ describe('game rooms entry point and Supabase integration', () => {
     expect(styles).not.toContain('transition: width .16s ease,height .16s ease');
   });
 
-  it('calcola il movimento in caselle, raddoppia il costo difficile e blocca gli ostacoli', () => {
+  it('calcola il movimento con diagonali alternate, terreno difficile e ostacoli', () => {
     const map = { grid_columns: 10, grid_rows: 10, image_width_px: 640, image_height_px: 640, grid_cell_size_px: 64 };
     const token = { grid_x: 4, grid_y: 4 };
     const cells = tacticalRangeCells(map, token, 2, [
@@ -120,6 +120,24 @@ describe('game rooms entry point and Supabase integration', () => {
     expect(cells).toContainEqual({ gridX: 5, gridY: 4 });
     expect(cells).not.toContainEqual({ gridX: 4, gridY: 5 });
     expect(oneCellMovement).not.toContainEqual({ gridX: 5, gridY: 4 });
+
+    const openMap = { ...map, grid_columns: 20, grid_rows: 20 };
+    const centeredToken = { grid_x: 10, grid_y: 10 };
+    const sixSquares = tacticalRangeCells(openMap, centeredToken, 6, [], true);
+    expect(sixSquares).toContainEqual({ gridX: 16, gridY: 10 });
+    expect(sixSquares).toContainEqual({ gridX: 14, gridY: 14 });
+    expect(sixSquares).not.toContainEqual({ gridX: 15, gridY: 15 });
+  });
+
+  it('mostra nella legenda i simboli tattici della mappa', () => {
+    const view = readFileSync('src/features/gameRooms/gameRooms.js', 'utf8');
+    const styles = readFileSync('src/features/gameRooms/gameRooms.css', 'utf8');
+    expect(view).toContain('game-room-legend__difficult');
+    expect(view).toContain('game-room-legend__obstacle');
+    expect(view).toContain('game-room-legend__attack');
+    expect(view).toContain('game-room-legend__movement');
+    expect(view).toContain('Portata in mischia');
+    expect(styles).toContain('.game-room-legend__difficult');
   });
 
   it('protegge terreno e ostacoli con RLS riservata al Dungeon Master', () => {
