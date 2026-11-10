@@ -73,6 +73,10 @@ registerRoute('library', async (container) => {
   const { renderLibrary } = await import('./features/library/library.js');
   await renderLibrary(container);
 });
+registerRoute('dnd-catalog', async (container) => {
+  const { renderDndCatalog } = await import('./features/dndCatalog/dndCatalog.js');
+  await renderDndCatalog(container);
+});
 registerRoute('game-rooms', async (container) => {
   const { renderGameRooms } = await import('./features/gameRooms/gameRooms.js');
   await renderGameRooms(container);

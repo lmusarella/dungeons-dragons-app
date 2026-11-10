@@ -74,7 +74,8 @@ export async function fetchGameRoom(roomId) {
         hp: {
           current: profile.hp_current === null ? null : Number(profile.hp_current),
           max: profile.hp_max === null ? null : Number(profile.hp_max)
-        }
+        },
+        speed: profile.speed_m === null || profile.speed_m === undefined ? null : Number(profile.speed_m)
       }
     }));
   } else {
@@ -97,7 +98,13 @@ export async function fetchGameRoom(roomId) {
   const tokens = activeMap
     ? (unwrap(await supabase.from('game_map_tokens').select('*').eq('room_id', roomId).eq('map_id', activeMap.id).eq('is_removed', false).order('created_at')) || [])
     : [];
-  return { room, members: enrichedMembers, maps, tokens };
+  let mapCells = [];
+  if (activeMap) {
+    const cellsResult = await supabase.from('game_map_cells').select('*').eq('room_id', roomId).eq('map_id', activeMap.id);
+    if (!cellsResult.error) mapCells = cellsResult.data || [];
+    else if (!['42P01', 'PGRST205'].includes(cellsResult.error.code)) throw cellsResult.error;
+  }
+  return { room, members: enrichedMembers, maps, tokens, mapCells };
 }
 
 export async function fetchSharedGameCreatures() {
@@ -143,6 +150,8 @@ export async function createGameMap({ roomId, title, file, width, height, gridCe
     image_width_px: width,
     image_height_px: height,
     grid_cell_size_px: gridCellSize,
+    grid_columns: Math.max(1, Math.ceil(Number(width) / Number(gridCellSize || 64))),
+    grid_rows: Math.max(1, Math.ceil(Number(height) / Number(gridCellSize || 64))),
     grid_visible: Boolean(gridVisible)
   }).select().single());
   try {
@@ -162,11 +171,16 @@ export async function createGameMap({ roomId, title, file, width, height, gridCe
 }
 
 export async function updateGameMapSettings(roomId, mapId, settings) {
-  return unwrap(await supabase.from('game_maps').update({
+  const patch = {
     grid_cell_size_px: Number(settings.gridCellSize),
     grid_color: settings.gridColor,
     grid_visible: Boolean(settings.gridVisible)
-  }).eq('id', mapId).eq('room_id', roomId).select().single());
+  };
+  if (settings.imageWidth && settings.imageHeight) {
+    patch.grid_columns = Math.max(1, Math.ceil(Number(settings.imageWidth) / Number(settings.gridCellSize)));
+    patch.grid_rows = Math.max(1, Math.ceil(Number(settings.imageHeight) / Number(settings.gridCellSize)));
+  }
+  return unwrap(await supabase.from('game_maps').update(patch).eq('id', mapId).eq('room_id', roomId).select().single());
 }
 
 export async function deleteGameMap(roomId, mapId) {
@@ -191,7 +205,7 @@ export async function createCharacterMapToken({ roomId, mapId, participant, grid
     image_url: participant.imageUrl || null,
     grid_x: gridX,
     grid_y: gridY,
-    token_data: { hp: { current: participant.hpCurrent ?? null, max: participant.hpMax ?? null } }
+    token_data: { hp: { current: participant.hpCurrent ?? null, max: participant.hpMax ?? null }, speed_m: participant.speed ?? 9 }
   }).select().single());
 }
 
@@ -214,6 +228,20 @@ export async function moveGameMapToken(roomId, mapId, tokenId, gridX, gridY) {
     grid_x: gridX,
     grid_y: gridY
   }).eq('id', tokenId).eq('room_id', roomId).eq('map_id', mapId).select().single());
+}
+
+export async function setGameMapCell({ roomId, mapId, gridX, gridY, cellType }) {
+  if (!cellType) {
+    return unwrap(await supabase.from('game_map_cells').delete()
+      .eq('room_id', roomId).eq('map_id', mapId).eq('grid_x', gridX).eq('grid_y', gridY));
+  }
+  return unwrap(await supabase.from('game_map_cells').upsert({
+    room_id: roomId,
+    map_id: mapId,
+    grid_x: gridX,
+    grid_y: gridY,
+    cell_type: cellType
+  }, { onConflict: 'map_id,grid_x,grid_y' }).select().single());
 }
 
 export async function deleteGameMapToken(roomId, mapId, tokenId) {
@@ -249,6 +277,7 @@ export function subscribeToGameRoom(roomId, handlers = {}) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'game_room_members', filter: `room_id=eq.${roomId}` }, () => handlers.onPersistentChange?.())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'game_maps', filter: `room_id=eq.${roomId}` }, () => handlers.onPersistentChange?.())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'game_map_tokens', filter: `room_id=eq.${roomId}` }, () => handlers.onPersistentChange?.())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'game_map_cells', filter: `room_id=eq.${roomId}` }, () => handlers.onPersistentChange?.())
     .on('presence', { event: 'sync' }, () => handlers.onPresence?.(channel.presenceState()))
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED' && handlers.userId) {

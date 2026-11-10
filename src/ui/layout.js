@@ -196,7 +196,8 @@ function buildMenuContent() {
   const menuEntries = [
     { route: 'characters', icon: '♙', label: 'Personaggi', description: 'Seleziona o crea un personaggio' },
     { route: 'game-rooms', icon: '⌗', label: 'Stanze di gioco', description: 'Crea o raggiungi una sessione multiplayer' },
-    { route: 'library', icon: '☷', label: 'Archivio centralizzato', description: 'Gestisci incantesimi e oggetti condivisi' }
+    { route: 'dnd-catalog', icon: '♜', label: 'Catalogo D&D', description: 'Classi, specie, capacità e bestiario' },
+    { route: 'library', icon: '☷', label: 'Incantesimi e oggetti', description: 'Cataloghi condivisi già esistenti' }
   ];
 
   const wrapper = document.createElement('div');

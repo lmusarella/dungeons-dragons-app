@@ -19,6 +19,7 @@ import {
   moveGameMapToken,
   placeOwnGameMapToken,
   rotateGameRoomInvite,
+  setGameMapCell,
   subscribeToGameRoom,
   updateGameMapSettings
 } from './gameRoomsApi.js';
@@ -149,7 +150,9 @@ async function openMapSettings(roomId, map, participants = []) {
   const settings = {
     gridCellSize: Number(data.get('grid_cell_size')) || 64,
     gridColor: data.get('grid_color') || '#000000',
-    gridVisible: data.get('grid_visible') === 'true'
+    gridVisible: data.get('grid_visible') === 'true',
+    imageWidth: Number(map.image_width_px) || 1,
+    imageHeight: Number(map.image_height_px) || 1
   };
   await updateGameMapSettings(roomId, map.id, settings);
   const participantIndex = data.get('token_participant');
@@ -164,8 +167,8 @@ function roomTokenParticipants(lobby, state) {
   const activeCharacter = state.characters.find((character) => String(character.id) === String(state.activeCharacterId)) || state.characters[0] || null;
   const isMaster = String(lobby.room.master_user_id) === String(state.user.id);
   return [
-    isMaster && activeCharacter ? { userId: state.user.id, characterId: activeCharacter.id, name: activeCharacter.name || 'Dungeon Master', imageUrl: sanitizeImageUrl(activeCharacter.data?.avatar_url || ''), hpCurrent: activeCharacter.data?.hp?.current, hpMax: activeCharacter.data?.hp?.max, isMaster: true } : null,
-    ...lobby.members.map((member) => member.character ? ({ userId: member.user_id, characterId: member.character.id, name: member.character.name || member.display_name, imageUrl: sanitizeImageUrl(member.character.data?.avatar_url || ''), hpCurrent: member.character.data?.hp?.current, hpMax: member.character.data?.hp?.max, isMaster: false }) : null)
+    isMaster && activeCharacter ? { userId: state.user.id, characterId: activeCharacter.id, name: activeCharacter.name || 'Dungeon Master', imageUrl: sanitizeImageUrl(activeCharacter.data?.avatar_url || ''), hpCurrent: activeCharacter.data?.hp?.current, hpMax: activeCharacter.data?.hp?.max, speed: activeCharacter.data?.speed, isMaster: true } : null,
+    ...lobby.members.map((member) => member.character ? ({ userId: member.user_id, characterId: member.character.id, name: member.character.name || member.display_name, imageUrl: sanitizeImageUrl(member.character.data?.avatar_url || ''), hpCurrent: member.character.data?.hp?.current, hpMax: member.character.data?.hp?.max, speed: member.character.data?.speed, isMaster: false }) : null)
   ].filter(Boolean);
 }
 
@@ -184,7 +187,7 @@ function renderRoomList(container, rooms) {
   container.innerHTML = `<section class="game-rooms-page"><header class="game-rooms-hero"><div><span class="eyebrow">Multiplayer</span><h1>Stanze di gioco</h1><p>Crea una sessione come Dungeon Master oppure raggiungi il tuo gruppo con un codice d’invito.</p></div><div class="game-rooms-primary-actions"><button class="ghost-button" type="button" data-join-room>Entra in una stanza</button><button class="primary" type="button" data-create-room>+ Crea stanza</button></div></header><section class="game-room-collection"><header><div><h2>Le tue sessioni</h2><small>${rooms.length} ${rooms.length === 1 ? 'stanza disponibile' : 'stanze disponibili'}</small></div></header>${rooms.length ? `<div class="game-room-grid">${rooms.map((room) => `<article class="game-room-card"><header><span class="game-room-role">${room.isMaster ? 'Dungeon Master' : 'Giocatore'}</span><span class="game-room-status game-room-status--${room.status}">${STATUS_LABELS[room.status] || room.status}</span></header><h3>${escapeHtml(room.title)}</h3><p>${escapeHtml(room.description || 'Nessuna descrizione')}</p><dl><div><dt>Partecipanti</dt><dd>${room.participantCount}/${room.max_players}</dd></div><div><dt>Master</dt><dd>${room.isMaster ? 'Tu' : 'Dungeon Master'}</dd></div></dl><button class="primary game-room-card__open" type="button" data-open-room="${escapeHtml(room.id)}">Accedi alla stanza <span aria-hidden="true">→</span></button></article>`).join('')}</div>` : '<div class="game-room-empty"><span aria-hidden="true">⌗</span><h3>Nessuna stanza disponibile</h3><p>Crea la tua prima sessione oppure usa il codice ricevuto dal Dungeon Master.</p></div>'}</section></section>`;
 }
 
-function buildTacticalMap(activeMap, tokens = []) {
+function buildTacticalMap(activeMap, tokens = [], mapCells = []) {
   if (!activeMap) return `<div class="game-map-empty"><span aria-hidden="true">▦</span><strong>Nessuna mappa attiva</strong><p>Il Dungeon Master può preparare e attivare una mappa per la sessione.</p></div>`;
   const width = Math.max(1, Number(activeMap.image_width_px) || (Number(activeMap.grid_columns) || 20) * (Number(activeMap.grid_cell_size_px) || 64));
   const height = Math.max(1, Number(activeMap.image_height_px) || (Number(activeMap.grid_rows) || 15) * (Number(activeMap.grid_cell_size_px) || 64));
@@ -200,7 +203,12 @@ function buildTacticalMap(activeMap, tokens = []) {
     const image = sanitizeImageUrl(token.image_url);
     return `<span class="game-map-token game-map-token--${escapeHtml(token.token_type)}" style="left:${left}%;top:${top}%;width:${tokenWidth}%;height:${tokenHeight}%" title="${escapeHtml(token.name)}">${image ? `<img src="${image}" alt="" draggable="false">` : `<b>${escapeHtml(String(token.name || '?').slice(0, 2).toUpperCase())}</b>`}<small>${escapeHtml(token.name)}</small></span>`;
   }).join('');
-  return `<div class="game-map-viewport" data-map-viewport><div class="game-map-canvas" data-map-canvas style="aspect-ratio:${width}/${height};${activeMap.imageUrl ? `background-image:url('${escapeHtml(activeMap.imageUrl)}')` : ''}">${activeMap.grid_visible ? `<span class="game-map-grid" style="${gridStyle}"></span>` : ''}<span class="game-map-tokens">${tokenMarkup}</span></div></div>`;
+  const cellMarkup = mapCells.map((entry) => {
+    const left = ((offsetX + Number(entry.grid_x) * cell) / width) * 100;
+    const top = ((offsetY + Number(entry.grid_y) * cell) / height) * 100;
+    return `<span class="game-map-cell game-map-cell--${escapeHtml(entry.cell_type)}" style="left:${left}%;top:${top}%;width:${(cell / width) * 100}%;height:${(cell / height) * 100}%" aria-hidden="true"></span>`;
+  }).join('');
+  return `<div class="game-map-viewport" data-map-viewport><div class="game-map-stage" data-map-stage style="--map-stage-width:${width}px;--map-stage-height:${height}px"><div class="game-map-canvas" data-map-canvas data-native-width="${width}" data-native-height="${height}" style="width:${width}px;height:${height}px;${activeMap.imageUrl ? `background-image:url('${escapeHtml(activeMap.imageUrl)}')` : ''}">${activeMap.grid_visible ? `<span class="game-map-grid" style="${gridStyle}"></span>` : ''}<span class="game-map-cell-layer">${cellMarkup}</span><span class="game-map-range-layer" data-map-range-layer></span><span class="game-map-tokens">${tokenMarkup}</span></div></div></div>`;
 }
 
 function mapGridPosition(event, canvas, map) {
@@ -212,8 +220,58 @@ function mapGridPosition(event, canvas, map) {
   const pixelY = ((event.clientY - rect.top) / rect.height) * nativeHeight;
   const gridX = Math.floor((pixelX - (Number(map.grid_offset_x_px) || 0)) / cell);
   const gridY = Math.floor((pixelY - (Number(map.grid_offset_y_px) || 0)) / cell);
-  const valid = gridX >= 0 && gridY >= 0 && gridX < Number(map.grid_columns) && gridY < Number(map.grid_rows);
+  const columns = Math.max(Number(map.grid_columns) || 0, Math.ceil((nativeWidth - (Number(map.grid_offset_x_px) || 0)) / cell));
+  const rows = Math.max(Number(map.grid_rows) || 0, Math.ceil((nativeHeight - (Number(map.grid_offset_y_px) || 0)) / cell));
+  const valid = gridX >= 0 && gridY >= 0 && gridX < columns && gridY < rows;
   return { gridX, gridY, valid, nativeWidth, nativeHeight, cell };
+}
+
+function tokenDetailMarkup(token) {
+  const hp = token.token_data?.hp || {};
+  const type = token.token_type === 'character' ? 'Personaggio' : token.token_type === 'creature' ? 'Creatura' : 'Pedina';
+  return `<div class="game-token-quick-detail"><header>${token.image_url ? `<img src="${escapeHtml(sanitizeImageUrl(token.image_url))}" alt="">` : '<span aria-hidden="true">♟</span>'}<div><small>${type}</small><strong>${escapeHtml(token.name)}</strong></div><button type="button" data-token-detail-close aria-label="Chiudi">×</button></header><div class="game-token-quick-detail__stats"><span><small>PF</small><b>${escapeHtml(hp.current ?? '—')} / ${escapeHtml(hp.max ?? '—')}</b></span><span><small>Iniziativa</small><b>${escapeHtml(token.initiative ?? '—')}</b></span><span><small>Posizione</small><b>${Number(token.grid_x) + 1}, ${Number(token.grid_y) + 1}</b></span><span><small>Ingombro</small><b>${Number(token.size_columns) || 1}×${Number(token.size_rows) || 1}</b></span></div>${token.notes ? `<p>${escapeHtml(token.notes)}</p>` : ''}</div>`;
+}
+
+function openTokenQuickDetail(token) {
+  document.querySelector('.game-token-detail-popover')?.remove();
+  const host = document.createElement('div');
+  host.className = 'game-token-detail-popover';
+  host.innerHTML = `<div data-token-detail-close></div>${tokenDetailMarkup(token)}`;
+  document.body.append(host);
+  const close = () => host.remove();
+  host.querySelectorAll('[data-token-detail-close]').forEach((element) => element.addEventListener('click', close));
+}
+
+export function tacticalRangeCells(map, token, radius, mapCells = [], movement = false) {
+  const columns = Math.max(Number(map.grid_columns) || 0, Math.ceil(Number(map.image_width_px || 1) / Number(map.grid_cell_size_px || 64)));
+  const rows = Math.max(Number(map.grid_rows) || 0, Math.ceil(Number(map.image_height_px || 1) / Number(map.grid_cell_size_px || 64)));
+  const obstacles = new Set(mapCells.filter((cell) => cell.cell_type === 'obstacle').map((cell) => `${cell.grid_x}:${cell.grid_y}`));
+  const difficult = new Set(mapCells.filter((cell) => cell.cell_type === 'difficult').map((cell) => `${cell.grid_x}:${cell.grid_y}`));
+  const start = { x: Number(token.grid_x), y: Number(token.grid_y), cost: 0 };
+  const queue = [start];
+  const best = new Map([[`${start.x}:${start.y}`, 0]]);
+  const result = [];
+  while (queue.length) {
+    const current = queue.shift();
+    if (current.cost > 0) result.push({ gridX: current.x, gridY: current.y });
+    for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
+      if (!dx && !dy) continue;
+      const x = current.x + dx; const y = current.y + dy; const key = `${x}:${y}`;
+      if (x < 0 || y < 0 || x >= columns || y >= rows || obstacles.has(key)) continue;
+      const cost = current.cost + (movement && difficult.has(key) ? 2 : 1);
+      if (cost > radius || (best.has(key) && best.get(key) <= cost)) continue;
+      best.set(key, cost); queue.push({ x, y, cost });
+    }
+  }
+  return result;
+}
+
+function renderTacticalRange(canvas, map, token, cells, kind) {
+  const layer = canvas?.querySelector('[data-map-range-layer]');
+  if (!layer || !token || !cells.length) return;
+  const width = Number(map.image_width_px) || 1; const height = Number(map.image_height_px) || 1;
+  const cell = Number(map.grid_cell_size_px) || 64; const offsetX = Number(map.grid_offset_x_px) || 0; const offsetY = Number(map.grid_offset_y_px) || 0;
+  layer.innerHTML = cells.map((entry) => `<span class="game-map-range-cell game-map-range-cell--${kind}" style="left:${((offsetX + entry.gridX * cell) / width) * 100}%;top:${((offsetY + entry.gridY * cell) / height) * 100}%;width:${(cell / width) * 100}%;height:${(cell / height) * 100}%"></span>`).join('');
 }
 
 function numberCreatureTokens(tokens = []) {
@@ -244,17 +302,23 @@ function healthBarMarkup(currentValue, maxValue, className) {
 }
 
 function renderLobby(container, data, userId, onlineUsers = new Set(), masterCharacter = null, tokenSelections = new Map(), options = {}) {
-  const { room, members, maps, tokens = [] } = data;
-  const { creaturePaletteOpen = false, sharedCreatures = [], selectedLobbyUserId = null, selectedCreatureId = null, creatureSearch = '' } = options;
+  const { room, members, maps, tokens = [], mapCells = [] } = data;
+  const { creaturePaletteOpen = false, sharedCreatures = [], dmCharacters = [], selectedLobbyUserId = null, selectedCreatureId = null, selectedDmCharacterId = null, creatureSearch = '', tacticalMode = null, terrainMode = null, weaponOptions = [] } = options;
   const roomRulesVersion = String(room.rules_version || '2014').includes('2024') ? '2024' : '2014';
   const normalizedCreatureSearch = creatureSearch.trim().toLocaleLowerCase('it');
   const visibleCreatures = sharedCreatures.filter((creature) => creature.rules === roomRulesVersion && (!normalizedCreatureSearch || creature.name.toLocaleLowerCase('it').includes(normalizedCreatureSearch)));
+  const visibleDmCharacters = dmCharacters.filter((character) => !normalizedCreatureSearch || character.name.toLocaleLowerCase('it').includes(normalizedCreatureSearch));
   const isMaster = String(room.master_user_id) === String(userId);
   const activeMap = maps.find((map) => map.is_active);
   const players = members;
   const displayTokens = numberCreatureTokens(tokens);
-  const placedCreatureTokens = displayTokens.filter((token) => token.token_type === 'creature' && (!activeMap || String(token.map_id) === String(activeMap.id)));
-  container.innerHTML = `<section class="game-room-lobby"><header class="game-room-sessionbar"><div class="game-room-sessionbar__identity"><button class="game-room-back" type="button" data-room-list aria-label="Torna alle stanze">‹</button><span><small>Sessione multiplayer</small><strong>${escapeHtml(room.title)}</strong></span></div><div class="game-room-sessionbar__actions">${isMaster ? '<button class="ghost-button game-room-delete" type="button" data-delete-room>Elimina sessione</button>' : '<button class="ghost-button game-room-danger" type="button" data-leave-room>Esci</button>'}</div></header><div class="game-room-workspace"><main class="game-room-map-panel"><header><div class="game-room-map-title"><span class="eyebrow">Mappa attiva</span><h1>${activeMap ? escapeHtml(activeMap.title) : 'Tavolo di gioco'}</h1></div><div class="game-map-toolbar"><button type="button" data-map-zoom-out aria-label="Riduci zoom">−</button><output data-map-zoom>100%</output><button type="button" data-map-zoom-in aria-label="Aumenta zoom">+</button><button type="button" data-map-fit>Adatta</button></div><div class="game-room-map-actions">${isMaster ? '<button class="primary" type="button" data-manage-maps>Mappe</button>' : ''}</div></header>${buildTacticalMap(activeMap, displayTokens)}</main><aside class="game-room-sidebar"><section class="game-room-panel game-room-members"><header><div><span class="eyebrow">Lobby</span><h2>Partecipanti</h2></div><strong>${players.length}/${room.max_players}</strong></header><div>${players.length ? players.map((member) => { const online = onlineUsers.has(String(member.user_id)) || String(member.user_id) === String(userId); return `<article><span class="game-room-presence ${online ? 'is-online' : ''}" title="${online ? 'Online' : 'Offline'}"></span><span><strong>${escapeHtml(member.display_name || 'Giocatore')}${String(member.user_id) === String(userId) ? '<em class="game-room-member-self">Tu</em>' : ''}</strong></span>${isMaster ? `<button class="icon-button" type="button" data-kick-member="${escapeHtml(member.user_id)}" aria-label="Espelli ${escapeHtml(member.display_name)}">×</button>` : ''}</article>`; }).join('') : '<p class="game-room-members-empty">Nessun partecipante collegato.</p>'}</div></section>${isMaster ? `<section class="game-room-panel game-room-invite"><header><div><span class="eyebrow">Invito</span><h2>Codice stanza</h2></div><div class="game-room-invite__actions"><button class="game-room-icon-action" type="button" data-copy-invite aria-label="Copia codice" title="Copia codice">⧉</button><button class="game-room-icon-action" type="button" data-rotate-invite aria-label="Genera un nuovo codice" title="Nuovo codice">↻</button></div></header><code>${escapeHtml(room.invite_code)}</code></section>` : ''}<section class="game-room-panel game-room-legend"><span class="eyebrow">Legenda</span><p><i aria-hidden="true"></i><strong>1 casella</strong><span>= 1,5 m</span></p></section></aside></div></section>`;
+  const placedMapTokens = displayTokens.filter((token) => !activeMap || String(token.map_id) === String(activeMap.id));
+  const selectedToken = displayTokens.find((token) => String(token.id) === String(options.selectedMapTokenId));
+  const canControlSelected = selectedToken && (isMaster || String(selectedToken.owner_user_id) === String(userId));
+  const controlledWeapons = selectedToken && String(selectedToken.owner_user_id) === String(userId) ? weaponOptions : [];
+  const tacticalActions = canControlSelected && selectedToken.token_type === 'character' ? `<div class="game-map-tactical-actions" data-tactical-actions><button type="button" data-tactical-mode="attack" class="${tacticalMode === 'attack' ? 'is-active' : ''}"><span>⚔</span>Attacco</button><button type="button" data-tactical-mode="movement" class="${tacticalMode === 'movement' ? 'is-active' : ''}"><span>➜</span>Movimento</button>${tacticalMode === 'attack' ? `<label><span>Arma</span><select data-tactical-weapon>${controlledWeapons.length ? controlledWeapons.map((weapon) => `<option value="${escapeHtml(weapon.id)}" ${String(options.selectedWeaponId) === String(weapon.id) ? 'selected' : ''}>${escapeHtml(weapon.name)}</option>`).join('') : '<option value="melee">Attacco in mischia</option>'}</select></label>` : ''}</div>` : '';
+  const terrainActions = isMaster && activeMap && !tacticalActions ? `<div class="game-map-terrain-actions"><small>Strumenti DM</small><button type="button" data-terrain-mode="difficult" class="${terrainMode === 'difficult' ? 'is-active' : ''}">Terreno difficile</button><button type="button" data-terrain-mode="obstacle" class="${terrainMode === 'obstacle' ? 'is-active' : ''}">Ostacolo</button><button type="button" data-terrain-mode="erase" class="${terrainMode === 'erase' ? 'is-active' : ''}">Cancella</button></div>` : '';
+  container.innerHTML = `<section class="game-room-lobby"><header class="game-room-sessionbar"><div class="game-room-sessionbar__identity"><button class="game-room-back" type="button" data-room-list aria-label="Torna alle stanze">‹</button><span><small>Sessione multiplayer</small><strong>${escapeHtml(room.title)}</strong></span></div><div class="game-room-sessionbar__actions">${isMaster ? '<button class="ghost-button game-room-delete" type="button" data-delete-room>Elimina sessione</button>' : '<button class="ghost-button game-room-danger" type="button" data-leave-room>Esci</button>'}</div></header><div class="game-room-workspace"><main class="game-room-map-panel"><header><div class="game-room-map-title"><span class="eyebrow">Mappa attiva</span><h1>${activeMap ? escapeHtml(activeMap.title) : 'Tavolo di gioco'}</h1></div><div class="game-map-toolbar"><button type="button" data-map-zoom-out aria-label="Riduci zoom">−</button><output data-map-zoom>100%</output><button type="button" data-map-zoom-in aria-label="Aumenta zoom">+</button><button type="button" data-map-fit>Adatta</button></div><div class="game-room-map-actions">${isMaster ? '<button class="primary" type="button" data-manage-maps>Mappe</button>' : ''}</div></header>${buildTacticalMap(activeMap, displayTokens, mapCells)}${terrainActions}${tacticalActions}</main><aside class="game-room-sidebar"><section class="game-room-panel game-room-members"><header><div><span class="eyebrow">Lobby</span><h2>Partecipanti</h2></div><strong>${players.length}/${room.max_players}</strong></header><div>${players.length ? players.map((member) => { const online = onlineUsers.has(String(member.user_id)) || String(member.user_id) === String(userId); return `<article><span class="game-room-presence ${online ? 'is-online' : ''}" title="${online ? 'Online' : 'Offline'}"></span><span><strong>${escapeHtml(member.display_name || 'Giocatore')}${String(member.user_id) === String(userId) ? '<em class="game-room-member-self">Tu</em>' : ''}</strong></span>${isMaster ? `<button class="icon-button" type="button" data-kick-member="${escapeHtml(member.user_id)}" aria-label="Espelli ${escapeHtml(member.display_name)}">×</button>` : ''}</article>`; }).join('') : '<p class="game-room-members-empty">Nessun partecipante collegato.</p>'}</div></section>${isMaster ? `<section class="game-room-panel game-room-invite"><header><div><span class="eyebrow">Invito</span><h2>Codice stanza</h2></div><div class="game-room-invite__actions"><button class="game-room-icon-action" type="button" data-copy-invite aria-label="Copia codice" title="Copia codice">⧉</button><button class="game-room-icon-action" type="button" data-rotate-invite aria-label="Genera un nuovo codice" title="Nuovo codice">↻</button></div></header><code>${escapeHtml(room.invite_code)}</code></section>` : ''}<section class="game-room-panel game-room-legend"><span class="eyebrow">Legenda</span><p><i aria-hidden="true"></i><strong>1 casella</strong><span>= 1,5 m</span></p></section></aside></div></section>`;
   const invite = container.querySelector('.game-room-invite');
   const sessionbar = container.querySelector('.game-room-sessionbar');
   const sessionActions = container.querySelector('.game-room-sessionbar__actions');
@@ -265,10 +329,11 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
   const workspace = container.querySelector('.game-room-workspace');
   if (isMaster && creaturePaletteOpen && workspace) {
     workspace.classList.add('has-creature-palette');
-    workspace.insertAdjacentHTML('afterbegin', `<aside class="game-room-creature-palette"><header><span><small>Bestiario ${roomRulesVersion}</small><strong>Pedine</strong></span><button type="button" data-close-creature-palette aria-label="Chiudi bestiario">×</button></header><label class="game-room-creature-search"><input type="search" data-creature-search aria-label="Cerca pedina" value="${escapeHtml(creatureSearch)}" placeholder="Cerca una pedina…" autocomplete="off"></label><div class="game-room-creature-catalog">${visibleCreatures.length ? visibleCreatures.map((creature) => `<button class="game-room-creature-card ${String(creature.id) === String(selectedCreatureId) ? 'is-selected' : ''}" type="button" data-creature-id="${escapeHtml(creature.id)}">${creature.imageUrl ? `<img src="${escapeHtml(sanitizeImageUrl(creature.imageUrl))}" alt="" draggable="false">` : '<i aria-hidden="true">♞</i>'}<strong>${escapeHtml(creature.name)}</strong></button>`).join('') : `<p class="game-room-creature-empty">Nessuna creatura trovata.</p>`}</div><section class="game-room-placed-creatures"><header><strong>Pedine sulla mappa</strong><small>${placedCreatureTokens.length}</small></header><div>${placedCreatureTokens.length ? placedCreatureTokens.map((token) => { const source = sharedCreatures.find((creature) => String(creature.id) === String(token.shared_creature_id)); const hp = token.token_data?.hp || { current: source?.hpCurrent, max: source?.hpMax }; return `<button type="button" class="game-room-placed-creature ${String(token.id) === String(options.selectedMapTokenId) ? 'is-selected' : ''}" data-placed-token-id="${escapeHtml(token.id)}">${token.image_url ? `<img src="${escapeHtml(sanitizeImageUrl(token.image_url))}" alt="" draggable="false">` : '<i aria-hidden="true">♞</i>'}<span><strong>${escapeHtml(token.name)}</strong>${healthBarMarkup(hp.current, hp.max, 'game-room-creature-hp')}</span></button>`; }).join('') : '<p>Nessuna pedina inserita.</p>'}</div></section></aside>`);
+    workspace.insertAdjacentHTML('afterbegin', `<aside class="game-room-creature-palette"><header><span><small>Personaggi e bestiario ${roomRulesVersion}</small><strong>Pedine</strong></span><button type="button" data-close-creature-palette aria-label="Chiudi pedine">×</button></header><label class="game-room-creature-search"><input type="search" data-creature-search aria-label="Cerca pedina" value="${escapeHtml(creatureSearch)}" placeholder="Cerca una pedina…" autocomplete="off"></label><section class="game-room-dm-character-palette"><header><strong>I tuoi personaggi</strong><small>${visibleDmCharacters.length}</small></header><div>${visibleDmCharacters.length ? visibleDmCharacters.map((character) => `<button class="game-room-creature-card game-room-dm-character-card ${String(character.id) === String(selectedDmCharacterId) ? 'is-selected' : ''}" type="button" data-dm-character-id="${escapeHtml(character.id)}">${character.imageUrl ? `<img src="${escapeHtml(sanitizeImageUrl(character.imageUrl))}" alt="" draggable="false">` : '<i aria-hidden="true">♙</i>'}<strong>${escapeHtml(character.name)}</strong></button>`).join('') : '<p class="game-room-creature-empty">Nessun personaggio creato.</p>'}</div></section><section class="game-room-creature-source"><header><strong>Bestiario ${roomRulesVersion}</strong><small>${visibleCreatures.length}</small></header><div class="game-room-creature-catalog">${visibleCreatures.length ? visibleCreatures.map((creature) => `<button class="game-room-creature-card ${String(creature.id) === String(selectedCreatureId) ? 'is-selected' : ''}" type="button" data-creature-id="${escapeHtml(creature.id)}">${creature.imageUrl ? `<img src="${escapeHtml(sanitizeImageUrl(creature.imageUrl))}" alt="" draggable="false">` : '<i aria-hidden="true">♞</i>'}<strong>${escapeHtml(creature.name)}</strong></button>`).join('') : `<p class="game-room-creature-empty">Nessuna creatura trovata.</p>`}</div></section><section class="game-room-placed-creatures"><header><strong>Pedine sulla mappa</strong><small>${placedMapTokens.length}</small></header><div>${placedMapTokens.length ? placedMapTokens.map((token) => { const source = sharedCreatures.find((creature) => String(creature.id) === String(token.shared_creature_id)); const hp = token.token_data?.hp || { current: source?.hpCurrent, max: source?.hpMax }; return `<button type="button" class="game-room-placed-creature ${String(token.id) === String(options.selectedMapTokenId) ? 'is-selected' : ''}" data-placed-token-id="${escapeHtml(token.id)}">${token.image_url ? `<img src="${escapeHtml(sanitizeImageUrl(token.image_url))}" alt="" draggable="false">` : `<i aria-hidden="true">${token.token_type === 'character' ? '♙' : '♞'}</i>`}<span><strong>${escapeHtml(token.name)}</strong>${healthBarMarkup(hp.current, hp.max, 'game-room-creature-hp')}</span></button>`; }).join('') : '<p>Nessuna pedina inserita.</p>'}</div></section></aside>`);
   }
   container.querySelectorAll('.game-room-members article').forEach((article, index) => {
     const player = players[index];
+    if (String(player?.user_id) === String(room.master_user_id)) article.querySelector('[data-kick-member]')?.remove();
     const info = article.children[1];
     info?.classList.add('game-room-member-info');
     const avatarUrl = sanitizeImageUrl(player?.character?.data?.avatar_url || '');
@@ -293,14 +358,14 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
       if (String(player.user_id) === String(selectedLobbyUserId)) article.classList.add('is-lobby-selected');
     }
     if (player?.character && String(player.user_id) === String(userId)) {
-      article.classList.add('is-own-character', 'is-token-source');
+      article.classList.add('is-own-character', 'is-lobby-selectable');
     }
   });
   container.querySelectorAll('.game-map-token').forEach((tokenElement, index) => {
     const token = displayTokens[index];
     if (!token) return;
     tokenElement.dataset.mapTokenId = token.id;
-    if (isMaster) {
+    if (isMaster || String(token.owner_user_id) === String(userId)) {
       tokenElement.classList.add('is-draggable');
       tokenElement.setAttribute('aria-label', `Sposta ${token.name}`);
     }
@@ -309,7 +374,10 @@ function renderLobby(container, data, userId, onlineUsers = new Set(), masterCha
       tokenElement.classList.add('is-selected');
       tokenElement.dataset.selectedBy = selectedBy.join(', ');
       tokenElement.insertAdjacentHTML('beforeend', `<em class="game-map-token__selection">${escapeHtml(selectedBy.join(', '))}</em>`);
-      if (isMaster) tokenElement.insertAdjacentHTML('beforeend', '<span class="game-map-token__selected-actions"><button type="button" data-remove-map-token>Rimuovi dalla griglia</button></span>');
+      if (String(options.selectedMapTokenId) === String(token.id)) {
+        tokenElement.insertAdjacentHTML('beforeend', '<span class="game-map-token__detail-action"><button type="button" data-token-details>Dettagli</button></span>');
+        if (isMaster) tokenElement.insertAdjacentHTML('beforeend', '<span class="game-map-token__selected-actions"><button type="button" data-remove-map-token>Rimuovi dalla griglia</button></span>');
+      }
     }
   });
   const mapActions = container.querySelector('.game-room-map-actions');
@@ -364,29 +432,54 @@ export async function renderGameRooms(container) {
       let creaturePaletteOpen = false;
       let selectedLobbyUserId = null;
       let selectedCreatureId = null;
+      let selectedDmCharacterId = null;
       let creatureSearch = '';
       let focusTokenId = null;
+      let tacticalMode = null;
+      let selectedWeaponId = null;
+      let terrainMode = null;
       const paint = () => {
         const previousViewport = container.querySelector('[data-map-viewport]');
         const previousScroll = previousViewport ? { left: previousViewport.scrollLeft, top: previousViewport.scrollTop } : null;
         const activeCharacter = state.characters.find((character) => String(character.id) === String(state.activeCharacterId)) || state.characters[0] || null;
         const masterCharacter = String(lobby.room.master_user_id) === String(state.user.id) ? activeCharacter : null;
-        document.querySelectorAll('.game-room-member-drag-ghost,.game-room-creature-drag-ghost,.game-room-avatar-drag-preview').forEach((ghost) => ghost.remove());
-        renderLobby(container, lobby, state.user.id, online, masterCharacter, tokenSelections, { creaturePaletteOpen, sharedCreatures, selectedLobbyUserId, selectedCreatureId, selectedMapTokenId: localSelectedTokenId, creatureSearch });
+        const dmCharacters = String(lobby.room.master_user_id) === String(state.user.id) ? state.characters.map((character) => ({ userId: state.user.id, characterId: character.id, id: character.id, name: character.name || 'Personaggio', imageUrl: sanitizeImageUrl(character.data?.avatar_url || ''), hpCurrent: character.data?.hp?.current, hpMax: character.data?.hp?.max, speed: character.data?.speed, isMaster: true, tokenType: 'character' })) : [];
+        const equippedWeapons = (state.cache?.items || []).filter((item) => item.category === 'weapon' && item.equipable && ((Array.isArray(item.equip_slots) && item.equip_slots.length) || item.equip_slot));
+        if (!selectedWeaponId && equippedWeapons.length) selectedWeaponId = String(equippedWeapons[0].id);
+        renderLobby(container, lobby, state.user.id, online, masterCharacter, tokenSelections, { creaturePaletteOpen, sharedCreatures, dmCharacters, selectedLobbyUserId, selectedCreatureId, selectedDmCharacterId, selectedMapTokenId: localSelectedTokenId, creatureSearch, tacticalMode, selectedWeaponId, weaponOptions: equippedWeapons, terrainMode });
         const syncMapZoom = () => {
           const canvas = container.querySelector('[data-map-canvas]');
+          const viewport = container.querySelector('[data-map-viewport]');
           const output = container.querySelector('[data-map-zoom]');
-          if (canvas) canvas.style.transform = `scale(${mapZoom})`;
+          if (canvas && viewport) {
+            const nativeWidth = Number(canvas.dataset.nativeWidth) || 1;
+            const nativeHeight = Number(canvas.dataset.nativeHeight) || 1;
+            // Il 100% riempie l'intero pannello: la dimensione eccedente resta scrollabile.
+            const fitScale = Math.max(.01, viewport.clientWidth / nativeWidth, viewport.clientHeight / nativeHeight);
+            const scaledWidth = nativeWidth * fitScale * mapZoom;
+            const scaledHeight = nativeHeight * fitScale * mapZoom;
+            canvas.style.width = `${scaledWidth}px`;
+            canvas.style.height = `${scaledHeight}px`;
+            canvas.style.transform = 'none';
+            const stage = container.querySelector('[data-map-stage]');
+            if (stage) {
+              stage.style.setProperty('--map-stage-width', `${scaledWidth}px`);
+              stage.style.setProperty('--map-stage-height', `${scaledHeight}px`);
+            }
+          }
           if (output) output.textContent = `${Math.round(mapZoom * 100)}%`;
         };
         container.querySelector('[data-map-zoom-in]')?.addEventListener('click', () => { mapZoom = Math.min(2.5, mapZoom + .25); syncMapZoom(); });
         container.querySelector('[data-map-zoom-out]')?.addEventListener('click', () => { mapZoom = Math.max(.5, mapZoom - .25); syncMapZoom(); });
-        container.querySelector('[data-map-fit]')?.addEventListener('click', () => { mapZoom = 1; container.querySelector('[data-map-viewport]')?.scrollTo({ top: 0, left: 0 }); syncMapZoom(); });
+        container.querySelector('[data-map-fit]')?.addEventListener('click', () => {
+          const viewport = container.querySelector('[data-map-viewport]');
+          mapZoom = 1;
+          viewport?.scrollTo({ top: 0, left: 0 }); syncMapZoom();
+        });
         const mapCanvas = container.querySelector('[data-map-canvas]');
         if (pendingToken && mapCanvas) {
           mapCanvas.classList.add('is-placing-token');
-          const title = container.querySelector('.game-room-map-title');
-          title?.insertAdjacentHTML('beforeend', `<small class="game-map-placement-hint">Tocca una casella per posizionare ${escapeHtml(pendingToken.name)}</small>`);
+          container.querySelector('.game-room-map-panel')?.insertAdjacentHTML('beforeend', `<div class="game-map-placement-overlay" role="status"><span aria-hidden="true">⌖</span><div><strong>Posiziona ${escapeHtml(pendingToken.name)}</strong><small>Seleziona una casella libera sulla mappa</small></div></div>`);
           mapCanvas.addEventListener('click', async (event) => {
             if (event.target.closest('.game-map-token')) return;
             const currentMap = lobby.maps.find((map) => map.is_active);
@@ -403,10 +496,21 @@ export async function renderGameRooms(container) {
                 await createCreatureMapToken({ roomId, mapId: currentMap.id, creature: participant, gridX, gridY });
               } else {
                 const existingToken = lobby.tokens.find((token) => String(token.character_id) === String(participant.characterId));
-                if (existingToken) await moveGameMapToken(roomId, currentMap.id, existingToken.id, gridX, gridY);
-                else await createCharacterMapToken({ roomId, mapId: currentMap.id, participant, gridX, gridY });
+                const isMaster = String(lobby.room.master_user_id) === String(state.user.id);
+                if (isMaster && existingToken) await moveGameMapToken(roomId, currentMap.id, existingToken.id, gridX, gridY);
+                else if (isMaster) await createCharacterMapToken({ roomId, mapId: currentMap.id, participant, gridX, gridY });
+                else await placeOwnGameMapToken(roomId, currentMap.id, gridX, gridY);
               }
               lobby = await fetchGameRoom(roomId);
+              const placedToken = participant.tokenType === 'creature'
+                ? null
+                : lobby.tokens.find((token) => String(token.character_id) === String(participant.characterId));
+              if (placedToken) {
+                localSelectedTokenId = String(placedToken.id);
+                tokenSelections.clear();
+                tokenSelections.set(String(placedToken.id), [participant.name]);
+                focusTokenId = String(placedToken.id);
+              }
               paint();
               createToast(`Pedina di ${participant.name} posizionata`);
             } catch (error) { createToast(formatError(error), 'error'); }
@@ -414,10 +518,46 @@ export async function renderGameRooms(container) {
         }
         const currentMapForDrag = lobby.maps.find((map) => map.is_active);
         if (mapCanvas && currentMapForDrag) {
+          const selectedMapToken = lobby.tokens.find((token) => String(token.id) === String(localSelectedTokenId));
+          if (selectedMapToken && tacticalMode) {
+            const selectedCharacter = state.characters.find((character) => String(character.id) === String(selectedMapToken.character_id));
+            if (tacticalMode === 'movement') {
+              const speedMeters = Math.max(1.5, Number(selectedCharacter?.data?.speed ?? selectedMapToken.token_data?.speed_m ?? 9));
+              const cells = tacticalRangeCells(currentMapForDrag, selectedMapToken, Math.floor(speedMeters / 1.5), lobby.mapCells || [], true);
+              renderTacticalRange(mapCanvas, currentMapForDrag, selectedMapToken, cells, 'movement');
+            } else if (tacticalMode === 'attack') {
+              const weapon = String(selectedMapToken.owner_user_id) === String(state.user.id)
+                ? (state.cache?.items || []).find((item) => String(item.id) === String(selectedWeaponId))
+                : null;
+              const rangeMeters = weapon?.weapon_range === 'ranged' || weapon?.range_normal
+                ? Number(weapon.range_normal) || 1.5
+                : Number(weapon?.melee_range) || 1.5;
+              const cells = tacticalRangeCells(currentMapForDrag, selectedMapToken, Math.max(1, Math.ceil(rangeMeters / 1.5)), lobby.mapCells || [], false);
+              renderTacticalRange(mapCanvas, currentMapForDrag, selectedMapToken, cells, 'attack');
+            }
+          }
+          if (String(lobby.room.master_user_id) === String(state.user.id) && terrainMode) {
+            mapCanvas.classList.add('is-editing-terrain');
+            mapCanvas.addEventListener('click', async (event) => {
+              if (event.target.closest('.game-map-token')) return;
+              event.preventDefault(); event.stopPropagation();
+              const position = mapGridPosition(event, mapCanvas, currentMapForDrag);
+              if (!position.valid) return;
+              const existing = (lobby.mapCells || []).find((cell) => Number(cell.grid_x) === position.gridX && Number(cell.grid_y) === position.gridY);
+              try {
+                const cellType = terrainMode === 'erase' ? null : terrainMode;
+                await setGameMapCell({ roomId, mapId: currentMapForDrag.id, gridX: position.gridX, gridY: position.gridY, cellType });
+                lobby.mapCells = (lobby.mapCells || []).filter((cell) => cell !== existing);
+                if (cellType) lobby.mapCells.push({ id: existing?.id || `pending-cell-${Date.now()}`, room_id: roomId, map_id: currentMapForDrag.id, grid_x: position.gridX, grid_y: position.gridY, cell_type: cellType });
+                paint();
+              } catch (error) { createToast(formatError(error), 'error'); }
+            }, { capture: true });
+          }
           const ownRoomMember = lobby.members.find((member) => String(member.user_id) === String(state.user.id));
           const currentPresenceName = ownRoomMember?.display_name || (String(lobby.room.master_user_id) === String(state.user.id) ? 'Dungeon Master' : 'Giocatore');
           const selectToken = (tokenId) => {
             const nextTokenId = localSelectedTokenId === String(tokenId) ? null : String(tokenId);
+            tacticalMode = null;
             localSelectedTokenId = nextTokenId;
             tokenSelections.clear();
             if (nextTokenId) tokenSelections.set(nextTokenId, [currentPresenceName]);
@@ -425,212 +565,20 @@ export async function renderGameRooms(container) {
             paint();
           };
           const clearSelectionForDrag = () => {
+            tacticalMode = null;
             localSelectedTokenId = null;
             tokenSelections.clear();
             container.querySelectorAll('.game-map-token.is-selected').forEach((token) => {
               token.classList.remove('is-selected');
               token.querySelector('.game-map-token__selection')?.remove();
+              token.querySelector('.game-map-token__detail-action')?.remove();
               token.querySelector('.game-map-token__selected-actions')?.remove();
             });
+            container.querySelector('[data-map-range-layer]')?.replaceChildren();
+            container.querySelector('[data-tactical-actions]')?.remove();
             void cleanupRealtime?.updatePresence?.({ selectedTokenId: null, selectedAt: Date.now() });
           };
-          const ownParticipant = roomTokenParticipants(lobby, state).find((participant) => String(participant.userId) === String(state.user.id));
-          const placeLobbyParticipant = async (position) => {
-            if (!ownParticipant || !position?.valid) return;
-            const existingToken = lobby.tokens.find((token) => String(token.character_id) === String(ownParticipant.characterId));
-            const previousPosition = existingToken ? { x: existingToken.grid_x, y: existingToken.grid_y } : null;
-            const optimisticToken = existingToken || {
-              id: `pending-${Date.now()}`,
-              room_id: roomId,
-              map_id: currentMapForDrag.id,
-              token_type: 'character',
-              character_id: ownParticipant.characterId,
-              owner_user_id: ownParticipant.userId,
-              name: ownParticipant.name,
-              image_url: ownParticipant.imageUrl,
-              grid_x: position.gridX,
-              grid_y: position.gridY,
-              size_columns: 1,
-              size_rows: 1
-            };
-            optimisticToken.grid_x = position.gridX;
-            optimisticToken.grid_y = position.gridY;
-            if (!existingToken) lobby.tokens.push(optimisticToken);
-            paint();
-            try {
-              const isMaster = String(lobby.room.master_user_id) === String(state.user.id);
-              if (existingToken && isMaster) {
-                await moveGameMapToken(roomId, currentMapForDrag.id, existingToken.id, position.gridX, position.gridY);
-              } else if (isMaster) {
-                const created = await createCharacterMapToken({ roomId, mapId: currentMapForDrag.id, participant: ownParticipant, gridX: position.gridX, gridY: position.gridY });
-                optimisticToken.id = created.id;
-              } else {
-                const tokenId = await placeOwnGameMapToken(roomId, currentMapForDrag.id, position.gridX, position.gridY);
-                optimisticToken.id = tokenId;
-              }
-            } catch (error) {
-              if (existingToken) {
-                existingToken.grid_x = previousPosition.x;
-                existingToken.grid_y = previousPosition.y;
-              } else lobby.tokens = lobby.tokens.filter((token) => token !== optimisticToken);
-              paint();
-              createToast(formatError(error), 'error');
-            }
-          };
-          const lobbySource = container.querySelector('.game-room-members article.is-token-source');
-          if (lobbySource && ownParticipant) {
-            const lobbyDropTarget = document.createElement('span');
-            lobbyDropTarget.className = 'game-map-drop-target';
-            const showLobbyDropTarget = (position) => {
-              if (!position.valid) { lobbyDropTarget.remove(); return; }
-              const offsetX = Number(currentMapForDrag.grid_offset_x_px) || 0;
-              const offsetY = Number(currentMapForDrag.grid_offset_y_px) || 0;
-              lobbyDropTarget.style.left = `${((offsetX + position.gridX * position.cell) / position.nativeWidth) * 100}%`;
-              lobbyDropTarget.style.top = `${((offsetY + position.gridY * position.cell) / position.nativeHeight) * 100}%`;
-              lobbyDropTarget.style.width = `${(position.cell / position.nativeWidth) * 100}%`;
-              lobbyDropTarget.style.height = `${(position.cell / position.nativeHeight) * 100}%`;
-              mapCanvas.append(lobbyDropTarget);
-            };
-            let touchDrag = null;
-            lobbySource.addEventListener('pointerdown', (event) => {
-              if (event.button !== 0 || event.target.closest('button')) return;
-              touchDrag = { pointerId: event.pointerId, pointerType: event.pointerType, startedAt: performance.now(), startX: event.clientX, startY: event.clientY, active: false, ghost: null, position: null };
-              lobbySource.setPointerCapture(event.pointerId);
-            });
-            lobbySource.addEventListener('pointermove', (event) => {
-              if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
-              const distance = Math.hypot(event.clientX - touchDrag.startX, event.clientY - touchDrag.startY);
-              const horizontalIntent = Math.abs(event.clientX - touchDrag.startX) > Math.abs(event.clientY - touchDrag.startY);
-              const heldLongEnough = performance.now() - touchDrag.startedAt > 180;
-              if (!touchDrag.active && distance > 8 && (touchDrag.pointerType === 'mouse' || horizontalIntent || heldLongEnough)) {
-                touchDrag.active = true;
-                lobbySource.dataset.suppressLobbyClick = 'true';
-                clearSelectionForDrag();
-                document.querySelectorAll('.game-room-member-drag-ghost,.game-room-avatar-drag-preview').forEach((ghost) => ghost.remove());
-                touchDrag.ghost = lobbySource.querySelector('.game-room-member-avatar')?.cloneNode(true) || document.createElement('span');
-                touchDrag.ghost.className = 'game-room-member-drag-ghost';
-                document.body.append(touchDrag.ghost);
-              }
-              if (!touchDrag.active) return;
-              event.preventDefault();
-              touchDrag.ghost.style.left = `${event.clientX + 12}px`;
-              touchDrag.ghost.style.top = `${event.clientY + 12}px`;
-              touchDrag.position = mapGridPosition(event, mapCanvas, currentMapForDrag);
-              showLobbyDropTarget(touchDrag.position);
-            });
-            const finishTouchDrag = (event) => {
-              if (!touchDrag || touchDrag.pointerId !== event.pointerId) return;
-              const completed = touchDrag.active && touchDrag.position?.valid ? touchDrag.position : null;
-              if (touchDrag.active) lobbySource.dataset.suppressLobbyClick = 'true';
-              touchDrag.ghost?.remove();
-              lobbyDropTarget.remove();
-              touchDrag = null;
-              if (completed) void placeLobbyParticipant(completed);
-            };
-            lobbySource.addEventListener('pointerup', finishTouchDrag);
-            lobbySource.addEventListener('pointercancel', finishTouchDrag);
-          }
-          const placeCreatureFromPalette = async (creature, position) => {
-            if (!creature || !position?.valid) return;
-            const optimisticToken = {
-              id: `pending-creature-${Date.now()}`,
-              room_id: roomId,
-              map_id: currentMapForDrag.id,
-              token_type: 'creature',
-              shared_creature_id: creature.id,
-              name: creature.name,
-              image_url: creature.imageUrl,
-              grid_x: position.gridX,
-              grid_y: position.gridY,
-              size_columns: 1,
-              size_rows: 1,
-              token_data: { hp: { current: creature.hpCurrent, max: creature.hpMax } }
-            };
-            lobby.tokens.push(optimisticToken);
-            paint();
-            try {
-              const created = await createCreatureMapToken({ roomId, mapId: currentMapForDrag.id, creature, gridX: position.gridX, gridY: position.gridY });
-              optimisticToken.id = created.id;
-            } catch (error) {
-              lobby.tokens = lobby.tokens.filter((token) => token !== optimisticToken);
-              paint();
-              createToast(formatError(error), 'error');
-            }
-          };
-          container.querySelectorAll('.game-room-creature-card').forEach((creatureCard) => {
-            const creature = sharedCreatures.find((entry) => String(entry.id) === String(creatureCard.dataset.creatureId));
-            if (!creature) return;
-            let creatureDrag = null;
-            const creatureDropTarget = document.createElement('span');
-            creatureDropTarget.className = 'game-map-drop-target';
-            const showCreatureTarget = (position) => {
-              if (!position.valid) { creatureDropTarget.remove(); return; }
-              const offsetX = Number(currentMapForDrag.grid_offset_x_px) || 0;
-              const offsetY = Number(currentMapForDrag.grid_offset_y_px) || 0;
-              creatureDropTarget.style.left = `${((offsetX + position.gridX * position.cell) / position.nativeWidth) * 100}%`;
-              creatureDropTarget.style.top = `${((offsetY + position.gridY * position.cell) / position.nativeHeight) * 100}%`;
-              creatureDropTarget.style.width = `${(position.cell / position.nativeWidth) * 100}%`;
-              creatureDropTarget.style.height = `${(position.cell / position.nativeHeight) * 100}%`;
-              mapCanvas.append(creatureDropTarget);
-            };
-            creatureCard.addEventListener('pointerdown', (event) => {
-              if (event.button !== 0) return;
-              creatureDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, active: false, ghost: null, position: null };
-              creatureCard.setPointerCapture(event.pointerId);
-            });
-            creatureCard.addEventListener('pointermove', (event) => {
-              if (!creatureDrag || creatureDrag.pointerId !== event.pointerId) return;
-              if (!creatureDrag.active && Math.hypot(event.clientX - creatureDrag.startX, event.clientY - creatureDrag.startY) > 8) {
-                creatureDrag.active = true;
-                creatureCard.dataset.suppressCreatureClick = 'true';
-                document.querySelectorAll('.game-room-creature-drag-ghost').forEach((ghost) => ghost.remove());
-                creatureDrag.ghost = creatureCard.querySelector('img')?.cloneNode(true) || creatureCard.querySelector('i')?.cloneNode(true) || document.createElement('span');
-                creatureDrag.ghost.className = 'game-room-creature-drag-ghost';
-                document.body.append(creatureDrag.ghost);
-              }
-              if (!creatureDrag.active) return;
-              event.preventDefault();
-              creatureDrag.ghost.style.left = `${event.clientX + 12}px`;
-              creatureDrag.ghost.style.top = `${event.clientY + 12}px`;
-              creatureDrag.position = mapGridPosition(event, mapCanvas, currentMapForDrag);
-              showCreatureTarget(creatureDrag.position);
-            });
-            const finishCreatureDrag = (event) => {
-              if (!creatureDrag || creatureDrag.pointerId !== event.pointerId) return;
-              const completed = creatureDrag.active && creatureDrag.position?.valid ? creatureDrag.position : null;
-              if (creatureDrag.active) creatureCard.dataset.suppressCreatureClick = 'true';
-              creatureDrag.ghost?.remove();
-              creatureDropTarget.remove();
-              creatureDrag = null;
-              if (completed) void placeCreatureFromPalette(creature, completed);
-            };
-            creatureCard.addEventListener('pointerup', finishCreatureDrag);
-            creatureCard.addEventListener('pointercancel', finishCreatureDrag);
-          });
           container.querySelectorAll('.game-map-token').forEach((tokenElement) => {
-            let pressTimer = null;
-            let pressStart = null;
-            const closeActions = () => tokenElement.querySelector('.game-map-token-actions')?.remove();
-            tokenElement.addEventListener('pointerdown', (event) => {
-              pressStart = { x: event.clientX, y: event.clientY };
-              clearTimeout(pressTimer);
-              pressTimer = setTimeout(() => {
-                tokenElement.dataset.suppressClick = 'true';
-                container.querySelectorAll('.game-map-token-actions').forEach((actions) => actions.remove());
-                tokenElement.insertAdjacentHTML('beforeend', '<span class="game-map-token-actions"><button type="button" data-token-action="details">Dettagli</button><button type="button" data-token-action="status">Stato</button><button type="button" data-token-action="more">Altro</button></span>');
-                tokenElement.querySelectorAll('[data-token-action]').forEach((button) => button.addEventListener('click', (actionEvent) => {
-                  actionEvent.preventDefault();
-                  actionEvent.stopPropagation();
-                  createToast('Azione disponibile in un prossimo aggiornamento');
-                  closeActions();
-                }));
-              }, 600);
-            });
-            tokenElement.addEventListener('pointermove', (event) => {
-              if (pressStart && Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 7) clearTimeout(pressTimer);
-            });
-            tokenElement.addEventListener('pointerup', () => clearTimeout(pressTimer));
-            tokenElement.addEventListener('pointercancel', () => clearTimeout(pressTimer));
             tokenElement.addEventListener('contextmenu', (event) => event.preventDefault());
             tokenElement.addEventListener('click', (event) => {
               event.stopPropagation();
@@ -645,6 +593,7 @@ export async function renderGameRooms(container) {
             if (event.target.closest('.game-map-token')) return;
             tokenSelections.clear();
             localSelectedTokenId = null;
+            tacticalMode = null;
             void cleanupRealtime?.updatePresence?.({ selectedTokenId: null, selectedAt: Date.now() });
             paint();
           });
@@ -663,6 +612,12 @@ export async function renderGameRooms(container) {
               paint();
               createToast('Pedina rimossa dalla griglia');
             } catch (error) { createToast(formatError(error), 'error'); }
+          }));
+          container.querySelectorAll('[data-token-details]').forEach((button) => button.addEventListener('click', (event) => {
+            event.preventDefault(); event.stopPropagation();
+            const tokenElement = button.closest('[data-map-token-id]');
+            const token = lobby.tokens.find((entry) => String(entry.id) === String(tokenElement?.dataset.mapTokenId));
+            if (token) openTokenQuickDetail(token);
           }));
           container.querySelectorAll('.game-map-token.is-draggable').forEach((tokenElement) => {
             let dragPosition = null;
@@ -759,13 +714,15 @@ export async function renderGameRooms(container) {
         container.querySelector('[data-position-token]')?.addEventListener('click', () => {
           creaturePaletteOpen = !creaturePaletteOpen;
           selectedCreatureId = null;
-          if (!creaturePaletteOpen && pendingToken?.tokenType === 'creature') pendingToken = null;
+          selectedDmCharacterId = null;
+          if (!creaturePaletteOpen && pendingToken?.paletteSource) pendingToken = null;
           paint();
         });
         container.querySelector('[data-close-creature-palette]')?.addEventListener('click', () => {
           creaturePaletteOpen = false;
           selectedCreatureId = null;
-          if (pendingToken?.tokenType === 'creature') pendingToken = null;
+          selectedDmCharacterId = null;
+          if (pendingToken?.paletteSource) pendingToken = null;
           paint();
         });
         container.querySelector('[data-creature-search]')?.addEventListener('input', (event) => {
@@ -793,15 +750,46 @@ export async function renderGameRooms(container) {
           if (!creature) return;
           const isSameCreature = String(selectedCreatureId) === String(creature.id);
           selectedCreatureId = isSameCreature ? null : String(creature.id);
+          selectedDmCharacterId = null;
           selectedLobbyUserId = null;
-          pendingToken = isSameCreature ? null : { ...creature, sharedCreatureId: creature.id, tokenType: 'creature' };
+          pendingToken = isSameCreature ? null : { ...creature, sharedCreatureId: creature.id, tokenType: 'creature', paletteSource: 'creature' };
           paint();
           if (!isSameCreature) createToast(`Tocca una casella per posizionare ${creature.name}`);
         }));
-        container.querySelectorAll('.game-room-members article.is-master-selectable').forEach((article) => article.addEventListener('click', (event) => {
+        container.querySelectorAll('[data-dm-character-id]').forEach((button) => button.addEventListener('click', () => {
+          const character = state.characters.find((entry) => String(entry.id) === String(button.dataset.dmCharacterId));
+          if (!character) return;
+          const isSameCharacter = String(selectedDmCharacterId) === String(character.id);
+          selectedDmCharacterId = isSameCharacter ? null : String(character.id);
+          selectedCreatureId = null;
+          selectedLobbyUserId = null;
+          pendingToken = isSameCharacter ? null : { userId: state.user.id, characterId: character.id, id: character.id, name: character.name || 'Personaggio', imageUrl: sanitizeImageUrl(character.data?.avatar_url || ''), hpCurrent: character.data?.hp?.current, hpMax: character.data?.hp?.max, speed: character.data?.speed, isMaster: true, tokenType: 'character', paletteSource: 'dm-character' };
+          paint();
+          if (!isSameCharacter) createToast(`Seleziona una casella per posizionare ${character.name}`);
+        }));
+        container.querySelectorAll('[data-tactical-mode]').forEach((button) => button.addEventListener('click', () => {
+          const nextMode = button.dataset.tacticalMode;
+          tacticalMode = tacticalMode === nextMode ? null : nextMode;
+          terrainMode = null;
+          paint();
+        }));
+        container.querySelector('[data-tactical-weapon]')?.addEventListener('change', (event) => {
+          selectedWeaponId = event.currentTarget.value;
+          tacticalMode = 'attack';
+          paint();
+        });
+        container.querySelectorAll('[data-terrain-mode]').forEach((button) => button.addEventListener('click', () => {
+          const nextMode = button.dataset.terrainMode;
+          terrainMode = terrainMode === nextMode ? null : nextMode;
+          tacticalMode = null;
+          pendingToken = null;
+          paint();
+        }));
+        container.querySelectorAll('.game-room-members article.is-master-selectable, .game-room-members article.is-lobby-selectable').forEach((article) => article.addEventListener('click', (event) => {
           if (event.target.closest('button')) return;
-          if (article.dataset.suppressLobbyClick === 'true') { delete article.dataset.suppressLobbyClick; return; }
           const userId = article.dataset.lobbyUserId;
+          const canSelectParticipant = String(lobby.room.master_user_id) === String(state.user.id) || String(userId) === String(state.user.id);
+          if (!canSelectParticipant) return;
           const participant = roomTokenParticipants(lobby, state).find((entry) => String(entry.userId) === String(userId));
           if (!participant) return;
           const isSame = String(selectedLobbyUserId) === String(userId);
@@ -815,6 +803,7 @@ export async function renderGameRooms(container) {
             void cleanupRealtime?.updatePresence?.({ selectedTokenId: null, selectedAt: Date.now() });
           } else if (characterToken) {
             pendingToken = null;
+            tacticalMode = null;
             localSelectedTokenId = String(characterToken.id);
             tokenSelections.clear();
             tokenSelections.set(String(characterToken.id), ['Dungeon Master']);
@@ -822,6 +811,8 @@ export async function renderGameRooms(container) {
             void cleanupRealtime?.updatePresence?.({ selectedTokenId: characterToken.id, selectedAt: Date.now() });
           } else {
             pendingToken = participant;
+            tacticalMode = null;
+            createToast(`Seleziona una casella in cui posizionare ${participant.name}`);
           }
           paint();
         }));
