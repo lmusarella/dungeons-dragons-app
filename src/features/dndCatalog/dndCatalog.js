@@ -3,6 +3,7 @@ import { createToast, openConfirmModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { CATALOG_GROUPS, FIELD_META, RULES_VERSIONS, getCatalog } from './catalogConfig.js';
 import { catalogDescription, catalogName, catalogStatBlock } from './catalogLocale.js';
+import { renderCatalogAdvancedDetails, renderCatalogDescription, renderCatalogSource } from './catalogPresentation.js';
 import {
   createCatalogRecord,
   deleteCatalogRecord,
@@ -14,6 +15,7 @@ import {
 } from './catalogApi.js';
 import {
   getCharacterProgression,
+  getCatalogParent,
   getClassDetails,
   getResolvedFeatureOrigins,
   getSubclassProgressions,
@@ -81,7 +83,9 @@ function progressionCell(value) {
 }
 
 function classProgressionTables(item) {
-  const data = item?.data && typeof item.data === 'object' ? item.data : {};
+  const data = item?.class_data && typeof item.class_data === 'object'
+    ? item.class_data
+    : item?.data && typeof item.data === 'object' ? item.data : {};
   const tables = [];
   const seen = new Set();
   const addTable = (title, labels, rows) => {
@@ -110,9 +114,9 @@ function classProgressionTables(item) {
   ));
   const candidates = [
     ['Progressione di classe', data.progression || data.level_progression || data.class_progression],
-    ['Slot incantesimo', data.spell_slots || data.spellSlots || data.spell_slot_progression || data.spellSlotProgression],
-    ['Incantesimi conosciuti', data.spells_known_progression || data.spellsKnownProgression],
-    ['Trucchetti conosciuti', data.cantrip_progression || data.cantripProgression]
+    ['Slot incantesimo', item.spellcasting_data?.spell_slots || item.spellcasting_data?.slots || data.spellcasting_data?.spell_slots || data.spell_slots || data.spellSlots || data.spell_slot_progression || data.spellSlotProgression],
+    ['Incantesimi conosciuti', item.spellcasting_data?.spells_known_progression || data.spellcasting_data?.spells_known_progression || data.spells_known_progression || data.spellsKnownProgression],
+    ['Trucchetti conosciuti', item.spellcasting_data?.cantrip_progression || data.spellcasting_data?.cantrip_progression || data.cantrip_progression || data.cantripProgression]
   ];
   candidates.forEach(([title, value]) => {
     if (Array.isArray(value)) {
@@ -200,9 +204,7 @@ function modalShell(content, className = '') {
 }
 
 async function openRecordDetail(catalog, item, canManage, callbacks) {
-  const rows = dataRows(item, catalog);
   const image = sanitizeImageUrl(item.image_url);
-  const localizedDescription = catalogDescription(item);
   const { backdrop, close } = modalShell(`
     <header class="dnd-catalog-detail__header">
       <div>${image ? `<img src="${image}" alt="">` : `<span class="dnd-catalog-detail__icon">${catalog.icon}</span>`}</div>
@@ -210,9 +212,10 @@ async function openRecordDetail(catalog, item, canManage, callbacks) {
       <button type="button" class="dnd-catalog-modal__close" data-modal-close aria-label="Chiudi">×</button>
     </header>
     <div class="dnd-catalog-detail__content">
-      ${localizedDescription ? `<section><h3>Descrizione</h3><p class="dnd-catalog-detail__description">${escapeHtml(localizedDescription)}</p></section>` : ''}
-      <section><h3>Dati completi</h3><dl>${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('') || '<p class="muted">Nessun dato aggiuntivo.</p>'}</dl></section>
+      ${renderCatalogAdvancedDetails(catalog, item)}
       <section class="dnd-catalog-detail__relations"><h3>${catalog.key === 'features' ? 'Concesso da' : catalog.key === 'classes' ? 'Progressione della classe' : 'Privilegi e abilità collegate'}</h3><div data-record-relations><div class="dnd-catalog-inline-loader"><span></span>Caricamento collegamenti…</div></div></section>
+      ${renderCatalogDescription(item)}
+      ${renderCatalogSource(item)}
     </div>
     ${canManage ? `<footer class="dnd-catalog-modal__actions"><button type="button" data-record-delete class="danger">Elimina</button><button type="button" data-record-edit class="primary">Modifica</button></footer>` : ''}
   `, 'dnd-catalog-detail');
@@ -231,21 +234,48 @@ async function openRecordDetail(catalog, item, canManage, callbacks) {
       const subclassGrants = subclassProgressions.flatMap((entry) => entry.grants);
       const allFeatureGrants = [...grants, ...subclassGrants];
       relations.innerHTML = `
-        <section class="dnd-class-overview-strip">
-          <div><small>Dado vita</small><strong>${escapeHtml(item.hit_die || '—')}</strong></div>
-          <div><small>Caratteristiche</small><strong>${escapeHtml(item.primary_abilities || '—')}</strong></div>
-          <div><small>Tiri salvezza</small><strong>${escapeHtml(item.saving_throws || '—')}</strong></div>
-          <div><small>Sottoclassi</small><strong>${details?.subclasses?.length || 0}</strong></div>
-        </section>
-        <section class="dnd-catalog-relation-block dnd-class-features"><header><div><small>Progressione 1–20</small><h4>Abilità della classe</h4></div><span>${grants.length} collegate</span></header>${renderFeatureTimeline(grants)}</section>
-        <section class="dnd-catalog-relation-block dnd-class-tables"><header><div><small>Incantesimi e risorse</small><h4>Tabelle di progressione</h4></div></header>${renderClassTables(item)}</section>
-        ${progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block dnd-class-choices"><header><div><small>Decisioni del giocatore</small><h4>Scelte per livello</h4></div></header>${progression.choiceGroups.map((group) => `<article class="dnd-catalog-choice-summary"><strong>${escapeHtml(catalogName(group))}</strong><small>${group.required ? 'Obbligatoria' : 'Facoltativa'} · ${group.allow_duplicates ? 'duplicati ammessi' : 'senza duplicati'}</small><div>${group.progression.map((step) => `<span>Livello ${escapeHtml(step.level)}: +${escapeHtml(step.choices_granted ?? step.new_choices)}</span>`).join('')}</div><p>${group.options.map((option) => escapeHtml(option.label_override || catalogName(option.entity) || option.static_code || 'Opzione')).join(' · ')}</p></article>`).join('')}</section>` : ''}
-        ${details?.subclasses?.length ? `<section class="dnd-catalog-relation-block dnd-class-subclasses"><header><div><small>Disponibili dal livello ${escapeHtml(details.subclass_selection_level)}</small><h4>Sottoclassi e relative abilità</h4></div><span>${details.subclasses.length}</span></header><div>${details.subclasses.map((subclass, index) => { const linked = subclassGrantMap.get(String(subclass.id)) || []; return `<details ${index === 0 ? 'open' : ''}><summary><span><strong>${escapeHtml(catalogName(subclass))}</strong><small>${linked.length} abilità collegate</small></span><b>＋</b></summary><div>${renderFeatureTimeline(linked)}</div></details>`; }).join('')}</div></section>` : ''}`;
+        <nav class="dnd-class-detail-tabs" role="tablist" aria-label="Dettaglio classe">
+          <button type="button" class="is-active" role="tab" aria-selected="true" data-class-detail-tab="progression">Progressione <span>${grants.length}</span></button>
+          <button type="button" role="tab" aria-selected="false" data-class-detail-tab="overview">Statistiche e tabelle</button>
+          <button type="button" role="tab" aria-selected="false" data-class-detail-tab="subclasses">Sottoclassi <span>${details?.subclasses?.length || 0}</span></button>
+        </nav>
+        <div class="dnd-class-detail-panels">
+          <section class="dnd-class-detail-panel is-active" role="tabpanel" data-class-detail-panel="progression">
+            <section class="dnd-catalog-relation-block dnd-class-features"><header><div><small>Progressione completa 1–20</small><h4>Abilità della classe</h4></div><span>${grants.length} collegate</span></header>${renderFeatureTimeline(grants)}</section>
+            ${progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block dnd-class-choices"><header><div><small>Decisioni del giocatore</small><h4>Scelte per livello</h4></div></header>${progression.choiceGroups.map((group) => `<article class="dnd-catalog-choice-summary"><strong>${escapeHtml(catalogName(group))}</strong><small>${group.required ? 'Obbligatoria' : 'Facoltativa'} · ${group.allow_duplicates ? 'duplicati ammessi' : 'senza duplicati'}</small><div>${group.progression.map((step) => `<span>Livello ${escapeHtml(step.level)}: +${escapeHtml(step.choices_granted ?? step.new_choices)}</span>`).join('')}</div><p>${group.options.map((option) => escapeHtml(option.label_override_it || catalogName(option.entity) || option.label_override || option.static_code || 'Opzione')).join(' · ')}</p></article>`).join('')}</section>` : ''}
+            ${progression.errors?.length ? '<p class="dnd-class-partial-warning">Alcune informazioni sulle scelte non sono disponibili, ma abilità e progressione restano consultabili.</p>' : ''}
+          </section>
+          <section class="dnd-class-detail-panel" role="tabpanel" data-class-detail-panel="overview" hidden>
+            <section class="dnd-class-overview-strip">
+              <div><small>Dado vita</small><strong>${escapeHtml(item.hit_die || '—')}</strong></div>
+              <div><small>Caratteristiche</small><strong>${escapeHtml(displayValue(item.primary_abilities || '—'))}</strong></div>
+              <div><small>Tiri salvezza</small><strong>${escapeHtml(displayValue(item.saving_throw_proficiencies || item.saving_throws || '—'))}</strong></div>
+              <div><small>Sottoclassi</small><strong>${details?.subclasses?.length || 0}</strong></div>
+            </section>
+            <section class="dnd-catalog-relation-block dnd-class-tables"><header><div><small>Incantesimi e risorse</small><h4>Tabelle di progressione</h4></div></header>${renderClassTables(item)}</section>
+          </section>
+          <section class="dnd-class-detail-panel" role="tabpanel" data-class-detail-panel="subclasses" hidden>
+            ${details?.subclasses?.length ? `<section class="dnd-catalog-relation-block dnd-class-subclasses"><header><div><small>Disponibili dal livello ${escapeHtml(details.subclass_selection_level)}</small><h4>Sottoclassi e relative abilità</h4></div><span>${details.subclasses.length}</span></header><div>${details.subclasses.map((subclass, index) => { const linked = subclassGrantMap.get(String(subclass.id)) || []; return `<details ${index === 0 ? 'open' : ''}><summary><span><strong>${escapeHtml(catalogName(subclass))}</strong><small>${linked.length} abilità collegate</small></span><b>＋</b></summary><div>${renderFeatureTimeline(linked)}</div></details>`; }).join('')}</div></section>` : '<p class="dnd-catalog-no-relations">Nessuna sottoclasse collegata.</p>'}
+          </section>
+        </div>`;
       relations.querySelectorAll('[data-linked-feature]').forEach((button) => button.addEventListener('click', () => {
         const grant = allFeatureGrants.find((entry) => String(entry.entity?.id) === button.dataset.linkedFeature);
         if (!grant?.entity || grant.target_type !== 'feature') return;
         close();
         void openRecordDetail(getCatalog('features'), grant.entity, canManage, callbacks);
+      }));
+      relations.querySelectorAll('[data-class-detail-tab]').forEach((button) => button.addEventListener('click', () => {
+        const tab = button.dataset.classDetailTab;
+        relations.querySelectorAll('[data-class-detail-tab]').forEach((entry) => {
+          const active = entry === button;
+          entry.classList.toggle('is-active', active);
+          entry.setAttribute('aria-selected', String(active));
+        });
+        relations.querySelectorAll('[data-class-detail-panel]').forEach((panel) => {
+          const active = panel.dataset.classDetailPanel === tab;
+          panel.classList.toggle('is-active', active);
+          panel.hidden = !active;
+        });
       }));
     } else if (catalog.key === 'features') {
       const origins = await getResolvedFeatureOrigins(item.id, item.rules_version);
@@ -256,12 +286,13 @@ async function openRecordDetail(catalog, item, canManage, callbacks) {
         feats: 'featIds', 'fighting-styles': 'fightingStyleIds'
       }[catalog.key];
       const context = contextKey ? { [contextKey]: contextKey.endsWith('Ids') ? [item.id] : item.id, level: 20, classLevel: 20, rulesVersion: item.rules_version } : null;
-      const [progression, speciesDetails] = await Promise.all([
+      const [progression, speciesDetails, parent] = await Promise.all([
         context ? getCharacterProgression(context) : Promise.resolve({ automaticGrants: [], choiceGroups: [] }),
-        catalog.key === 'species' ? getSpeciesDetails(item.id, null, item.rules_version) : Promise.resolve(null)
+        catalog.key === 'species' ? getSpeciesDetails(item.id, null, item.rules_version) : Promise.resolve(null),
+        getCatalogParent(catalog.key, item)
       ]);
       const variants = speciesDetails?.variants || [];
-      relations.innerHTML = `${variants.length ? `<section class="dnd-catalog-relation-block"><h4>Varianti della specie</h4><div class="dnd-catalog-relation-chips">${variants.map((variant) => `<span>${escapeHtml(catalogName(variant))} <small>${escapeHtml(variant.rules_version)}</small></span>`).join('')}</div></section>` : ''}${progression.automaticGrants.length ? `<div class="dnd-catalog-level-list">${progression.automaticGrants.map((grant) => `<div><span class="dnd-catalog-level-badge">Livello ${escapeHtml(grant.unlock_level || 1)}</span><span><strong>${escapeHtml(catalogName(grant.entity, 'Contenuto non disponibile'))}</strong><small>${escapeHtml(grant.target_type)}</small></span></div>`).join('')}</div>` : ''}${progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block"><h4>Scelte collegate</h4>${progression.choiceGroups.map((group) => `<article class="dnd-catalog-choice-summary"><strong>${escapeHtml(catalogName(group))}</strong><small>${group.required ? 'Obbligatoria' : 'Facoltativa'}</small><p>${group.options.map((option) => escapeHtml(option.label_override || catalogName(option.entity) || option.static_code || 'Opzione')).join(' · ')}</p></article>`).join('')}</section>` : ''}${!variants.length && !progression.automaticGrants.length && !progression.choiceGroups.length ? '<p class="dnd-catalog-no-relations">Nessun collegamento disponibile nei dati.</p>' : ''}`;
+      relations.innerHTML = `${parent ? `<section class="dnd-catalog-relation-block"><h4>${escapeHtml(parent.relation_type)}</h4><div class="dnd-catalog-relation-chips"><span>${escapeHtml(catalogName(parent))} <small>${escapeHtml(parent.rules_version || '')}</small></span></div></section>` : ''}${variants.length ? `<section class="dnd-catalog-relation-block"><h4>Varianti della specie</h4><div class="dnd-catalog-relation-chips">${variants.map((variant) => `<span>${escapeHtml(catalogName(variant))} <small>${escapeHtml(variant.rules_version)}</small></span>`).join('')}</div></section>` : ''}${progression.automaticGrants.length ? `<div class="dnd-catalog-level-list">${progression.automaticGrants.map((grant) => `<div><span class="dnd-catalog-level-badge">Livello ${escapeHtml(grant.unlock_level || 1)}</span><span><strong>${escapeHtml(catalogName(grant.entity, 'Contenuto non disponibile'))}</strong><small>${escapeHtml(grant.target_type)}</small></span></div>`).join('')}</div>` : ''}${progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block"><h4>Scelte collegate</h4>${progression.choiceGroups.map((group) => `<article class="dnd-catalog-choice-summary"><strong>${escapeHtml(catalogName(group))}</strong><small>${group.required ? 'Obbligatoria' : 'Facoltativa'}</small><p>${group.options.map((option) => escapeHtml(option.label_override_it || catalogName(option.entity) || option.label_override || option.static_code || 'Opzione')).join(' · ')}</p></article>`).join('')}</section>` : ''}${!parent && !variants.length && !progression.automaticGrants.length && !progression.choiceGroups.length ? '<p class="dnd-catalog-no-relations">Nessun collegamento disponibile nei dati.</p>' : ''}`;
     }
   } catch (error) {
     relations.innerHTML = `<p class="dnd-catalog-relations-error">${escapeHtml(normalizeCatalogError(error))}</p>`;

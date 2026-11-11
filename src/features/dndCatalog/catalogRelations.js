@@ -210,6 +210,20 @@ export async function getSpeciesDetails(speciesId, variantId, rulesVersion) {
   });
 }
 
+export async function getCatalogParent(catalogKey, item) {
+  const relation = {
+    subclasses: ['shared_class_id', 'shared_classes', 'Classe'],
+    'species-variants': ['shared_species_id', 'shared_species', 'Specie'],
+    'fighting-styles': ['shared_feat_id', 'shared_feats', 'Talento associato']
+  }[catalogKey];
+  if (!relation || !item?.[relation[0]]) return null;
+  const [column, table, type] = relation;
+  return cached(`parent:${table}:${item[column]}`, async () => {
+    const row = unwrap(await supabase.from(table).select('*').eq('id', item[column]).limit(1))[0] || null;
+    return row ? { ...row, relation_type: type } : null;
+  });
+}
+
 export async function getAutomaticGrants(context = {}) {
   const rows = (await fetchBySources('shared_grants', context)).filter((grant) => isUnlocked(grant, context));
   const resolved = await resolveTargets(rows, TARGETS, context.rulesVersion);
@@ -234,7 +248,13 @@ export async function getAvailableChoiceGroups(context = {}) {
     }));
   if (!groups.length) return [];
   const ids = groups.map((group) => group.id);
-  const progression = unwrap(await supabase.from('shared_choice_progression').select('*').in('choice_group_id', ids).order('level', { ascending: true }));
+  const progression = unwrap(await supabase.from('shared_choice_progression').select('*').in('choice_group_id', ids))
+    .map((row) => ({
+      ...row,
+      level: row.unlock_level ?? row.required_level ?? row.level,
+      new_choices: row.choices_granted ?? row.new_choices
+    }))
+    .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0));
   const progressionByGroup = new Map();
   progression.forEach((row) => {
     if (!progressionByGroup.has(row.choice_group_id)) progressionByGroup.set(row.choice_group_id, []);
@@ -251,9 +271,15 @@ export async function getAvailableChoiceGroups(context = {}) {
 }
 
 export async function getCharacterProgression(context = {}) {
-  const [automaticGrants, choiceGroups] = await Promise.all([
+  const [grantResult, choiceResult] = await Promise.allSettled([
     getAutomaticGrants(context),
     getAvailableChoiceGroups(context)
   ]);
-  return { automaticGrants, choiceGroups };
+  if (import.meta.env?.DEV && grantResult.status === 'rejected') console.warn('Grant del catalogo non disponibili', grantResult.reason);
+  if (import.meta.env?.DEV && choiceResult.status === 'rejected') console.warn('Scelte del catalogo non disponibili', choiceResult.reason);
+  return {
+    automaticGrants: grantResult.status === 'fulfilled' ? grantResult.value : [],
+    choiceGroups: choiceResult.status === 'fulfilled' ? choiceResult.value : [],
+    errors: [grantResult, choiceResult].filter((result) => result.status === 'rejected').map((result) => result.reason)
+  };
 }

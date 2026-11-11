@@ -20,6 +20,8 @@ describe('catalogo D&D condiviso', () => {
     expect(source).toContain('renderFeatureTimeline');
     expect(source).toContain('renderClassTables');
     expect(source).toContain('Sottoclassi e relative abilità');
+    expect(source).toContain('data-class-detail-tab="progression"');
+    expect(source).toContain('data-class-detail-panel="subclasses"');
     expect(source).toContain('catalogName');
     expect(source).toContain('catalogDescription');
     expect(source).toContain('catalogStatBlock');
@@ -43,6 +45,8 @@ describe('catalogo D&D condiviso', () => {
     expect(resolver).toContain('getAvailableChoiceOptions');
     expect(resolver).toContain('getCharacterProgression');
     expect(resolver).toContain('getSubclassProgressions');
+    expect(resolver).toContain('row.unlock_level ?? row.required_level ?? row.level');
+    expect(resolver).toContain('Promise.allSettled');
     expect(drawer).toContain('name="shared_class_id"');
     expect(drawer).toContain('name="shared_subclass_id"');
     expect(drawer).toContain('catalog_choice_option_ids');
