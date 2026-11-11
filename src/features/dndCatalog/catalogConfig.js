@@ -7,6 +7,7 @@ export const CATALOG_GROUPS = [
       { key: 'classes', table: 'shared_classes', label: 'Classi', singular: 'Classe', icon: '⚔', description: 'Progressioni, competenze e sottoclassi.', fields: ['description', 'hit_die', 'primary_abilities', 'saving_throws', 'image_url', 'source'] },
       { key: 'subclasses', table: 'shared_subclasses', label: 'Sottoclassi', singular: 'Sottoclasse', icon: '♜', description: 'Archetipi collegati alle classi.', fields: ['shared_class_id', 'description', 'image_url', 'source'] },
       { key: 'species', table: 'shared_species', label: 'Specie', singular: 'Specie', icon: '♞', description: 'Specie, tratti e varianti.', fields: ['description', 'size', 'speed', 'image_url', 'source'] },
+      { key: 'species-variants', table: 'shared_species_variants', label: 'Varianti di specie', singular: 'Variante di specie', icon: '♘', description: 'Varianti collegate alla specie tramite UUID.', fields: ['shared_species_id', 'description', 'image_url', 'source'] },
       { key: 'backgrounds', table: 'shared_backgrounds', label: 'Background', singular: 'Background', icon: '⌂', description: 'Origini e competenze iniziali.', fields: ['description', 'image_url', 'source'] }
     ]
   },
@@ -23,7 +24,7 @@ export const CATALOG_GROUPS = [
     entries: [
       { key: 'spells', table: 'shared_spells', label: 'Incantesimi', singular: 'Incantesimo', icon: '✧', description: 'Grimorio condiviso 2014 e 2024.', existingRoute: 'library' },
       { key: 'items', table: 'shared_items', label: 'Oggetti', singular: 'Oggetto', icon: '♙', description: 'Equipaggiamento e tesori condivisi.', existingRoute: 'library' },
-      { key: 'creatures', table: 'shared_creatures', label: 'Bestiario', singular: 'Creatura', icon: '♛', description: 'Bestie e mostri con blocco statistiche.', fields: ['description', 'creature_type', 'size', 'challenge_rating', 'image_url', 'source'] }
+      { key: 'creatures', table: 'shared_creatures', label: 'Bestiario', singular: 'Creatura', icon: '♛', description: 'Bestie e mostri con blocco statistiche.', fields: ['description', 'creature_type', 'size', 'challenge_rating', 'stat_block_it', 'image_url', 'source'] }
     ]
   }
 ];
@@ -40,6 +41,7 @@ export const FIELD_META = {
   primary_abilities: { label: 'Caratteristiche principali', placeholder: 'Forza, Destrezza' },
   saving_throws: { label: 'Tiri salvezza', placeholder: 'Forza, Costituzione' },
   shared_class_id: { label: 'ID classe di appartenenza', placeholder: 'UUID della classe' },
+  shared_species_id: { label: 'ID specie di appartenenza', placeholder: 'UUID della specie' },
   size: { label: 'Taglia', placeholder: 'Media' },
   speed: { label: 'Velocità', type: 'number', placeholder: '9' },
   category: { label: 'Categoria' },
@@ -52,6 +54,7 @@ export const FIELD_META = {
   shared_feat_id: { label: 'ID talento collegato', placeholder: 'UUID del talento (facoltativo)' },
   creature_type: { label: 'Tipo di creatura', placeholder: 'Bestia, Umanoide…' },
   challenge_rating: { label: 'Grado di sfida', placeholder: '1/2, 5, 20…' },
+  stat_block_it: { label: 'Blocco statistiche italiano', type: 'json', placeholder: '{ "ac": 15, "hp": 30 }' },
   image_url: { label: 'URL immagine', type: 'url' },
   source: { label: 'Manuale / fonte', placeholder: 'Manuale del Giocatore' }
 };

@@ -1,6 +1,7 @@
 import { createCharacter, updateCharacter } from '../characterApi.js';
 import { getState, setActiveCharacter, setState } from '../../../app/state.js';
 import { cacheSnapshot } from '../../../lib/offline/cache.js';
+import { escapeHtml } from '../../../lib/html.js';
 import {
   buildInput,
   buildSelect,
@@ -18,6 +19,13 @@ import {
 import { weaponMasteries2024 } from '../../rules/weaponMasteries.js';
 import { getAbilityModifier, normalizeNumber } from './utils.js';
 import { getCharacterRulesVersion, inferCharacterCasterClasses, SPELLCASTER_CLASS_OPTIONS } from '../spellPreparation.js';
+import {
+  getCharacterCatalogOptions,
+  getCharacterProgression,
+  getClassDetails,
+  getSpeciesDetails
+} from '../../dndCatalog/catalogRelations.js';
+import { catalogDescription, catalogName } from '../../dndCatalog/catalogLocale.js';
 
 
 function attachDrawerNumberStepper(input, {
@@ -147,13 +155,16 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   const nameField = buildInput({ label: 'Nome', name: 'name', placeholder: 'Es. Aria', value: character?.name ?? '' });
   nameField.querySelector('input').required = true;
   identityRow.appendChild(nameField);
-  identityRow.appendChild(buildInput({ label: 'Classe', name: 'class_name', value: characterData.class_name ?? characterData.class_archetype ?? '' }));
-  identityRow.appendChild(buildInput({ label: 'Archetipo', name: 'archetype', value: characterData.archetype ?? '' }));
+  const legacyClassField = buildInput({ label: 'Classe', name: 'class_name', value: characterData.class_name ?? characterData.class_archetype ?? '' });
+  const legacySubclassField = buildInput({ label: 'Archetipo', name: 'archetype', value: characterData.archetype ?? '' });
+  identityRow.appendChild(legacyClassField);
+  identityRow.appendChild(legacySubclassField);
   mainSection.appendChild(identityRow);
   const mainGrid = document.createElement('div');
   mainGrid.className = 'character-edit-grid';
   mainGrid.appendChild(buildInput({ label: 'Livello', name: 'level', type: 'number', value: characterData.level ?? '' }));
-  mainGrid.appendChild(buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' }));
+  const legacySpeciesField = buildInput({ label: 'Razza', name: 'race', value: characterData.race ?? '' });
+  mainGrid.appendChild(legacySpeciesField);
   mainGrid.appendChild(buildInput({ label: 'Allineamento', name: 'alignment', value: characterData.alignment ?? '' }));
   const characterSystemField = document.createElement('label');
   characterSystemField.className = 'field';
@@ -170,7 +181,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   backgroundSection.className = 'character-edit-section character-edit-section--background';
   const backgroundGrid = document.createElement('div');
   backgroundGrid.className = 'character-edit-grid';
-  backgroundGrid.appendChild(buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' }));
+  const legacyBackgroundField = buildInput({ label: 'Background', name: 'background', value: characterData.background ?? '' });
+  backgroundGrid.appendChild(legacyBackgroundField);
   backgroundSection.appendChild(backgroundGrid);
   backgroundSection.appendChild(buildTextarea({
     label: 'Descrizione background',
@@ -178,6 +190,20 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     placeholder: 'Dettagli sul background, origini e tratti distintivi...',
     value: characterData.description ?? ''
   }));
+
+  const catalogSection = document.createElement('div');
+  catalogSection.className = 'character-edit-section character-catalog-selection';
+  catalogSection.innerHTML = `
+    <header><div><h4>Catalogo condiviso</h4><p>Collegamenti tramite UUID reali, separati per versione delle regole.</p></div><span data-catalog-selection-status>Caricamento…</span></header>
+    <div class="character-edit-grid character-catalog-selection__grid">
+      <label class="field"><span>Classe dal catalogo</span><select name="shared_class_id"><option value="">Nessuna selezione</option></select></label>
+      <label class="field"><span>Sottoclasse dal catalogo</span><select name="shared_subclass_id" disabled><option value="">Nessuna selezione</option></select><small data-subclass-level-hint></small></label>
+      <label class="field"><span>Specie dal catalogo</span><select name="shared_species_id"><option value="">Nessuna selezione</option></select></label>
+      <label class="field"><span>Variante della specie</span><select name="shared_species_variant_id" disabled><option value="">Nessuna selezione</option></select></label>
+      <label class="field"><span>Background dal catalogo</span><select name="shared_background_id"><option value="">Nessuna selezione</option></select></label>
+    </div>
+    <section class="character-catalog-progression" data-character-catalog-progression><p>Seleziona classe, specie o background per vedere benefici e scelte sbloccati.</p></section>
+  `;
 
   const statsSection = document.createElement('div');
   statsSection.className = 'character-edit-section character-edit-section--vitals compact-character-section';
@@ -734,7 +760,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       title: 'Identità & Background',
       icon: '🪪',
       description: 'Identità, origini e storia del personaggio.',
-      content: buildEditGroup('Identità & Background', [mainSection, backgroundSection], {
+      content: buildEditGroup('Identità & Background', [mainSection, catalogSection, backgroundSection], {
         icon: '🪪',
         description: 'Tutte le informazioni narrative e identificative, organizzate in un’unica schermata.',
         layoutClass: 'character-edit-group--identity-background'
@@ -882,6 +908,130 @@ export async function openCharacterDrawer(user, onSave, character = null) {
   form.appendChild(stepper);
   updateStepperState();
 
+  const catalogClassSelect = form.querySelector('select[name="shared_class_id"]');
+  const catalogSubclassSelect = form.querySelector('select[name="shared_subclass_id"]');
+  const catalogSpeciesSelect = form.querySelector('select[name="shared_species_id"]');
+  const catalogVariantSelect = form.querySelector('select[name="shared_species_variant_id"]');
+  const catalogBackgroundSelect = form.querySelector('select[name="shared_background_id"]');
+  const catalogStatus = form.querySelector('[data-catalog-selection-status]');
+  const subclassHint = form.querySelector('[data-subclass-level-hint]');
+  const progressionPanel = form.querySelector('[data-character-catalog-progression]');
+  const levelInput = form.querySelector('input[name="level"]');
+  const selectedChoiceIds = new Set((characterData.catalog_choice_option_ids || []).map(String));
+  let resolvedChoiceGroups = [];
+  let catalogLoadSequence = 0;
+
+  const fillCatalogSelect = (select, rows, selectedId, emptyLabel = 'Nessuna selezione') => {
+    if (!select) return;
+    select.replaceChildren(new Option(emptyLabel, ''));
+    rows.forEach((row) => select.add(new Option(catalogName(row), row.id, false, String(row.id) === String(selectedId || ''))));
+  };
+  const selectedCatalogName = (select) => select?.value ? select.options[select.selectedIndex]?.textContent || '' : '';
+  const renderProgression = ({ automaticGrants = [], choiceGroups = [] } = {}) => {
+    if (!progressionPanel) return;
+    resolvedChoiceGroups = choiceGroups;
+    const automatic = automaticGrants.length
+      ? `<div class="character-catalog-progression__group"><h5>Benefici automatici</h5>${automaticGrants.map((grant) => `<article><span>Livello ${escapeHtml(grant.unlock_level || 1)}</span><strong>${escapeHtml(catalogName(grant.entity, 'Contenuto non disponibile'))}</strong><small>${escapeHtml(grant.target_type.replaceAll('_', ' '))}</small></article>`).join('')}</div>`
+      : '<p>Nessun beneficio automatico sbloccato al livello corrente.</p>';
+    const choices = choiceGroups.length
+      ? `<div class="character-catalog-progression__group"><h5>Scelte del personaggio</h5>${choiceGroups.map((group) => {
+        const picked = group.options.filter((option) => selectedChoiceIds.has(String(option.id))).length;
+        const required = Number(group.choices_granted || 0);
+        return `<fieldset data-catalog-choice-group="${escapeHtml(group.id)}"><legend><strong>${escapeHtml(catalogName(group))}</strong><span>${picked}/${required} ${group.required ? 'obbligatorie' : 'disponibili'}</span></legend><p>${escapeHtml(catalogDescription(group, `Sbloccate: ${required}`))}</p><div>${group.options.map((option) => `<label><input type="checkbox" name="catalog_choice_option_ids" value="${escapeHtml(option.id)}" ${selectedChoiceIds.has(String(option.id)) ? 'checked' : ''}><span><strong>${escapeHtml(option.label_override || catalogName(option.entity) || option.static_code || 'Opzione')}</strong><small>${option.minimum_level ? `Dal livello ${escapeHtml(option.minimum_level)}` : escapeHtml(option.option_type)}</small></span></label>`).join('') || '<small>Nessuna opzione collegata disponibile.</small>'}</div></fieldset>`;
+      }).join('')}</div>`
+      : '';
+    progressionPanel.innerHTML = automatic + choices;
+    progressionPanel.querySelectorAll('input[name="catalog_choice_option_ids"]').forEach((input) => input.addEventListener('change', () => {
+      if (input.checked) selectedChoiceIds.add(input.value);
+      else selectedChoiceIds.delete(input.value);
+    }));
+  };
+  const catalogContext = () => ({
+    classId: catalogClassSelect?.value || null,
+    subclassId: catalogSubclassSelect?.value || null,
+    speciesId: catalogSpeciesSelect?.value || null,
+    speciesVariantId: catalogVariantSelect?.value || null,
+    backgroundId: catalogBackgroundSelect?.value || null,
+    level: Number(levelInput?.value) || 1,
+    classLevel: Number(levelInput?.value) || 1,
+    rulesVersion: characterSystemSelect.value
+  });
+  const refreshProgression = async (sequence) => {
+    try {
+      const progression = await getCharacterProgression(catalogContext());
+      if (sequence !== catalogLoadSequence) return;
+      renderProgression(progression);
+    } catch {
+      if (sequence === catalogLoadSequence && progressionPanel) progressionPanel.innerHTML = '<p>Progressione non disponibile: verifica che le relazioni del catalogo siano state importate.</p>';
+    }
+  };
+  const refreshDependentCatalogs = async ({ preserveSubclass = true, preserveVariant = true } = {}) => {
+    const sequence = ++catalogLoadSequence;
+    const level = Number(levelInput?.value) || 1;
+    const [classDetails, speciesDetails] = await Promise.all([
+      getClassDetails(catalogClassSelect?.value, characterSystemSelect.value),
+      getSpeciesDetails(catalogSpeciesSelect?.value, catalogVariantSelect?.value, characterSystemSelect.value)
+    ]);
+    if (sequence !== catalogLoadSequence) return;
+    const previousSubclass = preserveSubclass ? catalogSubclassSelect?.value : '';
+    const subclassLevel = classDetails?.subclass_selection_level || 1;
+    fillCatalogSelect(catalogSubclassSelect, classDetails?.subclasses || [], previousSubclass);
+    catalogSubclassSelect.disabled = !classDetails || level < subclassLevel;
+    if (catalogSubclassSelect.disabled) catalogSubclassSelect.value = '';
+    if (subclassHint) subclassHint.textContent = classDetails ? `Disponibile dal livello ${subclassLevel}.` : '';
+    const previousVariant = preserveVariant ? (speciesDetails?.variant?.id || catalogVariantSelect?.value) : '';
+    fillCatalogSelect(catalogVariantSelect, speciesDetails?.variants || [], previousVariant);
+    catalogVariantSelect.disabled = !speciesDetails || !(speciesDetails.variants || []).length;
+    legacyClassField.querySelector('input').value = selectedCatalogName(catalogClassSelect) || legacyClassField.querySelector('input').value;
+    legacySubclassField.querySelector('input').value = selectedCatalogName(catalogSubclassSelect) || (catalogSubclassSelect?.value ? '' : legacySubclassField.querySelector('input').value);
+    legacySpeciesField.querySelector('input').value = selectedCatalogName(catalogSpeciesSelect) || legacySpeciesField.querySelector('input').value;
+    legacyBackgroundField.querySelector('input').value = selectedCatalogName(catalogBackgroundSelect) || legacyBackgroundField.querySelector('input').value;
+    await refreshProgression(sequence);
+  };
+  const loadCatalogSelections = async ({ reset = false } = {}) => {
+    const sequence = ++catalogLoadSequence;
+    if (catalogStatus) catalogStatus.textContent = 'Caricamento…';
+    try {
+      const options = await getCharacterCatalogOptions(characterSystemSelect.value);
+      if (sequence !== catalogLoadSequence) return;
+      fillCatalogSelect(catalogClassSelect, options.classes, reset ? '' : characterData.shared_class_id);
+      fillCatalogSelect(catalogSpeciesSelect, options.species, reset ? '' : characterData.shared_species_id);
+      fillCatalogSelect(catalogBackgroundSelect, options.backgrounds, reset ? '' : characterData.shared_background_id);
+      if (!reset) {
+        catalogClassSelect.value = characterData.shared_class_id || '';
+        catalogSpeciesSelect.value = characterData.shared_species_id || '';
+        catalogBackgroundSelect.value = characterData.shared_background_id || '';
+      }
+      legacyClassField.hidden = Boolean(options.classes.length);
+      legacySpeciesField.hidden = Boolean(options.species.length);
+      legacyBackgroundField.hidden = Boolean(options.backgrounds.length);
+      if (catalogStatus) catalogStatus.textContent = options.errors?.length
+        ? `${options.classes.length + options.species.length + options.backgrounds.length} contenuti · ${options.errors.length} sezione non disponibile`
+        : `${options.classes.length + options.species.length + options.backgrounds.length} contenuti`;
+      await refreshDependentCatalogs({ preserveSubclass: !reset, preserveVariant: !reset });
+      if (!reset) {
+        catalogSubclassSelect.value = characterData.shared_subclass_id || '';
+        catalogVariantSelect.value = characterData.shared_species_variant_id || '';
+        await refreshProgression(catalogLoadSequence);
+      }
+    } catch {
+      if (sequence !== catalogLoadSequence) return;
+      if (catalogStatus) catalogStatus.textContent = 'Catalogo non disponibile';
+      catalogSection.classList.add('is-unavailable');
+    }
+  };
+  catalogClassSelect?.addEventListener('change', () => void refreshDependentCatalogs({ preserveSubclass: false }));
+  catalogSpeciesSelect?.addEventListener('change', () => void refreshDependentCatalogs({ preserveVariant: false }));
+  catalogSubclassSelect?.addEventListener('change', () => void refreshProgression(++catalogLoadSequence));
+  catalogVariantSelect?.addEventListener('change', () => void refreshProgression(++catalogLoadSequence));
+  catalogBackgroundSelect?.addEventListener('change', () => {
+    legacyBackgroundField.querySelector('input').value = selectedCatalogName(catalogBackgroundSelect) || legacyBackgroundField.querySelector('input').value;
+    void refreshProgression(++catalogLoadSequence);
+  });
+  characterSystemSelect.addEventListener('change', () => void loadCatalogSelections({ reset: true }));
+  levelInput?.addEventListener('change', () => void refreshDependentCatalogs());
+  void loadCatalogSelections();
+
   const modal = document.querySelector('[data-form-modal]');
   const modalCard = modal?.querySelector('.modal-card');
   modalCard?.classList.add('modal-card--wide', 'modal-card--character-editor');
@@ -991,6 +1141,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     createToast('Inserisci un nome per il personaggio', 'error');
     return;
   }
+  const incompleteRequiredChoice = resolvedChoiceGroups.find((group) => group.required && group.options
+    .filter((option) => selectedChoiceIds.has(String(option.id))).length < Number(group.choices_granted || 0));
+  if (incompleteRequiredChoice) {
+    createToast(`Completa la scelta obbligatoria: ${catalogName(incompleteRequiredChoice)}`, 'error');
+    return;
+  }
   const toNumberOrNull = (value) => (value === '' ? null : Number(value));
   const nextSkills = { ...characterData.skills };
   const nextMastery = { ...characterData.skill_mastery };
@@ -1089,6 +1245,12 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     background: formData.get('background')?.trim() || null,
     class_name: formData.get('class_name')?.trim() || null,
     archetype: formData.get('archetype')?.trim() || null,
+    shared_class_id: formData.get('shared_class_id') || null,
+    shared_subclass_id: formData.get('shared_subclass_id') || null,
+    shared_species_id: formData.get('shared_species_id') || null,
+    shared_species_variant_id: formData.get('shared_species_variant_id') || null,
+    shared_background_id: formData.get('shared_background_id') || null,
+    catalog_choice_option_ids: [...selectedChoiceIds],
     speed: toNumberOrNull(formData.get('speed')),
     darkvision_enabled: formData.has('darkvision_enabled'),
     darkvision_range_m: formData.has('darkvision_enabled') ? (toNumberOrNull(formData.get('darkvision_range_m')) ?? 18) : null,

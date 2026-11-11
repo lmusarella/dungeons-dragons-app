@@ -110,14 +110,14 @@ export async function fetchGameRoom(roomId) {
 export async function fetchSharedGameCreatures() {
   const rows = unwrap(await supabase.from('shared_creatures').select('*').limit(250)) || [];
   return rows.map((row) => {
-    const data = row.data || row.creature_data || row.stat_block || {};
+    const data = row.stat_block_it || row.data || row.creature_data || row.stat_block || {};
     const hpSource = data.hp ?? data.hit_points ?? data.hitPoints ?? row.hit_points ?? row.hp ?? {};
     const hp = typeof hpSource === 'number' || typeof hpSource === 'string'
       ? { current: Number(hpSource), max: Number(hpSource) }
       : hpSource;
     return {
       id: row.id,
-      name: row.name || data.name || 'Creatura',
+      name: row.name_it || row.name || data.name_it || data.name || 'Creatura',
       imageUrl: row.image_url || row.avatar_url || data.image_url || data.avatar_url || '',
       type: row.type || data.type || data.creature_type || 'Creatura',
       rules: String(row.rules_version || row.rules || row.edition || data.rules_version || data.rules || data.edition || data.source_year || '2014').includes('2024') ? '2024' : '2014',

@@ -12,12 +12,42 @@ describe('catalogo D&D condiviso', () => {
     expect(source).toContain('searchCatalog(catalog');
     expect(source).toContain('normalizeCatalogError');
     expect(source).toContain('getClassFeatureGrants');
+    expect(source).toContain('getCharacterProgression');
+    expect(source).toContain('getClassDetails');
+    expect(source).toContain('Scelte per livello');
+    expect(source).toContain('Disponibili dal livello');
+    expect(source).toContain('Progressione della classe');
+    expect(source).toContain('renderFeatureTimeline');
+    expect(source).toContain('renderClassTables');
+    expect(source).toContain('Sottoclassi e relative abilità');
+    expect(source).toContain('catalogName');
+    expect(source).toContain('catalogDescription');
+    expect(source).toContain('catalogStatBlock');
     expect(source).toContain('getFeatureOrigins');
     expect(source).toContain('Privilegi e abilità collegate');
     expect(source).toContain('Livello ${escapeHtml(grant.unlock_level');
     expect(config).toContain("table: 'shared_classes'");
     expect(config).toContain("table: 'shared_creatures'");
+    expect(config).toContain("table: 'shared_species_variants'");
     expect(config).toContain("existingRoute: 'library'");
+  });
+
+  it('risolve grant, scelte e progressione usando UUID e foreign key reali', () => {
+    const resolver = readFileSync('src/features/dndCatalog/catalogRelations.js', 'utf8');
+    const drawer = readFileSync('src/features/character/home/characterDrawer.js', 'utf8');
+    expect(resolver).toContain("classId: ['shared_class_id', 'source_class_id']");
+    expect(resolver).toContain("subclassId: ['shared_subclass_id', 'source_subclass_id']");
+    expect(resolver).toContain("speciesVariantId: ['shared_species_variant_id', 'source_species_variant_id']");
+    expect(resolver).toContain("['granted_feature_id', 'target_feature_id']");
+    expect(resolver).toContain('row.new_choices');
+    expect(resolver).toContain('getAvailableChoiceOptions');
+    expect(resolver).toContain('getCharacterProgression');
+    expect(resolver).toContain('getSubclassProgressions');
+    expect(drawer).toContain('name="shared_class_id"');
+    expect(drawer).toContain('name="shared_subclass_id"');
+    expect(drawer).toContain('catalog_choice_option_ids');
+    expect(drawer).toContain('Completa la scelta obbligatoria');
+    expect(drawer).toContain('shared_species_variant_id');
   });
 
   it('pagina i dati sul server e protegge i payload amministrativi', () => {
@@ -30,6 +60,10 @@ describe('catalogo D&D condiviso', () => {
     expect(api).toContain(".from('shared_grants')");
     expect(api).toContain(".eq('source_class_id', classId)");
     expect(api).toContain(".from('shared_features').select('*').in('id', featureIds)");
+    expect(api).toContain("catalog.key === 'creatures'");
+    expect(api).toContain(".eq('challenge_rating', challengeRating.trim())");
+    expect(api).toContain('name_it.ilike');
+    expect(api).toContain(".order('name_it'");
   });
 
   it('riutilizza il linguaggio visivo dell archivio centralizzato e mostra i dati strutturati', () => {

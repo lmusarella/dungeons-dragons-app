@@ -14,17 +14,23 @@ export function normalizeCatalogError(error) {
   return error?.message || 'Operazione sul catalogo non riuscita.';
 }
 
-export async function searchCatalog(catalog, { query = '', rulesVersion = '', page = 1, pageSize = 18 } = {}) {
+export async function searchCatalog(catalog, { query = '', rulesVersion = '', creatureType = '', challengeRating = '', page = 1, pageSize = 18 } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(PAGE_SIZE_LIMIT, Math.max(1, Number(pageSize) || 18));
   const from = (safePage - 1) * safePageSize;
   let request = supabase
     .from(catalog.table)
     .select('*', { count: 'exact' })
+    .order('name_it', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true })
     .range(from, from + safePageSize - 1);
-  if (query.trim()) request = request.ilike('name', `%${query.trim()}%`);
+  if (query.trim()) {
+    const safeQuery = query.trim().replace(/[,%()]/g, ' ');
+    request = request.or(`name.ilike.%${safeQuery}%,name_it.ilike.%${safeQuery}%`);
+  }
   if (rulesVersion) request = request.eq('rules_version', rulesVersion);
+  if (catalog.key === 'creatures' && creatureType.trim()) request = request.ilike('creature_type', creatureType.trim());
+  if (catalog.key === 'creatures' && challengeRating.trim()) request = request.eq('challenge_rating', challengeRating.trim());
   const { data, error, count } = await request;
   if (error) throw error;
   return { items: data || [], total: count ?? data?.length ?? 0, page: safePage, pageSize: safePageSize };
@@ -69,7 +75,7 @@ export async function getFeatureOrigins(featureId) {
   const lookupRequests = ORIGIN_TABLES.map(async ([column, table, type]) => {
     const ids = [...new Set(grants.map((grant) => grant[column]).filter(Boolean))];
     if (!ids.length) return [];
-    const rows = unwrap(await supabase.from(table).select('id,name,rules_version').in('id', ids)) || [];
+    const rows = unwrap(await supabase.from(table).select('id,name,name_it,rules_version').in('id', ids)) || [];
     return rows.map((row) => ({ ...row, type, column }));
   });
   const origins = (await Promise.all(lookupRequests)).flat();
