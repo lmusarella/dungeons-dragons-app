@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../lib/html.js';
-export function buildResourceFacts(resource) {
+export function buildResourceFacts(resource, { parent = null } = {}) {
   const recovery = { short_rest: 'Riposo breve', long_rest: 'Riposo lungo', daily: 'Ogni giorno', none: 'Nessun consumo' };
   const max = Math.max(0, Number(resource.max_uses) || 0);
   const remaining = Math.max(0, max - Math.max(0, Number(resource.used) || 0));
@@ -13,6 +13,9 @@ export function buildResourceFacts(resource) {
   const savingThrowLabels = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
   const facts = [
     ['Attivazione',resource.cast_time],
+    ['Origine',resource.catalog_key ? 'Catalogo D&D' : null],
+    ['Risorsa consumata',parent?.name || null],
+    ['Saldo risorsa',parent && Number(parent.max_uses) ? Math.max(0, Number(parent.max_uses) - Math.max(0, Number(parent.used) || 0)) + ' / ' + Number(parent.max_uses) : null],
     ['Disponibili',max ? remaining + ' / ' + max : null],
     ['Recupero',resource.reset_on ? (recovery[resource.reset_on] || resource.reset_on) : null],
     ['Tiro',resource.damage_dice_notation ? resource.damage_dice_notation + (Number(resource.damage_modifier) ? ' ' + (Number(resource.damage_modifier)>0 ? '+' : '') + Number(resource.damage_modifier) : '') : null],

@@ -5,9 +5,9 @@ export const CATALOG_GROUPS = [
     label: 'Personaggi',
     entries: [
       { key: 'classes', table: 'shared_classes', label: 'Classi', singular: 'Classe', icon: '⚔', description: 'Progressioni, competenze e sottoclassi.', fields: ['description', 'hit_die', 'primary_abilities', 'saving_throws', 'image_url', 'source'] },
-      { key: 'subclasses', table: 'shared_subclasses', label: 'Sottoclassi', singular: 'Sottoclasse', icon: '♜', description: 'Archetipi collegati alle classi.', fields: ['shared_class_id', 'description', 'image_url', 'source'] },
+      { key: 'subclasses', hidden: true, table: 'shared_subclasses', label: 'Sottoclassi', singular: 'Sottoclasse', icon: '♜', description: 'Archetipi collegati alle classi.', fields: ['shared_class_id', 'description', 'image_url', 'source'] },
       { key: 'species', table: 'shared_species', label: 'Specie', singular: 'Specie', icon: '♞', description: 'Specie, tratti e varianti.', fields: ['description', 'size', 'speed', 'image_url', 'source'] },
-      { key: 'species-variants', table: 'shared_species_variants', label: 'Varianti di specie', singular: 'Variante di specie', icon: '♘', description: 'Varianti collegate alla specie tramite UUID.', fields: ['shared_species_id', 'description', 'image_url', 'source'] },
+      { key: 'species-variants', hidden: true, table: 'shared_species_variants', label: 'Varianti di specie', singular: 'Variante di specie', icon: '♘', description: 'Varianti collegate alla specie tramite UUID.', fields: ['shared_species_id', 'description', 'image_url', 'source'] },
       { key: 'backgrounds', table: 'shared_backgrounds', label: 'Background', singular: 'Background', icon: '⌂', description: 'Origini e competenze iniziali.', fields: ['description', 'image_url', 'source'] }
     ]
   },

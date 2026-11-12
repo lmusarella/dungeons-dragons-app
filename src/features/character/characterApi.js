@@ -44,6 +44,11 @@ export async function updateResourcesReset(characterId, resetOn) {
       const used = Number(resource.used) || 0;
       if (maxUses === 0 || used === 0) return null;
       if (resource.reset_on === 'none' || resource.reset_on === null) return null;
+      if (resource.catalog_key) {
+        const catalogRecovery = Math.max(0, Number(resetOn === 'short_rest' ? resource.recovery_short : resource.recovery_long) || 0);
+        const catalogNextUsed = Math.max(used - catalogRecovery, 0);
+        return catalogRecovery && catalogNextUsed !== used ? { id: resource.id, used: catalogNextUsed } : null;
+      }
       const recoveryShort = resource.recovery_short === null || resource.recovery_short === ''
         ? NaN
         : Number(resource.recovery_short);

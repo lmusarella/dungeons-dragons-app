@@ -14,9 +14,71 @@ export function normalizeCatalogError(error) {
   return error?.message || 'Operazione sul catalogo non riuscita.';
 }
 
-export async function searchCatalog(catalog, { query = '', rulesVersion = '', creatureType = '', challengeRating = '', page = 1, pageSize = 18 } = {}) {
+const MISSING_COLUMN = ['42703', 'PGRST204'];
+const CATEGORY_COLUMNS = ['feature_category', 'category'];
+let featureCategoryColumn = 'category';
+
+async function selectColumnValues(table, column, ids, values) {
+  const result = await supabase.from(table).select('*').in(column, ids);
+  if (result.error) {
+    if (MISSING_COLUMN.includes(result.error.code) || /column .* does not exist|could not find/i.test(result.error.message || '')) return;
+    throw result.error;
+  }
+  values.push(...(result.data || []));
+}
+
+/** Id dei privilegi collegati a classi/sottoclassi, via concessioni dirette e opzioni di scelta. */
+export async function getFeatureIdsForOrigin({ classIds = [], subclassIds = [] }) {
+  const sources = [
+    ['source_class_id', classIds], ['shared_class_id', classIds],
+    ['source_subclass_id', subclassIds], ['shared_subclass_id', subclassIds]
+  ].filter(([, ids]) => ids.length);
+  const grants = [];
+  const groups = [];
+  await Promise.all(sources.map(async ([column, ids]) => {
+    await selectColumnValues('shared_grants', column, ids, grants);
+    await selectColumnValues('shared_choice_groups', column, ids, groups);
+  }));
+  const featureIds = new Set(grants.map((row) => row.target_feature_id || row.granted_feature_id).filter(Boolean).map(String));
+  const groupIds = [...new Set(groups.map((row) => row.id))];
+  if (groupIds.length) {
+    const options = [];
+    await selectColumnValues('shared_choice_options', 'choice_group_id', groupIds, options);
+    options.forEach((row) => { if (row.shared_feature_id) featureIds.add(String(row.shared_feature_id)); });
+  }
+  return [...featureIds];
+}
+
+async function searchFeaturesByOrigin(catalog, filters) {
+  const { query, rulesVersion, featureCategory, activationType, classId, subclassId, classSubclassIds, page, pageSize } = filters;
+  const ids = await getFeatureIdsForOrigin(subclassId ? { subclassIds: [subclassId] } : { classIds: [classId], subclassIds: classSubclassIds.filter(Boolean) });
+  const chunks = [];
+  for (let index = 0; index < ids.length; index += 80) chunks.push(ids.slice(index, index + 80));
+  const rows = (await Promise.all(chunks.map(async (chunk) => {
+    let request = supabase.from(catalog.table).select('*').in('id', chunk);
+    if (query.trim()) {
+      const safeQuery = query.trim().replace(/[,%()]/g, ' ');
+      request = request.or('name.ilike.%' + safeQuery + '%,name_it.ilike.%' + safeQuery + '%');
+    }
+    if (rulesVersion) request = request.eq('rules_version', rulesVersion);
+    if (featureCategory) request = request.eq(featureCategoryColumn, featureCategory);
+    if (activationType) request = request.eq('activation_type', activationType);
+    return unwrap(await request) || [];
+  }))).flat();
+  rows.sort((a, b) => String(a.name_it || a.name || '').localeCompare(String(b.name_it || b.name || ''), 'it'));
+  const from = (page - 1) * pageSize;
+  return { items: rows.slice(from, from + pageSize), total: rows.length, page, pageSize };
+}
+
+export async function searchCatalog(catalog, {
+  query = '', rulesVersion = '', creatureType = '', challengeRating = '', page = 1, pageSize = 18,
+  featureCategory = '', activationType = '', classId = '', subclassId = '', classSubclassIds = []
+} = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(PAGE_SIZE_LIMIT, Math.max(1, Number(pageSize) || 18));
+  if (catalog.key === 'features' && (classId || subclassId)) {
+    return searchFeaturesByOrigin(catalog, { query, rulesVersion, featureCategory, activationType, classId, subclassId, classSubclassIds, page: safePage, pageSize: safePageSize });
+  }
   const from = (safePage - 1) * safePageSize;
   let request = supabase
     .from(catalog.table)
@@ -26,14 +88,61 @@ export async function searchCatalog(catalog, { query = '', rulesVersion = '', cr
     .range(from, from + safePageSize - 1);
   if (query.trim()) {
     const safeQuery = query.trim().replace(/[,%()]/g, ' ');
-    request = request.or(`name.ilike.%${safeQuery}%,name_it.ilike.%${safeQuery}%`);
+    request = request.or('name.ilike.%' + safeQuery + '%,name_it.ilike.%' + safeQuery + '%');
   }
   if (rulesVersion) request = request.eq('rules_version', rulesVersion);
   if (catalog.key === 'creatures' && creatureType.trim()) request = request.ilike('creature_type', creatureType.trim());
   if (catalog.key === 'creatures' && challengeRating.trim()) request = request.eq('challenge_rating', challengeRating.trim());
+  if (catalog.key === 'features' && featureCategory) request = request.eq(featureCategoryColumn, featureCategory);
+  if (catalog.key === 'features' && activationType) request = request.eq('activation_type', activationType);
   const { data, error, count } = await request;
   if (error) throw error;
   return { items: data || [], total: count ?? data?.length ?? 0, page: safePage, pageSize: safePageSize };
+}
+
+async function distinctColumnValues(column) {
+  const values = new Set();
+  for (let page = 0; page < 10; page += 1) {
+    const result = await supabase.from('shared_features').select(column).range(page * 1000, page * 1000 + 999);
+    if (result.error) throw result.error;
+    (result.data || []).forEach((row) => { if (row[column]) values.add(String(row[column])); });
+    if ((result.data || []).length < 1000) break;
+  }
+  return [...values].sort();
+}
+
+let featureFacetsPromise = null;
+/** Valori distinti di categoria e attivazione dei privilegi, per i filtri del compendio. */
+export function getFeatureFacets() {
+  if (!featureFacetsPromise) {
+    featureFacetsPromise = (async () => {
+      let categories = [];
+      for (const column of CATEGORY_COLUMNS) {
+        try {
+          const values = await distinctColumnValues(column);
+          featureCategoryColumn = column;
+          if (values.length) { categories = values; break; }
+        } catch { /* colonna assente: prova la successiva */ }
+      }
+      let activations = [];
+      try { activations = await distinctColumnValues('activation_type'); } catch { /* assente */ }
+      return { categories, activations };
+    })().catch((error) => { featureFacetsPromise = null; throw error; });
+  }
+  return featureFacetsPromise;
+}
+
+let originOptionsPromise = null;
+/** Classi e sottoclassi per i filtri dei privilegi. */
+export function getFeatureOriginOptions() {
+  if (!originOptionsPromise) {
+    originOptionsPromise = Promise.all([
+      supabase.from('shared_classes').select('id,name,name_it,rules_version').order('name', { ascending: true }),
+      supabase.from('shared_subclasses').select('id,name,name_it,rules_version,shared_class_id').order('name', { ascending: true })
+    ]).then(([classes, subclasses]) => ({ classes: unwrap(classes) || [], subclasses: unwrap(subclasses) || [] }))
+      .catch((error) => { originOptionsPromise = null; throw error; });
+  }
+  return originOptionsPromise;
 }
 
 export async function getCatalogRecord(catalog, id) {

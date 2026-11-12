@@ -71,12 +71,15 @@ function isMissingColumn(error) {
     || /column .* does not exist|could not find the .* column/i.test(error?.message || '');
 }
 
+const missingColumns = new Set();
+
 async function queryCompatibleColumns(table, columns, id) {
   const rows = [];
   for (const column of columns) {
+    if (missingColumns.has(`${table}.${column}`)) continue;
     const result = await supabase.from(table).select('*').eq(column, id);
     if (result.error) {
-      if (isMissingColumn(result.error)) continue;
+      if (isMissingColumn(result.error)) { missingColumns.add(`${table}.${column}`); continue; }
       throw result.error;
     }
     rows.push(...(result.data || []));
@@ -87,9 +90,10 @@ async function queryCompatibleColumns(table, columns, id) {
 async function queryCompatibleColumnValues(table, columns, ids) {
   const rows = [];
   for (const column of columns) {
+    if (missingColumns.has(`${table}.${column}`)) continue;
     const result = await supabase.from(table).select('*').in(column, ids);
     if (result.error) {
-      if (isMissingColumn(result.error)) continue;
+      if (isMissingColumn(result.error)) { missingColumns.add(`${table}.${column}`); continue; }
       throw result.error;
     }
     rows.push(...(result.data || []));

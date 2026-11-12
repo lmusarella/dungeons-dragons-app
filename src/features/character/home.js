@@ -9,6 +9,7 @@ import { buildSelect, createToast, openConfirmModal, openFormModal, setGlobalLoa
 import { cacheSnapshot } from '../../lib/offline/cache.js';
 import { escapeHtml } from '../../lib/html.js';
 import { openDiceOverlay, updateDiceOverlayWarning } from '../dice-roller/overlay/dice.js';
+import { hasCatalogSelection, syncCatalogResources } from './catalogResourceSync.js';
 import { openCharacterDrawer } from './home/characterDrawer.js';
 import { presentSheetDetail } from './home/sheetDetail.js';
 import { openGeneralModifierEditor } from './home/generalModifiers.js';
@@ -1065,6 +1066,11 @@ export async function renderHome(container) {
             <div>
               <p class="eyebrow">Risorse</p>           
             </div>
+            ${activeCharacter && canManageResources && hasCatalogSelection(activeCharacter) ? `
+              <button class="icon-button" data-sync-catalog-resources aria-label="Sincronizza risorse dal catalogo" title="Sincronizza risorse dal catalogo">
+                <span aria-hidden="true">⟳</span>
+              </button>
+            ` : ''}
             ${activeCharacter && canManageResources ? `
               <button class="icon-button icon-button--add" data-add-resource aria-label="Nuova risorsa">
                 <span aria-hidden="true">+</span>
@@ -1183,6 +1189,29 @@ export async function renderHome(container) {
   if (editButton) {
     editButton.addEventListener('click', () => {
       openCharacterDrawer(user, () => renderHome(container), activeCharacter);
+    });
+  }
+
+  const syncResourcesButton = container.querySelector('[data-sync-catalog-resources]');
+  if (syncResourcesButton) {
+    syncResourcesButton.addEventListener('click', async () => {
+      syncResourcesButton.disabled = true;
+      try {
+        const result = await syncCatalogResources(activeCharacter);
+        const details = [
+          `${result.created} create`, `${result.updated} aggiornate`,
+          result.review.length ? `${result.review.length} con costo da revisionare` : '',
+          result.unresolved.length ? `${result.unresolved.length} non automatizzabili` : '',
+          result.skipped.length ? `${result.skipped.length} già presenti manualmente` : ''
+        ].filter(Boolean).join(' · ');
+        createToast(`Risorse dal catalogo: ${details}`, result.unresolved.length ? 'error' : 'success');
+        if (result.unresolved.length) console.info('Risorse del catalogo non automatizzabili', result.unresolved);
+        renderHome(container);
+      } catch (error) {
+        console.warn('Sincronizzazione risorse del catalogo non riuscita', error);
+        createToast(error?.message || 'Sincronizzazione risorse non riuscita', 'error');
+        syncResourcesButton.disabled = false;
+      }
     });
   }
 
@@ -1775,6 +1804,7 @@ export async function renderHome(container) {
         if (!child) return;
         openResourceDetail(child, {
           present: presentResourceView,
+          parentResource: resource,
           canHaveChildren: false,
           onEdit: canManageResources ? () => openResourceDrawer(activeCharacter, null, child, { present: presentResourceView }) : null,
           onDelete: canManageResources ? () => deleteResourceWithConfirmation(child) : null

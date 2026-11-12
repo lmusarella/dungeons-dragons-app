@@ -384,7 +384,8 @@ export function openResourceDetail(resource, {
   onEdit,
   onDelete,
   onCreateChild,
-  onOpenChild
+  onOpenChild,
+  parentResource = null
 } = {}) {
   const detail = document.createElement('div');
   detail.className = 'resource-detail';
@@ -402,7 +403,7 @@ export function openResourceDetail(resource, {
   const imageUrl = resource.image_url?.trim() || '';
   const usageLabel = isPool ? 'Pool disponibile' : 'Cariche disponibili';
   const showChildSection = Boolean(canHaveChildren);
-  const resourceFacts = buildResourceFacts(resource).replace(
+  const resourceFacts = buildResourceFacts(resource, { parent: parentResource }).replace(
     'class="power-detail-facts"',
     'class="spell-manual__facts power-detail-facts"'
   );

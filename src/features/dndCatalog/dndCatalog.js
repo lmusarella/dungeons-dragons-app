@@ -4,11 +4,13 @@ import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { CATALOG_GROUPS, FIELD_META, RULES_VERSIONS, getCatalog } from './catalogConfig.js';
 import { catalogDescription, catalogName, catalogSourceLabel, catalogStatBlock } from './catalogLocale.js';
 import { renderAsiSummary } from './asiSummary.js';
-import { renderCatalogAdvancedDetails, renderCatalogDescription } from './catalogPresentation.js';
+import { labelIt, renderCatalogAdvancedDetails, renderCatalogDescription } from './catalogPresentation.js';
 import {
   createCatalogRecord,
   deleteCatalogRecord,
   getClassFeatureGrants,
+  getFeatureFacets,
+  getFeatureOriginOptions,
   getFeatureOrigins,
   normalizeCatalogError,
   searchCatalog,
@@ -350,6 +352,77 @@ export function renderClassSummary(item) {
   return `<section class="dnd-class-summary"><header><small>Profilo della classe</small><h3>Statistiche e competenze</h3></header>${top ? `<div class="dnd-class-stats">${top}</div>` : ''}${profBlock || skillBlock ? `<div class="dnd-class-panels">${profBlock}${skillBlock}</div>` : ''}</section>`;
 }
 
+const EQUIPMENT_TYPE_LABELS = {
+  weaponSimple: 'Arma semplice a scelta', weaponSimpleMelee: 'Arma semplice da mischia a scelta', weaponSimpleRanged: 'Arma semplice a distanza a scelta',
+  weaponMartial: 'Arma da guerra a scelta', weaponMartialMelee: 'Arma da guerra da mischia a scelta', weaponMartialRanged: 'Arma da guerra a distanza a scelta',
+  armorLight: 'Armatura leggera a scelta', armorMedium: 'Armatura media a scelta', armorHeavy: 'Armatura pesante a scelta',
+  toolArtisan: 'Strumenti da artigiano a scelta', instrumentMusical: 'Strumento musicale a scelta', setGaming: 'Set da gioco a scelta', focusSpellcastingArcane: 'Focus arcano a scelta'
+};
+
+function cleanEquipmentText(value) {
+  return String(value ?? '').replace(/\{@\w+\s+([^|}]*)[^}]*\}/g, '$1').replace(/\s+/g, ' ').trim();
+}
+
+function equipmentEntryLabel(entry) {
+  if (entry === null || entry === undefined) return '';
+  if (typeof entry === 'string' || typeof entry === 'number') return cleanEquipmentText(entry);
+  const quantity = Number(entry.quantity) > 1 ? ` ×${entry.quantity}` : '';
+  if (entry.item) {
+    const name = String(entry.displayName || entry.item).split('|')[0];
+    return `${name.charAt(0).toUpperCase()}${name.slice(1)}${quantity}`;
+  }
+  if (entry.equipmentType) return `${EQUIPMENT_TYPE_LABELS[entry.equipmentType] || String(entry.equipmentType).replace(/([A-Z])/g, ' $1').toLowerCase()}${quantity}`;
+  if (entry.special) return `${cleanEquipmentText(entry.special)}${quantity}`;
+  if (entry.value !== undefined) return `${Number(entry.value) / 100} mo`;
+  if (entry.containsValue !== undefined) return `${entry.item || 'Contenitore'} (${Number(entry.containsValue) / 100} mo)`;
+  return '';
+}
+
+function parseEquipmentGroups(equipment) {
+  const groups = [];
+  if (Array.isArray(equipment.defaultData) && equipment.defaultData.length) {
+    equipment.defaultData.forEach((group) => {
+      if (!group || typeof group !== 'object') return;
+      const options = Object.entries(group).map(([key, entries]) => ({ key, items: (Array.isArray(entries) ? entries : [entries]).map(equipmentEntryLabel).filter(Boolean) })).filter((option) => option.items.length);
+      if (!options.length) return;
+      if (options.length === 1 && options[0].key === '_') groups.push({ fixed: options[0].items });
+      else groups.push({ choices: options.map((option) => ({ ...option, key: option.key === '_' ? '' : option.key })) });
+    });
+    return groups;
+  }
+  (Array.isArray(equipment.default) ? equipment.default : []).forEach((line) => {
+    const text = cleanEquipmentText(line);
+    if (!text) return;
+    const parts = text.split(/\(([a-z])\)/i);
+    if (parts.length < 3) { groups.push({ fixed: [text] }); return; }
+    const options = [];
+    for (let index = 1; index < parts.length; index += 2) {
+      const label = parts[index + 1].replace(/\s*,?\s*\bor\b\s*$/i, '').replace(/[,;\s]+$/, '').trim();
+      if (label) options.push({ key: parts[index], items: [label] });
+    }
+    if (options.length) groups.push({ choices: options });
+  });
+  return groups;
+}
+
+export function renderClassEquipment(item) {
+  const data = item?.class_data && typeof item.class_data === 'object' ? item.class_data
+    : item?.data && typeof item.data === 'object' ? item.data : {};
+  const rules = data['5etools'] || data;
+  const equipment = [item?.starting_equipment, data.starting_equipment, data.startingEquipment, rules.startingEquipment, rules.starting_equipment]
+    .find((value) => value && typeof value === 'object' && !Array.isArray(value));
+  if (!equipment) return '';
+  const groups = parseEquipmentGroups(equipment);
+  const gold = cleanEquipmentText(equipment.goldAlternative);
+  if (!groups.length && !gold) return '';
+  const fixed = groups.filter((group) => group.fixed).flatMap((group) => group.fixed);
+  const choices = groups.filter((group) => group.choices);
+  const fixedBlock = fixed.length ? `<article class="dnd-class-equipment__fixed"><small>Sempre inclusi</small><div class="dnd-class-chips">${fixed.map((entry) => `<span class="dnd-class-chip">${escapeHtml(entry)}</span>`).join('')}</div></article>` : '';
+  const choiceBlocks = choices.map((group, index) => `<article class="dnd-class-equipment__choice"><small>Scelta ${index + 1}</small><div>${group.choices.map((option) => `<div class="dnd-class-equipment__option">${option.key ? `<b>${escapeHtml(option.key.toUpperCase())}</b>` : ''}<span>${option.items.map(escapeHtml).join(' · ')}</span></div>`).join('')}</div></article>`).join('');
+  const extra = [equipment.additionalFromBackground ? 'Più l’equipaggiamento del background.' : '', gold ? `In alternativa: ${gold} mo di ricchezza iniziale.` : ''].filter(Boolean);
+  return `<section class="dnd-class-summary dnd-class-equipment"><header><small>Punto di partenza</small><h3>Equipaggiamento iniziale</h3></header>${fixedBlock}${choices.length ? `<div class="dnd-class-equipment__choices">${choiceBlocks}</div>` : ''}${extra.length ? `<p class="dnd-class-equipment__note">${escapeHtml(extra.join(' '))}</p>` : ''}</section>`;
+}
+
 function fieldInput(key, value = '') {
   const meta = FIELD_META[key] || {};
   const safeValue = escapeHtml(value ?? '');
@@ -397,7 +470,7 @@ function modalShell(content, className = '', onClose = null) {
 
 async function openRecordDetail(catalog, item, canManage, callbacks, nav = {}) {
   const image = sanitizeImageUrl(item.image_url);
-  const relationsSection = `<section class="dnd-catalog-detail__relations"><h3>${catalog.key === 'features' ? 'Concesso da' : catalog.key === 'classes' ? 'Progressione della classe' : catalog.key === 'subclasses' ? 'Abilità della sottoclasse' : catalog.key === 'species' ? 'Abilità della specie' : 'Privilegi e abilità collegate'}</h3><div data-record-relations><div class="dnd-catalog-inline-loader"><span></span>Caricamento collegamenti…</div></div></section>`;
+  const relationsSection = `<section class="dnd-catalog-detail__relations"><h3>${catalog.key === 'features' ? 'Concesso da' : catalog.key === 'classes' ? 'Progressione della classe' : catalog.key === 'subclasses' ? 'Abilità della sottoclasse' : catalog.key === 'species' ? 'Abilità della specie' : catalog.key === 'backgrounds' ? 'Abilità del background' : 'Privilegi e abilità collegate'}</h3><div data-record-relations><div class="dnd-catalog-inline-loader"><span></span>Caricamento collegamenti…</div></div></section>`;
   const { backdrop, close } = modalShell(`
     <header class="dnd-catalog-detail__header">
       <div>${image ? `<img src="${image}" alt="">` : `<span class="dnd-catalog-detail__icon">${catalog.icon}</span>`}</div>
@@ -407,8 +480,8 @@ async function openRecordDetail(catalog, item, canManage, callbacks, nav = {}) {
     <div class="dnd-catalog-detail__content">
       ${renderCatalogAdvancedDetails(catalog, item)}
       ${['species', 'species-variants'].includes(catalog.key) ? '<div data-record-asi></div>' : ''}
-      ${catalog.key === 'classes' ? renderClassSummary(item) : ''}
-      ${['subclasses', 'species'].includes(catalog.key) ? `${renderCatalogDescription(item)}${relationsSection}` : `${relationsSection}${renderCatalogDescription(item)}`}
+      ${catalog.key === 'classes' ? `${renderClassSummary(item)}${renderClassEquipment(item)}` : ''}
+      ${['subclasses', 'species', 'backgrounds'].includes(catalog.key) ? `${renderCatalogDescription(item)}${relationsSection}` : `${relationsSection}${renderCatalogDescription(item)}`}
     </div>
     <footer class="dnd-catalog-modal__actions"><button type="button" data-record-back>← Indietro</button>${canManage ? '<button type="button" data-record-edit class="primary">Modifica</button>' : ''}</footer>
   `, 'dnd-catalog-detail');
@@ -510,13 +583,13 @@ async function openRecordDetail(catalog, item, canManage, callbacks, nav = {}) {
         getCatalogParent(catalog.key, item)
       ]);
       const variants = speciesDetails?.variants || [];
-      if (catalog.key === 'subclasses' || catalog.key === 'species') {
+      if (['subclasses', 'species', 'backgrounds'].includes(catalog.key)) {
         const grants = progression.automaticGrants.filter((grant) => grant.target_type === 'feature');
         const isSpecies = catalog.key === 'species';
-        const label = isSpecies ? 'specie' : 'sottoclasse';
+        const label = isSpecies ? 'specie' : catalog.key === 'backgrounds' ? 'background' : 'sottoclasse';
         const parentBlock = parent ? `<section class="dnd-catalog-relation-block"><h4>${escapeHtml(parent.relation_type)}</h4><div class="dnd-catalog-relation-chips"><span>${escapeHtml(catalogName(parent))} <small>${escapeHtml(parent.rules_version || '')}</small></span></div></section>` : '';
         const featuresBlock = `<section class="dnd-catalog-relation-block dnd-class-features"><header><div><small>Progressione completa 1–20</small><h4>Abilità della ${label}</h4></div><span>${grants.length} collegate</span></header>${renderFeatureTimeline(grants, `Nessuna abilità della ${label} collegata.`)}</section>`;
-        const choicesBlock = isSpecies && progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block dnd-class-choices"><header><div><small>Decisioni del giocatore</small><h4>Scelte collegate</h4></div></header>${renderChoiceGroups(progression.choiceGroups)}</section>` : '';
+        const choicesBlock = catalog.key !== 'subclasses' && progression.choiceGroups.length ? `<section class="dnd-catalog-relation-block dnd-class-choices"><header><div><small>Decisioni del giocatore</small><h4>Scelte collegate</h4></div></header>${renderChoiceGroups(progression.choiceGroups)}</section>` : '';
         if (isSpecies) {
           const variantsBlock = variants.length
             ? `<section class="dnd-catalog-relation-block dnd-class-subclasses"><header><div><small>Varianti e sottospecie</small><h4>Varianti della specie</h4></div><span>${variants.length}</span></header><div class="dnd-species-variant-list">${variants.map((variant) => `<button type="button" data-linked-variant="${escapeHtml(variant.id)}"><strong>${escapeHtml(catalogName(variant))}</strong><small>${escapeHtml(catalogDescription(variant, 'Apri il dettaglio della variante'))}</small></button>`).join('')}</div></section>`
@@ -627,11 +700,11 @@ export async function renderDndCatalog(container) {
     </header>
     <div class="dnd-catalog-layout">
       <aside class="dnd-catalog-nav" aria-label="Cataloghi D&D">
-        ${CATALOG_GROUPS.map((group) => `<section><h2>${group.label}</h2>${group.entries.map((entry, index) => `<button type="button" data-catalog-key="${entry.key}" ${group === CATALOG_GROUPS[0] && index === 0 ? 'class="is-active"' : ''}><span>${entry.icon}</span><strong>${entry.label}</strong></button>`).join('')}</section>`).join('')}
+        ${CATALOG_GROUPS.map((group) => `<section><h2>${group.label}</h2>${group.entries.filter((entry) => !entry.hidden).map((entry, index) => `<button type="button" data-catalog-key="${entry.key}" ${group === CATALOG_GROUPS[0] && index === 0 ? 'class="is-active"' : ''}><span>${entry.icon}</span><strong>${entry.label}</strong></button>`).join('')}</section>`).join('')}
       </aside>
       <main class="dnd-catalog-main">
         <header class="dnd-catalog-section-header"><div><small data-catalog-kicker></small><h2 data-catalog-title></h2><p data-catalog-description></p></div><button type="button" class="primary" data-catalog-create ${canManage ? '' : 'hidden'}>＋ Nuovo</button></header>
-        <div class="dnd-catalog-filters"><label><span>Cerca</span><input type="search" data-catalog-search placeholder="Cerca per nome…"></label><label><span>Versione</span><select data-catalog-version><option value="">2014 e 2024</option><option>2014</option><option>2024</option></select></label><label data-creature-filter hidden><span>Tipo</span><input data-catalog-creature-type placeholder="Es. Bestia"></label><label data-creature-filter hidden><span>Grado di sfida</span><input data-catalog-challenge-rating placeholder="Es. 1/2"></label></div>
+        <div class="dnd-catalog-filters"><label><span>Cerca</span><input type="search" data-catalog-search placeholder="Cerca per nome…"></label><label><span>Versione</span><select data-catalog-version><option value="">2014 e 2024</option><option>2014</option><option>2024</option></select></label><label data-creature-filter hidden><span>Tipo</span><input data-catalog-creature-type placeholder="Es. Bestia"></label><label data-creature-filter hidden><span>Grado di sfida</span><input data-catalog-challenge-rating placeholder="Es. 1/2"></label><label data-feature-filter hidden><span>Categoria</span><select data-feature-category><option value="">Tutte</option></select></label><label data-feature-filter hidden><span>Attivazione</span><select data-feature-activation><option value="">Tutte</option></select></label><label data-feature-filter hidden><span>Classe</span><select data-feature-class><option value="">Tutte le classi</option></select></label><label data-feature-filter hidden><span>Sottoclasse</span><select data-feature-subclass disabled><option value="">Scegli prima una classe</option></select></label></div>
         <div class="dnd-catalog-status" data-catalog-status></div>
         <div class="dnd-catalog-grid" data-catalog-grid></div>
         <nav class="dnd-catalog-pagination" data-catalog-pagination aria-label="Paginazione"></nav>
@@ -647,6 +720,55 @@ export async function renderDndCatalog(container) {
   const versionInput = container.querySelector('[data-catalog-version]');
   const creatureTypeInput = container.querySelector('[data-catalog-creature-type]');
   const challengeRatingInput = container.querySelector('[data-catalog-challenge-rating]');
+  const featureCategoryInput = container.querySelector('[data-feature-category]');
+  const featureActivationInput = container.querySelector('[data-feature-activation]');
+  const featureClassInput = container.querySelector('[data-feature-class]');
+  const featureSubclassInput = container.querySelector('[data-feature-subclass]');
+  const featureFilterData = { loaded: false, loading: false, classes: [], subclasses: [] };
+  const originLabel = (row) => `${catalogName(row)}${versionInput.value ? '' : ` (${row.rules_version})`}`;
+  const fillSelect = (select, entries, placeholder) => {
+    const previous = select.value;
+    select.replaceChildren(new Option(placeholder, ''));
+    entries.forEach(([value, label]) => select.add(new Option(label, value)));
+    select.value = entries.some(([value]) => value === previous) ? previous : '';
+  };
+  const visibleClasses = () => featureFilterData.classes.filter((row) => !versionInput.value || row.rules_version === versionInput.value);
+  const fillOriginSelects = () => {
+    fillSelect(featureClassInput, visibleClasses().map((row) => [String(row.id), originLabel(row)]), 'Tutte le classi');
+    const subclasses = featureClassInput.value ? featureFilterData.subclasses.filter((row) => String(row.shared_class_id) === featureClassInput.value) : [];
+    fillSelect(featureSubclassInput, subclasses.map((row) => [String(row.id), originLabel(row)]), featureClassInput.value ? 'Tutte le sottoclassi' : 'Scegli prima una classe');
+    featureSubclassInput.disabled = !featureClassInput.value;
+  };
+  const mergeSelectOptions = (select, values, placeholder) => {
+    const known = [...select.options].map((option) => option.value).filter(Boolean);
+    const merged = [...new Set([...known, ...values.filter(Boolean)])].sort();
+    if (merged.length === known.length) return;
+    fillSelect(select, merged.map((value) => [value, labelIt(value)]), placeholder);
+  };
+  const mergeFacetsFromItems = (items) => {
+    mergeSelectOptions(featureCategoryInput, items.map((entry) => entry.feature_category || entry.category), 'Tutte');
+    mergeSelectOptions(featureActivationInput, items.map((entry) => entry.activation_type), 'Tutte');
+  };
+  const loadFeatureFilters = async () => {
+    if (featureFilterData.loaded || featureFilterData.loading) return;
+    featureFilterData.loading = true;
+    const [facets, origins] = await Promise.allSettled([getFeatureFacets(), getFeatureOriginOptions()]);
+    if (facets.status === 'fulfilled') {
+      mergeSelectOptions(featureCategoryInput, facets.value.categories, 'Tutte');
+      mergeSelectOptions(featureActivationInput, facets.value.activations, 'Tutte');
+    } else console.warn('Filtri categoria/attivazione non disponibili', facets.reason);
+    if (origins.status === 'fulfilled') {
+      featureFilterData.classes = origins.value.classes;
+      featureFilterData.subclasses = origins.value.subclasses;
+      fillOriginSelects();
+    } else console.warn('Filtri classe/sottoclasse non disponibili', origins.reason);
+    featureFilterData.loaded = facets.status === 'fulfilled' && origins.status === 'fulfilled';
+    featureFilterData.loading = false;
+  };
+  const resetFeatureFilters = () => {
+    [featureCategoryInput, featureActivationInput, featureClassInput].forEach((select) => { select.value = ''; });
+    fillOriginSelects();
+  };
 
   const activeCatalog = () => getCatalog(state.key);
   const renderHeader = () => {
@@ -656,6 +778,8 @@ export async function renderDndCatalog(container) {
     container.querySelector('[data-catalog-description]').textContent = catalog.description;
     container.querySelector('[data-catalog-create]').hidden = !canManage || Boolean(catalog.existingRoute);
     container.querySelectorAll('[data-creature-filter]').forEach((field) => { field.hidden = catalog.key !== 'creatures'; });
+    container.querySelectorAll('[data-feature-filter]').forEach((field) => { field.hidden = catalog.key !== 'features'; });
+    if (catalog.key === 'features') void loadFeatureFilters();
   };
   const renderPagination = () => {
     const pages = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
@@ -683,9 +807,10 @@ export async function renderDndCatalog(container) {
       return;
     }
     try {
-      const result = await searchCatalog(catalog, { query: searchInput.value, rulesVersion: versionInput.value, creatureType: creatureTypeInput.value, challengeRating: challengeRatingInput.value, page: state.page, pageSize: PAGE_SIZE });
+      const result = await searchCatalog(catalog, { query: searchInput.value, rulesVersion: versionInput.value, creatureType: creatureTypeInput.value, challengeRating: challengeRatingInput.value, featureCategory: featureCategoryInput.value, activationType: featureActivationInput.value, classId: featureClassInput.value, subclassId: featureSubclassInput.value, classSubclassIds: featureFilterData.subclasses.filter((row) => String(row.shared_class_id) === featureClassInput.value).map((row) => row.id), page: state.page, pageSize: PAGE_SIZE });
       if (requestId !== state.request) return;
       state.items = result.items;
+      if (catalog.key === 'features') mergeFacetsFromItems(result.items);
       state.total = result.total;
       status.textContent = `${result.total} ${result.total === 1 ? 'elemento' : 'elementi'}`;
       grid.innerHTML = state.items.length ? state.items.map((item) => card(catalog, item)).join('') : `<div class="dnd-catalog-empty"><span>${catalog.icon}</span><h3>Nessun contenuto trovato</h3><p>Modifica i filtri${canManage ? ' oppure crea il primo elemento' : ''}.</p></div>`;
@@ -712,13 +837,15 @@ export async function renderDndCatalog(container) {
   };
 
   container.querySelectorAll('[data-catalog-key]').forEach((button) => button.addEventListener('click', () => {
-    state.key = button.dataset.catalogKey; state.page = 1; searchInput.value = ''; versionInput.value = ''; creatureTypeInput.value = ''; challengeRatingInput.value = '';
+    state.key = button.dataset.catalogKey; state.page = 1; searchInput.value = ''; versionInput.value = ''; creatureTypeInput.value = ''; challengeRatingInput.value = ''; resetFeatureFilters();
     container.querySelectorAll('[data-catalog-key]').forEach((entry) => entry.classList.toggle('is-active', entry === button));
     void load();
   }));
   let searchTimer;
   searchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.page = 1; void load(); }, 250); });
-  versionInput.addEventListener('change', () => { state.page = 1; void load(); });
+  versionInput.addEventListener('change', () => { state.page = 1; fillOriginSelects(); void load(); });
+  [featureCategoryInput, featureActivationInput, featureSubclassInput].forEach((select) => select.addEventListener('change', () => { state.page = 1; void load(); }));
+  featureClassInput.addEventListener('change', () => { state.page = 1; featureSubclassInput.value = ''; fillOriginSelects(); void load(); });
   creatureTypeInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.page = 1; void load(); }, 250); });
   challengeRatingInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.page = 1; void load(); }, 250); });
   pagination.addEventListener('click', (event) => {

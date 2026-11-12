@@ -243,65 +243,51 @@ function spellNodeRows(value, context = '') {
   });
 }
 
+function splitSpells(text) {
+  return String(text).split(/,\s*(?![^()]*\))/).map((entry) => entry.trim()).filter(Boolean);
+}
+
 function renderAdditionalSpellBenefits(item) {
   const benefits = resolveAdditionalSpells(item.subclass_data || item.data);
   if (!benefits.length) return '';
   const content = benefits.map((benefit) => {
-    const rows = spellNodeRows(benefit.value);
-    const chips = rows.length
-      ? rows.map((row) => `<span class="catalog-spell-chip">${row.context ? `<b>${escapeHtml(row.context)}</b>` : ''}${escapeHtml(row.text)}</span>`).join('')
-      : '<span class="catalog-spell-chip">Dati non interpretabili automaticamente</span>';
-    return `<div class="catalog-spell-row catalog-spell-row--${escapeHtml(benefit.kind)}"><strong>${escapeHtml(SPELL_BENEFIT_LABELS[benefit.kind] || labelIt(benefit.kind))}</strong><div>${chips}</div></div>`;
+    const rawRows = spellNodeRows(benefit.value).map((row) => {
+      const parts = row.context ? row.context.split(' · ') : [];
+      const level = /^Livello \d+$/.test(parts[0] || '') ? parts.shift().replace('Livello ', '') : '—';
+      return { level, condition: parts.join(' · '), spells: splitSpells(row.text) };
+    });
+    const rows = [];
+    rawRows.forEach((row) => {
+      const existing = rows.find((entry) => entry.level === row.level && entry.condition === row.condition);
+      if (existing) existing.spells.push(...row.spells.filter((spell) => !existing.spells.includes(spell)));
+      else rows.push({ ...row, spells: [...row.spells] });
+    });
+    const hasCondition = rows.some((row) => row.condition);
+    const body = rows.length
+      ? rows.map((row) => `<tr><th scope="row">${escapeHtml(row.level)}</th>${hasCondition ? `<td>${escapeHtml(row.condition || '—')}</td>` : ''}<td>${row.spells.map((spell) => `<span class="catalog-spell-chip">${escapeHtml(spell)}</span>`).join('')}</td></tr>`).join('')
+      : `<tr><td colspan="${hasCondition ? 3 : 2}">Dati non interpretabili automaticamente</td></tr>`;
+    return `<section class="dnd-class-progression-table catalog-spell-table"><header><h4>${escapeHtml(SPELL_BENEFIT_LABELS[benefit.kind] || labelIt(benefit.kind))}</h4><small>${rawRows.length} ${rawRows.length === 1 ? 'voce' : 'voci'}</small></header><div><table><thead><tr><th>Livello</th>${hasCondition ? '<th>Condizione</th>' : ''}<th>Incantesimi</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
   }).join('');
-  return section('Incantesimi e benefici aggiuntivi', `<div class="catalog-spell-compact">${content}</div>`);
+  return section('Incantesimi e benefici aggiuntivi', `<div class="catalog-spell-tables">${content}</div>`);
 }
 
-const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-const FEET_TO_METERS = (feet) => Math.round(Number(feet) * 0.3 * 10) / 10;
-
-function signed(value) {
-  const number = Number(value);
-  return `${number >= 0 ? '+' : ''}${number}`;
-}
-
-function abilityOption(option) {
-  if (!option || typeof option !== 'object') return present(option);
-  const fixed = ABILITY_KEYS.filter((key) => option[key] !== undefined).map((key) => `${labelIt(key)} ${signed(option[key])}`);
-  const choice = option.choose;
-  if (choice) {
-    const from = (choice.from || ABILITY_KEYS).map(labelIt).join(', ');
-    const amount = choice.amount ?? 1;
-    const count = choice.count ?? 1;
-    fixed.push(`${count} a scelta tra ${from} ${signed(amount)}`);
-  }
-  if (option.any !== undefined) fixed.push(`Qualsiasi ${signed(option.any)}`);
-  return fixed.join(' · ');
-}
-
-function speciesAbilityBonus(item, data, rules) {
-  const raw = data.ability_increases ?? data.ability_score_increases ?? data.ability_bonuses ?? data.abilityBonuses
-    ?? rules.ability ?? item.ability_increases ?? item.ability;
-  if (!raw) return '';
-  const options = Array.isArray(raw) ? raw : [raw];
-  return options.map(abilityOption).filter(Boolean).join(' oppure ');
-}
+const feetToMeters = (feet) => Math.round(Number(feet) * 0.3 * 10) / 10;
 
 function speciesMovement(item, data, rules) {
-  const speed = rules.speed ?? data.speed ?? item.speed;
-  if (!speed || typeof speed !== 'object') return [];
+  const speed = rules.speed ?? data.speed;
+  if (!speed || typeof speed !== 'object' || Array.isArray(speed)) return '';
   const walk = numericDistance(speed.walk);
   return Object.entries(speed).filter(([type]) => type !== 'walk' && type !== 'choose').map(([type, raw]) => {
     const distance = raw === true ? walk : numericDistance(raw);
     if (distance === null || distance === undefined) return '';
     const note = raw && typeof raw === 'object' ? raw.condition || raw.note : '';
-    return stat(`Velocità di ${labelIt(type).toLowerCase()}`, `${FEET_TO_METERS(distance)} m`, note || (raw === true ? 'Pari alla velocità base' : ''));
+    return stat('Velocità di ' + labelIt(type).toLowerCase(), feetToMeters(distance) + ' m', note || (raw === true ? 'Pari alla velocità base' : ''));
   }).join('');
 }
 
 function speciesDarkvision(data, rules) {
-  const value = rules.darkvision ?? data.darkvision;
-  const distance = numericDistance(value);
-  return distance ? stat('Scurovisione', `${FEET_TO_METERS(distance)} m`) : '';
+  const distance = numericDistance(rules.darkvision ?? data.darkvision);
+  return distance ? stat('Scurovisione', feetToMeters(distance) + ' m') : '';
 }
 
 function renderStandard(catalog, item) {
