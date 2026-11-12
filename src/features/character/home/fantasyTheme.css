@@ -4424,3 +4424,41 @@ body .sheet-detail .inventory-money-workspace .coin-exchange-button { grid-colum
   body .sheet-detail .coin-workspace-action,
   body .sheet-detail .inventory-money-workspace .coin-exchange-button { width: 100%; min-width: 0; margin: 0; }
 }
+.feature-mechanics {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--feature-color, #7c304f) 32%, #d9c29d);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(124, 48, 79, .08), rgba(251, 244, 226, .74));
+}
+
+.feature-mechanics > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.feature-mechanics > header strong { color: #4c2335; font-family: Georgia, serif; }
+.feature-mechanics__card { padding: 12px; border: 1px solid rgba(124, 48, 79, .2); border-radius: 13px; background: rgba(255, 252, 244, .9); }
+.feature-mechanics__heading { display: flex; justify-content: space-between; gap: 10px; }
+.feature-mechanics__heading small { color: #956e48; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.feature-mechanics__heading h4 { margin: 3px 0 0; color: #56253a; font-family: Georgia, serif; font-size: 1rem; }
+.feature-mechanics__card > p { margin: 8px 0 10px; color: #5f5148; font-size: .86rem; line-height: 1.45; }
+.feature-roll-table__actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.feature-roll-table__actions button, .feature-mechanics__formula { min-height: 34px; padding: 7px 11px; font-size: .78rem; }
+.feature-roll-table__result { display: grid; gap: 8px; margin-top: 10px; padding: 10px; border-radius: 12px; background: #f2e3c8; box-shadow: inset 3px 0 #7c304f; }
+.feature-roll-table__outcome { display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; }
+.feature-roll-table__outcome > span { display: grid; place-items: center; width: 38px; aspect-ratio: 1; border-radius: 50%; background: #7c304f; color: #fff; font-weight: 800; }
+.feature-roll-table__outcome div { display: grid; gap: 4px; }
+.feature-roll-table__outcome small { color: #936d49; text-transform: uppercase; font-weight: 800; }
+.feature-roll-table__outcome button, .feature-roll-table__choices button { border: 1px solid rgba(124, 48, 79, .3); border-radius: 9px; background: #fffaf0; color: #6b2945; text-align: left; }
+.feature-roll-table__outcome button { justify-self: start; padding: 5px 8px; }
+.feature-roll-table__outcome button.is-selected, .feature-roll-table__choices button.is-selected { background: #7c304f; color: #fff; }
+.feature-roll-table__complete { display: grid; max-height: 300px; overflow: auto; gap: 1px; margin-top: 9px; border: 1px solid #dbc7a4; border-radius: 11px; }
+.feature-roll-table__complete > div { display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 8px 10px; background: rgba(255, 252, 244, .94); font-size: .8rem; line-height: 1.4; }
+.feature-roll-table__complete > div:nth-child(even) { background: #f6ead3; }
+.feature-roll-table__complete strong { color: #7c304f; }
+.feature-roll-table__choices { display: grid; gap: 5px; max-height: 280px; overflow: auto; }
+.feature-roll-table__choices button { display: grid; grid-template-columns: 36px 1fr; gap: 8px; padding: 8px; }
+
+@media (max-width: 720px) {
+  .feature-mechanics > header { align-items: flex-start; flex-direction: column; }
+  .feature-roll-table__actions > button { flex: 1 1 auto; }
+}

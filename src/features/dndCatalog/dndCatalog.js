@@ -2,8 +2,8 @@ import { canManageSharedCatalog } from '../library/catalogPermissions.js';
 import { createToast, openConfirmModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { CATALOG_GROUPS, FIELD_META, RULES_VERSIONS, getCatalog } from './catalogConfig.js';
-import { catalogDescription, catalogName, catalogStatBlock } from './catalogLocale.js';
-import { renderCatalogAdvancedDetails, renderCatalogDescription, renderCatalogSource } from './catalogPresentation.js';
+import { catalogDescription, catalogName, catalogSourceLabel, catalogStatBlock } from './catalogLocale.js';
+import { renderCatalogAdvancedDetails, renderCatalogDescription } from './catalogPresentation.js';
 import {
   createCatalogRecord,
   deleteCatalogRecord,
@@ -82,7 +82,33 @@ function progressionCell(value) {
   return String(value);
 }
 
-function classProgressionTables(item) {
+const FULL_CASTER_SLOTS = [
+  [], [2], [3], [4, 2], [4, 3], [4, 3, 2], [4, 3, 3], [4, 3, 3, 1], [4, 3, 3, 2],
+  [4, 3, 3, 3, 1], [4, 3, 3, 3, 2], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1],
+  [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1],
+  [4, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1],
+  [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1]
+];
+
+function derivedSlotProgression(spellcasting = {}) {
+  const kind = String(spellcasting.casterProgression || spellcasting.caster_progression || '').trim().toLowerCase();
+  if (!kind || ['none', 'null', 'pact'].includes(kind)) return null;
+  const effectiveLevel = (level) => {
+    if (['full', '1', '1/1'].includes(kind)) return level;
+    if (['half', '1/2'].includes(kind)) return Math.floor(level / 2);
+    if (['artificer', 'half-up', '1/2-up'].includes(kind)) return Math.ceil(level / 2);
+    if (['third', '1/3'].includes(kind)) return Math.floor(level / 3);
+    return 0;
+  };
+  const rows = Array.from({ length: 20 }, (_, index) => {
+    const level = index + 1;
+    const slots = FULL_CASTER_SLOTS[effectiveLevel(level)] || [];
+    return Array.from({ length: 9 }, (_, slotIndex) => slots[slotIndex] ?? 0);
+  });
+  return rows.some((row) => row.some(Boolean)) ? rows : null;
+}
+
+export function classProgressionTables(item) {
   const data = item?.class_data && typeof item.class_data === 'object'
     ? item.class_data
     : item?.data && typeof item.data === 'object' ? item.data : {};
@@ -112,16 +138,59 @@ function classProgressionTables(item) {
     group.colLabels || group.columns || group.labels || [],
     group.rows || group.data || []
   ));
+  const spellcasting = item.spellcasting_data || data.spellcasting_data || {};
+  const explicitSlots = spellcasting.spell_slots || spellcasting.spellSlots || spellcasting.slots
+    || data.spell_slots || data.spellSlots || data.spell_slot_progression || data.spellSlotProgression;
+  const slotProgression = explicitSlots || derivedSlotProgression(spellcasting);
+  const preparedProgression = spellcasting.prepared_spells_progression || spellcasting.preparedSpellsProgression
+    || data.prepared_spells_progression || data.preparedSpellsProgression;
+  const cantripProgression = spellcasting.cantrip_progression || spellcasting.cantripProgression
+    || data.cantrip_progression || data.cantripProgression;
+  const progressionAt = (progression, level) => {
+    if (Array.isArray(progression)) return progression[level - 1];
+    if (progression && typeof progression === 'object') return progression[level] ?? progression[String(level)];
+    return undefined;
+  };
+  const progressionLength = (progression) => {
+    if (Array.isArray(progression)) return progression.length;
+    if (progression && typeof progression === 'object') return Math.max(0, ...Object.keys(progression).map(Number).filter(Number.isFinite));
+    return 0;
+  };
+  const spellProgressionLevels = Math.max(
+    progressionLength(slotProgression), progressionLength(preparedProgression), progressionLength(cantripProgression)
+  );
+  if (spellProgressionLevels) {
+    const rows = Array.from({ length: spellProgressionLevels }, (_, index) => {
+      const level = index + 1;
+      const rawSlots = progressionAt(slotProgression, level);
+      const slots = Array.isArray(rawSlots)
+        ? rawSlots
+        : rawSlots && typeof rawSlots === 'object'
+          ? Array.from({ length: 9 }, (__, slotIndex) => rawSlots[slotIndex + 1] ?? rawSlots[String(slotIndex + 1)] ?? 0)
+          : [];
+      return [
+        progressionAt(preparedProgression, level) ?? '—',
+        progressionAt(cantripProgression, level) ?? '—',
+        ...Array.from({ length: 9 }, (__, slotIndex) => slots[slotIndex] ?? 0)
+      ];
+    });
+    addTable(
+      'Progressione incantesimi',
+      ['Preparati', 'Trucchetti', ...Array.from({ length: 9 }, (_, index) => `Slot ${index + 1}°`)],
+      rows
+    );
+  }
   const candidates = [
     ['Progressione di classe', data.progression || data.level_progression || data.class_progression],
-    ['Slot incantesimo', item.spellcasting_data?.spell_slots || item.spellcasting_data?.slots || data.spellcasting_data?.spell_slots || data.spell_slots || data.spellSlots || data.spell_slot_progression || data.spellSlotProgression],
-    ['Incantesimi conosciuti', item.spellcasting_data?.spells_known_progression || data.spellcasting_data?.spells_known_progression || data.spells_known_progression || data.spellsKnownProgression],
-    ['Trucchetti conosciuti', item.spellcasting_data?.cantrip_progression || data.spellcasting_data?.cantrip_progression || data.cantrip_progression || data.cantripProgression]
+    ['Incantesimi conosciuti', spellcasting.spells_known_progression || spellcasting.spellsKnownProgression || data.spells_known_progression || data.spellsKnownProgression]
   ];
   candidates.forEach(([title, value]) => {
     if (Array.isArray(value)) {
       const first = value.find((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
-      addTable(title, first ? Object.keys(first).filter((key) => !['level', 'livello'].includes(key)) : [], value);
+      const labels = title === 'Slot incantesimo' && value.some((entry) => Array.isArray(entry))
+        ? Array.from({ length: 9 }, (_, index) => `Slot ${index + 1}°`)
+        : first ? Object.keys(first).filter((key) => !['level', 'livello'].includes(key)) : [];
+      addTable(title, labels, value);
     } else if (value && typeof value === 'object') {
       const entries = Object.entries(value).sort(([a], [b]) => Number(a) - Number(b));
       if (entries.length) {
@@ -158,6 +227,84 @@ function renderFeatureTimeline(grants) {
   return `<div class="dnd-class-level-timeline">${[...byLevel.entries()].sort(([a], [b]) => a - b).map(([level, entries]) => `<article><span class="dnd-class-level-timeline__level"><small>Livello</small><strong>${level}</strong></span><div>${entries.map((grant) => `<button type="button" data-linked-feature="${escapeHtml(grant.entity?.id || '')}"><strong>${escapeHtml(catalogName(grant.entity, 'Contenuto non disponibile'))}</strong><small>${escapeHtml(catalogDescription(grant.entity, grant.notes || 'Beneficio automatico'))}</small></button>`).join('')}</div></article>`).join('')}</div>`;
 }
 
+const CLASS_SUMMARY_LABELS = {
+  armor: 'Armature', armour: 'Armature', weapons: 'Armi', weapon: 'Armi', tools: 'Strumenti', tool: 'Strumenti',
+  skills: 'Abilità', skill: 'Abilità', savingthrows: 'Tiri salvezza', saving_throws: 'Tiri salvezza',
+  simple: 'Armi semplici', martial: 'Armi da guerra', light: 'Armature leggere', medium: 'Armature medie',
+  heavy: 'Armature pesanti', shields: 'Scudi', any: 'Qualsiasi'
+};
+
+const SKILL_LABELS = {
+  acrobatics: 'Acrobazia', animal_handling: 'Addestrare Animali', animalhandling: 'Addestrare Animali', arcana: 'Arcano',
+  athletics: 'Atletica', deception: 'Inganno', history: 'Storia', insight: 'Intuizione', intimidation: 'Intimidire',
+  investigation: 'Indagare', medicine: 'Medicina', nature: 'Natura', perception: 'Percezione', performance: 'Intrattenere',
+  persuasion: 'Persuasione', religion: 'Religione', sleight_of_hand: 'Rapidità di Mano', sleightofhand: 'Rapidità di Mano',
+  stealth: 'Furtività', survival: 'Sopravvivenza'
+};
+
+function summaryLabel(value) {
+  const raw = String(value || '').trim();
+  const key = raw.replace(/[\s-]+/g, '_').toLowerCase();
+  return SKILL_LABELS[key] || CLASS_SUMMARY_LABELS[key] || raw.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function summaryValue(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'string' || typeof value === 'number') return summaryLabel(value);
+  if (typeof value === 'boolean') return value ? 'Sì' : '';
+  if (Array.isArray(value)) return value.map(summaryValue).filter(Boolean).join(', ');
+  if (typeof value !== 'object') return '';
+  if (value.choose !== undefined) {
+    const choice = value.choose;
+    const options = choice?.from ?? choice?.options ?? choice;
+    const count = Number(choice?.count ?? choice?.amount ?? value.count ?? value.amount) || 1;
+    return `Scegline ${count}: ${summaryValue(options)}`;
+  }
+  if (value.from !== undefined) {
+    const count = Number(value.count ?? value.amount) || 1;
+    return `Scegline ${count}: ${summaryValue(value.from)}`;
+  }
+  return Object.entries(value).map(([key, entry]) => {
+    const formatted = summaryValue(entry);
+    return formatted ? `${summaryLabel(key)}: ${formatted}` : '';
+  }).filter(Boolean).join(' · ');
+}
+
+function firstClassValue(item, ...paths) {
+  for (const path of paths) {
+    const value = path.split('.').reduce((current, key) => current?.[key], item);
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return null;
+}
+
+export function renderClassSummary(item) {
+  const data = item?.class_data && typeof item.class_data === 'object' ? item.class_data
+    : item?.data && typeof item.data === 'object' ? item.data : {};
+  const source = { ...item, resolved_data: data, rules: data['5etools'] || data };
+  const spellcasting = item.spellcasting_data || data.spellcasting_data || {};
+  const starting = firstClassValue(source, 'rules.startingProficiencies', 'rules.starting_proficiencies', 'resolved_data.startingProficiencies', 'resolved_data.starting_proficiencies') || {};
+  const skills = firstClassValue(source,
+    'skill_proficiencies', 'resolved_data.skill_proficiencies', 'resolved_data.skillProficiencies',
+    'rules.skillProficiencies', 'rules.skill_proficiencies', 'rules.startingProficiencies.skills', 'rules.starting_proficiencies.skills'
+  ) ?? starting.skills;
+  const proficiencySource = firstClassValue(source, 'proficiencies', 'resolved_data.proficiencies') || starting;
+  const proficiencies = proficiencySource && typeof proficiencySource === 'object' && !Array.isArray(proficiencySource)
+    ? Object.fromEntries(Object.entries(proficiencySource).filter(([key]) => !['skills', 'skillProficiencies', 'skill_proficiencies', 'savingThrows', 'saving_throws'].includes(key)))
+    : proficiencySource;
+  const cards = [
+    ['Dado vita', item.hit_die ? String(item.hit_die).toLowerCase().startsWith('d') ? item.hit_die : `d${item.hit_die}` : null],
+    ['Caratteristica incantatore', spellcasting.spellcastingAbility || spellcasting.spellcasting_ability || spellcasting.ability],
+    ['Tiri salvezza', firstClassValue(source, 'saving_throw_proficiencies', 'resolved_data.saving_throw_proficiencies', 'resolved_data.savingThrows', 'rules.proficiency', 'rules.savingThrows')],
+    ['Competenze', proficiencies],
+    ['Abilità selezionabili', skills]
+  ].map(([label, value]) => {
+    const formatted = summaryValue(value);
+    return formatted ? `<article><small>${escapeHtml(label)}</small><strong>${escapeHtml(formatted)}</strong></article>` : '';
+  }).filter(Boolean).join('');
+  return cards ? `<section class="dnd-class-summary"><header><small>Profilo della classe</small><h3>Statistiche e competenze</h3></header><div>${cards}</div></section>` : '';
+}
+
 function fieldInput(key, value = '') {
   const meta = FIELD_META[key] || {};
   const safeValue = escapeHtml(value ?? '');
@@ -176,7 +323,7 @@ function fieldInput(key, value = '') {
 
 function card(catalog, item) {
   const image = sanitizeImageUrl(item.image_url);
-  const subtitle = item.category || item.creature_type || item.source || catalog.singular;
+  const subtitle = item.category || item.creature_type || catalogSourceLabel(item.source) || catalog.singular;
   return `<article class="dnd-catalog-card" data-catalog-record="${escapeHtml(item.id)}" tabindex="0" role="button">
     <div class="dnd-catalog-card__media">${image ? `<img src="${image}" alt="">` : `<span aria-hidden="true">${catalog.icon}</span>`}</div>
     <div class="dnd-catalog-card__body">
@@ -208,14 +355,14 @@ async function openRecordDetail(catalog, item, canManage, callbacks) {
   const { backdrop, close } = modalShell(`
     <header class="dnd-catalog-detail__header">
       <div>${image ? `<img src="${image}" alt="">` : `<span class="dnd-catalog-detail__icon">${catalog.icon}</span>`}</div>
-      <section><small>${escapeHtml(catalog.singular)} · Regole ${escapeHtml(item.rules_version || '—')}</small><h2>${escapeHtml(catalogName(item, 'Senza nome'))}</h2><p>${escapeHtml(item.source || 'Fonte non indicata')}</p></section>
+      <section><small>${escapeHtml(catalog.singular)} · Regole ${escapeHtml(item.rules_version || '—')}</small><h2>${escapeHtml(catalogName(item, 'Senza nome'))}</h2><p>${escapeHtml(catalogSourceLabel(item.source) || 'Fonte non indicata')}</p></section>
       <button type="button" class="dnd-catalog-modal__close" data-modal-close aria-label="Chiudi">×</button>
     </header>
     <div class="dnd-catalog-detail__content">
       ${renderCatalogAdvancedDetails(catalog, item)}
+      ${catalog.key === 'classes' ? renderClassSummary(item) : ''}
       <section class="dnd-catalog-detail__relations"><h3>${catalog.key === 'features' ? 'Concesso da' : catalog.key === 'classes' ? 'Progressione della classe' : 'Privilegi e abilità collegate'}</h3><div data-record-relations><div class="dnd-catalog-inline-loader"><span></span>Caricamento collegamenti…</div></div></section>
       ${renderCatalogDescription(item)}
-      ${renderCatalogSource(item)}
     </div>
     ${canManage ? `<footer class="dnd-catalog-modal__actions"><button type="button" data-record-delete class="danger">Elimina</button><button type="button" data-record-edit class="primary">Modifica</button></footer>` : ''}
   `, 'dnd-catalog-detail');
@@ -246,12 +393,6 @@ async function openRecordDetail(catalog, item, canManage, callbacks) {
             ${progression.errors?.length ? '<p class="dnd-class-partial-warning">Alcune informazioni sulle scelte non sono disponibili, ma abilità e progressione restano consultabili.</p>' : ''}
           </section>
           <section class="dnd-class-detail-panel" role="tabpanel" data-class-detail-panel="overview" hidden>
-            <section class="dnd-class-overview-strip">
-              <div><small>Dado vita</small><strong>${escapeHtml(item.hit_die || '—')}</strong></div>
-              <div><small>Caratteristiche</small><strong>${escapeHtml(displayValue(item.primary_abilities || '—'))}</strong></div>
-              <div><small>Tiri salvezza</small><strong>${escapeHtml(displayValue(item.saving_throw_proficiencies || item.saving_throws || '—'))}</strong></div>
-              <div><small>Sottoclassi</small><strong>${details?.subclasses?.length || 0}</strong></div>
-            </section>
             <section class="dnd-catalog-relation-block dnd-class-tables"><header><div><small>Incantesimi e risorse</small><h4>Tabelle di progressione</h4></div></header>${renderClassTables(item)}</section>
           </section>
           <section class="dnd-class-detail-panel" role="tabpanel" data-class-detail-panel="subclasses" hidden>

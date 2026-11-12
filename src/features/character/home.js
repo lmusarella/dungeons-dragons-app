@@ -55,6 +55,9 @@ import { attachModalValueStepper, buildHpActionFields } from './home/hpModal.js'
 import { abilityShortLabel, conditionList, damageTypeList, savingThrowList, skillList } from './home/constants.js';
 import { normalizeSpellSchool } from './spellSchools.js';
 import { expandSpellSourceSelection, groupSpellSources } from './spellSources.js';
+import { getCharacterProgression } from '../dndCatalog/catalogRelations.js';
+import { getFeatureDiceAdapter, resolveCharacterFeatureMechanics } from './featureMechanicsResolver.js';
+import { buildFeatureRollTables, installFeatureRollTables } from './home/featureRollTables.js';
 import {
   applyDeathSaveRoll,
   applyRestRecovery,
@@ -884,12 +887,24 @@ export async function renderHome(container) {
   let resources = Array.isArray(state.cache.resources) ? state.cache.resources : [];
   let items = Array.isArray(state.cache.items) ? state.cache.items : [];
   let companions = Array.isArray(state.cache.companions) ? state.cache.companions : [];
+  let featureMechanics = [];
   if (!offline && activeCharacter) {
-    const [resourcesResult, itemsResult, characterSpellsResult, companionsResult] = await Promise.allSettled([
+    const characterLevel = Number(activeCharacter.data?.level) || 1;
+    const catalogProgressionRequest = activeCharacter.data?.shared_class_id || activeCharacter.data?.shared_subclass_id
+      ? getCharacterProgression({
+        classId: activeCharacter.data?.shared_class_id,
+        subclassId: activeCharacter.data?.shared_subclass_id,
+        level: characterLevel,
+        classLevel: characterLevel,
+        rulesVersion: String(activeCharacter.data?.rules_version || activeCharacter.system || '2014').replace(/\D/g, '') || '2014'
+      })
+      : Promise.resolve({ automaticGrants: [], choiceGroups: [] });
+    const [resourcesResult, itemsResult, characterSpellsResult, companionsResult, progressionResult] = await Promise.allSettled([
       fetchResources(activeCharacter.id),
       fetchItems(activeCharacter.id),
       fetchCharacterSpells(activeCharacter.id),
-      fetchCompanions(activeCharacter.id)
+      fetchCompanions(activeCharacter.id),
+      catalogProgressionRequest
     ]);
     const snapshot = {};
     if (resourcesResult.status === 'fulfilled') {
@@ -932,6 +947,11 @@ export async function renderHome(container) {
         const merged = dedupeCharacterSpells([...currentSpells, ...linkedToMerge]);
         activeCharacter.data = { ...(activeCharacter.data || {}), spells: merged };
       }
+    }
+    if (progressionResult.status === 'fulfilled') {
+      featureMechanics = resolveCharacterFeatureMechanics(progressionResult.value, activeCharacter);
+    } else {
+      console.warn('Meccaniche delle capacità non disponibili', progressionResult.reason);
     }
     if (Object.keys(snapshot).length) {
       await cacheSnapshot(snapshot);
@@ -1052,6 +1072,7 @@ export async function renderHome(container) {
             ` : ''}
           </header>
           <div class="home-scroll-body home-scroll-body--resources">
+            ${buildFeatureRollTables(featureMechanics)}
             ${activeCharacter
     ? buildResourceSections(resources.map((resource) => ({
       ...resource,
@@ -1619,6 +1640,35 @@ export async function renderHome(container) {
       historyLabel: resource.name || null
     });
   };
+
+  installFeatureRollTables(container, featureMechanics, ({ title, notation }) => {
+    const adapter = getFeatureDiceAdapter(notation);
+    const parsed = parseDamageDice(adapter.engineFormula);
+    if (!parsed?.notation) {
+      createToast('Formula del dado non valida per questa capacità', 'error');
+      return Promise.resolve(null);
+    }
+    const adapted = adapter.engineFormula !== adapter.requestedFormula;
+    const session = openDiceOverlay({
+      keepOpen: adapted,
+      title: `${title || 'Capacità speciale'}${adapted ? ` · ${adapter.requestedFormula}` : ''}`,
+      mode: 'generic',
+      notation: parsed.notation,
+      modifier: 0,
+      rollType: 'GEN',
+      characterId: activeCharacter?.id,
+      historyLabel: title || null,
+      onRollComplete: ({ total }) => {
+        const mapped = adapter.mapResult(total);
+        if (adapted) {
+          const output = document.querySelector('#dice-overlay [data-dice-result]');
+          if (output) output.textContent = String(mapped);
+          updateDiceOverlayWarning(`${adapter.requestedFormula}: risultato ${mapped} (simulato con ${adapter.engineFormula})`);
+        }
+      }
+    });
+    return session.waitForRoll.then((value) => value == null ? null : adapter.mapResult(value));
+  });
 
   const getResourceChildren = (resource) => resources.filter(
     (entry) => String(entry.parent_resource_id) === String(resource?.id)

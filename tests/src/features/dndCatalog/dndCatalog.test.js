@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { classProgressionTables } from '../../../../src/features/dndCatalog/dndCatalog.js';
 
 describe('catalogo D&D condiviso', () => {
+  it('deriva la progressione completa degli slot per un incantatore full', () => {
+    const tables = classProgressionTables({
+      spellcasting_data: {
+        casterProgression: 'full',
+        cantripProgression: [4, 4, 4, 5],
+        preparedSpellsProgression: [2, 4, 6, 7]
+      }
+    });
+    const slots = tables.find((table) => table.title === 'Progressione incantesimi');
+    expect(slots.columns).toEqual(['Livello', 'Preparati', 'Trucchetti', 'Slot 1°', 'Slot 2°', 'Slot 3°', 'Slot 4°', 'Slot 5°', 'Slot 6°', 'Slot 7°', 'Slot 8°', 'Slot 9°']);
+    expect(slots.rows[0]).toEqual([1, 2, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(slots.rows[19]).toEqual([20, '—', '—', 4, 3, 3, 3, 3, 2, 2, 1, 1]);
+    expect(tables.filter((table) => ['Progressione incantesimi', 'Trucchetti conosciuti', 'Incantesimi preparati'].includes(table.title))).toHaveLength(1);
+  });
+
   it('integra navigazione, cataloghi e modalità amministrativa', () => {
     const source = readFileSync('src/features/dndCatalog/dndCatalog.js', 'utf8');
     const config = readFileSync('src/features/dndCatalog/catalogConfig.js', 'utf8');

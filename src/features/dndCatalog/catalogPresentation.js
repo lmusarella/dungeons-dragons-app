@@ -1,5 +1,6 @@
 import { escapeHtml } from '../../lib/html.js';
-import { catalogDescription, catalogName, catalogStatBlock } from './catalogLocale.js';
+import { findFeatureRollTables, mechanicsText, resolveAdditionalSpells } from '../character/featureMechanicsResolver.js';
+import { catalogDescription, catalogName, catalogSourceLabel, catalogStatBlock } from './catalogLocale.js';
 
 export const CATALOG_LABELS_IT = {
   str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma',
@@ -17,12 +18,15 @@ export const CATALOG_LABELS_IT = {
   frightened: 'Spaventato', grappled: 'Afferrato', incapacitated: 'Incapacitato', invisible: 'Invisibile',
   paralyzed: 'Paralizzato', petrified: 'Pietrificato', poisoned: 'Avvelenato', prone: 'Prono', restrained: 'Trattenuto',
   stunned: 'Stordito', unconscious: 'Privo di sensi', passive: 'Passiva', at_will: 'A volontà'
+  , casterprogression: 'Progressione incantatore', cantripprogression: 'Trucchetti per livello',
+  preparedspellsprogression: 'Incantesimi preparati per livello', spellcastingability: 'Caratteristica da incantatore'
 };
 
 const EMPTY_VALUES = new Set(['', 'null', 'undefined', '—']);
 
 export function labelIt(code = '') {
   const key = String(code).trim().toLowerCase();
+  if (['', 'null', 'undefined'].includes(key)) return '';
   return CATALOG_LABELS_IT[key] || key.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -198,6 +202,60 @@ function renderCreature(item) {
   ].join('');
 }
 
+function rollLabel(entry) {
+  return entry.minRoll === entry.maxRoll ? String(entry.minRoll) : `${entry.minRoll}–${entry.maxRoll}`;
+}
+
+function renderFeatureRollTables(item) {
+  const tables = findFeatureRollTables(item.mechanics, item);
+  if (!tables.length) return '';
+  return tables.map((table) => section(
+    table.title || 'Tabella degli effetti',
+    `<div class="catalog-feature-table__meta"><span>Dado</span><strong>${escapeHtml(table.diceFormula || '—')}</strong><small>${table.entries.length} risultati possibili</small></div>
+     <div class="catalog-feature-table"><table><thead><tr><th>Risultato</th><th>Effetto</th></tr></thead><tbody>${table.entries.map((entry) => `<tr><th>${escapeHtml(rollLabel(entry))}</th><td>${escapeHtml(entry.description)}</td></tr>`).join('')}</tbody></table></div>`,
+    'Meccanica casuale'
+  )).join('');
+}
+
+const SPELL_BENEFIT_LABELS = {
+  known: 'Incantesimi conosciuti',
+  prepared: 'Sempre preparati',
+  expanded: 'Espansione della lista',
+  innate: 'Incantesimi innati'
+};
+
+function spellNodeRows(value, context = '') {
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string' || typeof value === 'number') {
+    return [{ context, text: mechanicsText(value) || String(value) }];
+  }
+  if (Array.isArray(value)) return value.flatMap((entry) => spellNodeRows(entry, context));
+  if (typeof value !== 'object') return [];
+  if (value.choose !== undefined) {
+    const choice = mechanicsText(value.choose) || present(value.choose);
+    const amount = value.count ?? value.amount;
+    return [{ context, text: `Scelta${amount ? ` (${amount})` : ''}: ${choice}` }];
+  }
+  if (value.all !== undefined) return spellNodeRows(value.all, context ? `${context} · Tutti` : 'Tutti');
+  return Object.entries(value).flatMap(([key, entry]) => {
+    const label = /^\d+$/.test(key) ? `Livello ${key}` : labelIt(key);
+    return spellNodeRows(entry, context ? `${context} · ${label}` : label);
+  });
+}
+
+function renderAdditionalSpellBenefits(item) {
+  const benefits = resolveAdditionalSpells(item.subclass_data || item.data);
+  if (!benefits.length) return '';
+  const content = benefits.map((benefit) => {
+    const rows = spellNodeRows(benefit.value);
+    return `<article class="catalog-spell-benefit catalog-spell-benefit--${escapeHtml(benefit.kind)}">
+      <header><span>${escapeHtml(SPELL_BENEFIT_LABELS[benefit.kind] || labelIt(benefit.kind))}</span><small>${rows.length} ${rows.length === 1 ? 'voce' : 'voci'}</small></header>
+      <div>${rows.length ? rows.map((row) => `<p>${row.context ? `<strong>${escapeHtml(row.context)}</strong>` : ''}<span>${escapeHtml(row.text)}</span></p>`).join('') : '<p><span>Dati presenti ma non interpretabili automaticamente.</span></p>'}</div>
+    </article>`;
+  }).join('');
+  return section('Incantesimi e benefici aggiuntivi', `<div class="catalog-spell-benefits">${content}</div>`, 'Dati della sottoclasse');
+}
+
 function renderStandard(catalog, item) {
   const key = catalog.key;
   const data = key === 'classes' ? dataSource(item, 'class_data', 'data')
@@ -210,9 +268,9 @@ function renderStandard(catalog, item) {
                 : key === 'fighting-styles' ? dataSource(item, 'style_data', 'data') : {};
   const configurations = {
     classes: {
-      stats: [stat('Dado Vita', normalizeHitDie(item.hit_die)), stat('Livello sottoclasse', item.subclass_selection_level ?? data.subclass_selection_level)],
-      fields: [['primary_abilities', 'Caratteristiche principali'], ['saving_throw_proficiencies', 'Tiri salvezza'], ['proficiencies', 'Competenze']],
-      extra: item.spellcasting_data || data.spellcasting_data
+      stats: [],
+      fields: [],
+      extra: null
     },
     subclasses: { stats: [stat('Livello disponibile', item.subclass_selection_level ?? data.subclass_selection_level)], fields: [['proficiencies', 'Competenze'], ['benefits', 'Benefici']] },
     species: { stats: [stat('Taglia', labelIt(item.size)), stat('Velocità', item.speed_m !== undefined ? `${item.speed_m} m` : '')], fields: [['proficiencies', 'Competenze'], ['languages', 'Lingue'], ['senses', 'Sensi'], ['special_traits', 'Tratti speciali']] },
@@ -227,8 +285,11 @@ function renderStandard(catalog, item) {
   const stats = (config.stats || []).filter(Boolean).join('');
   const props = selectedStructuredProperties(data, config.fields || []);
   const extra = config.extra ? properties(Object.entries(config.extra).map(([field, value]) => property(labelIt(field), value))) : '';
+  const specialMechanics = key === 'features' ? renderFeatureRollTables(item)
+    : key === 'subclasses' ? renderAdditionalSpellBenefits(item) : '';
   return [
     stats ? `<div class="catalog-stats-grid catalog-stats-grid--primary">${stats}</div>` : '',
+    specialMechanics,
     section('Proprietà e meccaniche', props),
     section('Incantesimi', extra)
   ].join('');
@@ -245,5 +306,5 @@ export function renderCatalogDescription(item) {
 }
 
 export function renderCatalogSource(item) {
-  return item.source ? section('Fonte', `<p class="catalog-source">${escapeHtml(item.source)}</p>`) : '';
+  return item.source ? section('Fonte', `<p class="catalog-source">${escapeHtml(catalogSourceLabel(item.source))}</p>`) : '';
 }
