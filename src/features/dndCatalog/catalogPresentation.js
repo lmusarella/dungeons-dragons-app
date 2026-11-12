@@ -248,12 +248,60 @@ function renderAdditionalSpellBenefits(item) {
   if (!benefits.length) return '';
   const content = benefits.map((benefit) => {
     const rows = spellNodeRows(benefit.value);
-    return `<article class="catalog-spell-benefit catalog-spell-benefit--${escapeHtml(benefit.kind)}">
-      <header><span>${escapeHtml(SPELL_BENEFIT_LABELS[benefit.kind] || labelIt(benefit.kind))}</span><small>${rows.length} ${rows.length === 1 ? 'voce' : 'voci'}</small></header>
-      <div>${rows.length ? rows.map((row) => `<p>${row.context ? `<strong>${escapeHtml(row.context)}</strong>` : ''}<span>${escapeHtml(row.text)}</span></p>`).join('') : '<p><span>Dati presenti ma non interpretabili automaticamente.</span></p>'}</div>
-    </article>`;
+    const chips = rows.length
+      ? rows.map((row) => `<span class="catalog-spell-chip">${row.context ? `<b>${escapeHtml(row.context)}</b>` : ''}${escapeHtml(row.text)}</span>`).join('')
+      : '<span class="catalog-spell-chip">Dati non interpretabili automaticamente</span>';
+    return `<div class="catalog-spell-row catalog-spell-row--${escapeHtml(benefit.kind)}"><strong>${escapeHtml(SPELL_BENEFIT_LABELS[benefit.kind] || labelIt(benefit.kind))}</strong><div>${chips}</div></div>`;
   }).join('');
-  return section('Incantesimi e benefici aggiuntivi', `<div class="catalog-spell-benefits">${content}</div>`, 'Dati della sottoclasse');
+  return section('Incantesimi e benefici aggiuntivi', `<div class="catalog-spell-compact">${content}</div>`);
+}
+
+const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+const FEET_TO_METERS = (feet) => Math.round(Number(feet) * 0.3 * 10) / 10;
+
+function signed(value) {
+  const number = Number(value);
+  return `${number >= 0 ? '+' : ''}${number}`;
+}
+
+function abilityOption(option) {
+  if (!option || typeof option !== 'object') return present(option);
+  const fixed = ABILITY_KEYS.filter((key) => option[key] !== undefined).map((key) => `${labelIt(key)} ${signed(option[key])}`);
+  const choice = option.choose;
+  if (choice) {
+    const from = (choice.from || ABILITY_KEYS).map(labelIt).join(', ');
+    const amount = choice.amount ?? 1;
+    const count = choice.count ?? 1;
+    fixed.push(`${count} a scelta tra ${from} ${signed(amount)}`);
+  }
+  if (option.any !== undefined) fixed.push(`Qualsiasi ${signed(option.any)}`);
+  return fixed.join(' · ');
+}
+
+function speciesAbilityBonus(item, data, rules) {
+  const raw = data.ability_increases ?? data.ability_score_increases ?? data.ability_bonuses ?? data.abilityBonuses
+    ?? rules.ability ?? item.ability_increases ?? item.ability;
+  if (!raw) return '';
+  const options = Array.isArray(raw) ? raw : [raw];
+  return options.map(abilityOption).filter(Boolean).join(' oppure ');
+}
+
+function speciesMovement(item, data, rules) {
+  const speed = rules.speed ?? data.speed ?? item.speed;
+  if (!speed || typeof speed !== 'object') return [];
+  const walk = numericDistance(speed.walk);
+  return Object.entries(speed).filter(([type]) => type !== 'walk' && type !== 'choose').map(([type, raw]) => {
+    const distance = raw === true ? walk : numericDistance(raw);
+    if (distance === null || distance === undefined) return '';
+    const note = raw && typeof raw === 'object' ? raw.condition || raw.note : '';
+    return stat(`Velocità di ${labelIt(type).toLowerCase()}`, `${FEET_TO_METERS(distance)} m`, note || (raw === true ? 'Pari alla velocità base' : ''));
+  }).join('');
+}
+
+function speciesDarkvision(data, rules) {
+  const value = rules.darkvision ?? data.darkvision;
+  const distance = numericDistance(value);
+  return distance ? stat('Scurovisione', `${FEET_TO_METERS(distance)} m`) : '';
 }
 
 function renderStandard(catalog, item) {
@@ -273,7 +321,7 @@ function renderStandard(catalog, item) {
       extra: null
     },
     subclasses: { stats: [stat('Livello disponibile', item.subclass_selection_level ?? data.subclass_selection_level)], fields: [['proficiencies', 'Competenze'], ['benefits', 'Benefici']] },
-    species: { stats: [stat('Taglia', labelIt(item.size)), stat('Velocità', item.speed_m !== undefined ? `${item.speed_m} m` : '')], fields: [['proficiencies', 'Competenze'], ['languages', 'Lingue'], ['senses', 'Sensi'], ['special_traits', 'Tratti speciali']] },
+    species: { stats: [stat('Taglia', labelIt(item.size)), stat('Velocità', item.speed_m !== undefined ? `${item.speed_m} m` : '')], fields: [['creature_type', 'Tipo di creatura'], ['senses', 'Sensi'], ['resistances', 'Resistenze'], ['languages', 'Lingue'], ['proficiencies', 'Competenze'], ['age', 'Età'], ['special_traits', 'Tratti speciali']] },
     'species-variants': { stats: [stat('Tipo di variante', labelIt(item.variant_kind))], fields: [['bonuses', 'Bonus'], ['proficiencies', 'Competenze'], ['traits', 'Tratti']] },
     feats: { stats: [stat('Categoria', labelIt(item.feat_category || item.category)), stat('Ripetibile', item.repeatable)], fields: [['prerequisites', 'Prerequisiti'], ['ability_increases', 'Incrementi caratteristiche'], ['benefits', 'Benefici']] },
     backgrounds: { stats: [], fields: [['skill_proficiencies', 'Competenze nelle abilità'], ['tool_proficiencies', 'Competenze negli strumenti'], ['languages', 'Lingue'], ['ability_increases', 'Incrementi caratteristiche'], ['starting_equipment', 'Equipaggiamento iniziale'], ['origin_feat', 'Talento di Origine'], ['benefits', 'Benefici']] },
@@ -282,11 +330,14 @@ function renderStandard(catalog, item) {
   };
   const config = configurations[key];
   if (!config) return '';
-  const stats = (config.stats || []).filter(Boolean).join('');
+  const rules = data['5etools'] && typeof data['5etools'] === 'object' ? data['5etools'] : data;
+  const speciesStats = key === 'species' ? [speciesMovement(item, data, rules), speciesDarkvision(data, rules)] : [];
+  const stats = [...(config.stats || []), ...speciesStats].filter(Boolean).join('');
   const props = selectedStructuredProperties(data, config.fields || []);
   const extra = config.extra ? properties(Object.entries(config.extra).map(([field, value]) => property(labelIt(field), value))) : '';
   const specialMechanics = key === 'features' ? renderFeatureRollTables(item)
     : key === 'subclasses' ? renderAdditionalSpellBenefits(item) : '';
+  if (key === 'species') return stats || props ? `<div class="catalog-species-overview">${stats ? `<div class="catalog-stats-grid catalog-stats-grid--primary">${stats}</div>` : ''}${props}</div>` : '';
   return [
     stats ? `<div class="catalog-stats-grid catalog-stats-grid--primary">${stats}</div>` : '',
     specialMechanics,

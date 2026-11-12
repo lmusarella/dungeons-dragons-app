@@ -26,6 +26,12 @@ import {
   getSpeciesDetails
 } from '../../dndCatalog/catalogRelations.js';
 import { catalogDescription, catalogName } from '../../dndCatalog/catalogLocale.js';
+import { createSpeciesAsiPanel } from './speciesAsiPanel.js';
+
+function parseSpeciesAsiRecord(raw) {
+  if (!raw) return null;
+  try { return JSON.parse(String(raw)); } catch { return null; }
+}
 
 
 function attachDrawerNumberStepper(input, {
@@ -202,6 +208,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       <label class="field"><span>Variante della specie</span><select name="shared_species_variant_id" disabled><option value="">Nessuna selezione</option></select></label>
       <label class="field"><span>Background dal catalogo</span><select name="shared_background_id"><option value="">Nessuna selezione</option></select></label>
     </div>
+    <section class="species-asi" data-species-asi hidden></section>
+    <input type="hidden" name="species_asi_json" value="">
     <section class="character-catalog-progression" data-character-catalog-progression><p>Seleziona classe, specie o background per vedere benefici e scelte sbloccati.</p></section>
   `;
 
@@ -956,7 +964,16 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     classLevel: Number(levelInput?.value) || 1,
     rulesVersion: characterSystemSelect.value
   });
+  const speciesAsiPanel = createSpeciesAsiPanel({
+    root: form.querySelector('[data-species-asi]'),
+    form,
+    hiddenInput: form.querySelector('input[name="species_asi_json"]'),
+    initialRecord: characterData.species_asi || null,
+    isExisting: Boolean(character),
+    tashaCustomOrigin: characterData.campaign_rules?.tasha_custom_origin === true
+  });
   const refreshProgression = async (sequence) => {
+    void speciesAsiPanel.update({ speciesId: catalogSpeciesSelect?.value || null, variantId: catalogVariantSelect?.value || null, rulesVersion: characterSystemSelect.value });
     try {
       const progression = await getCharacterProgression(catalogContext());
       if (sequence !== catalogLoadSequence) return;
@@ -1014,6 +1031,8 @@ export async function openCharacterDrawer(user, onSave, character = null) {
         catalogVariantSelect.value = characterData.shared_species_variant_id || '';
         await refreshProgression(catalogLoadSequence);
       }
+      speciesAsiPanel.setReady();
+      void speciesAsiPanel.update({ speciesId: catalogSpeciesSelect?.value || null, variantId: catalogVariantSelect?.value || null, rulesVersion: characterSystemSelect.value });
     } catch {
       if (sequence !== catalogLoadSequence) return;
       if (catalogStatus) catalogStatus.textContent = 'Catalogo non disponibile';
@@ -1251,6 +1270,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     shared_species_variant_id: formData.get('shared_species_variant_id') || null,
     shared_background_id: formData.get('shared_background_id') || null,
     catalog_choice_option_ids: [...selectedChoiceIds],
+    species_asi: parseSpeciesAsiRecord(formData.get('species_asi_json')) ?? characterData.species_asi ?? null,
     speed: toNumberOrNull(formData.get('speed')),
     darkvision_enabled: formData.has('darkvision_enabled'),
     darkvision_range_m: formData.has('darkvision_enabled') ? (toNumberOrNull(formData.get('darkvision_range_m')) ?? 18) : null,

@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase.js';
 import { catalogName } from './catalogLocale.js';
+import { getCopyReference, sourceCode } from '../character/speciesAsiResolver.js';
 
 const cache = new Map();
 
@@ -282,4 +283,22 @@ export async function getCharacterProgression(context = {}) {
     choiceGroups: choiceResult.status === 'fulfilled' ? choiceResult.value : [],
     errors: [grantResult, choiceResult].filter((result) => result.status === 'rejected').map((result) => result.reason)
   };
+}
+
+export async function getSpeciesAsiSources(speciesId, variantId, rulesVersion) {
+  const details = await getSpeciesDetails(speciesId, variantId, rulesVersion);
+  if (!details) return null;
+  const copyChain = [];
+  const visited = new Set([String(details.id)]);
+  let reference = getCopyReference(details);
+  while (reference && copyChain.length < 5) {
+    const candidates = unwrap(await supabase.from('shared_species').select('*').eq('rules_version', rulesVersion).eq('name', reference.name));
+    const normalized = String(reference.source || '').toUpperCase();
+    const original = candidates.find((row) => !normalized || sourceCode(row) === normalized.replace(/[\s_-]+/g, '')) || null;
+    if (!original || visited.has(String(original.id))) break;
+    visited.add(String(original.id));
+    copyChain.push(original);
+    reference = getCopyReference(original);
+  }
+  return { species: details, variants: details.variants || [], variant: details.variant, copyChain };
 }
