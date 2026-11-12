@@ -63,11 +63,10 @@ describe('catalogo D&D condiviso', () => {
     expect(resolver).toContain('getSubclassProgressions');
     expect(resolver).toContain('row.unlock_level ?? row.required_level ?? row.level');
     expect(resolver).toContain('Promise.allSettled');
-    expect(drawer).toContain('name="shared_class_id"');
-    expect(drawer).toContain('name="shared_subclass_id"');
-    expect(drawer).toContain('catalog_choice_option_ids');
-    expect(drawer).toContain('Completa la scelta obbligatoria');
-    expect(drawer).toContain('shared_species_variant_id');
+    expect(drawer).not.toContain('name="shared_class_id"');
+    expect(drawer).toContain('shared_class_id: characterData.shared_class_id ?? null');
+    expect(drawer).toContain('catalog_choice_option_ids: characterData.catalog_choice_option_ids ?? []');
+    expect(drawer).toContain('shared_species_variant_id: characterData.shared_species_variant_id ?? null');
   });
 
   it('pagina i dati sul server e protegge i payload amministrativi', () => {
