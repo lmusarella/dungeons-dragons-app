@@ -77,6 +77,10 @@ registerRoute('dnd-catalog', async (container) => {
   const { renderDndCatalog } = await import('./features/dndCatalog/dndCatalog.js');
   await renderDndCatalog(container);
 });
+registerRoute('character-builder', async (container) => {
+  const { renderCharacterBuilder } = await import('./features/characterBuilder/characterBuilder.js');
+  await renderCharacterBuilder(container);
+});
 registerRoute('game-rooms', async (container) => {
   const { renderGameRooms } = await import('./features/gameRooms/gameRooms.js');
   await renderGameRooms(container);

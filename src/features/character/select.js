@@ -39,7 +39,7 @@ export async function renderCharacterSelect(container) {
           </div>
           <div class="character-select-hero__actions">
             <span class="character-select-header__count"><strong>${characters.length}</strong> ${characters.length === 1 ? 'personaggio' : 'personaggi'}</span>
-            ${canCreateCharacter ? '<button class="character-select-add" type="button" data-create-character><span aria-hidden="true">＋</span> Nuovo personaggio</button>' : ''}
+            ${canCreateCharacter ? '<button class="character-select-add" type="button" data-create-character><span aria-hidden="true">＋</span> Nuovo personaggio</button><button class="character-select-add" type="button" data-guided-character><span aria-hidden="true">✦</span> Creazione guidata</button>' : ''}
           </div>
         </header>
         <div class="card character-select-card character-select-card--refined">
@@ -61,6 +61,7 @@ export async function renderCharacterSelect(container) {
       });
     });
 
+  container.querySelector('[data-guided-character]')?.addEventListener('click', () => navigate('character-builder'));
   const createButton = container.querySelector('[data-create-character]');
     if (createButton) {
       createButton.addEventListener('click', () => {

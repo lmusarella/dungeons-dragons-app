@@ -229,6 +229,15 @@ export async function getCatalogParent(catalogKey, item) {
   });
 }
 
+/** Tutte le concessioni di una classe, senza raggruppare per capacità (serve il livello di ogni ripetizione). */
+export async function getClassFeatureLevels(classId, rulesVersion) {
+  if (!classId) return [];
+  const rows = await fetchBySources('shared_grants', { classId });
+  return (await resolveTargets(rows, TARGETS, rulesVersion))
+    .filter((grant) => grant.target_type === 'feature')
+    .sort((a, b) => (Number(a.unlock_level) || 0) - (Number(b.unlock_level) || 0));
+}
+
 export async function getAutomaticGrants(context = {}) {
   const rows = (await fetchBySources('shared_grants', context)).filter((grant) => isUnlocked(grant, context));
   const resolved = await resolveTargets(rows, TARGETS, context.rulesVersion);

@@ -30,7 +30,7 @@ async function renderRoute() {
   const appHeader = document.querySelector('[data-app-header]');
   const offlineBanner = document.querySelector('[data-offline-banner]');
   const appShell = document.querySelector('.app-shell');
-  const hideShell = route === 'login' || route === 'characters' || route === 'library' || route === 'dnd-catalog' || route === 'settings' || route === 'game-rooms';
+  const hideShell = route === 'login' || route === 'characters' || route === 'library' || route === 'dnd-catalog' || route === 'character-builder' || route === 'settings' || route === 'game-rooms';
   const hideHeader = route === 'login';
   const isAuthRoute = route === 'login' || route === 'characters';
   const applyRouteShellState = () => {

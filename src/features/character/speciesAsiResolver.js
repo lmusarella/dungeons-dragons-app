@@ -15,7 +15,7 @@ const isObject = (value) => Boolean(value) && typeof value === 'object' && !Arra
 export const emptyAsi = () => Object.fromEntries(ABILITY_KEYS.map((key) => [key, 0]));
 
 export function rulesData(row) {
-  const raw = row?.species_data ?? row?.variant_data ?? row?.data;
+  const raw = row?.species_data ?? row?.variant_data ?? row?.background_data ?? row?.class_data ?? row?.subclass_data ?? row?.data;
   if (!isObject(raw)) return {};
   return isObject(raw['5etools']) ? { ...raw, ...raw['5etools'] } : raw;
 }
@@ -232,5 +232,28 @@ export function buildSpeciesAsiRecord({ resolution, choice, evaluation, speciesI
     complete: Boolean(evaluation?.complete),
     tasha_custom_origin: Boolean(tashaCustomOrigin),
     applied: evaluation?.applied || emptyAsi()
+  };
+}
+
+/**
+ * Regole 2024: gli incrementi alle caratteristiche provengono dal background. Per le regole 2014 il background
+ * non concede incrementi. Stessa struttura di risoluzione degli incrementi di specie.
+ * @returns {AsiResolution}
+ */
+export function resolveBackgroundAsi({ background, rulesVersion } = {}) {
+  const version = String(rulesVersion ?? background?.rules_version ?? '');
+  const base = { rulesVersion: version, warnings: [], options: [], kind: null, source: 'background', status: 'empty' };
+  if (!background) return base;
+  if (version !== '2024') return { ...base, status: 'not-applicable' };
+  const parsed = parseAbilityEntries(rulesData(background).ability);
+  const options = parsed.options.map((entry, index) => makeOption(`opt-${index}`, entry, 'own'));
+  const warnings = [...parsed.warnings];
+  if (!options.length) warnings.push('Dati incompleti: il catalogo non contiene incrementi di caratteristica per questo background.');
+  return {
+    ...base,
+    options,
+    warnings,
+    kind: options.length ? options[0].kind : 'unresolved',
+    status: !options.length ? 'unresolved' : options.length > 1 || options[0].picks.length ? 'needs-choice' : 'resolved'
   };
 }
