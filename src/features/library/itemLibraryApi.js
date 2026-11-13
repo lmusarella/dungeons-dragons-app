@@ -102,3 +102,27 @@ export async function deleteSharedItem(id) {
   const { error } = await supabase.from(SHARED_ITEMS_TABLE).delete().eq('id', id);
   if (error) throw error;
 }
+
+/** Dettaglio completo degli oggetti tramite UUID: gli oggetti sono trasversali alle edizioni, nessun filtro sulla versione. */
+export async function getSharedItemsByIds(ids = []) {
+  const unique = [...new Set(ids.filter(Boolean).map(String))];
+  if (!unique.length) return [];
+  const rows = [];
+  for (let index = 0; index < unique.length; index += 80) {
+    const { data, error } = await supabase.from(SHARED_ITEMS_TABLE).select('*').in('id', unique.slice(index, index + 80));
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+  return rows.map(normalizeSharedItem);
+}
+
+/** Tutti gli oggetti di una o più categorie (paginati a blocchi da 100), senza filtro di versione. */
+export async function listSharedItemsByCategories(categories = []) {
+  const items = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const result = await searchSharedItems({ categories, page, pageSize: 100 });
+    items.push(...result.items);
+    if (items.length >= result.total || !result.items.length) break;
+  }
+  return items;
+}

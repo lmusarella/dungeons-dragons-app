@@ -118,3 +118,24 @@ export async function deleteResource(id) {
     .eq('id', id);
   if (error) throw error;
 }
+
+const CHARACTER_CHILD_TABLES = ['character_spells', 'character_companions', 'resources', 'items', 'money_transactions', 'wallets', 'journal_session_files'];
+const IGNORABLE_CODES = ['42P01', 'PGRST205', '42703', 'PGRST204'];
+
+/**
+ * Elimina il personaggio e tutti i dati collegati (risorse, inventario, portafoglio, incantesimi, forme, diario).
+ * I dati figli vengono rimossi per primi in modo tollerante (tabelle assenti ignorate), poi il personaggio:
+ * se l'ultima eliminazione fallisce l'errore viene propagato.
+ */
+export async function deleteCharacterCascade(characterId) {
+  const entries = await supabase.from('journal_entries').select('id').eq('character_id', characterId);
+  const entryIds = (entries.data || []).map((row) => row.id);
+  if (entryIds.length) await supabase.from('journal_entry_tags').delete().in('entry_id', entryIds);
+  const children = ['journal_entries', ...CHARACTER_CHILD_TABLES];
+  for (const table of children) {
+    const { error } = await supabase.from(table).delete().eq('character_id', characterId);
+    if (error && !IGNORABLE_CODES.includes(error.code)) console.warn(`Eliminazione dati collegati (${table}) non riuscita`, error);
+  }
+  const { error } = await supabase.from('characters').delete().eq('id', characterId);
+  if (error) throw error;
+}

@@ -4,6 +4,8 @@ import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { CATALOG_GROUPS, FIELD_META, RULES_VERSIONS, getCatalog } from './catalogConfig.js';
 import { catalogDescription, catalogName, catalogSourceLabel, catalogStatBlock } from './catalogLocale.js';
 import { renderAsiSummary } from './asiSummary.js';
+import { fetchStartingEquipment } from '../startingEquipment/startingEquipmentApi.js';
+import { bindStartingEquipmentDetails, renderStartingEquipment } from '../startingEquipment/startingEquipmentView.js';
 import { labelIt, renderCatalogAdvancedDetails, renderCatalogDescription } from './catalogPresentation.js';
 import {
   createCatalogRecord,
@@ -480,7 +482,8 @@ async function openRecordDetail(catalog, item, canManage, callbacks, nav = {}) {
     <div class="dnd-catalog-detail__content">
       ${renderCatalogAdvancedDetails(catalog, item)}
       ${['species', 'species-variants'].includes(catalog.key) ? '<div data-record-asi></div>' : ''}
-      ${catalog.key === 'classes' ? `${renderClassSummary(item)}${renderClassEquipment(item)}` : ''}
+      ${catalog.key === 'classes' ? renderClassSummary(item) : ''}
+      ${['classes', 'backgrounds'].includes(catalog.key) ? '<div data-record-equipment></div>' : ''}
       ${['subclasses', 'species', 'backgrounds'].includes(catalog.key) ? `${renderCatalogDescription(item)}${relationsSection}` : `${relationsSection}${renderCatalogDescription(item)}`}
     </div>
     <footer class="dnd-catalog-modal__actions"><button type="button" data-record-back>← Indietro</button>${canManage ? '<button type="button" data-record-edit class="primary">Modifica</button>' : ''}</footer>
@@ -501,6 +504,18 @@ async function openRecordDetail(catalog, item, canManage, callbacks, nav = {}) {
   });
   const relations = backdrop.querySelector('[data-record-relations]');
   const asiSlot = backdrop.querySelector('[data-record-asi]');
+  const equipmentSlot = backdrop.querySelector('[data-record-equipment]');
+  if (equipmentSlot) {
+    void (async () => {
+      let html = '';
+      try {
+        const sources = await fetchStartingEquipment(catalog.key === 'classes' ? { classId: item.id } : { backgroundId: item.id });
+        html = renderStartingEquipment(sources);
+      } catch { html = ''; }
+      equipmentSlot.innerHTML = html || (catalog.key === 'classes' ? renderClassEquipment(item) : '');
+      bindStartingEquipmentDetails(equipmentSlot);
+    })();
+  }
   if (asiSlot) {
     void (async () => {
       try {
@@ -696,7 +711,7 @@ export async function renderDndCatalog(container) {
     <div class="card character-select-card library-shell library-shell--refined dnd-catalog-shell">
     <header class="character-select-header library-hero library-hero--refined dnd-catalog-hero">
       <div class="library-hero__copy"><span class="library-hero__icon" aria-hidden="true">♜</span><div><span class="library-hero__eyebrow">Compendio condiviso</span><h1 class="title-car-select">Catalogo D&amp;D</h1><p>Contenuti 2014 e 2024 centralizzati, collegabili e senza duplicazioni.</p></div></div>
-      <div class="library-hero__actions"><span class="${canManage ? 'dnd-catalog-admin' : 'library-readonly-badge'}">${canManage ? 'Modalità amministrazione' : '<span aria-hidden="true">◈</span> Catalogo in consultazione'}</span></div>
+      <div class="library-hero__actions">${canManage ? '<a class="character-select-add" href="#/item-aliases">Associazioni oggetti</a>' : ''}<span class="${canManage ? 'dnd-catalog-admin' : 'library-readonly-badge'}">${canManage ? 'Modalità amministrazione' : '<span aria-hidden="true">◈</span> Catalogo in consultazione'}</span></div>
     </header>
     <div class="dnd-catalog-layout">
       <aside class="dnd-catalog-nav" aria-label="Cataloghi D&D">

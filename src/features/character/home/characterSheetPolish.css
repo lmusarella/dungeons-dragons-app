@@ -941,3 +941,7 @@ body dialog.sheet-detail--familiars .sheet-familiars-host .familiar-quick-card.i
 .species-asi__pick label { display: flex; align-items: center; gap: 4px; font-weight: 800; }
 .species-asi__fixed, .species-asi__note { margin: 0; font-size: .82rem; }
 .species-asi > footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: .8rem; }
+
+.character-delete-button { width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #a33a3a; font-size: .9rem; cursor: pointer; }
+.character-delete-button:hover { border-color: #e0b4b4; background: rgba(163,58,58,.12); }
+.character-delete-button:disabled { opacity: .5; cursor: not-allowed; }

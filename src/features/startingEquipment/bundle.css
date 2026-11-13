@@ -1,0 +1,10 @@
+.seq-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.seq-chip { padding: 2px 9px; border: 1px solid #d9c3a0; border-radius: 999px; background: #f5ead8; color: #56313f; font: inherit; font-size: .74rem; font-weight: 700; }
+.seq-chip small { font-weight: 600; opacity: .85; }
+button.seq-chip--item { cursor: pointer; border-color: #c3d6b6; background: #e8f1e1; color: #3d6330; }
+button.seq-chip--item:hover { border-color: #3d6330; }
+.seq-chip--warn { border-color: #e0b4b4; background: #fbe9e9; color: #a33a3a; }
+.seq-pack { display: grid; gap: 4px; padding: 4px 6px; border: 1px dashed #c3d6b6; border-radius: 10px; }
+.seq-bundle { display: grid; gap: 3px; padding-left: 8px; }
+.seq-bundle > small { color: #967454; font-size: .58rem; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; }
+.equipment-item-bundle { margin-top: 10px; }

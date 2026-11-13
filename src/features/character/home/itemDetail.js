@@ -9,6 +9,9 @@ import { normalizeWeaponProperties, weaponPropertyOptions } from '../../inventor
 import { getWeaponMasteryLabel, getWeaponMasterySummary } from '../../rules/weaponMasteries.js';
 import { calcItemWeight } from '../../../lib/calc.js';
 import { formatWeight } from '../../../lib/format.js';
+import { fetchBundleContents } from '../../startingEquipment/bundleApi.js';
+import { bindBundleItems, renderBundleSection } from '../../startingEquipment/bundleView.js';
+import { getSharedItemsByIds } from '../../library/itemLibraryApi.js';
 
 const COIN_DENOMINATIONS = [
   { key: 'gp', factor: 100, name: 'oro', icon: 'moneta_oro.png' },
@@ -182,13 +185,27 @@ export function openEquipmentItemDetail(item, { items = [], weightUnit = 'kg', o
     armorMarkup +
     masteryMarkup +
     propertiesMarkup +
-    (description ? '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(description)+'</p></section>' : '') + '</section>' +
+    (description ? '<section class="equipment-item-lore"><h3>Descrizione</h3><p class="equipment-item-detail__description">'+escapeHtml(description)+'</p></section>' : '') +
+    (catalogMode && item.id ? '<section class="equipment-item-bundle" data-item-bundle hidden></section>' : '') + '</section>' +
     (slots.length && !catalogMode ? '<aside class="equipment-item-detail__body"><header class="equipment-position-header"><div><span class="eyebrow">Equipaggiamento</span><h3>'+escapeHtml(getBodyPartLabels(slots))+'</h3></div></header><div data-item-body-view></div><p class="equipment-position-hint">La parte lampeggiante indica la posizione dell’oggetto.</p></aside>' : '');
   return present({
     title: item.name || 'Oggetto',
     content, submitLabel: 'Chiudi', cancelLabel: null, showFooter: false,
     cardClass: ['modal-card--equipment-item-detail', shortcutSize ? 'modal-card--shortcut-size' : ''],
     onOpen: ({ modal, formEl }) => {
+      const bundleHost = content.querySelector('[data-item-bundle]');
+      if (bundleHost) {
+        void fetchBundleContents([item.id]).then((contents) => {
+          const html = renderBundleSection(contents.get(String(item.id)) || []);
+          if (!html) return;
+          bundleHost.innerHTML = html;
+          bundleHost.hidden = false;
+          bindBundleItems(bundleHost, async (childId) => {
+            const [child] = await getSharedItemsByIds([childId]).catch(() => []);
+            if (child) void openEquipmentItemDetail(child, { catalogMode: true, present, shortcutSize });
+          });
+        }).catch((error) => console.warn('Contenuti della dotazione non disponibili', error));
+      }
       const host = content.querySelector('[data-item-body-view]');
       const mannequinCleanup = host
         ? mountEquipmentMannequin(host, { items: [item], focusItemId: item.id, weightUnit })

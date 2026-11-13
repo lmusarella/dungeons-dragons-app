@@ -25,6 +25,11 @@ import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { showShortcutLoader } from '../character/home/shortcutViews.js';
 
 
+const missingContentsHandler = (collected) => ({ onMissingContents: (pack, names) => collected.push(`${pack.name}: ${names.join(', ')}`) });
+const warnMissingContents = (collected) => {
+  if (collected.length) createToast(`Alcuni contenuti non sono nel catalogo e vanno aggiunti a mano — ${collected.join('; ')}`, 'info');
+};
+
 const COIN_VALUES = { cp: 1, sp: 10, gp: 100, pp: 1000 };
 const COIN_LABELS = { cp: 'Rame', sp: 'Argento', gp: 'Oro', pp: 'Platino' };
 
@@ -544,15 +549,18 @@ export async function renderInventory(container) {
         if (!selectedItems.length) return;
         await runWithGlobalLoader(async () => {
           try {
+            const missingContents = [];
             await addSharedItemsToInventory(selectedItems, activeCharacter, {
               container_item_id: containerItem.id,
               inventory_location: null
-            });
+            }, missingContentsHandler(missingContents));
+            warnMissingContents(missingContents);
             const totalQuantity = selectedItems.reduce((total, item) => total + Math.max(1, Number(item.selected_quantity) || 1), 0);
             createToast(`${totalQuantity} ${totalQuantity === 1 ? 'unità aggiunta' : 'unità aggiunte'} in ${containerItem.name}`, 'success');
             await refreshAfterMutation();
           } catch (error) {
-            createToast('Errore durante l’aggiunta dal compendio', 'error');
+            console.error('Aggiunta dal compendio non riuscita', error);
+            createToast(`Errore durante l’aggiunta dal compendio: ${error?.message || 'errore sconosciuto'}`, 'error');
           }
         });
       }));
@@ -1032,12 +1040,15 @@ export async function renderInventory(container) {
       }
       const stopAddingLoader = showShortcutLoader(container, 'Aggiunta oggetti');
       try {
-        await addSharedItemsToInventory(selected, activeCharacter);
+        const missingContents = [];
+        await addSharedItemsToInventory(selected, activeCharacter, {}, missingContentsHandler(missingContents));
+        warnMissingContents(missingContents);
         const totalQuantity = selected.reduce((total, item) => total + Math.max(1, Number(item.selected_quantity) || 1), 0);
         createToast(`${totalQuantity} ${totalQuantity === 1 ? 'unità aggiunta' : 'unità aggiunte'} all’inventario`, 'success');
         await refreshAfterMutation();
       } catch (error) {
-        createToast('Errore durante l’aggiunta dall’archivio', 'error');
+        console.error('Aggiunta dall’archivio non riuscita', error);
+        createToast(`Errore durante l’aggiunta dall’archivio: ${error?.message || 'errore sconosciuto'}`, 'error');
       } finally {
         stopAddingLoader();
       }
@@ -1068,11 +1079,14 @@ export async function renderInventory(container) {
     if (!isShortcut) setGlobalLoading(true);
     try {
       try {
-        await addSharedItemsToInventory(selected, activeCharacter);
+        const missingContents = [];
+        await addSharedItemsToInventory(selected, activeCharacter, {}, missingContentsHandler(missingContents));
+        warnMissingContents(missingContents);
         createToast(`${selected.length} ${selected.length === 1 ? 'oggetto aggiunto' : 'oggetti aggiunti'} all’inventario`, 'success');
         await refreshAfterMutation();
       } catch (error) {
-        createToast('Errore durante l’aggiunta dall’archivio', 'error');
+        console.error('Aggiunta dall’archivio non riuscita', error);
+        createToast(`Errore durante l’aggiunta dall’archivio: ${error?.message || 'errore sconosciuto'}`, 'error');
       }
     } finally {
       stopAddingLoader?.();

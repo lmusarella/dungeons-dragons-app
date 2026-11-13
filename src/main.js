@@ -81,6 +81,10 @@ registerRoute('character-builder', async (container) => {
   const { renderCharacterBuilder } = await import('./features/characterBuilder/characterBuilder.js');
   await renderCharacterBuilder(container);
 });
+registerRoute('item-aliases', async (container) => {
+  const { renderItemAliases } = await import('./features/itemAliases/itemAliases.js');
+  await renderItemAliases(container);
+});
 registerRoute('game-rooms', async (container) => {
   const { renderGameRooms } = await import('./features/gameRooms/gameRooms.js');
   await renderGameRooms(container);

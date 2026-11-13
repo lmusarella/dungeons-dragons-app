@@ -1,0 +1,41 @@
+.ia { display: grid; gap: 12px; max-width: 1280px; margin: 0 auto; padding: 16px; color: #4c3340; }
+.ia__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 18px; border: 1px solid #d5bc91; border-radius: 16px; background: linear-gradient(110deg,#f2e2c8,#fff9ed); box-shadow: inset 4px 0 #71364b; }
+.ia__header small { color: #9b7139; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.ia__header h1 { margin: 2px 0 4px; color: #71364b; font-family: Georgia,serif; font-size: 1.4rem; }
+.ia__header p { margin: 0; color: #7a6350; font-size: .82rem; }
+.ia__filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border: 1px solid #cfb78f; border-radius: 13px; background: rgba(251,245,233,.96); }
+.ia__filters label { display: grid; gap: 4px; flex: 1 1 140px; min-width: 0; }
+.ia__filters label:first-child { flex: 2 1 220px; }
+.ia__filters span, .ia-field span { color: #806756; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.ia input, .ia select, .ia-picker input[type="search"], .ia-picker input[type="text"] { padding: 7px 9px; border: 1px solid #cfb78f; border-radius: 9px; background: #fffaf0; color: #4c3340; font: inherit; font-size: .8rem; }
+.ia__count { margin: 0; color: #967454; font-size: .76rem; font-weight: 700; }
+.ia__table { overflow-x: auto; border: 1px solid #dbc4a2; border-radius: 12px; background: #fffaf0; }
+.ia table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.ia th { padding: 8px 10px; background: #71364b; color: #fff8e9; font-size: .62rem; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.ia td { padding: 8px 10px; border-bottom: 1px solid #eadac1; vertical-align: top; }
+.ia td small { display: block; color: #967454; font-size: .68rem; }
+.ia td span { display: block; }
+.ia code, .ia-picker code { padding: 1px 6px; border-radius: 6px; background: #f0e2cd; color: #71364b; font-size: .78rem; }
+.ia-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.ia-button { padding: 5px 12px; border: 1px solid #cdb58e; border-radius: 9px; background: #fffaf0; color: #71364b; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
+.ia-button--primary { border-color: #71364b; background: #71364b; color: #fff8e9; }
+.ia-button--danger { border-color: #e0b4b4; color: #a33a3a; }
+.ia-link { padding: 0; border: 0; background: none; color: #3d6330; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.ia-badge { display: inline-block; margin: 0 4px 2px 0; padding: 1px 9px; border: 1px solid #d9c3a0; border-radius: 999px; background: #f5ead8; color: #56313f; font-size: .68rem; font-style: normal; font-weight: 800; }
+.ia-badge--linked { border-color: #c3d6b6; background: #e8f1e1; color: #3d6330; }
+.ia-badge--missing { border-color: #e0b4b4; background: #fbe9e9; color: #a33a3a; }
+.ia-badge--ambiguous, .ia-badge--warn { border-color: #e2cf8c; background: #f8eec6; color: #7a5b10; }
+.ia-badge--scope { border-color: #d3c3e6; background: #eee6f7; color: #5b3d8a; }
+.ia-origins td { background: #fbf3e6; }
+.ia-origins ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ia-origins li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ia-empty { padding: 16px; color: #967454; font-size: .82rem; }
+.ia-picker { display: grid; gap: 10px; }
+.ia-picker__ref { margin: 0; }
+.ia-field { display: grid; gap: 4px; }
+.ia-results { display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+.ia-results button { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid #dfccb0; border-radius: 9px; background: #fffaf0; color: #4c3340; font: inherit; text-align: left; cursor: pointer; }
+.ia-results button:hover { border-color: #71364b; }
+.ia-results small { color: #967454; }
+.ia-preview { margin: 0; padding: 8px 10px; border-radius: 9px; background: #f5ead8; font-size: .8rem; }
+.ia-preview:empty { display: none; }

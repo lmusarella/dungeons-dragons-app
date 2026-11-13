@@ -1,4 +1,6 @@
-import { searchSharedItems } from '../library/itemLibraryApi.js';
+import { getSharedItemsByIds, searchSharedItems } from '../library/itemLibraryApi.js';
+import { fetchBundleContents } from '../startingEquipment/bundleApi.js';
+import { bundleEntryLabel } from '../startingEquipment/bundleView.js';
 import { createToast, openFormModal } from '../../ui/components.js';
 import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { getCategoryLabel } from './utils.js';
@@ -471,32 +473,68 @@ export function sharedItemToInventoryPayload(item, character, overrides = {}) {
   return payload;
 }
 
-export async function addSharedItemsToInventory(sharedItems = [], character, overrides = {}) {
+const normalizeKey = (value) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** Indici per ritrovare i contenuti di un pacchetto: source_id esatto, source_id senza edizione, poi nome originale identico. */
+function buildCatalogIndex(catalog) {
+  const byId = new Map();
+  const byBaseId = new Map();
+  const byName = new Map();
+  const put = (map, key, item) => { if (key && !map.has(key)) map.set(key, item); };
+  catalog.forEach((item) => {
+    const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item;
+    [template?.source_id, item?.source_id].filter(Boolean).forEach((id) => {
+      put(byId, normalizeKey(id), item);
+      put(byBaseId, normalizeKey(String(id).split('|')[0]), item);
+    });
+    [item?.original_name, template?.original_name, item?.name].forEach((name) => put(byName, normalizeKey(name), item));
+  });
+  return (entry) => byId.get(normalizeKey(entry.source_id))
+    || byBaseId.get(normalizeKey(String(entry.source_id || '').split('|')[0]))
+    || byName.get(normalizeKey(entry.name))
+    || null;
+}
+
+export async function addSharedItemsToInventory(sharedItems = [], character, overrides = {}, { onMissingContents = null } = {}) {
   if (!character || !Array.isArray(sharedItems) || !sharedItems.length) return [];
-  const bundledItems = sharedItems.filter((item) => {
+  // Fonte principale: vista shared_item_bundle_catalog (UUID, nessun filtro di versione). Ripiego: bundle_contents legacy.
+  const viewContents = await fetchBundleContents(sharedItems.map((item) => item.id)).catch((error) => {
+    console.warn('Vista dei contenuti delle dotazioni non disponibile, uso bundle_contents', error);
+    return new Map();
+  });
+  const hasLegacyContents = (item) => {
     const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item;
     return Array.isArray(template?.bundle_contents) && template.bundle_contents.length > 0;
-  });
-  let catalogBySourceId = new Map();
+  };
+  const bundledItems = sharedItems.filter((item) => (viewContents.get(String(item.id)) || []).length > 0 || hasLegacyContents(item));
   let resolvedBundles = new Map();
 
   if (bundledItems.length) {
-    const catalog = await loadAllSharedItems();
-    catalogBySourceId = new Map(catalog
-      .map((item) => {
-        const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item;
-        return [String(template?.source_id || ''), item];
-      })
-      .filter(([sourceId]) => sourceId));
+    const viewChildIds = [...new Set(bundledItems.flatMap((item) => (viewContents.get(String(item.id)) || []).filter((entry) => entry.linked).map((entry) => entry.itemId)))];
+    const viewChildren = new Map((await getSharedItemsByIds(viewChildIds)).map((child) => [String(child.id), child]));
+    const legacyItems = bundledItems.filter((item) => !(viewContents.get(String(item.id)) || []).length);
+    const findCatalogItem = legacyItems.length ? buildCatalogIndex(await loadAllSharedItems()) : () => null;
     resolvedBundles = new Map(bundledItems.map((item) => {
+      const fromView = viewContents.get(String(item.id)) || [];
+      if (fromView.length) {
+        const resolvedView = fromView.map((entry) => ({ entry, item: entry.linked ? viewChildren.get(entry.itemId) || null : null }));
+        const unlinked = resolvedView.filter(({ item: child }) => !child).map(({ entry }) => bundleEntryLabel(entry));
+        if (unlinked.length) {
+          console.warn(`Contenuti della dotazione ${item.name} non collegati a shared_items`, unlinked);
+          onMissingContents?.(item, unlinked);
+        }
+        return [String(item.id), resolvedView.filter(({ item: child }) => child)];
+      }
       const template = item?.item_data && typeof item.item_data === 'object' ? item.item_data : item;
       const resolved = template.bundle_contents.map((entry) => ({
         entry,
-        item: catalogBySourceId.get(String(entry.source_id || ''))
+        item: findCatalogItem(entry)
       }));
       const missing = resolved.filter(({ item: child }) => !child).map(({ entry }) => entry.name || entry.source_id);
-      if (missing.length) throw new Error(`Oggetti mancanti nella dotazione ${item.name}: ${missing.join(', ')}`);
-      return [String(item.id), resolved];
+      if (missing.length) console.warn(`Contenuti della dotazione ${item.name} non trovati in shared_items`, resolved.filter(({ item: child }) => !child).map(({ entry }) => entry));
+      if (missing.length && !onMissingContents) throw new Error(`Oggetti mancanti nella dotazione ${item.name}: ${missing.join(', ')}`);
+      if (missing.length) onMissingContents(item, missing);
+      return [String(item.id), resolved.filter(({ item: child }) => child)];
     }));
   }
 

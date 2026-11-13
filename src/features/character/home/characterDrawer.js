@@ -1,4 +1,5 @@
-import { createCharacter, updateCharacter } from '../characterApi.js';
+import { createCharacter, deleteCharacterCascade, updateCharacter } from '../characterApi.js';
+import { navigate } from '../../../app/router.js';
 import { getState, setActiveCharacter, setState } from '../../../app/state.js';
 import { cacheSnapshot } from '../../../lib/offline/cache.js';
 import { escapeHtml } from '../../../lib/html.js';
@@ -7,6 +8,7 @@ import {
   buildSelect,
   buildTextarea,
   createToast,
+  openConfirmModal,
   openFormModal,
 } from '../../../ui/components.js';
 import {
@@ -967,12 +969,47 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     }
   });
 
+  let characterDeleted = false;
   const formData = await openFormModal({
     title: character ? 'Modifica personaggio' : 'Nuovo personaggio',
     submitLabel: character ? 'Salva' : 'Crea',
     content: form,
     onOpen: ({ modal, fieldsEl }) => {
       enhanceNumericFields(fieldsEl || form);
+      const headerActions = character ? modal.querySelector('[data-form-header-actions]') : null;
+      let deleteButton = null;
+      if (headerActions) {
+        deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'icon-button character-delete-button';
+        deleteButton.title = 'Elimina personaggio';
+        deleteButton.setAttribute('aria-label', 'Elimina personaggio');
+        deleteButton.innerHTML = '<span aria-hidden="true">🗑</span>';
+        deleteButton.addEventListener('click', async () => {
+          const confirmed = await openConfirmModal({
+            title: 'Elimina personaggio',
+            message: `Eliminare definitivamente “${character.name}” con inventario, risorse, monete, incantesimi e diario? L’operazione non può essere annullata.`,
+            confirmLabel: 'Elimina'
+          });
+          if (!confirmed) return;
+          deleteButton.disabled = true;
+          try {
+            await deleteCharacterCascade(character.id);
+            const remaining = getState().characters.filter((entry) => entry.id !== character.id);
+            setState({ characters: remaining });
+            if (String(getState().activeCharacterId) === String(character.id)) setActiveCharacter(remaining[0]?.id ?? null);
+            await cacheSnapshot({ characters: remaining });
+            createToast('Personaggio eliminato');
+            characterDeleted = true;
+            modal.querySelector('[data-form-cancel]')?.click();
+          } catch (error) {
+            console.error('Eliminazione personaggio non riuscita', error);
+            createToast(`Eliminazione non riuscita: ${error?.message || 'errore'}`, 'error');
+            deleteButton.disabled = false;
+          }
+        });
+        headerActions.appendChild(deleteButton);
+      }
       const footer = modal.querySelector('.modal-footer');
       if (!footer) return null;
       const modalActions = footer.querySelector('.modal-actions');
@@ -983,6 +1020,7 @@ export async function openCharacterDrawer(user, onSave, character = null) {
       modalActions.classList.add('modal-actions--with-center');
       modalActions.insertBefore(centeredActions, modalActions.querySelector('.modal-actions__right'));
       return () => {
+        deleteButton?.remove();
         centeredActions.remove();
         modalActions.classList.remove('modal-actions--with-center');
         stepper.appendChild(stepperActions);
@@ -990,7 +1028,10 @@ export async function openCharacterDrawer(user, onSave, character = null) {
     }
   });
   modalCard?.classList.remove('modal-card--wide', 'modal-card--character-editor');
-  if (!formData) return;
+  if (!formData) {
+    if (characterDeleted) navigate('characters');
+    return;
+  }
   const name = formData.get('name')?.trim();
   if (!name) {
     createToast('Inserisci un nome per il personaggio', 'error');

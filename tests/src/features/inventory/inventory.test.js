@@ -167,7 +167,7 @@ describe('src/features/inventory/inventory.js', () => {
     expect(inventory).toContain("defaultSource: 'manual'");
     expect(inventory).toContain('addSharedItemsToInventory(selectedItems, activeCharacter, {');
     expect(inventory).toContain('container_item_id: containerItem.id');
-    expect(picker).toContain('addSharedItemsToInventory(sharedItems = [], character, overrides = {})');
+    expect(picker).toContain('addSharedItemsToInventory(sharedItems = [], character, overrides = {}, { onMissingContents = null } = {})');
     expect(picker).toContain('{ ...overrides, qty: getSelectedQuantity(item) }');
   });
 

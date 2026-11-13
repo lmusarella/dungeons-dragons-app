@@ -80,3 +80,21 @@
 .cb-loading span { width: 16px; height: 16px; border: 2px solid #d9c3a0; border-top-color: #71364b; border-radius: 50%; animation: cb-spin .8s linear infinite; }
 @keyframes cb-spin { to { transform: rotate(360deg); } }
 @media (max-width: 720px) { .cb-scores { grid-template-columns: repeat(3,minmax(0,1fr)); } .cb__steps button span { display: none; } .cb__steps button.is-active span { display: inline; } }
+.cb-eq-group { display: grid; gap: 6px; }
+.cb-eq-group > small { color: #967454; font-size: .62rem; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; }
+.cb-eq-option { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border: 1px solid #eadac1; border-radius: 10px; background: #fbf3e6; cursor: pointer; }
+.cb-eq-option.is-selected { border-color: #71364b; background: #f8ecd8; }
+.cb-eq-option > b { min-width: 16px; padding-top: 4px; color: #71364b; }
+.cb-eq-entries { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cb-eq-item { cursor: pointer; font: inherit; }
+.cb-eq-pick { display: grid; gap: 2px; color: #967454; font-size: .72rem; font-weight: 700; }
+.cb-eq-pick select, .cb-eq-pick input { padding: 6px 8px; border: 1px solid #cfb78f; border-radius: 8px; background: #fffaf0; color: #4c3340; font: inherit; }
+.cb-eq-gold { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.cb-chip--warn { border-color: #e0b4b4; background: #fbe9e9; color: #a33a3a; }
+.cb-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-bottom: 10px; }
+.cb-filters .cb-filter { margin-bottom: 0; flex: 1 1 150px; max-width: 260px; }
+.cb-filter select { padding: 8px 10px; border: 1px solid #cfb78f; border-radius: 9px; background: #fffaf0; color: #4c3340; font: inherit; }
+.cb-stepper--level { gap: 4px; }
+.cb-stepper--level input { width: 64px; text-align: center; padding: 8px 6px; border: 1px solid #cfb78f; border-radius: 9px; background: #fffaf0; color: #4c3340; font: inherit; }
+.cb-stepper--level button { width: 34px; height: 34px; }
+.cb-panel--variant { margin: 0 0 14px; border-color: #71364b; }
