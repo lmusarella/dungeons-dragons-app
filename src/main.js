@@ -85,6 +85,10 @@ registerRoute('item-aliases', async (container) => {
   const { renderItemAliases } = await import('./features/itemAliases/itemAliases.js');
   await renderItemAliases(container);
 });
+registerRoute('spell-aliases', async (container) => {
+  const { renderSpellAliases } = await import('./features/spellReferences/spellAliases.js');
+  await renderSpellAliases(container);
+});
 registerRoute('game-rooms', async (container) => {
   const { renderGameRooms } = await import('./features/gameRooms/gameRooms.js');
   await renderGameRooms(container);

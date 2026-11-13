@@ -711,7 +711,7 @@ export async function renderDndCatalog(container) {
     <div class="card character-select-card library-shell library-shell--refined dnd-catalog-shell">
     <header class="character-select-header library-hero library-hero--refined dnd-catalog-hero">
       <div class="library-hero__copy"><span class="library-hero__icon" aria-hidden="true">♜</span><div><span class="library-hero__eyebrow">Compendio condiviso</span><h1 class="title-car-select">Catalogo D&amp;D</h1><p>Contenuti 2014 e 2024 centralizzati, collegabili e senza duplicazioni.</p></div></div>
-      <div class="library-hero__actions">${canManage ? '<a class="character-select-add" href="#/item-aliases">Associazioni oggetti</a>' : ''}<span class="${canManage ? 'dnd-catalog-admin' : 'library-readonly-badge'}">${canManage ? 'Modalità amministrazione' : '<span aria-hidden="true">◈</span> Catalogo in consultazione'}</span></div>
+      <div class="library-hero__actions">${canManage ? '<a class="character-select-add" href="#/item-aliases">Associazioni oggetti</a><a class="character-select-add" href="#/spell-aliases">Associa incantesimi</a>' : ''}<span class="${canManage ? 'dnd-catalog-admin' : 'library-readonly-badge'}">${canManage ? 'Modalità amministrazione' : '<span aria-hidden="true">◈</span> Catalogo in consultazione'}</span></div>
     </header>
     <div class="dnd-catalog-layout">
       <aside class="dnd-catalog-nav" aria-label="Cataloghi D&D">

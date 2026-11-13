@@ -98,3 +98,14 @@
 .cb-stepper--level input { width: 64px; text-align: center; padding: 8px 6px; border: 1px solid #cfb78f; border-radius: 9px; background: #fffaf0; color: #4c3340; font: inherit; }
 .cb-stepper--level button { width: 34px; height: 34px; }
 .cb-panel--variant { margin: 0 0 14px; border-color: #71364b; }
+
+/* Sfondo condiviso con la schermata di login. */
+.app-shell[data-route='character-builder'],
+.app-shell[data-route='character-builder'] .app-main {
+  background-image: linear-gradient(120deg, rgba(31, 20, 23, .48), rgba(55, 31, 38, .22)), url('/img/sfondo_login.jpg') !important;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.cb__body { background: rgba(255, 253, 248, .94); }
+.cb__steps button { background: rgba(255, 250, 240, .94); }
