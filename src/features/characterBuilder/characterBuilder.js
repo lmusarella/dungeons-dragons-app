@@ -27,10 +27,11 @@ import { bindBundleItems, renderBundleSection } from '../startingEquipment/bundl
 import { entryLabel } from '../startingEquipment/startingEquipmentView.js';
 import './characterBuilder.css';
 
+const ALIGNMENTS = ['Legale Buono', 'Neutrale Buono', 'Caotico Buono', 'Legale Neutrale', 'Neutrale', 'Caotico Neutrale', 'Legale Malvagio', 'Neutrale Malvagio', 'Caotico Malvagio'];
+
 const STEPS = [
-  { key: 'version', label: 'Regole' },
-  { key: 'class', label: 'Nome e classe' },
-  { key: 'subclass', label: 'Sottoclasse' },
+  { key: 'version', label: 'Regole e Identità' },
+  { key: 'class', label: 'Classe' },
   { key: 'species', label: 'Specie' },
   { key: 'background', label: 'Background' },
   { key: 'abilities', label: 'Caratteristiche' },
@@ -50,7 +51,7 @@ function createState() {
     speciesId: null, variantId: null, speciesSources: null, speciesChoice: { optionId: null, picks: [] },
     background: null, backgroundId: null, backgroundChoice: { optionId: null, picks: [] },
     abilities: { mode: 'pointbuy', pointBuy: defaultBaseScores(), standard: {}, manual: Object.fromEntries(ABILITY_KEYS.map((key) => [key, 10])) },
-    asi: {}, classPicks: [], backgroundPicks: [], filter: '', sources: null, availableSources: [],
+    asi: {}, classPicks: [], backgroundPicks: [], filter: '', sources: null, availableSources: [], filterSources: false, alignment: '',
     equipment: { key: null, sources: [], items: [], error: false, selection: { alternatives: {}, categoryPicks: {}, goldAlt: {}, acknowledged: {} } }
   };
 }
@@ -86,23 +87,23 @@ export async function renderCharacterBuilder(container) {
   const validate = (key) => {
     const data = derived();
     switch (key) {
-      case 'version': return state.version ? null : 'Scegli la versione delle regole.';
-      case 'class':
+      case 'version':
+        if (!state.version) return 'Scegli la versione delle regole.';
         if (!state.name.trim()) return 'Inserisci il nome del personaggio.';
         if (!(state.level >= 1 && state.level <= 20)) return 'Il livello deve essere tra 1 e 20.';
-        return state.classId ? null : 'Scegli una classe.';
-      case 'subclass': return !subclassAvailable() || state.subclass ? null : 'Scegli una sottoclasse.';
+        return null;
+      case 'class':
+        if (!state.classId) return 'Scegli una classe.';
+        return !subclassAvailable() || state.subclass ? null : 'Scegli una sottoclasse.';
       case 'species': return state.speciesId ? null : 'Scegli una specie.';
       case 'abilities': {
         const base = validateBaseScores(state.abilities);
         if (!base.valid) return base.errors[0] || 'Completa la distribuzione dei punteggi.';
         if (data.speciesResolution?.options.length && !data.speciesEval.complete) return 'Completa gli incrementi di caratteristica della specie.';
-        return null;
-      }
-      case 'background':
-        if (!state.backgroundId) return 'Scegli un background.';
         if (data.backgroundResolution.options.length && !data.backgroundEval.complete) return 'Completa gli incrementi di caratteristica del background.';
         return null;
+      }
+      case 'background': return state.backgroundId ? null : 'Scegli un background.';
       case 'skills': return data.skillSelection.complete ? null : 'Completa le scelte di competenza.';
       case 'equipment': return resolveEquipment(state.equipment.sources, state.equipment.selection).complete ? null : 'Completa le scelte dell’equipaggiamento iniziale.';
       default: return null;
@@ -113,9 +114,9 @@ export async function renderCharacterBuilder(container) {
   const optionList = (key) => (state.options?.[key] || []).filter(sourceAllowed);
   const manualOf = (row) => (row.source ? catalogSourceLabel(row.source) : '');
 
-  const card = ({ id, title, sub, desc, image, selected, attr, source = '', size = '' }) => {
+  const card = ({ id, title, sub, desc, image, selected, attr, source = '', size = '', center = false }) => {
     const src = sanitizeImageUrl(image);
-    return `<button type="button" class="cb-card ${selected ? 'is-selected' : ''}" ${attr}="${escapeHtml(id)}" data-cb-filter-text="${escapeHtml(String(title).toLowerCase())}" data-cb-source="${escapeHtml(String(source))}" data-cb-size="${escapeHtml(String(size))}">
+    return `<button type="button" class="cb-card ${selected ? 'is-selected' : ''} ${center ? 'cb-card--center' : ''}" ${attr}="${escapeHtml(id)}" data-cb-filter-text="${escapeHtml(String(title).toLowerCase())}" data-cb-source="${escapeHtml(String(source))}" data-cb-size="${escapeHtml(String(size))}">
       <span class="cb-card__media">${src ? `<img src="${src}" alt="">` : `<b aria-hidden="true">${escapeHtml(String(title).slice(0, 1))}</b>`}</span>
       <span class="cb-card__body"><strong>${escapeHtml(title)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}${desc ? `<em>${escapeHtml(desc)}</em>` : ''}</span>
     </button>`;
@@ -141,33 +142,64 @@ export async function renderCharacterBuilder(container) {
   };
 
   const renderers = {
-    version: () => `<div class="cb-intro"><h2>Quale versione delle regole?</h2><p>Classi, specie e background vengono caricati dal catalogo della versione scelta. Cambiarla in seguito azzera le scelte.</p></div>
-      <div class="cb-grid cb-grid--two">${['2014', '2024'].map((version) => card({ id: version, title: `D&D ${version}`, sub: version === '2014' ? 'Manuale del Giocatore 2014' : 'Manuale del Giocatore 2024', desc: version === '2014' ? 'Incrementi di caratteristica dalla specie.' : 'Incrementi di caratteristica dal background.', selected: state.version === version, attr: 'data-cb-version' })).join('')}</div>`,
-
-    class: () => `<div class="cb-intro"><h2>Nome e classe</h2></div>
+    version: () => `<div class="cb-intro"><h2>Regole e identità</h2><p>Scegli la versione delle regole, il nome, l’allineamento e il livello. Cambiare versione in seguito azzera le scelte successive.</p></div>
       <div class="cb-row"><label class="cb-field"><span>Nome del personaggio</span><input data-cb-name value="${escapeHtml(state.name)}" placeholder="Es. Aria Lunargento" autocomplete="off"></label>
+      <label class="cb-field cb-field--medium"><span>Allineamento</span><select data-cb-alignment><option value="">Non definito</option>${ALIGNMENTS.map((entry) => `<option value="${escapeHtml(entry)}" ${state.alignment === entry ? 'selected' : ''}>${escapeHtml(entry)}</option>`).join('')}</select></label>
       <div class="cb-field cb-field--small"><span>Livello di classe</span><span class="cb-stepper cb-stepper--level"><button type="button" data-cb-level-step="-1" ${state.level <= 1 ? 'disabled' : ''} aria-label="Diminuisci livello">−</button><input type="number" data-cb-level min="1" max="20" value="${state.level}"><button type="button" data-cb-level-step="1" ${state.level >= 20 ? 'disabled' : ''} aria-label="Aumenta livello">+</button></span></div></div>
-      <div class="cb-grid">${optionList('classes').map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.classId === row.id, attr: 'data-cb-class' })).join('') || '<p class="cb-empty">Nessuna classe disponibile per questa versione.</p>'}</div>`,
+      <section class="cb-manuals">
+        <div class="cb-choices">
+          ${['2014', '2024'].map((version) => `<button type="button" class="cb-rule ${state.version === version ? 'is-selected' : ''}" data-cb-version="${version}" aria-pressed="${state.version === version ? 'true' : 'false'}"><span class="cb-rule__check" aria-hidden="true">✓</span><span class="cb-rule__edition">D&amp;D</span><strong>${version}</strong><small>${state.version === version ? 'Selezionata' : 'Seleziona'}</small></button>`).join('')}
+        ${state.version ? `<button type="button" class="cb-toggle ${state.filterSources ? 'is-on' : ''}" data-cb-filter-sources role="switch" aria-checked="${state.filterSources ? 'true' : 'false'}">
+          <span class="cb-toggle__switch" aria-hidden="true"></span>
+          <span class="cb-toggle__text"><strong>Filtra manuali concessi</strong><small>${state.filterSources ? `${state.sources ? state.sources.size : 0} su ${state.availableSources.length} manuali attivi` : 'Tutti i manuali sono inclusi'}</small></span>
+        </button>` : ''}
+        </div>
+        ${state.filterSources && state.availableSources.length ? `<div class="cb-manuals__panel">
+          <div class="cb-manuals__actions"><button type="button" class="cb__ghost" data-cb-sources-all="1">Seleziona tutti</button><button type="button" class="cb__ghost" data-cb-sources-all="0">Deseleziona tutti</button></div>
+          <div class="cb-manuals__grid">${state.availableSources.map((entry) => {
+    const label = catalogSourceLabel(entry.code);
+    const title = label.replace(/\s*\([^)]*\)$/, '');
+    const checked = state.sources?.has(entry.code);
+    return `<label class="cb-tile ${checked ? 'is-on' : ''}"><input type="checkbox" data-cb-source-toggle="${escapeHtml(entry.code)}" ${checked ? 'checked' : ''}><span class="cb-tile__check" aria-hidden="true">✓</span><span class="cb-tile__text"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(String(entry.code).toUpperCase())} · ${entry.count} contenuti</small></span></label>`;
+  }).join('')}</div>
+          <p class="cb-note">Classi, sottoclassi, specie e background dei manuali deselezionati non verranno proposti.</p>
+        </div>` : ''}
+      </section>`,
 
-    subclass: () => {
-      if (!state.classDetails) return '<p class="cb-empty">Scegli prima una classe.</p>';
-      const level = state.classDetails.subclass_selection_level || 1;
-      if (!state.classDetails.subclasses?.length) return '<div class="cb-intro"><h2>Sottoclasse</h2><p>Questa classe non ha sottoclassi nel catalogo.</p></div>';
-      if (state.level < level) return `<div class="cb-intro"><h2>Sottoclasse</h2><p>La sottoclasse si sceglie dal livello ${level}. Il tuo personaggio è di livello ${state.level}: potrai sceglierla in seguito.</p></div>`;
-      return `<div class="cb-intro"><h2>Sottoclasse di ${escapeHtml(catalogName(state.classDetails))}</h2></div><div class="cb-grid">${state.classDetails.subclasses.filter(sourceAllowed).map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), desc: descriptionOf(row), image: row.image_url, selected: state.subclass?.id === row.id, attr: 'data-cb-subclass' })).join('')}</div>`;
+    class: () => {
+      const classCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.classId === row.id, attr: 'data-cb-class', ...extra });
+      if (state.classId && state.classDetails) {
+        const row = (state.options?.classes || []).find((entry) => String(entry.id) === String(state.classId)) || state.classDetails;
+        const minLevel = state.classDetails.subclass_selection_level || 1;
+        const subclasses = (state.classDetails.subclasses || []).filter(sourceAllowed);
+        let subclassBlock = '';
+        if (state.classDetails.subclasses?.length) {
+          subclassBlock = state.level < minLevel
+            ? `<p class="cb-note">La sottoclasse si sceglie dal livello ${minLevel}. Il personaggio è di livello ${state.level}: potrai sceglierla in seguito.</p>`
+            : `<section class="cb-panel cb-panel--variant"><header><h3>Sottoclasse di ${escapeHtml(catalogName(state.classDetails))}</h3><small>Obbligatoria dal livello ${minLevel}</small></header><div class="cb-grid">${subclasses.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), desc: descriptionOf(entry), image: entry.image_url, selected: state.subclass?.id === entry.id, attr: 'data-cb-subclass' })).join('') || '<p class="cb-empty">Nessuna sottoclasse disponibile con i manuali selezionati.</p>'}</div></section>`;
+        }
+        return `<div class="cb-intro"><h2>Classe</h2></div><div class="cb-selected"><div class="cb-grid">${classCard(row, { attr: 'data-cb-class-selected', selected: true })}</div><button type="button" class="cb__ghost" data-cb-class-change>← Cambia classe</button></div>${subclassBlock}`;
+      }
+      return `<div class="cb-intro"><h2>Scegli la classe</h2></div>
+      <div class="cb-grid">${optionList('classes').map((row) => classCard(row)).join('') || '<p class="cb-empty">Nessuna classe disponibile per questa versione.</p>'}</div>`;
     },
 
     species: () => {
-      const variants = state.speciesSources?.variants || [];
+      const speciesCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: [manualOf(row), row.size, Number(row.speed) ? `${Math.round(Number(row.speed) * 0.3 * 10) / 10} m` : ''].filter(Boolean).join(' · '), source: row.source, size: row.size, image: row.image_url, selected: state.speciesId === row.id, attr: 'data-cb-species', ...extra });
+      if (state.speciesId && state.speciesSources) {
+        const row = (state.options?.species || []).find((entry) => String(entry.id) === String(state.speciesId)) || state.speciesSources.species;
+        const variants = state.speciesSources.variants || [];
+        const variantBlock = variants.length ? `<section class="cb-panel cb-panel--variant"><header><h3>Sottorazza di ${escapeHtml(catalogName(state.speciesSources.species))}</h3><small>Facoltativa</small></header><div class="cb-grid">${card({ id: '', title: 'Nessuna sottorazza', selected: !state.variantId, attr: 'data-cb-variant' })}${variants.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), desc: descriptionOf(entry), selected: state.variantId === entry.id, attr: 'data-cb-variant' })).join('')}</div></section>` : '';
+        return `<div class="cb-intro"><h2>Specie</h2></div><div class="cb-selected"><div class="cb-grid">${speciesCard(row, { attr: 'data-cb-species-selected', selected: true })}</div><button type="button" class="cb__ghost" data-cb-species-change>← Cambia specie</button></div>${variantBlock}`;
+      }
       const species = optionList('species');
       const sizes = [...new Set(species.map((row) => row.size).filter(Boolean))].sort();
       const manuals = [...new Set(species.map((row) => row.source).filter(Boolean))].sort();
-      const variantPanel = variants.length ? `<section class="cb-panel cb-panel--variant" data-cb-variant-panel><header><h3>Sottorazza di ${escapeHtml(catalogName(state.speciesSources.species))}</h3><small>Facoltativa</small></header><div class="cb-grid">${card({ id: '', title: 'Nessuna sottorazza', selected: !state.variantId, attr: 'data-cb-variant' })}${variants.map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), desc: descriptionOf(row), selected: state.variantId === row.id, attr: 'data-cb-variant' })).join('')}</div></section>` : '';
-      return `<div class="cb-intro"><h2>Scegli la specie</h2></div>${variantPanel}
+      return `<div class="cb-intro"><h2>Scegli la specie</h2></div>
       <div class="cb-filters">${filterBox()}
         <label class="cb-filter"><span>Manuale</span><select data-cb-filter-source><option value="">Tutti</option>${manuals.map((code) => `<option value="${escapeHtml(code)}">${escapeHtml(catalogSourceLabel(code))}</option>`).join('')}</select></label>
         <label class="cb-filter"><span>Taglia</span><select data-cb-filter-size><option value="">Tutte</option>${sizes.map((size) => `<option value="${escapeHtml(size)}">${escapeHtml(size)}</option>`).join('')}</select></label></div>
-      <div class="cb-grid" data-cb-cards>${species.map((row) => card({ id: row.id, title: catalogName(row), sub: [manualOf(row), row.size, Number(row.speed) ? `${Math.round(Number(row.speed) * 0.3 * 10) / 10} m` : ''].filter(Boolean).join(' · '), source: row.source, size: row.size, desc: descriptionOf(row), image: row.image_url, selected: state.speciesId === row.id, attr: 'data-cb-species' })).join('') || '<p class="cb-empty">Nessuna specie disponibile per questa versione.</p>'}</div>`;
+      <div class="cb-grid" data-cb-cards>${species.map((row) => speciesCard(row)).join('') || '<p class="cb-empty">Nessuna specie disponibile per questa versione.</p>'}</div>`;
     },
 
     abilities: () => {
@@ -201,14 +233,13 @@ export async function renderCharacterBuilder(container) {
         <div class="cb-table-wrap"><table class="cb-table"><thead><tr><th>Caratteristica</th><th>Base</th><th>Specie</th><th>Background</th><th>Classe</th><th>Totale</th></tr></thead><tbody>${rows}</tbody></table></div>
         ${data.asiPoints && remainingAsi > 0 ? `<p class="cb-note">Hai ancora ${remainingAsi} punti di aumento di classe da assegnare (massimo ${20} per caratteristica).</p>` : ''}
         ${asiEditor('species', data.speciesResolution, state.speciesChoice, data.speciesEval || { errors: [], option: null }, 'Incrementi della specie')}
-        ${state.version === '2024' && data.backgroundResolution.options.length ? '<p class="cb-note">Nelle regole 2024 gli incrementi di caratteristica del background si modificano tornando al passo Background.</p>' : ''}`;
+        ${asiEditor('background', data.backgroundResolution, state.backgroundChoice, data.backgroundEval, 'Incrementi del background')}`;
     },
 
     background: () => {
       const data = derived();
       return `<div class="cb-intro"><h2>Scegli il background</h2></div><div class="cb-filters">${filterBox()}<label class="cb-filter"><span>Manuale</span><select data-cb-filter-source><option value="">Tutti</option>${[...new Set(optionList('backgrounds').map((row) => row.source).filter(Boolean))].sort().map((code) => `<option value="${escapeHtml(code)}">${escapeHtml(catalogSourceLabel(code))}</option>`).join('')}</select></label></div>
-      <div class="cb-grid" data-cb-cards>${optionList('backgrounds').map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.backgroundId === row.id, attr: 'data-cb-background' })).join('') || '<p class="cb-empty">Nessun background disponibile per questa versione.</p>'}</div>
-      ${asiEditor('background', data.backgroundResolution, state.backgroundChoice, data.backgroundEval, 'Incrementi del background')}`;
+      <div class="cb-grid" data-cb-cards>${optionList('backgrounds').map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.backgroundId === row.id, attr: 'data-cb-background' })).join('') || '<p class="cb-empty">Nessun background disponibile per questa versione.</p>'}</div>`;
     },
 
     skills: () => {
@@ -369,11 +400,12 @@ export async function renderCharacterBuilder(container) {
         resetFromVersion();
         await busy(async () => {
           state.options = await loadBuilderOptions(version);
+          state.availableSources = state.options.availableSources || [];
+          state.sources = state.filterSources ? new Set(state.availableSources.map((entry) => entry.code)) : null;
         });
       });
-    }
-    if (key === 'class') {
-      body.querySelector('[data-cb-name]')?.addEventListener('input', (event) => { state.name = event.target.value; const error = validate('class'); nextButton.disabled = Boolean(error); hint.textContent = error || ''; });
+      body.querySelector('[data-cb-name]')?.addEventListener('input', (event) => { state.name = event.target.value; const error = validate('version'); nextButton.disabled = Boolean(error); hint.textContent = error || ''; });
+      body.querySelector('[data-cb-alignment]')?.addEventListener('change', (event) => { state.alignment = event.target.value; });
       const setLevel = (value) => {
         state.level = Math.min(20, Math.max(1, Number(value) || 1));
         if (state.classDetails && !subclassAvailable()) state.subclass = null;
@@ -382,6 +414,23 @@ export async function renderCharacterBuilder(container) {
       };
       body.querySelector('[data-cb-level]')?.addEventListener('change', (event) => setLevel(event.target.value));
       on('[data-cb-level-step]', 'click', (element) => setLevel(state.level + Number(element.dataset.cbLevelStep)));
+      on('[data-cb-filter-sources]', 'click', () => {
+        state.filterSources = !state.filterSources;
+        state.sources = state.filterSources ? new Set(state.availableSources.map((entry) => entry.code)) : null;
+        render();
+      });
+      on('[data-cb-source-toggle]', 'change', (element) => {
+        const next = new Set(state.sources || []);
+        if (element.checked) next.add(element.dataset.cbSourceToggle); else next.delete(element.dataset.cbSourceToggle);
+        state.sources = next;
+        render();
+      });
+      on('[data-cb-sources-all]', 'click', (element) => {
+        state.sources = element.dataset.cbSourcesAll === '1' ? new Set(state.availableSources.map((entry) => entry.code)) : new Set();
+        render();
+      });
+    }
+    if (key === 'class') {
       on('[data-cb-class]', 'click', async (element) => {
         const id = element.dataset.cbClass;
         if (id === state.classId) return;
@@ -395,8 +444,10 @@ export async function renderCharacterBuilder(container) {
           state.asiLevels = asiLevelsFromFeatures(levelRows);
         });
       });
-    }
-    if (key === 'subclass') {
+      on('[data-cb-class-change]', 'click', () => {
+        Object.assign(state, { classId: null, classDetails: null, subclass: null, classPicks: [], asi: {}, asiLevels: { levels: [], fromCatalog: false } });
+        render();
+      });
       on('[data-cb-subclass]', 'click', (element) => { state.subclass = state.classDetails.subclasses.find((row) => String(row.id) === element.dataset.cbSubclass) || null; render(); });
     }
     if (key === 'species') {
@@ -410,6 +461,10 @@ export async function renderCharacterBuilder(container) {
           refreshSpeciesChoice();
         });
       });
+      on('[data-cb-species-change]', 'click', () => {
+        Object.assign(state, { speciesId: null, variantId: null, speciesSources: null, speciesChoice: { optionId: null, picks: [] } });
+        render();
+      });
       on('[data-cb-variant]', 'click', async (element) => {
         await busy(async () => {
           state.variantId = element.dataset.cbVariant || null;
@@ -418,6 +473,7 @@ export async function renderCharacterBuilder(container) {
         });
       });
     }
+
     if (key === 'abilities') {
       on('[data-cb-mode]', 'click', (element) => { state.abilities.mode = element.dataset.cbMode; render(); });
       on('[data-cb-pb]', 'click', (element) => {
@@ -440,17 +496,18 @@ export async function renderCharacterBuilder(container) {
         render();
       });
     }
-    if (key === 'abilities' || key === 'background') {
-      const scope = key === 'abilities' ? 'species' : 'background';
-      const choiceKey = scope === 'species' ? 'speciesChoice' : 'backgroundChoice';
-      const resolution = () => (scope === 'species' ? derived().speciesResolution : derived().backgroundResolution);
-      on(`[data-cb-asi-option="${scope}"]`, 'change', (element) => { state[choiceKey] = reconcileAsiChoice(resolution(), { optionId: element.value, picks: [] }); render(); });
-      on(`[data-cb-asi-pick="${scope}"]`, 'change', (element) => {
-        const option = (scope === 'species' ? derived().speciesEval : derived().backgroundEval)?.option;
-        if (!option) return;
-        const picks = option.picks.map((pick, index) => [...body.querySelectorAll(`[data-cb-asi-pick="${scope}"][data-pick="${index}"]`)].map((select) => select.value));
-        state[choiceKey] = { optionId: option.id, picks };
-        render();
+    if (key === 'abilities') {
+      ['species', 'background'].forEach((scope) => {
+        const choiceKey = scope === 'species' ? 'speciesChoice' : 'backgroundChoice';
+        const resolution = () => (scope === 'species' ? derived().speciesResolution : derived().backgroundResolution);
+        on(`[data-cb-asi-option="${scope}"]`, 'change', (element) => { state[choiceKey] = reconcileAsiChoice(resolution(), { optionId: element.value, picks: [] }); render(); });
+        on(`[data-cb-asi-pick="${scope}"]`, 'change', (element) => {
+          const option = (scope === 'species' ? derived().speciesEval : derived().backgroundEval)?.option;
+          if (!option) return;
+          const picks = option.picks.map((pick, index) => [...body.querySelectorAll(`[data-cb-asi-pick="${scope}"][data-pick="${index}"]`)].map((select) => select.value));
+          state[choiceKey] = { optionId: option.id, picks };
+          render();
+        });
       });
     }
     if (key === 'background') {

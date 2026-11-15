@@ -196,6 +196,7 @@ export function buildCharacterPayload({ userId, state, classRecord, speciesRecor
       level,
       rules_version: state.version,
       race: speciesRecord ? catalogName(speciesRecord) : null,
+      alignment: state.alignment || null,
       background: backgroundRecord ? catalogName(backgroundRecord) : null,
       class_name: catalogName(classRecord),
       archetype: subclass ? catalogName(subclass) : null,
