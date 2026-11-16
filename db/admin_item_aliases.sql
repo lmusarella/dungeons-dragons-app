@@ -17,6 +17,16 @@ alter table public.shared_item_aliases
   add column if not exists updated_by uuid,
   add column if not exists updated_at timestamptz default now();
 
+-- Gli alias fanno parte del catalogo condiviso: il client deve poterli leggere
+-- affinche' le viste SECURITY INVOKER risolvano i riferimenti anche dopo un refresh.
+-- Le scritture restano protette: questo script non aggiunge policy INSERT/UPDATE/DELETE.
+alter table public.shared_item_aliases enable row level security;
+drop policy if exists shared_item_aliases_select_authenticated on public.shared_item_aliases;
+create policy shared_item_aliases_select_authenticated
+  on public.shared_item_aliases for select to authenticated
+  using (true);
+grant select on table public.shared_item_aliases to authenticated;
+
 alter table public.shared_starting_equipment_entries
   add column if not exists manual_link boolean not null default false,
   add column if not exists linked_by uuid,
