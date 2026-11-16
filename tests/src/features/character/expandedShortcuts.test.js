@@ -135,7 +135,7 @@ describe('expanded shortcut reference',()=>{
     expect(styles).toContain('.proficiency-modal__hero-icon');
     expect(styles).toContain('margin-bottom: 3px;');
     expect(styles).toContain(".home-layout.sheet-dashboard :is(.sheet-shortcuts--left,.sheet-shortcuts--right)");
-    expect(styles).toContain('background: rgba(251,244,230,.96)');
+    expect(styles).toContain('background: rgb(var(--paper-50-rgb) / .96)');
     expect(styles).toContain('border-radius: 20px');
   });
   it('uses contextual loaders and integrates the transaction ledger below coins',()=>{

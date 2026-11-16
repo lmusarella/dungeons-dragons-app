@@ -10,7 +10,7 @@
 }
 
 header {
-    color: white;
+    color: var(--white);
     padding: 5px;
 }
 
@@ -55,8 +55,8 @@ header {
 #textInput { 
     text-align: center;
     border: none;
-    color: rgba(0, 0, 0, 0.8);
-    background-color: rgba(199, 199, 199, 0.7);
+    color: rgb(var(--black-rgb) / 0.8);
+    background-color: rgb(var(--paper-200-rgb) / 0.7);
     width: 100%;
     text-overflow: ellipsis;
     padding: 0.2em;
@@ -64,7 +64,7 @@ header {
 }
 
 #textInput:focus {
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: rgb(var(--white-rgb) / 0.7);
     outline: none;
 }
 
@@ -79,7 +79,7 @@ header {
 
 .center_field * {
     position: relative;
-    background-color: rgba(255, 255, 255, 0.6);
+    background-color: rgb(var(--white-rgb) / 0.6);
     padding: 5px 15px;
     user-select: none;
 }
@@ -91,7 +91,7 @@ header {
 }
 
 #instructions p {
-    color: rgb(255, 255, 255);
+    color: var(--white);
     background: none;
     margin: auto;
     top: 35%;
@@ -123,8 +123,8 @@ header {
     margin-top: 5px;
     width: 97px;
     border: none;
-    background-color: rgba(255, 255, 255, 0.8);
-    color: black;
+    background-color: rgb(var(--white-rgb) / 0.8);
+    color: var(--black);
 }
 
 .bottom_field {
@@ -132,7 +132,7 @@ header {
     bottom: 0;
     text-align: center;
     min-height: 3rem;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgb(var(--black-rgb) / 0.4);
     width: inherit;
     padding: 0px;
 }
@@ -143,22 +143,16 @@ header {
     min-height: 1.5em;
     bottom: 5px;
     word-spacing: 0.5em;
-    color: rgba(255,255,255,0.9);
+    color: rgb(var(--white-rgb) / 0.9);
     padding: 0.5em;
     margin-left: 5px;
     margin-right: 5px;
 }
 
-#dice-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-}
-
 .diceov-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,.4);
+  background: rgb(var(--black-rgb) / .4);
   backdrop-filter: blur(2px);
 }
 
@@ -167,16 +161,16 @@ header {
   transform: translate(-50%, -50%);
   max-height: 96vh;
   overflow: auto;
-  background: #111;
-  color: #eee;
+  background: var(--black);
+  color: var(--white);
   border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  box-shadow: 0 12px 40px rgb(var(--black-rgb) / .4);
 }
 
 .diceov-panel {
-  background: #161616;
+  background: var(--gray-900);
   border-radius: 12px;
-  border: 1px solid #242424;
+  border: 1px solid var(--gray-900);
   padding: 0 10px 10px;
   margin-bottom: 2px;
 }
@@ -191,7 +185,7 @@ header {
   font-size: 1.35rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.6);
+  color: rgb(var(--white-rgb) / 0.6);
   text-align: center;
 }
 
@@ -244,7 +238,7 @@ header {
   height: 22px;
   padding: 2px;
   border-radius: 999px;
-  background: #1d1d1d;
+  background: var(--gray-900);
   border: 1px solid #2f2f2f;
   cursor: pointer;
   transition: background 0.2s ease, border 0.2s ease;
@@ -270,11 +264,11 @@ header {
 
 .diceov-toggle input:checked + .diceov-toggle-track {
   transform: translateX(18px);
-  background: #ffdc7a;
+  background: var(--gold-100);
 }
 
 .diceov-toggle input:focus-visible + .diceov-toggle-track {
-  outline: 2px solid rgba(255, 220, 122, 0.6);
+  outline: 2px solid rgb(var(--gold-100-rgb) / 0.6);
   outline-offset: 2px;
 }
 
@@ -330,17 +324,13 @@ header {
 .diceov-control input[type="number"],
 .diceov-control input[type="text"],
 .diceov-control select {
-  background: #0e0e0e;
+  background: var(--black);
   border: 1px solid #2f2f2f;
   border-radius: 8px;
-  color: #f1f1f1;
+  color: var(--white);
   padding: 4px 6px;
   font-size: 0.9rem;
   text-align: center;
-}
-
-.diceov-control select {
-  width: 100%;
 }
 
 .diceov-control input[type="number"] {
@@ -348,6 +338,7 @@ header {
 }
 
 .diceov-control select {
+  width: 100%;
   min-width: 72px;
 }
 
@@ -375,8 +366,8 @@ header {
 .diceov-history-panel {
   padding: 6px 8px;
   border-radius: 10px;
-  background: #0f0f0f;
-  border: 1px solid #2b2b2b;
+  background: var(--black);
+  border: 1px solid var(--gray-900);
 }
 
 .diceov-result-label {
@@ -384,7 +375,7 @@ header {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.6);
+  color: rgb(var(--white-rgb) / 0.6);
 }
 
 .diceov-result-value {
@@ -396,7 +387,7 @@ header {
 .diceov-result-detail {
   margin: 0;
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.7);
+  color: rgb(var(--white-rgb) / 0.7);
   display: block;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -411,14 +402,14 @@ header {
   flex-wrap: nowrap;
   text-align: center;
   background:
-    radial-gradient(circle at top, rgba(255, 220, 122, 0.12), transparent 55%),
-    #0f0f0f;
+    radial-gradient(circle at top, rgb(var(--gold-100-rgb) / 0.12), transparent 55%),
+    var(--black);
 }
 
 .diceov-result--final .diceov-result-label {
   margin: 0;
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgb(var(--white-rgb) / 0.82);
 }
 
 .diceov-result--final .diceov-result-value {
@@ -427,8 +418,8 @@ header {
   min-width: 48px;
   padding: 1px 12px;
   border-radius: 999px;
-  background: rgba(255, 220, 122, 0.12);
-  color: #ffdc7a;
+  background: rgb(var(--gold-100-rgb) / 0.12);
+  color: var(--gold-100);
   text-align: center;
 }
 
@@ -448,8 +439,8 @@ header {
 
 .diceov-history-accordion {
   border-radius: 12px;
-  border: 1px solid #2b2b2b;
-  background: #0f0f0f;
+  border: 1px solid var(--gray-900);
+  background: var(--black);
   overflow: hidden;
   position: relative;
   z-index: 5;
@@ -464,7 +455,7 @@ header {
   inset: var(--diceov-history-offset, 64px) 0 0;
   z-index: 30;
   border-radius: 14px;
-  background: #111;
+  background: var(--black);
   display: flex;
   flex-direction: column;
 }
@@ -499,12 +490,12 @@ header {
   padding: 6px 0;
   font-size: 0.89rem;
   align-items: center;
-  color: rgba(255,255,255,0.8);
+  color: rgb(var(--white-rgb) / 0.8);
   white-space: nowrap;
 }
 
 .diceov-history-row + .diceov-history-row {
-  border-top: 1px solid #2b2b2b;
+  border-top: 1px solid var(--gray-900);
 }
 
 .diceov-history-type {
@@ -518,7 +509,7 @@ header {
 }
 
 .diceov-history-type-code {
-  color: #ffdc7a;
+  color: var(--gold-100);
 }
 
 .diceov-history-type--ts .diceov-history-type-code {
@@ -540,21 +531,21 @@ header {
 .diceov-history-subtype {
   font-size: 0.79rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.7);
+  color: rgb(var(--white-rgb) / 0.7);
   text-transform: none;
 }
 
 .diceov-history-flag {
   font-size: 0.65rem;
   font-weight: 600;
-  color: #ffdc7a;
+  color: var(--gold-100);
   text-transform: uppercase;
 }
 
 .diceov-history-rollmode {
   font-size: 0.68rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.72);
+  color: rgb(var(--white-rgb) / 0.72);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -567,13 +558,13 @@ header {
 }
 
 .diceov-history-date {
-  color: rgba(255,255,255,0.55);
+  color: rgb(var(--white-rgb) / 0.55);
   text-align: right;
 }
 
 .diceov-history-empty {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.5);
+  color: rgb(var(--white-rgb) / 0.5);
   margin: 0;
 }
 
@@ -662,7 +653,6 @@ header {
 }
 
 /* (opzionale) se hai messo z-index altissimi altrove */
-#dice-overlay .diceov-backdrop { z-index: 0; }
 
 #dice-overlay .diceov-field--modifier .number-stepper {
   grid-template-columns: 30px minmax(0, 1fr) 30px;
@@ -675,14 +665,14 @@ header {
 #dice-overlay .diceov-field--modifier .number-stepper__button {
   border-radius: 8px;
   border-color: #3a3a3a;
-  background: #1e1e1e;
-  color: #f1f1f1;
+  background: var(--gray-900);
+  color: var(--white);
   font-size: 0.9rem;
 }
 
 #dice-overlay .diceov-field--modifier .number-stepper__button:hover {
-  border-color: #ffdc7a;
-  box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.2);
+  border-color: var(--gold-100);
+  box-shadow: 0 0 0 2px rgb(var(--gold-100-rgb) / 0.2);
 }
 
 .diceov-critical-banner {
@@ -705,62 +695,62 @@ header {
 }
 
 .diceov-critical-banner--poor {
-  color: #ffe9d1;
-  background: rgba(121, 55, 0, 0.44);
+  color: var(--paper-100);
+  background: rgb(var(--umber-400-rgb) / 0.44);
   border-color: rgba(255, 153, 87, 0.9);
 }
 
 .diceov-critical-banner--very-poor {
-  color: #fff0d6;
-  background: rgba(113, 78, 0, 0.42);
-  border-color: rgba(255, 190, 92, 0.88);
+  color: var(--paper-100);
+  background: rgb(var(--umber-400-rgb) / 0.42);
+  border-color: rgb(var(--gold-250-rgb) / 0.88);
 }
 
 .diceov-critical-banner--mediocre {
-  color: #e7ecf5;
+  color: var(--blue-100);
   background: rgba(59, 69, 84, 0.44);
   border-color: rgba(154, 170, 191, 0.9);
 }
 
 .diceov-critical-banner--mediocre-very-negative {
-  color: #ffe2d3;
+  color: var(--paper-250);
   background: rgba(126, 39, 20, 0.48);
   border-color: rgba(255, 119, 87, 0.94);
 }
 
 .diceov-critical-banner--mediocre-negative {
-  color: #fff0d6;
-  background: rgba(116, 76, 12, 0.44);
-  border-color: rgba(241, 180, 84, 0.92);
+  color: var(--paper-100);
+  background: rgb(var(--umber-400-rgb) / 0.44);
+  border-color: rgb(var(--gold-250-rgb) / 0.92);
 }
 
 .diceov-critical-banner--mediocre-positive {
-  color: #dcf7f0;
-  background: rgba(21, 102, 88, 0.44);
+  color: var(--green-50);
+  background: rgb(var(--teal-600-rgb) / 0.44);
   border-color: rgba(91, 214, 184, 0.92);
 }
 
 .diceov-critical-banner--mediocre-very-positive {
-  color: #dff3ff;
+  color: var(--blue-100);
   background: rgba(18, 83, 143, 0.46);
   border-color: rgba(89, 177, 255, 0.94);
 }
 
 .diceov-critical-banner--good {
-  color: #dff3ff;
+  color: var(--blue-100);
   background: rgba(16, 92, 153, 0.44);
   border-color: rgba(107, 201, 255, 0.92);
 }
 
 .diceov-critical-banner--excellent {
   color: #fff7d4;
-  background: rgba(135, 98, 10, 0.46);
-  border-color: rgba(255, 220, 122, 0.95);
+  background: rgb(var(--umber-500-rgb) / 0.46);
+  border-color: rgb(var(--gold-100-rgb) / 0.95);
 }
 
 .diceov-critical-banner--critical-success {
   color: #e5fbd7;
-  background: rgba(29, 112, 46, 0.44);
+  background: rgb(var(--green-700-rgb) / 0.44);
   border-color: rgba(124, 219, 106, 0.95);
 }
 
@@ -802,7 +792,7 @@ header {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #ffdc7a;
+  color: var(--gold-100);
   cursor: default;
   font-size: 0.76rem;
   font-weight: 800;
@@ -816,7 +806,7 @@ header {
 
 .diceov-section-title--button:hover,
 .diceov-section-title--button:focus-visible {
-  background: rgba(255, 220, 122, 0.08);
+  background: rgb(var(--gold-100-rgb) / 0.08);
   outline: none;
 }
 
@@ -849,7 +839,7 @@ header {
   padding: 2px 3px;
   border: 1px solid #303030;
   border-radius: 999px;
-  background: #111;
+  background: var(--black);
 }
 
 .diceov-quick-die-label {
@@ -857,14 +847,14 @@ header {
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: #ffdc7a;
+  color: var(--gold-100);
 }
 
 .diceov-quick-die-btn,
 .diceov-reroll-die {
   border: 1px solid #3a3a3a;
-  background: #1e1e1e;
-  color: #f1f1f1;
+  background: var(--gray-900);
+  color: var(--white);
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
@@ -881,13 +871,13 @@ header {
 .diceov-quick-die-btn:hover,
 .diceov-reroll-die:hover,
 .diceov-reroll-die.is-pending {
-  border-color: #ffdc7a;
-  box-shadow: 0 0 0 2px rgba(255, 220, 122, 0.18);
+  border-color: var(--gold-100);
+  box-shadow: 0 0 0 2px rgb(var(--gold-100-rgb) / 0.18);
   transform: translateY(-1px);
 }
 
 .diceov-reroll-die.is-pending {
-  background: rgba(255, 220, 122, 0.14);
+  background: rgb(var(--gold-100-rgb) / 0.14);
 }
 
 .diceov-reroll-card {
@@ -914,7 +904,7 @@ header {
 .diceov-reroll-status {
   margin: 0;
   font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgb(var(--white-rgb) / 0.62);
 }
 
 .diceov-reroll-tray {
@@ -939,7 +929,7 @@ header {
 .diceov-reroll-die-type {
   font-size: 0.66rem;
   font-weight: 800;
-  color: #ffdc7a;
+  color: var(--gold-100);
 }
 
 .diceov-reroll-die-value {
@@ -1011,14 +1001,14 @@ header {
   height: 34px;
   border-radius: 999px;
   border: 1px solid #3a3a3a;
-  background: #151515;
-  color: #f5f5f5;
+  background: var(--gray-900);
+  color: var(--white);
   cursor: pointer;
 }
 
 .diceov-history-icon-button[aria-expanded="true"] {
-  border-color: #ffdc7a;
-  color: #ffdc7a;
+  border-color: var(--gold-100);
+  color: var(--gold-100);
 }
 
 .diceov-history-popover-header {
@@ -1027,21 +1017,25 @@ header {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 8px;
-  color: #f5f5f5;
+  color: var(--white);
 }
 
 /* Dice roller application theme: parchment surfaces, plum actions and clear hierarchy. */
 #dice-overlay {
-  --diceov-plum: #71364c;
-  --diceov-plum-dark: #51283a;
-  --diceov-gold: #b88845;
-  --diceov-border: #d3b78e;
-  --diceov-ink: #4d3540;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  --diceov-plum: var(--wine-700);
+  --diceov-plum-dark: var(--wine-800);
+  --diceov-gold: var(--gold-400);
+  --diceov-border: var(--sand-200);
+  --diceov-ink: var(--wine-750);
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
 #dice-overlay .diceov-backdrop {
-  background: rgba(40, 22, 31, .58);
+  z-index: 0;
+  background: rgb(var(--wine-900-rgb) / .58);
   backdrop-filter: blur(6px);
 }
 
@@ -1055,11 +1049,11 @@ header {
   max-height: none;
   overflow: hidden;
   padding: 12px;
-  border: 1px solid #6e4858;
+  border: 1px solid var(--wine-600);
   border-radius: 22px;
-  background: linear-gradient(145deg, #3e2633, #241821 78%);
+  background: linear-gradient(145deg, var(--wine-750), var(--wine-900) 78%);
   color: var(--diceov-ink);
-  box-shadow: 0 24px 70px rgba(35, 18, 27, .42), inset 0 1px 0 rgba(255,255,255,.75);
+  box-shadow: 0 24px 70px rgb(var(--wine-900-rgb) / .42), inset 0 1px 0 rgb(var(--white-rgb) / .75);
 }
 
 #dice-overlay .diceov-panel {
@@ -1076,8 +1070,8 @@ header {
   overflow-y: auto;
   border: 1px solid var(--diceov-border);
   border-radius: 17px;
-  background: rgba(255, 249, 239, .96);
-  box-shadow: 0 7px 18px rgba(73, 43, 37, .12);
+  background: rgb(var(--paper-50-rgb) / .96);
+  box-shadow: 0 7px 18px rgb(var(--clay-800-rgb) / .12);
 }
 
 #dice-overlay .diceov-header {
@@ -1089,8 +1083,8 @@ header {
   margin: 0 -14px 12px;
   padding: 10px 14px;
   border-radius: 16px 16px 0 0;
-  background: linear-gradient(110deg, var(--diceov-plum-dark), #7d4058 68%, #925a70);
-  box-shadow: inset 0 -1px 0 rgba(255,244,224,.22);
+  background: linear-gradient(110deg, var(--diceov-plum-dark), var(--accent) 68%, var(--wine-550));
+  box-shadow: inset 0 -1px 0 rgb(var(--paper-100-rgb) / .22);
 }
 
 #dice-overlay .diceov-header::before { content: none; }
@@ -1108,16 +1102,16 @@ header {
   height: 36px;
   flex: 0 0 36px;
   place-items: center;
-  border: 1px solid rgba(255,243,220,.32);
+  border: 1px solid rgb(var(--paper-100-rgb) / .32);
   border-radius: 11px;
-  background: rgba(255,255,255,.12);
-  color: #f1d699;
+  background: rgb(var(--white-rgb) / .12);
+  color: var(--paper-150);
   font-size: 15px;
 }
 #dice-overlay .diceov-header__identity > div { display: grid; min-width: 0; gap: 2px; }
-#dice-overlay .diceov-header__identity small { color: #eadccf; font-size: 10px; line-height: 1.2; }
+#dice-overlay .diceov-header__identity small { color: var(--paper-200); font-size: 10px; line-height: 1.2; }
 #dice-overlay .diceov-eyebrow {
-  color: #fff7e8;
+  color: var(--paper-50);
   font: 750 clamp(16px, 2vw, 21px)/1.1 'Fraunces', Georgia, serif;
   letter-spacing: .02em;
   text-align: left;
@@ -1125,11 +1119,11 @@ header {
 }
 #dice-overlay .diceov-history-icon-button {
   grid-column: 2;
-  border-color: rgba(255,243,220,.35);
-  background: rgba(255,255,255,.12);
-  color: #fff7e8;
+  border-color: rgb(var(--paper-100-rgb) / .35);
+  background: rgb(var(--white-rgb) / .12);
+  color: var(--paper-50);
 }
-#dice-overlay .diceov-history-icon-button:is(:hover,[aria-expanded='true']) { border-color: #f1d699; background: rgba(241,214,153,.18); color: #fff3d2; }
+#dice-overlay .diceov-history-icon-button:is(:hover,[aria-expanded='true']) { border-color: var(--paper-150); background: rgb(var(--paper-150-rgb) / .18); color: var(--paper-100); }
 #dice-overlay .diceov-controls { gap: 10px; margin-top: 0; }
 #dice-overlay .diceov-control--row,
 #dice-overlay .diceov-generic-row {
@@ -1139,9 +1133,9 @@ header {
   gap: 10px;
   margin: 0;
   padding: 10px;
-  border: 1px solid #dec8a8;
+  border: 1px solid var(--color-border);
   border-radius: 13px;
-  background: linear-gradient(145deg, #f7ecdb, #efe0ca);
+  background: linear-gradient(145deg, var(--color-surface-alt), var(--color-surface-alt));
 }
 #dice-overlay .diceov-control--row { grid-template-columns: minmax(0, 1fr) 132px; }
 #dice-overlay .diceov-roll-mode-control { grid-column: 1 / -1; }
@@ -1182,24 +1176,24 @@ header {
   align-content: center;
   gap: 3px;
   padding: 7px 6px;
-  border: 1px solid #cfb58f;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fffaf1;
-  color: #664755;
+  background: var(--color-surface);
+  color: var(--wine-650);
   cursor: pointer;
   text-align: center;
   transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
 }
 #dice-overlay .diceov-mode-card strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-#dice-overlay .diceov-mode-card small { overflow: hidden; color: #8a716a; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-#dice-overlay .diceov-mode-card:is(:hover,:focus-visible) { border-color: #8b4a61; transform: translateY(-1px); }
+#dice-overlay .diceov-mode-card small { overflow: hidden; color: var(--clay-550); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+#dice-overlay .diceov-mode-card:is(:hover,:focus-visible) { border-color: var(--wine-550); transform: translateY(-1px); }
 #dice-overlay .diceov-mode-card.is-active {
-  border-color: #71364c;
-  background: linear-gradient(145deg, #7b3c54, #633044);
-  color: #fff8e9;
-  box-shadow: 0 4px 10px rgba(85,40,57,.18);
+  border-color: var(--accent);
+  background: linear-gradient(145deg, var(--accent), var(--wine-800));
+  color: var(--paper-50);
+  box-shadow: 0 4px 10px rgb(var(--wine-800-rgb) / .18);
 }
-#dice-overlay .diceov-mode-card.is-active small { color: #f0dfd4; }
+#dice-overlay .diceov-mode-card.is-active small { color: var(--paper-250); }
 #dice-overlay .diceov-mode-card:disabled { cursor: not-allowed; opacity: .72; transform: none; }
 #dice-overlay .diceov-control--row > .diceov-warning { grid-column: 1 / -1; }
 #dice-overlay .diceov-generic-row { grid-template-columns: minmax(0, 1fr) 132px; }
@@ -1228,22 +1222,22 @@ header {
 #dice-overlay .diceov-generic-row .diceov-field--modifier .number-stepper {
   width: 100%; grid-template-columns: 38px minmax(0, 1fr) 38px; gap: 4px;
 }
-#dice-overlay .diceov-label { margin-bottom: 5px; color: #6d4a57; font-size: 10px; font-weight: 850; letter-spacing: .04em; }
+#dice-overlay .diceov-label { margin-bottom: 5px; color: var(--wine-650); font-size: 10px; font-weight: 850; letter-spacing: .04em; }
 #dice-overlay .diceov-control :is(input[type='number'], input[type='text'], select) {
   width: 100%;
   min-height: 42px;
   padding: 7px 9px;
-  border: 1px solid #cdb38d;
+  border: 1px solid var(--sand-300);
   border-radius: 9px;
-  background: #fffdf8;
-  color: #4d3540;
-  box-shadow: inset 0 1px 2px rgba(70,42,37,.06);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: inset 0 1px 2px rgb(var(--clay-800-rgb) / .06);
 }
-#dice-overlay .diceov-control :is(input,select):focus-visible { outline: 3px solid rgba(184,136,69,.24); border-color: var(--diceov-gold); }
-#dice-overlay .diceov-toggle { border-color: #cdb38d; background: #e4d3bd; }
-#dice-overlay .diceov-toggle-track { background: #927b6e; }
+#dice-overlay .diceov-control :is(input,select):focus-visible { outline: 3px solid rgb(var(--gold-400-rgb) / .24); border-color: var(--diceov-gold); }
+#dice-overlay .diceov-toggle { border-color: var(--sand-300); background: var(--color-surface-alt); }
+#dice-overlay .diceov-toggle-track { background: var(--umber-600); }
 #dice-overlay .diceov-toggle input:checked + .diceov-toggle-track { background: var(--diceov-plum); }
-#dice-overlay .diceov-warning { color: #9b3e42; font-weight: 750; }
+#dice-overlay .diceov-warning { color: var(--color-danger); font-weight: 750; }
 #dice-overlay .diceov-inspiration-row {
   grid-column: 1 / -1;
   display: flex;
@@ -1251,9 +1245,9 @@ header {
   align-items: center;
   gap: 10px;
   padding: 6px 9px;
-  border: 1px solid #d5bc97;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: rgba(255,250,241,.72);
+  background: rgb(var(--paper-50-rgb) / .72);
 }
 #dice-overlay .diceov-inspiration {
   display: inline-flex;
@@ -1270,7 +1264,7 @@ header {
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
   gap: 8px;
-  color: #6d4a57;
+  color: var(--wine-650);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: .04em;
@@ -1285,9 +1279,9 @@ header {
 #dice-overlay .diceov-quick-config > [hidden] { display: none !important; }
 #dice-overlay .diceov-roll-config {
   padding: 9px 10px 10px;
-  border: 1px solid #dec8a8;
+  border: 1px solid var(--color-border);
   border-radius: 13px;
-  background: linear-gradient(145deg, #f7ecdb, #efe0ca);
+  background: linear-gradient(145deg, var(--color-surface-alt), var(--color-surface-alt));
 }
 #dice-overlay .diceov-quick-config .diceov-field--modifier {
   display: grid;
@@ -1306,10 +1300,10 @@ header {
   gap: 0;
   min-height: 42px;
   padding: 3px;
-  border: 1px solid #cdb38d;
+  border: 1px solid var(--sand-300);
   border-radius: 12px;
-  background: #fffdf8;
-  box-shadow: inset 0 1px 2px rgba(70,42,37,.06);
+  background: var(--color-surface);
+  box-shadow: inset 0 1px 2px rgb(var(--clay-800-rgb) / .06);
 }
 #dice-overlay .diceov-quick-config .diceov-field--modifier .number-stepper__button {
   display: grid;
@@ -1336,7 +1330,7 @@ header {
 }
 #dice-overlay .diceov-quick-config .diceov-field--modifier .number-stepper:focus-within {
   border-color: var(--diceov-gold);
-  box-shadow: 0 0 0 3px rgba(184,136,69,.18);
+  box-shadow: 0 0 0 3px rgb(var(--gold-400-rgb) / .18);
 }
 #dice-overlay .diceov-quick-config input[type='number'] {
   appearance: textfield;
@@ -1349,10 +1343,10 @@ header {
   min-width: 0;
   min-height: 40px;
   padding: 7px 10px;
-  border: 1px solid #cdb38d;
+  border: 1px solid var(--sand-300);
   border-radius: 9px;
-  background: #fffdf8;
-  color: #4d3540;
+  background: var(--color-surface);
+  color: var(--color-ink);
   font-size: 14px;
   font-weight: 700;
   text-align: left;
@@ -1363,27 +1357,27 @@ header {
 #dice-overlay .diceov-reroll-card,
 #dice-overlay .diceov-history-panel,
 #dice-overlay .diceov-history-accordion {
-  border-color: #d8bf99;
-  background: #fffaf1;
+  border-color: var(--color-border);
+  background: var(--color-surface);
   color: var(--diceov-ink);
 }
 #dice-overlay .diceov-accordion-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 #dice-overlay .diceov-section-title { color: var(--diceov-plum); }
-#dice-overlay .diceov-section-title--button:is(:hover,:focus-visible) { background: #eee0d7; }
-#dice-overlay .diceov-result-label { color: #80645f; }
+#dice-overlay .diceov-section-title--button:is(:hover,:focus-visible) { background: var(--paper-250); }
+#dice-overlay .diceov-result-label { color: var(--clay-550); }
 #dice-overlay .diceov-result-detail { color: #705b58; }
 #dice-overlay .diceov-result--final {
   flex-wrap: wrap;
   min-height: 58px;
   padding: 9px 10px;
-  border-color: #c9a66c;
-  background: radial-gradient(circle at top, rgba(211,166,90,.18), transparent 58%), #fff8e7;
+  border-color: var(--gold-250);
+  background: radial-gradient(circle at top, rgb(var(--gold-250-rgb) / .18), transparent 58%), var(--color-surface);
 }
 #dice-overlay .diceov-result--final .diceov-result-detail { width: 100%; order: 4; white-space: normal; }
-#dice-overlay .diceov-result--final .diceov-result-label { color: #6b4a4a; }
-#dice-overlay .diceov-result--final .diceov-result-value { background: #71364c; color: #fff4df; }
+#dice-overlay .diceov-result--final .diceov-result-label { color: var(--wine-650); }
+#dice-overlay .diceov-result--final .diceov-result-value { background: var(--accent); color: var(--paper-100); }
 
-#dice-overlay .diceov-quick-die { border-color: #d6bd98; background: #f4e7d4; }
+#dice-overlay .diceov-quick-die { border-color: var(--color-border); background: var(--color-surface-alt); }
 #dice-overlay .diceov-section-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 40px;
@@ -1397,30 +1391,33 @@ header {
   place-items: center;
   justify-self: center;
   padding: 0;
-  border: 1px solid #cbb08a;
+  border: 1px solid var(--sand-300);
   border-radius: 50%;
-  background: #fffaf1;
-  color: #633349;
+  background: var(--color-surface);
+  color: var(--wine-800);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
 }
 #dice-overlay .diceov-quick-reset:is(:hover, :focus-visible) {
   border-color: var(--diceov-plum);
-  background: #ead9df;
-  box-shadow: 0 0 0 2px rgba(118,54,75,.13);
+  background: var(--color-surface-accent);
+  box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .13);
 }
 #dice-overlay .diceov-quick-die-label,
 #dice-overlay .diceov-reroll-die-type { color: var(--diceov-plum); }
 #dice-overlay .diceov-quick-die-btn,
 #dice-overlay .diceov-reroll-die,
 #dice-overlay .diceov-field--modifier .number-stepper__button {
-  border-color: #cbb08a;
-  background: #fffaf1;
-  color: #633349;
+  border-color: var(--sand-300);
+  background: var(--color-surface);
+  color: var(--wine-800);
 }
-#dice-overlay .diceov-quick-die-btn { min-width: 38px; min-height: 38px; font-size: 20px; font-weight: 850; }
 #dice-overlay .diceov-quick-die-btn {
+  min-width: 38px;
+  min-height: 38px;
+  font-size: 20px;
+  font-weight: 850;
   display: grid;
   width: 38px;
   height: 38px;
@@ -1442,8 +1439,8 @@ header {
 #dice-overlay .diceov-field--modifier .number-stepper__button { min-width: 38px; min-height: 38px; }
 #dice-overlay :is(.diceov-quick-die-btn,.diceov-reroll-die,.diceov-field--modifier .number-stepper__button):hover {
   border-color: var(--diceov-plum);
-  background: #ead9df;
-  box-shadow: 0 0 0 2px rgba(118,54,75,.13);
+  background: var(--color-surface-accent);
+  box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .13);
 }
 #dice-overlay .diceov-generic-row {
   grid-template-columns: repeat(2, minmax(0, max-content));
@@ -1459,9 +1456,9 @@ header {
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  border: 1px solid #d6bd98;
+  border: 1px solid var(--color-border);
   border-radius: 9px;
-  background: rgba(255,250,241,.72);
+  background: rgb(var(--paper-50-rgb) / .72);
 }
 #dice-overlay .diceov-generic-row > .diceov-control > .diceov-label { margin: 0; white-space: nowrap; }
 #dice-overlay .diceov-generic-row .diceov-toggle { margin: 0; }
@@ -1475,12 +1472,12 @@ header {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #b98d68;
+  border: 1px solid var(--umber-300);
   border-radius: 16px;
   background:
-    radial-gradient(circle at 50% 35%, rgba(255,244,220,.11), transparent 34%),
-    linear-gradient(145deg, #4e2d3d, #2c1c27 72%);
-  box-shadow: inset 0 0 50px rgba(0,0,0,.28), 0 6px 16px rgba(62,34,36,.16);
+    radial-gradient(circle at 50% 35%, rgb(var(--paper-100-rgb) / .11), transparent 34%),
+    linear-gradient(145deg, var(--wine-750), var(--wine-900) 72%);
+  box-shadow: inset 0 0 50px rgb(var(--black-rgb) / .28), 0 6px 16px rgb(var(--clay-800-rgb) / .16);
 }
 #dice-overlay .diceov-tabletop-empty {
   position: absolute;
@@ -1491,15 +1488,15 @@ header {
   justify-items: center;
   gap: 7px;
   padding: 24px;
-  background: radial-gradient(circle at center, rgba(83,48,65,.84), rgba(32,22,29,.94) 68%);
-  color: #fff4e2;
+  background: radial-gradient(circle at center, rgb(var(--wine-800-rgb) / .84), rgb(var(--wine-900-rgb) / .94) 68%);
+  color: var(--paper-100);
   text-align: center;
   pointer-events: auto;
 }
 #dice-overlay .diceov-tabletop-empty[hidden] { display: none; }
-#dice-overlay .diceov-tabletop-empty > span { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid rgba(243,207,139,.38); border-radius: 18px; background: rgba(255,255,255,.08); font-size: 28px; }
+#dice-overlay .diceov-tabletop-empty > span { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid rgb(var(--gold-200-rgb) / .38); border-radius: 18px; background: rgb(var(--white-rgb) / .08); font-size: 28px; }
 #dice-overlay .diceov-tabletop-empty strong { font: 750 22px/1.15 'Fraunces', Georgia, serif; }
-#dice-overlay .diceov-tabletop-empty small { max-width: 330px; color: #d9c8c1; font-size: 12px; }
+#dice-overlay .diceov-tabletop-empty small { max-width: 330px; color: var(--paper-200); font-size: 12px; }
 #dice-overlay .diceov-tabletop-feedback {
   position: absolute;
   z-index: 5;
@@ -1521,21 +1518,21 @@ header {
   justify-content: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid rgba(255,255,255,.42);
+  border: 1px solid rgb(var(--white-rgb) / .42);
   border-radius: 16px;
-  background: rgba(255, 250, 241, .34);
-  color: #fff7ed;
-  box-shadow: 0 10px 28px rgba(19,10,16,.28);
+  background: rgb(var(--paper-50-rgb) / .34);
+  color: var(--paper-50);
+  box-shadow: 0 10px 28px rgb(var(--wine-950-rgb) / .28);
   backdrop-filter: blur(2px);
 }
 #dice-overlay .diceov-tabletop-feedback .diceov-result-label {
   order: 3;
   flex: 0 0 auto;
   margin: 0;
-  color: #fff4e5;
+  color: var(--paper-100);
   font-size: 12px;
   font-weight: 850;
-  text-shadow: 0 1px 3px rgba(22,9,16,.72);
+  text-shadow: 0 1px 3px rgb(var(--wine-950-rgb) / .72);
   text-transform: uppercase;
 }
 #dice-overlay .diceov-tabletop-feedback .diceov-result-value {
@@ -1544,8 +1541,8 @@ header {
   min-width: 62px;
   padding: 4px 14px;
   border-radius: 999px;
-  background: #71364c;
-  color: #fff5e3;
+  background: var(--accent);
+  color: var(--paper-100);
   font-size: 25px;
   font-weight: 900;
 }
@@ -1555,11 +1552,11 @@ header {
   width: auto;
   min-width: 0;
   margin: 0;
-  color: #fff8ef;
+  color: var(--paper-50);
   font-size: 12px;
   font-weight: 700;
   text-align: left;
-  text-shadow: 0 1px 4px rgba(22,9,16,.82);
+  text-shadow: 0 1px 4px rgb(var(--wine-950-rgb) / .82);
   white-space: nowrap;
 }
 #dice-overlay .diceov-tabletop-feedback .diceov-critical-banner {
@@ -1572,7 +1569,7 @@ header {
   border-radius: 999px;
   font-size: 11px;
   white-space: nowrap;
-  box-shadow: 0 8px 20px rgba(13,7,11,.28);
+  box-shadow: 0 8px 20px rgb(var(--black-rgb) / .28);
   backdrop-filter: blur(8px);
 }
 #dice-overlay .diceov-tabletop__header {
@@ -1581,17 +1578,17 @@ header {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(240,211,163,.24);
-  background: rgba(35,21,30,.62);
-  color: #fff5e3;
+  border-bottom: 1px solid rgb(var(--paper-150-rgb) / .24);
+  background: rgb(var(--wine-900-rgb) / .62);
+  color: var(--paper-100);
 }
 #dice-overlay .diceov-tabletop__header > span:first-child {
   display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center;
-  border: 1px solid rgba(255,243,220,.24); border-radius: 10px; background: rgba(255,255,255,.09); font-size: 17px;
+  border: 1px solid rgb(var(--paper-100-rgb) / .24); border-radius: 10px; background: rgb(var(--white-rgb) / .09); font-size: 17px;
 }
 #dice-overlay .diceov-tabletop__header > span:last-child { display: grid; gap: 2px; }
 #dice-overlay .diceov-tabletop__header strong { font: 700 16px/1.1 'Fraunces', Georgia, serif; }
-#dice-overlay .diceov-tabletop__header small { color: #dac9bd; font-size: 10px; }
+#dice-overlay .diceov-tabletop__header small { color: var(--paper-200); font-size: 10px; }
 #dice-overlay #diceRoller {
   width: 100%;
   height: 100%;
@@ -1616,7 +1613,7 @@ header {
   min-height: 0;
   flex-direction: column;
   border-radius: 0 0 16px 16px;
-  background: #f5e6d1;
+  background: var(--color-surface-alt);
 }
 #dice-overlay .diceov-history-accordion.is-open .diceov-history-panel { min-height: 0; flex: 1; overflow: hidden; }
 #dice-overlay .diceov-history-list { gap: 0; margin-top: 0; padding: 0 3px 4px; }
@@ -1635,27 +1632,27 @@ header {
 #dice-overlay .diceov-history-rollmode,
 #dice-overlay .diceov-history-date,
 #dice-overlay .diceov-history-empty,
-#dice-overlay .diceov-reroll-status { color: #806c64; }
+#dice-overlay .diceov-reroll-status { color: var(--clay-550); }
 
 #dice-overlay .diceov-history-accordion,
 #dice-overlay .diceov-history-panel,
 #dice-overlay .diceov-history-accordion.is-open {
-  border-color: #604150;
-  background: linear-gradient(155deg, #34212c, #20161d 76%);
-  color: #fff4e7;
+  border-color: var(--wine-750);
+  background: linear-gradient(155deg, var(--wine-850), var(--wine-900) 76%);
+  color: var(--paper-50);
 }
-#dice-overlay .diceov-history-panel { box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
-#dice-overlay .diceov-history-popover-header { color: #fff3df; }
+#dice-overlay .diceov-history-panel { box-shadow: inset 0 1px 0 rgb(var(--white-rgb) / .04); }
+#dice-overlay .diceov-history-popover-header { color: var(--paper-100); }
 #dice-overlay .diceov-history-popover-close {
-  border-color: #775264;
-  background: #432b37;
-  color: #fff2de;
+  border-color: var(--wine-600);
+  background: var(--wine-750);
+  color: var(--paper-100);
 }
-#dice-overlay .diceov-history-popover-close:is(:hover,:focus-visible) { border-color: #e2bd78; background: #573447; }
-#dice-overlay .diceov-history-row { color: #f3e7df; }
-#dice-overlay .diceov-history-row + .diceov-history-row { border-color: rgba(239,210,157,.17); }
-#dice-overlay .diceov-history-type-code { border-color: #8b6072; background: #4c3040; color: #f4d38d; }
-#dice-overlay .diceov-history-total { color: #f5cf82; }
+#dice-overlay .diceov-history-popover-close:is(:hover,:focus-visible) { border-color: var(--gold-200); background: var(--wine-800); }
+#dice-overlay .diceov-history-row { color: var(--paper-250); }
+#dice-overlay .diceov-history-row + .diceov-history-row { border-color: rgb(var(--paper-150-rgb) / .17); }
+#dice-overlay .diceov-history-type-code { border-color: var(--wine-550); background: var(--wine-750); color: var(--gold-200); }
+#dice-overlay .diceov-history-total { color: var(--gold-200); }
 #dice-overlay .diceov-history-subtype,
 #dice-overlay .diceov-history-rollmode,
 #dice-overlay .diceov-history-date,
@@ -1670,9 +1667,9 @@ header {
   justify-content: flex-start;
   margin: auto -14px 0;
   padding: 10px 14px 12px;
-  border-top: 1px solid #dfc9a9;
+  border-top: 1px solid var(--color-border);
   border-radius: 0 0 16px 16px;
-  background: rgba(255,249,239,.97);
+  background: rgb(var(--paper-50-rgb) / .97);
   backdrop-filter: blur(8px);
 }
 #dice-overlay .diceov-exit-button {
@@ -1681,16 +1678,16 @@ header {
   align-items: center;
   gap: 8px;
   padding: 8px 15px;
-  border: 1px solid #c7a980;
+  border: 1px solid var(--sand-300);
   border-radius: 11px;
-  background: #fffaf1;
-  color: #67384b;
+  background: var(--color-surface);
+  color: var(--accent);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(73,43,37,.08);
+  box-shadow: 0 3px 8px rgb(var(--clay-800-rgb) / .08);
 }
 #dice-overlay .diceov-exit-button > span:first-child { font-size: 18px; line-height: 1; }
-#dice-overlay .diceov-exit-button:is(:hover,:focus-visible) { border-color: #71364c; background: #ead9df; }
+#dice-overlay .diceov-exit-button:is(:hover,:focus-visible) { border-color: var(--accent); background: var(--color-surface-accent); }
 
 @media (max-width: 900px) {
   #dice-overlay .diceov-stage {

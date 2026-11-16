@@ -18,11 +18,11 @@
   background: var(--sheet-surface); color: #263a34; text-align: left;
   cursor: pointer; box-shadow: none; transition: background .15s, border-color .15s;
 }
-.sheet-shortcut > span { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 40px; font-size: 24px; color: #466a61; }
+.sheet-shortcut > span { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 40px; font-size: 24px; color: var(--teal-600); }
 .sheet-shortcut strong { font-size: 14px; font-weight: 600; }
 .sheet-shortcut small { font-size: 11px; line-height: 1.4; color: #59675e; }
-.sheet-shortcut:hover { background: #e9efea; border-color: #8e9d87; }
-.sheet-dashboard button:focus-visible { outline: 2px solid #d3be91; outline-offset: 3px; }
+.sheet-shortcut:hover { background: var(--gray-50); border-color: #8e9d87; }
+.sheet-dashboard button:focus-visible { outline: 2px solid var(--color-border); outline-offset: 3px; }
 .sheet-quickbar {
   grid-column: 2;
   position: sticky;
@@ -32,17 +32,17 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   padding: 8px;
-  border: 1px solid rgba(160, 137, 97, .36);
+  border: 1px solid rgb(var(--umber-450-rgb) / .36);
   border-radius: 18px;
-  background: rgba(255, 253, 248, .94);
-  box-shadow: 0 12px 34px rgba(45, 35, 27, .16);
+  background: rgb(var(--paper-50-rgb) / .94);
+  box-shadow: 0 12px 34px rgb(var(--umber-800-rgb) / .16);
   backdrop-filter: blur(14px);
 }
 .sheet-quickbar button { min-height: 54px; padding: 10px 6px; border: 1px solid var(--sheet-line); border-radius: 14px; background: var(--sheet-surface); color: #263a34; font-size: 12px; font-weight: 600; cursor: pointer; }
-.sheet-quickbar button span { display: block; margin-bottom: 4px; font-size: 20px; color: #466a61; }
-.sheet-quickbar button:first-child span { color: #9d3838; }
-.sheet-quickbar button:nth-child(2) span { color: #286546; }
-.sheet-quickbar button:hover { background: #e9efea; }
+.sheet-quickbar button span { display: block; margin-bottom: 4px; font-size: 20px; color: var(--teal-600); }
+.sheet-quickbar button:first-child span { color: var(--color-danger); }
+.sheet-quickbar button:nth-child(2) span { color: var(--green-650); }
+.sheet-quickbar button:hover { background: var(--gray-50); }
 .sheet-dashboard .character-overview { display: grid; gap: 12px; }
 .app-shell[data-route='home'] .sheet-dashboard .character-summary {
   display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px;
@@ -57,7 +57,7 @@
 .sheet-dashboard .character-summary-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .sheet-dashboard .profile-status-card { min-height: 48px; padding: 8px 10px; }
 .app-shell[data-route='home'] .sheet-dashboard :is(.stat-panel, .combat-stat, .combat-status-card, .profile-status-card, .hp-panel, .hp-vitals-card) {
-  border: 1px solid var(--sheet-line) !important; border-radius: 14px; box-shadow: none; background: #f4f5ef !important;
+  border: 1px solid var(--sheet-line) !important; border-radius: 14px; box-shadow: none; background: var(--gray-100) !important;
 }
 .sheet-dashboard .stat-panel { padding: 8px; }
 .sheet-dashboard .stat-grid--abilities { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
@@ -116,7 +116,7 @@
 }
 .sheet-dashboard .sheet-shortcut--inline > span { width: 24px; height: 24px; color: #526c60; }
 .sheet-dashboard .sheet-shortcut--inline small { display: none; }
-.sheet-dashboard .sheet-shortcut--inline:hover { background: #e7ede3; }
+.sheet-dashboard .sheet-shortcut--inline:hover { background: var(--green-100); }
 .sheet-dashboard .profile-status-card__label { font-size: 11px; }
 /* Leave space above the global action button instead of covering the dice shortcut. */
 .home-layout.sheet-dashboard { padding-bottom: 18px; }
@@ -127,7 +127,7 @@
 /* Restrict the canvas treatment to the sheet, preserving the original menu,
    header and navigation imagery. */
 .app-main:has(.sheet-dashboard) {
-  background-image: linear-gradient(135deg, #eeeee8, #e3e8e2);
+  background-image: linear-gradient(135deg, var(--gray-100), var(--gray-50));
 }
 .sheet-dashboard .sheet-shortcut,
 .sheet-dashboard .sheet-quickbar button {
@@ -139,11 +139,11 @@
   max-height: calc(100dvh - 40px);
   border: 1px solid #bfcac2;
   border-radius: 18px;
-  background: #fffdf8;
+  background: var(--color-surface);
 }
 .sheet-detail--rolls > .modal-header {
   padding: 18px 24px;
-  border-bottom: 1px solid #d5d9d2;
+  border-bottom: 1px solid var(--gray-50);
 }
 .sheet-detail--rolls > .modal-body {
   max-height: calc(100dvh - 130px);
@@ -166,18 +166,18 @@
 .sheet-detail--rolls .modifier-card {
   display: grid; grid-template-columns: 38px minmax(0, 1fr) 52px;
   gap: 10px; align-items: center; min-height: 68px; padding: 10px 12px;
-  border: 1px solid #d5d9d2; border-radius: 12px;
-  background: #f7f8f3; color: #263a34; box-shadow: none; text-align: left;
+  border: 1px solid var(--gray-50); border-radius: 12px;
+  background: var(--gray-100); color: #263a34; box-shadow: none; text-align: left;
 }
-.sheet-detail--rolls .modifier-card:hover { background: #e9efea; border-color: #648677; }
-.sheet-detail--rolls .modifier-card:focus-visible { outline: 2px solid #35695c; outline-offset: 2px; }
+.sheet-detail--rolls .modifier-card:hover { background: var(--gray-50); border-color: #648677; }
+.sheet-detail--rolls .modifier-card:focus-visible { outline: 2px solid var(--teal-600); outline-offset: 2px; }
 .sheet-detail--rolls :is(.skill-card__name, .saving-throw-card__name) {
   font-size: 15px; font-weight: 650; color: #263a34; white-space: normal;
 }
 .sheet-detail--rolls :is(.skill-card__status, .saving-throw-card__status) { color: #53645a; font-size: 12px; }
 .sheet-detail--rolls .modifier-value {
   width: auto; min-width: 0; height: auto; padding: 5px;
-  background: #e5ede7; color: #285246; border: 0; border-radius: 8px;
+  background: var(--gray-50); color: #285246; border: 0; border-radius: 8px;
   font-size: 23px; box-shadow: none;
 }
 .sheet-detail--rolls .modifier-value small { font-size: 10px; color: #466557; }

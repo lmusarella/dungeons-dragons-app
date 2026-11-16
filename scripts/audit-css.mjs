@@ -3,6 +3,8 @@ import { join, relative, resolve } from 'node:path';
 import postcss from 'postcss';
 import { parse } from 'acorn';
 import { full } from 'acorn-walk';
+import { deltaE, rgbKey, toLab } from './lib/color.mjs';
+import { colorMatches } from './lib/palette.mjs';
 
 /*
  * CSS audit. Read-only by default (exit code 1 when dead CSS is found).
@@ -10,7 +12,8 @@ import { full } from 'acorn-walk';
  *   node scripts/audit-css.mjs            report
  *   node scripts/audit-css.mjs --verbose  report without truncating the lists
  *   node scripts/audit-css.mjs --names    also list the unique dead class/id names
- *   node scripts/audit-css.mjs --colors   also list the most repeated colour literals
+ *   node scripts/audit-css.mjs --colors   also list the most repeated raw colours with the nearest palette token
+ *   node scripts/audit-css.mjs --merge    merge repeated selectors that are provably safe to merge
  *   node scripts/audit-css.mjs --fix      remove what the report marks as dead
  *                                         (rerun until it converges, then run the tests)
  *
@@ -22,6 +25,7 @@ import { full } from 'acorn-walk';
 const root = new URL('../', import.meta.url).pathname.replace(/^\/(.:)/, '$1');
 const args = new Set(process.argv.slice(2));
 const FIX = args.has('--fix');
+const MERGE = args.has('--merge');
 const VERBOSE = args.has('--verbose');
 const ENTRY = 'src/styles/index.css';
 const walk = (dir, test) => readdirSync(dir).flatMap((entry) => {
@@ -226,10 +230,12 @@ for (const [name, defs] of keyframeDefs) {
   defs.forEach(({ node }) => mutations.push({ type: 'remove', node }));
 }
 
+const CENTRAL_SHEETS = new Set(['src/styles/palette.css', 'src/styles/tokens.css']);
 for (const [name, defs] of varDefs) {
   if (varUse.has(name) || tokenSet.has(name)) continue;
-  report.vars.push({ kind: 'unused', name, location: `${defs[0].sheet.name}:${defs[0].node.source.start.line}`, count: defs.length });
-  defs.forEach(({ node }) => mutations.push({ type: 'remove', node }));
+  const central = defs.every(({ sheet }) => CENTRAL_SHEETS.has(sheet.name));
+  report.vars.push({ kind: central ? 'unused-token' : 'unused', name, location: `${defs[0].sheet.name}:${defs[0].node.source.start.line}`, count: defs.length });
+  if (!central) defs.forEach(({ node }) => mutations.push({ type: 'remove', node }));
 }
 for (const [name, uses] of varUse) {
   if (varDefs.has(name) || tokenSet.has(name)) continue;
@@ -289,6 +295,65 @@ for (const sheet of sheets) {
 }
 const multiFile = [...selectorFiles].filter(([, files]) => files.size > 1);
 
+/*
+ * Repeated selectors (same selector list and at-rule context declared more than once).
+ * Merging moves the declarations of the earlier rules into the last one, which delays
+ * them: it is only safe when no rule between them has the same specificity, the same
+ * importance and a related property (a tie that the original order resolved in its favour).
+ * Groups where that cannot be proven are reported and left alone.
+ */
+const FUNCTIONAL_PSEUDO = /:(is|not|has|where|matches|any)\(/;
+const specificity = (selector) => {
+  const text = selector.replace(/\[[^\]]*\]/g, '[a]').replace(/:where\([^)]*\)/g, '');
+  const ids = (text.match(/#[\w-]+/g) || []).length;
+  const classes = (text.match(/\.[\w-]+|\[a\]|:(?!:)[\w-]+/g) || []).length;
+  const types = (text.replace(/\.[\w-]+|#[\w-]+|\[a\]|::?[\w-]+|\([^)]*\)/g, ' ').match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length + (text.match(/::[\w-]+/g) || []).length;
+  return ids * 10000 + classes * 100 + types;
+};
+const propFamily = (prop) => (prop.startsWith('--') ? prop : prop.replace(/^-(webkit|moz)-/, '').split('-')[0]);
+const sheetRank = (sheet) => (globalOrder.includes(sheet.name) ? globalOrder.indexOf(sheet.name) : 1000 + sheets.indexOf(sheet));
+const orderOf = ({ sheet, rule }) => sheetRank(sheet) * 1e9 + rule.source.start.offset;
+const ruleKey = (rule) => `${contextOf(rule)}\u0000${normalize(rule.selector)}`;
+const ruleMeta = new Map();
+const metaOf = (entry) => {
+  if (!ruleMeta.has(entry.rule)) {
+    ruleMeta.set(entry.rule, {
+      order: orderOf(entry),
+      specs: splitSelectorList(entry.rule.selector).map((selector) => ({ spec: specificity(selector), loose: FUNCTIONAL_PSEUDO.test(selector) })),
+      props: entry.rule.nodes.filter((node) => node.type === 'decl').map((decl) => ({ family: propFamily(decl.prop), important: Boolean(decl.important) })),
+    });
+  }
+  return ruleMeta.get(entry.rule);
+};
+const everyRule = sheets.flatMap((sheet) => { const list = []; sheet.ast.walkRules((rule) => { if (!inKeyframes(rule)) list.push({ sheet, rule }); }); return list; });
+const tie = (a, b) => a.some((x) => b.some((y) => x.loose || y.loose || x.spec === y.spec));
+const mergeable = []; const unmergeable = [];
+for (const [key, entries] of rulesByKey) {
+  if (entries.length < 2 || /^:root/.test(entries[0].rule.selector)) continue;
+  const group = entries.slice().sort((a, b) => orderOf(a) - orderOf(b));
+  const inGlobal = group.every((entry) => globalOrder.includes(entry.sheet.name));
+  const sameSheet = group.every((entry) => entry.sheet === group[0].sheet);
+  if (!inGlobal && !sameSheet) { unmergeable.push({ group, reason: 'spans lazy and global sheets' }); continue; }
+  const scope = everyRule.filter((entry) => (inGlobal ? globalOrder.includes(entry.sheet.name) : entry.sheet === group[0].sheet));
+  const last = group.at(-1); const lastMeta = metaOf(last);
+  let blocker = null;
+  for (const early of group.slice(0, -1)) {
+    const earlyMeta = metaOf(early);
+    for (const decl of early.rule.nodes.filter((node) => node.type === 'decl')) {
+      const family = propFamily(decl.prop); const important = Boolean(decl.important);
+      const clash = scope.find((other) => {
+        const meta = metaOf(other);
+        return meta.order > earlyMeta.order && meta.order < lastMeta.order && ruleKey(other.rule) !== key
+          && meta.props.some((prop) => prop.family === family && prop.important === important) && tie(meta.specs, lastMeta.specs);
+      });
+      if (clash) { blocker = { decl, clash }; break; }
+    }
+    if (blocker) break;
+  }
+  if (blocker) unmergeable.push({ group, reason: `${blocker.decl.prop} may tie with ${blocker.clash.sheet.name.split('/').pop()}:${blocker.clash.rule.source.start.line}` });
+  else mergeable.push(group);
+}
+
 /* ----------------------------------------------------------------- output */
 const importantByFile = sheets.map((sheet) => { let count = 0; sheet.ast.walkDecls((decl) => { if (decl.important) count += 1; }); return [sheet.name, count]; });
 const section = (title) => console.log(`\n=== ${title} ===`);
@@ -323,18 +388,43 @@ cap(report.shadowed).forEach((entry) => console.log(`${entry.from} ${entry.prop}
 section(`Selectors defined in more than one stylesheet (${multiFile.length})`);
 cap(multiFile.sort((a, b) => b[1].size - a[1].size)).forEach(([selector, files]) => console.log(`${[...files].map((file) => file.split('/').pop()).join(', ').padEnd(60)} ${selector.slice(0, 90)}`));
 
+const paletteTokens = [...(sheets.find((sheet) => sheet.name === 'src/styles/palette.css')?.text ?? '').matchAll(/^\s*(--[a-z]+(?:-\d+)?):\s*(#[0-9a-f]{6});/gm)].map((match) => {
+  const rgb = [1, 3, 5].map((index) => parseInt(match[2].slice(index, index + 2), 16));
+  return { name: match[1], rgb, lab: toLab(rgb) };
+});
+const literals = new Map();
+sheets.filter((sheet) => !CENTRAL_SHEETS.has(sheet.name)).forEach((sheet) => sheet.ast.walkDecls((decl) => {
+  for (const { parsed } of colorMatches(decl.value)) {
+    if (!parsed) continue;
+    const key = rgbKey(parsed.rgb);
+    const entry = literals.get(key) || { rgb: parsed.rgb, n: 0, files: new Set() };
+    entry.n += 1; entry.files.add(sheet.name.split('/').pop()); literals.set(key, entry);
+  }
+}));
+const literalUses = [...literals.values()].reduce((sum, entry) => sum + entry.n, 0);
+section(`Raw colour values outside palette.css: ${literalUses} uses, ${literals.size} distinct (use var(--token); see palette.css)`);
 if (args.has('--colors')) {
-  const colors = new Map();
-  sheets.forEach((sheet) => sheet.ast.walkDecls((decl) => {
-    if (decl.prop.startsWith('--')) return;
-    for (const match of decl.value.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) colors.set(match[0].toLowerCase(), (colors.get(match[0].toLowerCase()) || 0) + 1);
-  }));
-  section(`Colour literals: ${[...colors.values()].reduce((sum, count) => sum + count, 0)} uses, ${colors.size} distinct`);
-  [...colors].sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([color, count]) => console.log(`${color.padEnd(10)} ${count}`));
+  [...literals].sort((a, b) => b[1].n - a[1].n).slice(0, VERBOSE ? Infinity : 25).forEach(([key, entry]) => {
+    const [token, distance] = paletteTokens.map((candidate) => [candidate, deltaE(toLab(entry.rgb), candidate.lab)]).sort((a, b) => a[1] - b[1])[0] ?? [];
+    console.log(`#${key}  x${String(entry.n).padEnd(3)} nearest ${token?.name} dE ${distance?.toFixed(1)}  ${[...entry.files].join(',')}`);
+  });
 }
 
-if (FIX) {
+section(`Repeated selectors: ${mergeable.length} can be merged (--merge), ${unmergeable.length} blocked`);
+cap(unmergeable).forEach(({ group, reason }) => console.log(`${group[0].sheet.name.split('/').pop()}:${group[0].rule.source.start.line} x${group.length}  ${normalize(group[0].rule.selector).slice(0, 70)}  [${reason}]`));
+
+if (FIX || MERGE) {
   const removed = new Set();
+  if (MERGE) {
+    for (const group of mergeable) {
+      const last = group.at(-1).rule;
+      const before = last.nodes.find((node) => node.type === 'decl')?.raws.before;
+      const moved = group.slice(0, -1).flatMap(({ rule }) => rule.nodes.filter((node) => node.type === 'decl').map((decl) => decl.clone({ raws: { before } })));
+      last.prepend(...moved);
+      group.slice(0, -1).forEach(({ rule }) => { removed.add(rule); rule.remove(); });
+    }
+    mutations.length = 0;
+  }
   for (const mutation of mutations) {
     if (mutation.type === 'selector') { if (!removed.has(mutation.node)) mutation.node.selector = mutation.selector; continue; }
     if (mutation.node.parent) { removed.add(mutation.node); mutation.node.remove(); }
@@ -346,7 +436,7 @@ if (FIX) {
     });
   };
   for (const sheet of sheets) { prune(sheet.ast); writeFileSync(sheet.path, sheet.ast.toString()); }
-  console.log(`\nApplied ${mutations.length} mutations.`);
+  console.log(MERGE ? '\nMerged repeated selectors; rerun until the report shows 0 mergeable.' : `\nApplied ${mutations.length} mutations.`);
 }
 const issues = report.deadRules.length + report.deadSelectors.length + report.keyframes.length;
-if (issues && !FIX) process.exitCode = 1;
+if (issues && !FIX && !MERGE) process.exitCode = 1;

@@ -76,7 +76,7 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     expect(source).toContain('diceov-header__identity');
     expect(source).toContain('Configura il tiro, poi trascina sul tavolo.');
     expect(styles).toContain('Dice roller application theme');
-    expect(styles).toContain('--diceov-plum: #71364c');
+    expect(styles).toContain('--diceov-plum: var(--wine-700)');
     expect(styles).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
     expect(source).toContain('setQuickDiceOpen(quickDiceInitiallyOpen)');
   });
@@ -88,7 +88,7 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     expect(source).toContain('data-roll-mode-option="advantage"');
     expect(source).toContain('data-roll-mode-option="disadvantage"');
     expect(styles).toContain('.diceov-mode-card.is-active');
-    expect(styles).toMatch(/\.diceov-history-accordion\.is-open\s*\{[\s\S]*background:\s*linear-gradient\(155deg,\s*#34212c,\s*#20161d/);
+    expect(styles).toMatch(/\.diceov-history-accordion\.is-open\s*\{[\s\S]*background:\s*linear-gradient\(155deg,\s*var\(--wine-850\),\s*var\(--wine-900\)/);
   });
 
   it('starts a generic roll empty and replaces buff controls with quick dice', () => {
@@ -119,7 +119,7 @@ describe('src/features/dice-roller/overlay/dice.js', () => {
     expect(source).toContain('diceov-quick-config');
     expect(source).toContain('data-quick-modifier="d20"');
     expect(styles).toContain('.diceov-stage--compact-roll .diceov-selection-control');
-    expect(styles).toContain('background: rgba(255, 250, 241, .34)');
+    expect(styles).toContain('background: rgb(var(--paper-50-rgb) / .34)');
   });
 
   it('aligns quick-dice controls and keeps tabletop feedback on one line', () => {

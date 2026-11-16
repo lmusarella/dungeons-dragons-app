@@ -16,6 +16,7 @@ const jsCssImports = jsSources.flatMap(([file, source]) => [...source.matchAll(/
 describe('stylesheet cascade', () => {
   it('declares the global cascade order in a single entry imported once by main.js', () => {
     expect(globalSheets).toEqual([
+      'src/styles/palette.css',
       'src/styles/tokens.css',
       'src/styles/base.css',
       'src/styles/theme.css',
@@ -42,12 +43,12 @@ describe('stylesheet cascade', () => {
     });
   });
 
-  it('declares custom properties on :root only in tokens.css', () => {
-    walk('src', '.css').map(rel).filter((sheet) => sheet !== 'src/styles/tokens.css').forEach((sheet) => {
+  it('declares custom properties on :root only in palette.css and tokens.css, each once', () => {
+    const central = ['src/styles/palette.css', 'src/styles/tokens.css'];
+    walk('src', '.css').map(rel).filter((sheet) => !central.includes(sheet)).forEach((sheet) => {
       expect(readFileSync(sheet, 'utf8'), sheet).not.toMatch(/(^|[}\s,])(:root|html)\s*\{[^}]*(^|[;{\s])--[\w-]+\s*:/m);
     });
-    const tokens = readFileSync('src/styles/tokens.css', 'utf8');
-    const names = [...tokens.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((match) => match[1]);
+    const names = central.flatMap((sheet) => [...readFileSync(sheet, 'utf8').matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((match) => match[1]));
     expect(new Set(names).size).toBe(names.length);
   });
 

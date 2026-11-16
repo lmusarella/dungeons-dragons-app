@@ -3,20 +3,22 @@
  * rules have the same specificity the one imported later wins, so keep it
  * explicit here and do not import these files from JavaScript modules.
  *
- *   1. tokens.css        global custom properties (the only :root variables)
- *   2. base.css          reset, typography, shared components, legacy page layouts
- *   3. theme.css         paper/parchment surfaces layered on top of base.css
- *   4. dice-roller       dice overlay (self-contained, `diceov-*` namespace)
- *   5. shellExperience   app shell, login, character select, quick-action modals
- *   6. tabletLayout      tablet/landscape layout of the character sheet
- *   7. fantasyTheme      character sheet visual language (ivory, wine, gold)
- *   8. characterSheetPolish  final adjustments of the character sheet
+ *   1. palette.css       colour primitives (the only raw colour values)
+ *   2. tokens.css        role aliases and global custom properties
+ *   3. base.css          reset, typography, shared components, legacy page layouts
+ *   4. theme.css         paper/parchment surfaces layered on top of base.css
+ *   5. dice-roller       dice overlay (self-contained, `diceov-*` namespace)
+ *   6. shellExperience   app shell, login, character select, quick-action modals
+ *   7. tabletLayout      tablet/landscape layout of the character sheet
+ *   8. fantasyTheme      character sheet visual language (ivory, wine, gold)
+ *   9. characterSheetPolish  final adjustments of the character sheet
  *
  * Feature stylesheets that are only needed by a lazy route (library, game
  * rooms, catalog, builder, aliases, starting equipment) stay next to their
  * feature and are imported by its entry module; they always load after this file.
  */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import './palette.css';
 @import './tokens.css';
 @import './base.css';
 @import './theme.css';

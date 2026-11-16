@@ -1,0 +1,141 @@
+/*
+ * Colour palette: the only place where raw colour values are declared.
+ * Names are `family-step`: the step goes from 50 (lightest) to 950 (darkest).
+ * Components should prefer the role aliases in tokens.css (--color-ink, --color-surface, --accent...)
+ * and use these primitives only when no role fits.
+ * Translucent variants use the `-rgb` twin: rgb(var(--wine-700-rgb) / 0.3).
+ * Generated from the former hard-coded values with a perceptual tolerance of dE <= 6.
+ */
+:root {
+  /* neutrals */
+  --white: #ffffff;
+  --white-rgb: 255 255 255;
+
+  --black: #000000;
+  --black-rgb: 0 0 0;
+
+  --gray-50: #e8f0ed;
+  --gray-50-rgb: 232 240 237;
+  --gray-100: #f4f5ef;
+  --gray-100-rgb: 244 245 239;
+  --gray-900: #1c1b1a;
+  --gray-900-rgb: 28 27 26;
+
+  /* paper / parchment surfaces */
+  --paper-50: #fffaf0;
+  --paper-50-rgb: 255 250 240;
+  --paper-100: #eadfc9;
+  --paper-100-rgb: 234 223 201;
+  --paper-150: #efd9aa;
+  --paper-150-rgb: 239 217 170;
+  --paper-200: #dfcfc2;
+  --paper-200-rgb: 223 207 194;
+  --paper-250: #f5e7e2;
+  --paper-250-rgb: 245 231 226;
+
+  /* sand: borders and dividers */
+  --sand-200: #d7c1a0;
+  --sand-200-rgb: 215 193 160;
+  --sand-300: #c9ac8d;
+
+  /* gold: highlights and rewards */
+  --gold-100: #ffdc7a;
+  --gold-100-rgb: 255 220 122;
+  --gold-200: #e5c585;
+  --gold-200-rgb: 229 197 133;
+  --gold-250: #d5ad69;
+  --gold-250-rgb: 213 173 105;
+  --gold-350: #b99b69;
+  --gold-350-rgb: 185 155 105;
+  --gold-400: #b88845;
+  --gold-400-rgb: 184 136 69;
+
+  /* umber: warm browns for text and strokes */
+  --umber-300: #a87e5c;
+  --umber-300-rgb: 168 126 92;
+  --umber-350: #665a48;
+  --umber-350-rgb: 102 90 72;
+  --umber-400: #81521f;
+  --umber-400-rgb: 129 82 31;
+  --umber-450: #947b5a;
+  --umber-450-rgb: 148 123 90;
+  --umber-500: #9b7139;
+  --umber-500-rgb: 155 113 57;
+  --umber-550: #7a6350;
+  --umber-550-rgb: 122 99 80;
+  --umber-600: #8a7261;
+  --umber-650: #704f3d;
+  --umber-650-rgb: 112 79 61;
+  --umber-700: #4f432c;
+  --umber-700-rgb: 79 67 44;
+  --umber-750: #5a381f;
+  --umber-750-rgb: 90 56 31;
+  --umber-800: #3e2a1a;
+  --umber-800-rgb: 62 42 26;
+  --umber-850: #6f5230;
+  --umber-850-rgb: 111 82 48;
+  --umber-900: #513f37;
+  --umber-900-rgb: 81 63 55;
+
+  /* clay: muted rose-browns */
+  --clay-250: #e0b4b4;
+  --clay-250-rgb: 224 180 180;
+  --clay-550: #826a65;
+  --clay-800: #492b25;
+  --clay-800-rgb: 73 43 37;
+
+  /* wine: brand accent and its tints */
+  --wine-100: #ead9df;
+  --wine-550: #925872;
+  --wine-600: #795165;
+  --wine-650: #6d4a4f;
+  --wine-650-rgb: 109 74 79;
+  --wine-700: #76364b;
+  --wine-700-rgb: 118 54 75;
+  --wine-750: #4c3340;
+  --wine-750-rgb: 76 51 64;
+  --wine-800: #582b40;
+  --wine-800-rgb: 88 43 64;
+  --wine-850: #382a30;
+  --wine-850-rgb: 56 42 48;
+  --wine-900: #231418;
+  --wine-900-rgb: 35 20 24;
+  --wine-950: #140a12;
+  --wine-950-rgb: 20 10 18;
+
+  /* red: danger */
+  --red-600: #a33a3a;
+  --red-600-rgb: 163 58 58;
+
+  /* green: success */
+  --green-50: #dfeee5;
+  --green-50-rgb: 223 238 229;
+  --green-100: #e8f1e1;
+  --green-150: #c3d6b6;
+  --green-200: #e9ebd8;
+  --green-550: #2f7a57;
+  --green-550-rgb: 47 122 87;
+  --green-600: #5c7046;
+  --green-600-rgb: 92 112 70;
+  --green-650: #296549;
+  --green-650-rgb: 41 101 73;
+  --green-700: #3d6330;
+  --green-700-rgb: 61 99 48;
+
+  /* teal: legacy app accent */
+  --teal-600: #2f6c64;
+  --teal-600-rgb: 47 108 100;
+  --teal-650: #3b5d60;
+  --teal-650-rgb: 59 93 96;
+
+  /* blue */
+  --blue-100: #e0e9f4;
+  --blue-600: #376b7c;
+  --blue-600-rgb: 55 107 124;
+
+  /* purple: magic and spells */
+  --purple-200: #d3c3e6;
+  --purple-650: #5e4a8f;
+  --purple-650-rgb: 94 74 143;
+  --purple-700: #674c70;
+}

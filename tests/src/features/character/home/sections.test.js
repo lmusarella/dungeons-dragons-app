@@ -167,7 +167,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.equipment-mannequin__load');
     expect(styles).toContain('.equipment-mannequin__item-image');
     expect(styles).toContain('.modal-card .field input:focus');
-    expect(readFileSync('src/styles/tokens.css', 'utf8')).toContain('--section-teal: #2f5f63');
+    expect(readFileSync('src/styles/tokens.css', 'utf8')).toContain('--section-teal: var(--teal-650)');
     expect(styles).toContain('.home-feature-panel {');
     expect(styles).toContain('inset 0 4px 0 var(--feature-color)');
     expect(styles).toContain('.journal-section-card--entries');
@@ -180,10 +180,10 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.modifier-card--mastery .skill-card__status::before');
     expect(styles).toContain('.modifier-card--proficiency .saving-throw-card__status::before');
     expect(styles).toContain('.spell-prepared-list__card.resource-card');
-    expect(styles).toContain('inset 3px 0 0 rgba(59, 93, 96, 0.68)');
+    expect(styles).toContain('inset 3px 0 0 rgb(var(--teal-650-rgb) / 0.68)');
     expect(styles).toContain('.home-feature-panel--resources .resource-card');
-    expect(styles).toContain('inset 3px 0 0 rgba(97, 116, 59, 0.68)');
-    expect(styles).toContain('background: #f6ead8');
+    expect(styles).toContain('inset 3px 0 0 rgb(var(--green-600-rgb) / 0.68)');
+    expect(styles).toContain('background: var(--color-surface-alt)');
     expect(source).not.toContain('data-add-equip');
     expect(styles).toContain('.attack-card.modifier-card:not(.resource-card) .attack-card__title');
     expect(styles).toContain('grid-template-areas:');

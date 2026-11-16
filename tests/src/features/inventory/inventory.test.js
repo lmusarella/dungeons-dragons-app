@@ -131,8 +131,8 @@ describe('src/features/inventory/inventory.js', () => {
     expect(shortcut).toContain('if (exchange) walletActions.append(exchange)');
     expect(shortcut).toContain("walletActions.append(actionButtons.get('receive'))");
     expect(styles).toContain('grid-template-columns: repeat(3,minmax(0,1fr))');
-    expect(styles).toContain('.coin-workspace-action--pay { grid-column: 1; }');
-    expect(styles).toContain('.coin-workspace-action--receive { grid-column: 3; }');
+    expect(styles).toContain('.coin-workspace-action--pay { border-color: var(--clay-250); background: var(--paper-250); color: #8e4149; grid-column: 1; }');
+    expect(styles).toContain('.coin-workspace-action--receive { border-color: #a8c5ad; background: var(--green-50); color: var(--green-650); grid-column: 3; }');
     expect(styles).toContain('.coin-exchange-button { grid-column: 2;');
     expect(styles).toContain('grid-template-columns: 30px minmax(0,1fr); grid-template-rows: auto auto');
     expect(styles).toContain('.wallet-card__info { display: contents; }');

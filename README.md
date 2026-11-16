@@ -39,15 +39,23 @@ npm run audit:css
   dichiara l'ordine della cascata: `tokens` → `base` → `theme` → dice-roller → `shellExperience`
   → `tabletLayout` → `fantasyTheme` → `characterSheetPolish`. A parità di specificità vince
   il file importato dopo: non importare questi file da moduli JS e non usare query `?v=`.
-- `src/styles/tokens.css` contiene le uniche custom property su `:root` (accent, monete,
-  palette shell, colori delle sezioni). Le variabili di componente restano accanto al componente.
+- `src/styles/palette.css` è l'unico posto dove si dichiarano valori di colore grezzi: primitivi
+  `--famiglia-step` (da 50 chiaro a 950 scuro, es. `--wine-700`, `--paper-50`, `--sand-200`).
+  Per le trasparenze usare il gemello `-rgb`: `rgb(var(--wine-700-rgb) / 0.3)`.
+- `src/styles/tokens.css` contiene i ruoli (`--accent`, `--color-ink`, `--color-surface`,
+  `--color-border`, `--color-danger`...) che puntano ai primitivi, più monete, palette shell e colori
+  delle sezioni. Nei componenti preferire i ruoli; per cambiare tema basta ripuntarli.
+  Le variabili di componente (`--toast-*`, `--filter-*`...) restano accanto al componente.
+- Niente nuovi `#hex`/`rgba()` fuori da `palette.css`: `tests/src/styles/palette.test.js` blocca
+  l'aumento dei colori grezzi residui (tetto da abbassare man mano che si migrano).
 - I CSS di feature lazy (`library`, `gameRooms`, `dndCatalog`, `characterBuilder`,
   `itemAliases`, `startingEquipment`) restano accanto alla feature e sono importati dal suo modulo;
   vengono sempre dopo i CSS globali.
 - `npm run audit:css` segnala classi/id/data-attribute senza riscontro nel JS, `@keyframes` e
   variabili non usati, dichiarazioni sovrascritte dallo stesso selettore e selettori definiti in più
   file. Con `-- --fix` rimuove il CSS morto (ripetere fino a convergenza, poi lanciare i test).
-  Aggiungere `-- --colors` per vedere i colori letterali più ripetuti.
+  Aggiungere `-- --colors` per vedere i colori grezzi residui con il token più vicino, e
+  `-- --merge` per unire i selettori ripetuti quando è dimostrabile che l'ordine non cambia.
 
 ## Troubleshooting
 

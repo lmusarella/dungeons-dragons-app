@@ -47,8 +47,8 @@ describe('spell preparation helpers', () => {
     expect(styles).toContain('.spell-manual__description { width: 100%; max-width: none;');
     expect(styles).toContain('.shared-spell-picker__source-filter { grid-area: source; align-self: end; }');
     expect(styles).toContain('.shared-spell-picker__source-filter > summary { height: 40px; min-height: 40px;');
-    expect(styles).toContain('.shared-spell-picker__select.is-active {\n  border-color: #76364b !important; background: #76364b !important; color: #fff8e9 !important;');
-    expect(styles).toContain('background: #fff8e9 !important; color: #76364b !important; opacity: 1;');
+    expect(styles).toContain('.shared-spell-picker__select.is-active {\n  border-color: var(--accent) !important; background: var(--accent) !important; color: var(--paper-50) !important;');
+    expect(styles).toContain('background: var(--color-surface) !important; color: var(--accent) !important; opacity: 1;');
     expect(styles).toContain('.shared-spell-picker__state {\n  grid-column: 1 / -1; width: 100%; min-height: 260px;');
     expect(styles).toContain('.shared-spell-picker__state--loading {\n  position: absolute; inset: 0; z-index: 2; min-height: 0; place-content: center;');
   });
