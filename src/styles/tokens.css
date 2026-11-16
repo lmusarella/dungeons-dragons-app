@@ -1,0 +1,39 @@
+/*
+ * Global design tokens: the only place where custom properties are declared on
+ * :root. Component-scoped variables (--shortcut-accent, --toast-*, --filter-*,
+ * --feature-color, ...) stay next to the component that owns them.
+ */
+:root {
+  /* Brand accent (wine). Use rgba(var(--accent-rgb), a) for translucent variants. */
+  --accent: #76364b;
+  --accent-strong: #57263a;
+  --accent-rgb: 118,54,75;
+
+  /* Coin artwork shared by wallet, inventory and exchange views. */
+  --coin-pp-image: url('/icons/moneta_platino.png');
+  --coin-gp-image: url('/icons/moneta_oro.png');
+  --coin-sp-image: url('/icons/moneta_argento.png');
+  --coin-cp-image: url('/icons/moneta_rame.png');
+
+  /* Application shell (header, login, character select, quick-action modals). */
+  --shell-wine: #6f3048;
+  --shell-cream: #fff8eb;
+  --shell-ink: #3f2932;
+  --shell-muted: #7f695d;
+
+  /* Character sheet section colours; each has an -rgb twin for rgba(). */
+  --section-teal: #2f5f63;
+  --section-teal-rgb: 47, 95, 99;
+  --section-green: #327052;
+  --section-green-rgb: 50, 112, 82;
+  --section-red: #a13c32;
+  --section-red-rgb: 161, 60, 50;
+  --section-blue: #376b7c;
+  --section-blue-rgb: 55, 107, 124;
+  --section-gold: #9a6525;
+  --section-gold-rgb: 154, 101, 37;
+  --section-olive: #61743b;
+  --section-olive-rgb: 97, 116, 59;
+  --section-warm: #80552b;
+  --section-warm-rgb: 128, 85, 43;
+}

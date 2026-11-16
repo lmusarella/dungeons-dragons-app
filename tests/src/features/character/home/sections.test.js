@@ -105,7 +105,7 @@ describe('src/features/character/home/sections.js', () => {
     expect(source).not.toContain('${weaknessEffectsTooltip}');
     expect(source).not.toContain('${conditionsEffectsTooltip}');
     expect(styles).toContain('.combat-vitals-grid');
-    expect(styles).toContain('.combat-status-card--weakness');
+    expect(readFileSync('src/features/character/home/fantasyTheme.css', 'utf8')).toContain('.status-launch-card--weakness');
     expect(styles).toContain('@container (max-width: 470px)');
   });
 
@@ -163,17 +163,11 @@ describe('src/features/character/home/sections.js', () => {
     expect(styles).toContain('.proficiency-tab-bar .tab-bar__button.is-active');
     expect(styles).toContain('.equipped-item-card.resource-card');
     expect(styles).toContain('.modal-card--equipment-mannequin');
-    expect(styles).toContain('.equipment-mannequin__part-button.is-selected');
     expect(styles).toContain('.equipment-mannequin__wardrobe-item.is-selected');
-    expect(styles).toContain('.equipment-mannequin__part-button.is-drop-target');
-    expect(styles).toContain('.equipment-mannequin__part-button.is-compatible');
-    expect(styles).toContain('.equipment-mannequin__legend-swatch--equipped');
-    expect(styles).toContain('@keyframes equipment-compatible-pulse');
-    expect(styles).toContain('@keyframes equipment-selected-pulse');
     expect(styles).toContain('.equipment-mannequin__load');
     expect(styles).toContain('.equipment-mannequin__item-image');
     expect(styles).toContain('.modal-card .field input:focus');
-    expect(styles).toContain('--section-teal: #2f5f63');
+    expect(readFileSync('src/styles/tokens.css', 'utf8')).toContain('--section-teal: #2f5f63');
     expect(styles).toContain('.home-feature-panel {');
     expect(styles).toContain('inset 0 4px 0 var(--feature-color)');
     expect(styles).toContain('.journal-section-card--entries');

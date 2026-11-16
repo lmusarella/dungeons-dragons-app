@@ -1,8 +1,4 @@
-import './styles/base.css';
-import './styles/theme.css';
-import './features/character/home/fantasyTheme.css?v=expanded-shortcuts2';
-import './features/dice-roller/styles.css';
-import './styles/shellExperience.css';
+import './styles/index.css';
 import { renderLayout, updateHeaderInfo, updateOfflineBanner } from './ui/layout.js';
 import { initRouter, registerRoute } from './app/router.js';
 import { initSession, ensureProfile, signOut } from './app/session.js';

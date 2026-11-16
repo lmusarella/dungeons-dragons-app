@@ -30,7 +30,24 @@ npm run dev
 npm run build
 npm run preview
 npm run test
+npm run audit:css
 ```
+
+## Organizzazione degli stili
+
+- `src/styles/index.css` è l'unico entry CSS globale (importato solo da `src/main.js`) e
+  dichiara l'ordine della cascata: `tokens` → `base` → `theme` → dice-roller → `shellExperience`
+  → `tabletLayout` → `fantasyTheme` → `characterSheetPolish`. A parità di specificità vince
+  il file importato dopo: non importare questi file da moduli JS e non usare query `?v=`.
+- `src/styles/tokens.css` contiene le uniche custom property su `:root` (accent, monete,
+  palette shell, colori delle sezioni). Le variabili di componente restano accanto al componente.
+- I CSS di feature lazy (`library`, `gameRooms`, `dndCatalog`, `characterBuilder`,
+  `itemAliases`, `startingEquipment`) restano accanto alla feature e sono importati dal suo modulo;
+  vengono sempre dopo i CSS globali.
+- `npm run audit:css` segnala classi/id/data-attribute senza riscontro nel JS, `@keyframes` e
+  variabili non usati, dichiarazioni sovrascritte dallo stesso selettore e selettori definiti in più
+  file. Con `-- --fix` rimuove il CSS morto (ripetere fino a convergenza, poi lanciare i test).
+  Aggiungere `-- --colors` per vedere i colori letterali più ripetuti.
 
 ## Troubleshooting
 

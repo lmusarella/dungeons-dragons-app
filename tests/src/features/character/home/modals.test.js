@@ -141,7 +141,6 @@ describe('src/features/character/home/modals.js', () => {
     expect(source).toContain('resource-detail-option__badges');
     expect(source).toContain("cardClass: 'modal-card--resource-detail'");
     expect(styles).toContain('.resource-parent-overview');
-    expect(styles).toContain('.resource-detail-option__actions .resource-icon-button');
     expect(styles).toContain('.power-manual .resource-parent-overview');
     expect(styles).toContain('.modal-card--resource-detail) .power-manual .resource-parent-overview .detail-rich-text { width: 100%; max-width: none;');
   });

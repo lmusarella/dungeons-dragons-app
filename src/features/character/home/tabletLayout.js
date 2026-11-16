@@ -6,9 +6,6 @@ import { installResourceFilters } from './resourceFilters.js';
 import { buildPlayCards } from './playCards.js';
 import { optimizeCatalog, polishCatalogCards } from './catalogLayout.js';
 import { presentSheetDetail } from './sheetDetail.js';
-import './tabletLayout.css?v=roll-grid';
-import './fantasyTheme.css?v=power-footer7';
-import './characterSheetPolish.css?v=sheet-polish10';
 
 const retainedDialogs = new WeakMap();
 

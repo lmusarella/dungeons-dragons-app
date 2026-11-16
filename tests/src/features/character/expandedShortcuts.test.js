@@ -69,7 +69,7 @@ describe('expanded shortcut reference',()=>{
     expect(layout).toContain("button.dataset.gameAction = ''");
     expect(layout).toContain('layout.after(toolbar)');
     expect(layout).not.toContain('layout.append(toolbar)');
-    expect(styles).toContain('grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto');
+    expect(styles).toContain('grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) var(--game-footer-height)');
     expect(styles).toContain('grid-column: 1 !important; grid-row: 2');
   });
   it('surfaces saving throws and labeled weapon facts in shortcut card footers',()=>{

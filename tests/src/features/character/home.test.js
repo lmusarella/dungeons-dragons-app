@@ -278,7 +278,7 @@ describe('src/features/character/home.js', () => {
     expect(styles).toContain(".app-shell[data-route='home'] > .app-main");
     expect(styles).toContain('grid-template-columns: 160px minmax(300px,1fr)');
     expect(styles).toContain('width: 160px; height: 160px; min-height: 160px; max-height: 160px');
-    expect(styles).toContain('grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: 54px');
+    expect(styles).toContain('grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-auto-rows: minmax(46px,1fr)');
   });
 
   it('edits shortcut modifiers in place and includes them in actual rolls', () => {

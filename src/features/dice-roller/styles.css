@@ -9,20 +9,9 @@
     margin: 0px;
 }
 
-
 header {
     color: white;
     padding: 5px;
-}
-
-#helpBtn {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 1.2rem;
-    height: 1.2rem;
-    border: none;
-    border-radius: 0.6rem;
 }
 
 /* ******* DICE ROLLER *********** */
@@ -174,24 +163,14 @@ header {
 }
 
 .diceov-stage {
-  position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  width: min(970px, 98vw);
   max-height: 96vh;
   overflow: auto;
   background: #111;
   color: #eee;
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0,0,0,.4);
-  padding: 8px 10px 10px;
-}
-
-.diceov-close {
-  position: absolute;
-  top: 6px; right: 8px;
-  border: 0; background: transparent; color: #fff; font-size: 22px;
-  cursor: pointer;
 }
 
 .diceov-panel {
@@ -231,26 +210,6 @@ header {
   font-weight: 600;
   margin-bottom: 4px;
   text-align: center;
-}
-
-.diceov-label--inline {
-  margin-bottom: 0;
-  text-align: right;
-  font-size: 0.82rem;
-  color: rgba(255,255,255,0.7);
-}
-
-.diceov-generic-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.diceov-radio-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .diceov-control--row {
@@ -328,14 +287,6 @@ header {
   background: #3a3a3a;
 }
 
-.diceov-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 0.85rem;
-}
-
 .diceov-warning {
   margin: 4px 0 0;
   font-size: 0.8rem;
@@ -357,15 +308,6 @@ header {
   flex: 2 1 240px;
   min-width: 0;
   width: 100%;
-}
-
-
-.diceov-generic-builder {
-  display: contents;
-}
-
-.diceov-generic-builder[hidden] {
-  display: none;
 }
 
 .diceov-generic-row input[name="dice-count"] {
@@ -407,13 +349,6 @@ header {
 
 .diceov-control select {
   min-width: 72px;
-}
-
-.diceov-hint {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.6);
-  text-align: center;
 }
 
 .diceov-results {
@@ -520,29 +455,6 @@ header {
   z-index: 5;
 }
 
-.diceov-history-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  background: transparent;
-  border: 0;
-  color: #eee;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
-
-.diceov-history-toggle-icon {
-  transition: transform 0.2s ease;
-}
-
-.diceov-history-accordion.is-open .diceov-history-toggle-icon {
-  transform: rotate(180deg);
-}
-
 .diceov-history-panel {
   padding: 10px 12px;
 }
@@ -621,7 +533,6 @@ header {
   color: #7dff9a;
 }
 
-
 .diceov-history-type--dmg .diceov-history-type-code {
   color: #ff6b6b;
 }
@@ -639,7 +550,6 @@ header {
   color: #ffdc7a;
   text-transform: uppercase;
 }
-
 
 .diceov-history-rollmode {
   font-size: 0.68rem;
@@ -673,45 +583,28 @@ header {
 #diceRollerUI .bottom_field { padding: 6px 8px; }
 
 /* === OVERRIDES SCOPED PER IL POPUP DEI DADI ============================== */
-.dice-roller-modal {
-  position: relative;
-  min-height: 320px;
-}
 
-.dice-roller-modal .dice-roller-embed {
-  position: relative;
-}
-
-#dice-overlay #diceRollerUI,
-.dice-roller-modal #diceRollerUI {
-  width: 100%;
-  height: auto;              /* ← non a viewport */
-  max-height: none;
-  overflow: visible;         /* ← evita tagli */
+#dice-overlay #diceRollerUI {              /* ← non a viewport */
+  max-height: none;         /* ← evita tagli */
   display: flex;
   flex-direction: column;
 }
 
-#dice-overlay #diceRoller,
-.dice-roller-modal #diceRoller {
+#dice-overlay #diceRoller {
   position: relative;        /* ← non absolute */
   top: auto;
   margin-top: 0;
-  z-index: 0;                /* ← niente -1 */
-  width: 100%;
-  height: clamp(260px, 50vh, 320px);  /* ← un’altezza sensata nel popup */
+  z-index: 0;                /* ← niente -1 */  /* ← un’altezza sensata nel popup */
   overflow: hidden;
 }
 
 /* il canvas si adatta all’altezza del box sopra */
-#dice-overlay #canvas,
-.dice-roller-modal #canvas {
+#dice-overlay #canvas {
   width: 100%;
   height: 100%;
 }
 
-#dice-overlay .center_field,
-.dice-roller-modal .center_field {
+#dice-overlay .center_field {
   position: relative;
   flex: 1;                   /* ← cresce in verticale nel popup */
   height: auto;              /* ← niente 80% fisso */
@@ -719,22 +612,19 @@ header {
   z-index: 0;
 }
 
-#dice-overlay .bottom_field,
-.dice-roller-modal .bottom_field {
+#dice-overlay .bottom_field {
   position: static;          /* ← NON assoluto nel popup */
   width: 100%;
   min-height: 2.5rem;
   margin-top: 8px;
 }
 
-#dice-overlay .top_field,
-.dice-roller-modal .top_field {
+#dice-overlay .top_field {
   width: 100%;
 }
 
 /* opzionale: l’input meno “full-width” se vuoi */
-#dice-overlay #textInput,
-.dice-roller-modal #textInput {
+#dice-overlay #textInput {
   max-width: 100%;
 }
 
@@ -756,13 +646,6 @@ header {
 }
 
 /* La X sta DAVVERO sopra a tutto dentro lo stage */
-.diceov-close {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 50;              /* > di tutto il resto nello stage */
-  pointer-events: auto;
-}
 
 /* Canvas e UI del roller: sotto la X */
 #dice-overlay #diceRoller,
@@ -783,12 +666,6 @@ header {
 
 #dice-overlay .diceov-field--modifier .number-stepper {
   grid-template-columns: 30px minmax(0, 1fr) 30px;
-  gap: 4px;
-}
-
-
-#dice-overlay .diceov-generic-row .diceov-field--modifier .number-stepper {
-  width: 100%;
 }
 
 #dice-overlay .diceov-generic-row .diceov-field--modifier .number-stepper input[type="number"] {
@@ -796,8 +673,6 @@ header {
 }
 
 #dice-overlay .diceov-field--modifier .number-stepper__button {
-  min-width: 30px;
-  min-height: 30px;
   border-radius: 8px;
   border-color: #3a3a3a;
   background: #1e1e1e;
@@ -945,7 +820,6 @@ header {
   outline: none;
 }
 
-
 .diceov-quick-dice-content {
   display: grid;
   gap: 4px;
@@ -1025,7 +899,6 @@ header {
 .diceov-reroll-card[hidden] {
   display: none;
 }
-
 
 .diceov-reroll-content {
   display: grid;
@@ -1162,8 +1035,6 @@ header {
   --diceov-plum: #71364c;
   --diceov-plum-dark: #51283a;
   --diceov-gold: #b88845;
-  --diceov-cream: #fff9ef;
-  --diceov-paper: #f3e5d0;
   --diceov-border: #d3b78e;
   --diceov-ink: #4d3540;
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -1373,7 +1244,6 @@ header {
 #dice-overlay .diceov-toggle-track { background: #927b6e; }
 #dice-overlay .diceov-toggle input:checked + .diceov-toggle-track { background: var(--diceov-plum); }
 #dice-overlay .diceov-warning { color: #9b3e42; font-weight: 750; }
-#dice-overlay .diceov-hint { color: #80695f; }
 #dice-overlay .diceov-inspiration-row {
   grid-column: 1 / -1;
   display: flex;
@@ -1749,9 +1619,6 @@ header {
   background: #f5e6d1;
 }
 #dice-overlay .diceov-history-accordion.is-open .diceov-history-panel { min-height: 0; flex: 1; overflow: hidden; }
-#dice-overlay .diceov-history-popover-header { color: #593543; }
-#dice-overlay .diceov-history-popover-close { border-color: #c9ad86; background: #fff9ef; color: #71364c; }
-#dice-overlay .diceov-history-row { color: #59444a; }
 #dice-overlay .diceov-history-list { gap: 0; margin-top: 0; padding: 0 3px 4px; }
 #dice-overlay .diceov-history-row {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1761,10 +1628,9 @@ header {
   white-space: normal;
 }
 #dice-overlay .diceov-history-type { grid-column: 1; grid-row: 1; min-width: 0; flex-wrap: wrap; }
-#dice-overlay .diceov-history-total { grid-column: 2; grid-row: 1; align-self: center; font-size: 18px; color: #71364c; }
+#dice-overlay .diceov-history-total { grid-column: 2; grid-row: 1; align-self: center; font-size: 18px; }
 #dice-overlay .diceov-history-rollmode { grid-column: 1; grid-row: 2; text-align: left; }
 #dice-overlay .diceov-history-date { grid-column: 2; grid-row: 2; }
-#dice-overlay .diceov-history-row + .diceov-history-row { border-color: #ddc7a5; }
 #dice-overlay .diceov-history-subtype,
 #dice-overlay .diceov-history-rollmode,
 #dice-overlay .diceov-history-date,
