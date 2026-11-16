@@ -3,7 +3,7 @@ import { searchSharedItems } from '../library/itemLibraryApi.js';
 import { clearStartingEquipmentCache } from '../startingEquipment/startingEquipmentApi.js';
 import { clearBundleCache } from '../startingEquipment/bundleApi.js';
 import { clearCatalogRelationsCache } from '../dndCatalog/catalogRelations.js';
-import { addOrphanAliases, groupReferences, referencesFromBundles, referencesFromEquipment } from './itemAliasesModel.js';
+import { addOrphanAliases, groupReferences, normalizeSourceId, referencesFromBundles, referencesFromEquipment } from './itemAliasesModel.js';
 
 const PAGE = 1000;
 
@@ -48,7 +48,9 @@ async function callRpc(name, args) {
   return data;
 }
 
-export const saveAlias = (system, key, itemId) => callRpc('admin_save_item_alias', { p_source_system: system, p_source_key: key, p_shared_item_id: itemId });
-export const deleteAlias = (system, key) => callRpc('admin_delete_item_alias', { p_source_system: system, p_source_key: key });
+/** La chiave dell'alias è sempre `trim().toLowerCase()`: è quella con cui le viste cercano la corrispondenza. */
+export const normalizeAliasKey = normalizeSourceId;
+export const saveAlias = (system, key, itemId) => callRpc('admin_save_item_alias', { p_source_system: system, p_source_key: normalizeAliasKey(key), p_shared_item_id: itemId });
+export const deleteAlias = (system, key) => callRpc('admin_delete_item_alias', { p_source_system: system, p_source_key: normalizeAliasKey(key) });
 export const setEntryItem = (entryId, itemId) => callRpc('admin_set_entry_item', { p_entry_id: entryId, p_shared_item_id: itemId });
 export const clearEntryItem = (entryId) => callRpc('admin_clear_entry_item', { p_entry_id: entryId });

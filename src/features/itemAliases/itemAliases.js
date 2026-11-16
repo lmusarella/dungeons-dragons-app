@@ -5,7 +5,7 @@ import { canManageSharedCatalog } from '../library/catalogPermissions.js';
 import { getSharedItemsByIds } from '../library/itemLibraryApi.js';
 import { openEquipmentItemDetail } from '../character/home/itemDetail.js';
 import { clearEntryItem, deleteAlias, loadReferenceGroups, saveAlias, searchItemsForAlias, setEntryItem } from './itemAliasesApi.js';
-import { SOURCE_LABELS, STATUS_LABELS, aliasScope, filterGroups, summarizeOrigins } from './itemAliasesModel.js';
+import { SOURCE_LABELS, STATUS_LABELS, aliasScope, applyAliasOverrides, filterGroups, summarizeOrigins } from './itemAliasesModel.js';
 import './itemAliases.css';
 
 const SCOPE_LABELS = { global: 'Alias globale', specific: 'Voce specifica', import: 'Da importazione', none: '' };
@@ -81,12 +81,12 @@ export async function renderItemAliases(container) {
   container.querySelector('[data-ia-back]').addEventListener('click', () => navigate('dnd-catalog'));
   const table = container.querySelector('[data-ia-table]');
   const count = container.querySelector('[data-ia-count]');
-  const state = { groups: [], expanded: new Set(), filters: { text: '', source: '', status: '', category: '' } };
+  const state = { groups: [], savedAliases: new Map(), expanded: new Set(), filters: { text: '', source: '', status: '', category: '' } };
 
   const load = async () => {
     try {
       const { groups } = await loadReferenceGroups();
-      state.groups = groups;
+      state.groups = applyAliasOverrides(groups, [...state.savedAliases.values()]);
       const categorySelect = container.querySelector('[data-ia-filter="category"]');
       const categories = [...new Set(groups.map((group) => group.category).filter(Boolean))].sort();
       categorySelect.replaceChildren(new Option('Tutte', ''), ...categories.map((value) => new Option(value, value)));
@@ -98,17 +98,20 @@ export async function renderItemAliases(container) {
     }
   };
 
-  const run = async (task, success) => {
+  const run = async (task, success, applyResult = null) => {
     try {
       const result = await task();
+      applyResult?.(result);
       createToast(typeof success === 'function' ? success(result) : success);
       await load();
+      return true;
     } catch (error) {
       console.error('Operazione sulle associazioni non riuscita', error);
       const message = error?.code === '42501' ? 'Non hai i permessi per modificare le associazioni.'
         : error?.code === 'PGRST202' ? 'Funzione non trovata: esegui db/admin_item_aliases.sql su Supabase (poi ricarica lo schema).'
           : `Operazione non riuscita: ${error?.message || 'errore'}`;
       createToast(message, 'error');
+      return false;
     }
   };
 
@@ -165,9 +168,24 @@ export async function renderItemAliases(container) {
         });
         if (!confirmed) return;
       }
-      await run(() => saveAlias(group.system, group.ref, itemId), (result) => (group.system === '5etools'
+      const saved = await run(() => saveAlias(group.system, group.sourceId, itemId), (result) => (group.system === '5etools'
         ? `Associazione salvata · ${result?.entries_updated ?? 0} voci di equipaggiamento aggiornate`
-        : 'Associazione salvata · i contenuti dei kit si aggiornano automaticamente'));
+        : 'Alias salvato · verifico che i contenuti dei kit lo risolvano…'), () => {
+        const currentGroup = state.groups.find((entry) => entry.id === group.id);
+        if (!currentGroup) return;
+        currentGroup.alias = { source_system: group.system, source_key: group.sourceId, shared_item_id: itemId };
+        state.savedAliases.set(group.id, currentGroup.alias);
+        currentGroup.itemId = itemId;
+        currentGroup.status = 'linked';
+        render();
+      });
+      if (saved) {
+        const after = state.groups.find((entry) => entry.id === group.id);
+        if (after && after.status !== 'linked') {
+          console.warn('Alias salvato ma il riferimento risulta ancora non collegato', { system: group.system, sourceId: group.sourceId, group: after });
+          createToast(`Alias “${group.ref}” salvato, ma la vista ${group.system === 'dnd5eapi' ? 'shared_item_bundle_catalog' : 'shared_starting_equipment_catalog'} non lo risolve ancora: la chiave dell’alias potrebbe non coincidere con quella usata dalla vista.`, 'error');
+        }
+      }
     }));
     table.querySelectorAll('[data-ia-remove]').forEach((button) => button.addEventListener('click', async () => {
       const group = groupFor(button);
@@ -178,7 +196,9 @@ export async function renderItemAliases(container) {
         confirmLabel: 'Rimuovi'
       });
       if (!confirmed) return;
-      await run(() => deleteAlias(group.system, group.ref), 'Collegamento rimosso');
+      await run(() => deleteAlias(group.system, group.sourceId), 'Collegamento rimosso', () => {
+        state.savedAliases.delete(group.id);
+      });
     }));
     table.querySelectorAll('[data-ia-entry-set]').forEach((button) => button.addEventListener('click', async () => {
       const group = groupFor(button);

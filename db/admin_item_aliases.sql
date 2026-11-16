@@ -41,6 +41,9 @@ create policy shared_item_link_audit_select_admin
   on public.shared_item_link_audit for select to authenticated
   using (public.is_catalog_admin());
 
+-- La chiave dell'alias e' SEMPRE normalizzata (lower(btrim)): e' quella con cui le viste (shared_item_bundle_catalog,
+-- shared_starting_equipment_catalog) cercano la corrispondenza. Eventuali alias gia' salvati con maiuscole diverse
+-- vengono riconosciuti, uniti in una sola riga e riscritti in forma normalizzata (nessun duplicato, nessun collegamento perso).
 create or replace function public.admin_save_item_alias(p_source_system text, p_source_key text, p_shared_item_id uuid)
 returns jsonb
 language plpgsql
@@ -48,7 +51,9 @@ security definer
 set search_path = public
 as $$
 declare
+  v_key text := lower(btrim(p_source_key));
   v_old uuid;
+  v_ctid tid;
   v_entries integer := 0;
   v_existing boolean;
 begin
@@ -58,25 +63,29 @@ begin
   if p_source_system not in ('5etools', 'dnd5eapi') then
     raise exception 'Invalid source_system %', p_source_system;
   end if;
-  if coalesce(trim(p_source_key), '') = '' then
+  if coalesce(v_key, '') = '' then
     raise exception 'source_key required';
   end if;
   if not exists (select 1 from public.shared_items where id = p_shared_item_id) then
     raise exception 'shared_item % not found', p_shared_item_id;
   end if;
 
-  select shared_item_id into v_old
+  select ctid, shared_item_id into v_ctid, v_old
   from public.shared_item_aliases
-  where source_system = p_source_system and source_key = p_source_key;
-  v_existing := found;
+  where source_system = p_source_system and lower(btrim(source_key)) = v_key
+  order by (source_key = v_key) desc, coalesce(is_manual, false) desc
+  limit 1;
+  v_existing := v_ctid is not null;
 
   if v_existing then
+    delete from public.shared_item_aliases
+    where source_system = p_source_system and lower(btrim(source_key)) = v_key and ctid <> v_ctid;
     update public.shared_item_aliases
-    set shared_item_id = p_shared_item_id, is_manual = true, updated_by = auth.uid(), updated_at = now()
-    where source_system = p_source_system and source_key = p_source_key;
+    set source_key = v_key, shared_item_id = p_shared_item_id, is_manual = true, updated_by = auth.uid(), updated_at = now()
+    where ctid = v_ctid;
   else
     insert into public.shared_item_aliases (source_system, source_key, shared_item_id, is_manual, updated_by, updated_at)
-    values (p_source_system, p_source_key, p_shared_item_id, true, auth.uid(), now());
+    values (p_source_system, v_key, p_shared_item_id, true, auth.uid(), now());
   end if;
 
   -- Propagazione alle dotazioni di classi/background: solo righe non risolte (o collegate dal vecchio alias),
@@ -84,7 +93,7 @@ begin
   if p_source_system = '5etools' then
     update public.shared_starting_equipment_entries e
     set shared_item_id = p_shared_item_id, match_status = 'matched'
-    where lower(e.source_ref) = lower(p_source_key)
+    where lower(btrim(e.source_ref)) = v_key
       and coalesce(e.manual_link, false) = false
       and (
         e.shared_item_id is null
@@ -95,9 +104,9 @@ begin
   end if;
 
   insert into public.shared_item_link_audit (action, source_system, source_key, old_item_id, new_item_id, affected)
-  values (case when v_existing then 'alias_update' else 'alias_create' end, p_source_system, p_source_key, v_old, p_shared_item_id, v_entries);
+  values (case when v_existing then 'alias_update' else 'alias_create' end, p_source_system, v_key, v_old, p_shared_item_id, v_entries);
 
-  return jsonb_build_object('created', not v_existing, 'previous_item_id', v_old, 'entries_updated', v_entries);
+  return jsonb_build_object('created', not v_existing, 'source_key', v_key, 'previous_item_id', v_old, 'entries_updated', v_entries);
 end;
 $$;
 
@@ -108,6 +117,7 @@ security definer
 set search_path = public
 as $$
 declare
+  v_key text := lower(btrim(p_source_key));
   v_old uuid;
   v_entries integer := 0;
 begin
@@ -116,24 +126,26 @@ begin
   end if;
   select shared_item_id into v_old
   from public.shared_item_aliases
-  where source_system = p_source_system and source_key = p_source_key;
+  where source_system = p_source_system and lower(btrim(source_key)) = v_key
+  order by (source_key = v_key) desc
+  limit 1;
   if not found then
     return jsonb_build_object('deleted', false, 'entries_updated', 0);
   end if;
 
-  delete from public.shared_item_aliases where source_system = p_source_system and source_key = p_source_key;
+  delete from public.shared_item_aliases where source_system = p_source_system and lower(btrim(source_key)) = v_key;
 
   if p_source_system = '5etools' then
     update public.shared_starting_equipment_entries e
     set shared_item_id = null, match_status = 'missing'
-    where lower(e.source_ref) = lower(p_source_key)
+    where lower(btrim(e.source_ref)) = v_key
       and coalesce(e.manual_link, false) = false
       and e.shared_item_id = v_old;
     get diagnostics v_entries = row_count;
   end if;
 
   insert into public.shared_item_link_audit (action, source_system, source_key, old_item_id, affected)
-  values ('alias_delete', p_source_system, p_source_key, v_old, v_entries);
+  values ('alias_delete', p_source_system, v_key, v_old, v_entries);
 
   return jsonb_build_object('deleted', true, 'entries_updated', v_entries);
 end;

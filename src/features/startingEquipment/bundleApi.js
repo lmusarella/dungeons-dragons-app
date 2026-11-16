@@ -6,8 +6,12 @@ const pick = (row, ...keys) => keys.map((key) => row?.[key]).find((value) => val
 
 /** Una riga della vista: un oggetto contenuto in una dotazione, collegato (o no) a shared_items tramite UUID. */
 export function normalizeBundleRow(row) {
-  const itemId = pick(row, 'shared_item_id', 'content_item_id', 'item_id');
+  const itemId = pick(row, 'shared_item_id', 'resolved_item_id', 'content_item_id', 'item_id');
   const matchStatus = String(pick(row, 'match_status') || '').toLowerCase();
+  const sourceRef = String(pick(row, 'source_key', 'alias_key', 'content_source_id', 'source_ref', 'source_id', 'original_name') || '');
+  // `source_id` nella vista può identificare la dotazione padre. L'identità del
+  // riferimento deve invece essere la stessa chiave usata dal JOIN degli alias.
+  const sourceId = String(pick(row, 'source_key', 'alias_key', 'content_source_id', 'source_ref', 'source_id', 'original_name') || '').trim().toLowerCase();
   return {
     bundleId: String(pick(row, 'bundle_id', 'bundle_item_id')),
     index: Number(pick(row, 'entry_index', 'content_index', 'position', 'sort_order')) || 0,
@@ -16,8 +20,9 @@ export function normalizeBundleRow(row) {
     name: String(pick(row, 'item_name_it', 'content_name_it', 'name_it', 'item_name') || ''),
     category: pick(row, 'item_category') || null,
     matchStatus,
-    sourceRef: String(pick(row, 'source_ref', 'content_source_id', 'source_id', 'original_name') || ''),
-    linked: Boolean(itemId) && matchStatus !== 'missing'
+    sourceId,
+    sourceRef,
+    linked: matchStatus === 'matched' || (Boolean(itemId) && matchStatus !== 'missing')
   };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  addOrphanAliases, aliasScope, filterGroups, groupReferences, referencesFromBundles, referencesFromEquipment
+  addOrphanAliases, aliasScope, applyAliasOverrides, filterGroups, groupReferences, referencesFromBundles, referencesFromEquipment
 } from '../../../../src/features/itemAliases/itemAliasesModel.js';
 
 let counter = 0;
@@ -88,6 +88,67 @@ describe('operazioni sulle associazioni', () => {
     await api.deleteAlias('dnd5eapi', 'backpack');
     expect(calls.map((call) => call.name)).toEqual(['admin_save_item_alias', 'admin_delete_item_alias']);
     expect(calls[0].args).toMatchObject({ p_source_system: 'dnd5eapi', p_shared_item_id: 'zaino-corretto' });
+  });
+  it('normalizza sempre la chiave dell’alias (Vestments → vestments) per salvataggio e rimozione', async () => {
+    const { api, calls } = await setup();
+    await api.saveAlias('dnd5eapi', ' Vestments ', 'abbigliamento-religioso-id');
+    await api.deleteAlias('dnd5eapi', 'Vestments');
+    expect(calls[0].args).toEqual({ p_source_system: 'dnd5eapi', p_source_key: 'vestments', p_shared_item_id: 'abbigliamento-religioso-id' });
+    expect(calls[1].args).toEqual({ p_source_system: 'dnd5eapi', p_source_key: 'vestments' });
+  });
+
+  it('un alias salvato con maiuscole diverse viene riconosciuto e il kit risulta collegato', async () => {
+    vi.resetModules();
+    vi.doUnmock('../../../../src/features/startingEquipment/bundleApi.js');
+    const { groupReferences, referencesFromBundles } = await import('../../../../src/features/itemAliases/itemAliasesModel.js');
+    const rows = [{ bundle_id: 'pack', bundle_name_it: 'Dotazione da chierico', source_ref: 'Vestments', quantity: 1, match_status: 'matched', shared_item_id: 'abbigliamento-religioso-id', item_name_it: 'Abbigliamento Religioso' }];
+    const [group] = groupReferences(referencesFromBundles(rows), [{ source_system: 'dnd5eapi', source_key: 'Vestments', shared_item_id: 'abbigliamento-religioso-id' }]);
+    expect(group).toMatchObject({ id: 'dnd5eapi|vestments', status: 'linked', itemName: 'Abbigliamento Religioso' });
+    expect(group.alias).toBeTruthy();
+  });
+
+  it('lo stato "matched" della vista basta a considerare collegato il kit, anche senza colonna con l’UUID', async () => {
+    vi.resetModules();
+    vi.doUnmock('../../../../src/features/startingEquipment/bundleApi.js');
+    const { groupReferences, referencesFromBundles } = await import('../../../../src/features/itemAliases/itemAliasesModel.js');
+    const rows = [{ bundle_id: 'pack', bundle_name_it: 'Dotazione da sacerdote', source_key: 'vestments', item_name_it: 'Abbigliamento Religioso', match_status: 'matched' }];
+    const [group] = groupReferences(referencesFromBundles(rows), [{ source_system: 'dnd5eapi', source_key: 'vestments', shared_item_id: 'e2d24af6' }, { source_system: 'dnd5eapi', source_key: 'Vestments', shared_item_id: 'e2d24af6' }]);
+    expect(group).toMatchObject({ id: 'dnd5eapi|vestments', status: 'linked', occurrences: 1 });
+    expect(group.itemId).toBe('e2d24af6');
+  });
+
+  it('identifica i contenuti tramite la chiave alias normalizzata, non tramite il source_id della dotazione', async () => {
+    vi.resetModules();
+    vi.doUnmock('../../../../src/features/startingEquipment/bundleApi.js');
+    const { groupReferences, referencesFromBundles } = await import('../../../../src/features/itemAliases/itemAliasesModel.js');
+    const rows = [
+      { bundle_id: 'pack-1', bundle_name_it: 'Dotazione da sacerdote', source_id: 'priest-pack', source_key: ' Vestments ', match_status: 'missing' },
+      { bundle_id: 'pack-2', bundle_name_it: 'Dotazione da sacerdote', source_id: 'scholars-pack', source_key: 'VESTMENTS', match_status: 'missing' }
+    ];
+    const [group] = groupReferences(referencesFromBundles(rows), [{ source_system: 'dnd5eapi', source_key: 'vestments', shared_item_id: 'e2d24af6' }]);
+    expect(group).toMatchObject({ id: 'dnd5eapi|vestments', sourceId: 'vestments', occurrences: 2, status: 'linked', itemId: 'e2d24af6' });
+  });
+
+  it('deduplica in memoria gli alias che differiscono solo per maiuscole', async () => {
+    const groups = addOrphanAliases([], [
+      { source_system: 'dnd5eapi', source_key: 'Vestments', shared_item_id: 'e2d24af6' },
+      { source_system: 'dnd5eapi', source_key: 'vestments', shared_item_id: 'e2d24af6' }
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ id: 'dnd5eapi|vestments', sourceId: 'vestments', status: 'linked' });
+  });
+
+  it('mantiene linked l’alias confermato dalla RPC quando RLS nasconde gli alias e la vista restituisce ancora missing', async () => {
+    vi.resetModules();
+    vi.doUnmock('../../../../src/features/startingEquipment/bundleApi.js');
+    const [missing] = groupReferences(referencesFromBundles([
+      { bundle_id: 'pack', bundle_name: 'Dotazione da sacerdote', source_key: 'vestments', match_status: 'missing', shared_item_id: null }
+    ]), []);
+    const [linked] = applyAliasOverrides([missing], [
+      { source_system: 'dnd5eapi', source_key: 'vestments', shared_item_id: 'e2d24af6' }
+    ]);
+    expect(missing.status).toBe('missing');
+    expect(linked).toMatchObject({ id: 'dnd5eapi|vestments', status: 'linked', itemId: 'e2d24af6' });
   });
 
   it('voce mancante dell’equipaggiamento di una classe: collegamento solo della singola voce', async () => {
