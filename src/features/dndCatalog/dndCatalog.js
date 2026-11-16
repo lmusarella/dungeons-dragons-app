@@ -4,6 +4,7 @@ import { escapeHtml, sanitizeImageUrl } from '../../lib/html.js';
 import { CATALOG_GROUPS, FIELD_META, RULES_VERSIONS, getCatalog } from './catalogConfig.js';
 import { catalogDescription, catalogName, catalogSourceLabel, catalogStatBlock } from './catalogLocale.js';
 import { renderAsiSummary } from './asiSummary.js';
+import { getCatalogRecord } from './catalogApi.js';
 import { fetchStartingEquipment } from '../startingEquipment/startingEquipmentApi.js';
 import { bindStartingEquipmentDetails, renderStartingEquipment } from '../startingEquipment/startingEquipmentView.js';
 import { labelIt, renderCatalogAdvancedDetails, renderCatalogDescription } from './catalogPresentation.js';
@@ -869,4 +870,11 @@ export async function renderDndCatalog(container) {
   });
   container.querySelector('[data-catalog-create]').addEventListener('click', () => openRecordForm(activeCatalog(), null, (payload) => saveRecord(null, payload)));
   await load();
+}
+
+/** Dettaglio di sola lettura di un record del catalogo, riutilizzato dal Character Builder. */
+export async function openCatalogDetailById(catalogKey, id) {
+  const catalog = getCatalog(catalogKey);
+  const record = await getCatalogRecord(catalog, id);
+  await openRecordDetail(catalog, record, false, { edit: () => {}, remove: async () => false });
 }

@@ -160,3 +160,12 @@
 .cb-rule.is-selected .cb-rule__edition, .cb-rule.is-selected small { color: #f0d9b8; }
 .cb-rule.is-selected strong { color: #fff8e9; }
 .cb-rule.is-selected .cb-rule__check { border-color: #fff8e9; background: #fff8e9; color: #71364b; }
+
+/* Card con pulsante di dettaglio */
+.cb-card-wrap { position: relative; display: flex; min-width: 0; }
+.cb-card-wrap[hidden] { display: none; }
+.cb-card-wrap > .cb-card { flex: 1 1 auto; min-width: 0; width: 100%; padding-right: 40px; }
+.cb-card--compact { align-items: center; min-height: 52px; }
+.cb-card--compact .cb-card__body { gap: 1px; }
+.cb-card__info { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid #cdb58e; border-radius: 50%; background: #fffaf0; color: #71364b; font: italic 800 .8rem Georgia, serif; cursor: pointer; }
+.cb-card__info:hover { border-color: #71364b; background: #71364b; color: #fff8e9; }

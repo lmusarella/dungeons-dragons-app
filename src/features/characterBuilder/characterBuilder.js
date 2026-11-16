@@ -27,6 +27,9 @@ import { bindBundleItems, renderBundleSection } from '../startingEquipment/bundl
 import { entryLabel } from '../startingEquipment/startingEquipmentView.js';
 import './characterBuilder.css';
 
+const BREAKDOWN_LABELS = { classes: 'classi', subclasses: 'sottoclassi', species: 'specie', variants: 'sottospecie', backgrounds: 'background' };
+const breakdownLabel = (breakdown = {}) => Object.entries(breakdown).map(([key, value]) => `${value} ${BREAKDOWN_LABELS[key] || key}`).join(' · ');
+
 const ALIGNMENTS = ['Legale Buono', 'Neutrale Buono', 'Caotico Buono', 'Legale Neutrale', 'Neutrale', 'Caotico Neutrale', 'Legale Malvagio', 'Neutrale Malvagio', 'Caotico Malvagio'];
 
 const STEPS = [
@@ -114,12 +117,16 @@ export async function renderCharacterBuilder(container) {
   const optionList = (key) => (state.options?.[key] || []).filter(sourceAllowed);
   const manualOf = (row) => (row.source ? catalogSourceLabel(row.source) : '');
 
-  const card = ({ id, title, sub, desc, image, selected, attr, source = '', size = '', center = false }) => {
+  const card = ({ id, title, sub, desc, image, selected, attr, source = '', size = '', center = false, compact = false, detail = null }) => {
     const src = sanitizeImageUrl(image);
-    return `<button type="button" class="cb-card ${selected ? 'is-selected' : ''} ${center ? 'cb-card--center' : ''}" ${attr}="${escapeHtml(id)}" data-cb-filter-text="${escapeHtml(String(title).toLowerCase())}" data-cb-source="${escapeHtml(String(source))}" data-cb-size="${escapeHtml(String(size))}">
-      <span class="cb-card__media">${src ? `<img src="${src}" alt="">` : `<b aria-hidden="true">${escapeHtml(String(title).slice(0, 1))}</b>`}</span>
-      <span class="cb-card__body"><strong>${escapeHtml(title)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}${desc ? `<em>${escapeHtml(desc)}</em>` : ''}</span>
-    </button>`;
+    const media = compact ? '' : `<span class="cb-card__media">${src ? `<img src="${src}" alt="">` : `<b aria-hidden="true">${escapeHtml(String(title).slice(0, 1))}</b>`}</span>`;
+    return `<div class="cb-card-wrap" data-cb-filter-text="${escapeHtml(String(title).toLowerCase())}" data-cb-source="${escapeHtml(String(source))}" data-cb-size="${escapeHtml(String(size))}">
+      <button type="button" class="cb-card ${selected ? 'is-selected' : ''} ${center ? 'cb-card--center' : ''} ${compact ? 'cb-card--compact' : ''}" ${attr}="${escapeHtml(id)}">
+        ${media}
+        <span class="cb-card__body"><strong>${escapeHtml(title)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}${desc && !compact ? `<em>${escapeHtml(desc)}</em>` : ''}</span>
+      </button>
+      ${detail ? `<button type="button" class="cb-card__info" data-cb-detail="${escapeHtml(detail)}:${escapeHtml(id)}" title="Mostra il dettaglio" aria-label="Mostra il dettaglio di ${escapeHtml(title)}">i</button>` : ''}
+    </div>`;
   };
   const descriptionOf = (row) => cleanText(catalogDescription(row)).slice(0, 140);
   const filterBox = () => '<label class="cb-filter"><span>Cerca</span><input type="search" data-cb-filter placeholder="Filtra per nome…"></label>';
@@ -160,14 +167,14 @@ export async function renderCharacterBuilder(container) {
     const label = catalogSourceLabel(entry.code);
     const title = label.replace(/\s*\([^)]*\)$/, '');
     const checked = state.sources?.has(entry.code);
-    return `<label class="cb-tile ${checked ? 'is-on' : ''}"><input type="checkbox" data-cb-source-toggle="${escapeHtml(entry.code)}" ${checked ? 'checked' : ''}><span class="cb-tile__check" aria-hidden="true">✓</span><span class="cb-tile__text"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(String(entry.code).toUpperCase())} · ${entry.count} contenuti</small></span></label>`;
+    return `<label class="cb-tile ${checked ? 'is-on' : ''}"><input type="checkbox" data-cb-source-toggle="${escapeHtml(entry.code)}" ${checked ? 'checked' : ''}><span class="cb-tile__check" aria-hidden="true">✓</span><span class="cb-tile__text"><strong>${escapeHtml(title)}</strong><small title="${escapeHtml(breakdownLabel(entry.breakdown))}">${escapeHtml(String(entry.code).toUpperCase())} · ${entry.count} ${entry.count === 1 ? 'contenuto' : 'contenuti'}</small></span></label>`;
   }).join('')}</div>
           <p class="cb-note">Classi, sottoclassi, specie e background dei manuali deselezionati non verranno proposti.</p>
         </div>` : ''}
       </section>`,
 
     class: () => {
-      const classCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.classId === row.id, attr: 'data-cb-class', ...extra });
+      const classCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.classId === row.id, attr: 'data-cb-class', detail: 'classes', ...extra });
       if (state.classId && state.classDetails) {
         const row = (state.options?.classes || []).find((entry) => String(entry.id) === String(state.classId)) || state.classDetails;
         const minLevel = state.classDetails.subclass_selection_level || 1;
@@ -176,7 +183,7 @@ export async function renderCharacterBuilder(container) {
         if (state.classDetails.subclasses?.length) {
           subclassBlock = state.level < minLevel
             ? `<p class="cb-note">La sottoclasse si sceglie dal livello ${minLevel}. Il personaggio è di livello ${state.level}: potrai sceglierla in seguito.</p>`
-            : `<section class="cb-panel cb-panel--variant"><header><h3>Sottoclasse di ${escapeHtml(catalogName(state.classDetails))}</h3><small>Obbligatoria dal livello ${minLevel}</small></header><div class="cb-grid">${subclasses.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), desc: descriptionOf(entry), image: entry.image_url, selected: state.subclass?.id === entry.id, attr: 'data-cb-subclass' })).join('') || '<p class="cb-empty">Nessuna sottoclasse disponibile con i manuali selezionati.</p>'}</div></section>`;
+            : `<section class="cb-panel cb-panel--variant"><header><h3>Sottoclasse di ${escapeHtml(catalogName(state.classDetails))}</h3><small>Obbligatoria dal livello ${minLevel}</small></header><div class="cb-grid">${subclasses.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), desc: descriptionOf(entry), image: entry.image_url, selected: state.subclass?.id === entry.id, attr: 'data-cb-subclass', detail: 'subclasses' })).join('') || '<p class="cb-empty">Nessuna sottoclasse disponibile con i manuali selezionati.</p>'}</div></section>`;
         }
         return `<div class="cb-intro"><h2>Classe</h2></div><div class="cb-selected"><div class="cb-grid">${classCard(row, { attr: 'data-cb-class-selected', selected: true })}</div><button type="button" class="cb__ghost" data-cb-class-change>← Cambia classe</button></div>${subclassBlock}`;
       }
@@ -185,11 +192,11 @@ export async function renderCharacterBuilder(container) {
     },
 
     species: () => {
-      const speciesCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: [manualOf(row), row.size, Number(row.speed) ? `${Math.round(Number(row.speed) * 0.3 * 10) / 10} m` : ''].filter(Boolean).join(' · '), source: row.source, size: row.size, image: row.image_url, selected: state.speciesId === row.id, attr: 'data-cb-species', ...extra });
+      const speciesCard = (row, extra = {}) => card({ id: row.id, title: catalogName(row), sub: [manualOf(row), row.size, Number(row.speed) ? `${Math.round(Number(row.speed) * 0.3 * 10) / 10} m` : ''].filter(Boolean).join(' · '), source: row.source, size: row.size, image: row.image_url, selected: state.speciesId === row.id, attr: 'data-cb-species', detail: 'species', ...extra });
       if (state.speciesId && state.speciesSources) {
         const row = (state.options?.species || []).find((entry) => String(entry.id) === String(state.speciesId)) || state.speciesSources.species;
         const variants = state.speciesSources.variants || [];
-        const variantBlock = variants.length ? `<section class="cb-panel cb-panel--variant"><header><h3>Sottorazza di ${escapeHtml(catalogName(state.speciesSources.species))}</h3><small>Facoltativa</small></header><div class="cb-grid">${card({ id: '', title: 'Nessuna sottorazza', selected: !state.variantId, attr: 'data-cb-variant' })}${variants.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), desc: descriptionOf(entry), selected: state.variantId === entry.id, attr: 'data-cb-variant' })).join('')}</div></section>` : '';
+        const variantBlock = variants.length ? `<section class="cb-panel cb-panel--variant"><header><h3>Sottorazza di ${escapeHtml(catalogName(state.speciesSources.species))}</h3><small>Facoltativa</small></header><div class="cb-grid">${card({ id: '', title: 'Nessuna sottorazza', compact: true, selected: !state.variantId, attr: 'data-cb-variant' })}${variants.map((entry) => card({ id: entry.id, title: catalogName(entry), sub: manualOf(entry), compact: true, selected: state.variantId === entry.id, attr: 'data-cb-variant', detail: 'species-variants' })).join('')}</div></section>` : '';
         return `<div class="cb-intro"><h2>Specie</h2></div><div class="cb-selected"><div class="cb-grid">${speciesCard(row, { attr: 'data-cb-species-selected', selected: true })}</div><button type="button" class="cb__ghost" data-cb-species-change>← Cambia specie</button></div>${variantBlock}`;
       }
       const species = optionList('species');
@@ -239,7 +246,7 @@ export async function renderCharacterBuilder(container) {
     background: () => {
       const data = derived();
       return `<div class="cb-intro"><h2>Scegli il background</h2></div><div class="cb-filters">${filterBox()}<label class="cb-filter"><span>Manuale</span><select data-cb-filter-source><option value="">Tutti</option>${[...new Set(optionList('backgrounds').map((row) => row.source).filter(Boolean))].sort().map((code) => `<option value="${escapeHtml(code)}">${escapeHtml(catalogSourceLabel(code))}</option>`).join('')}</select></label></div>
-      <div class="cb-grid" data-cb-cards>${optionList('backgrounds').map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, desc: descriptionOf(row), image: row.image_url, selected: state.backgroundId === row.id, attr: 'data-cb-background' })).join('') || '<p class="cb-empty">Nessun background disponibile per questa versione.</p>'}</div>`;
+      <div class="cb-grid" data-cb-cards>${optionList('backgrounds').map((row) => card({ id: row.id, title: catalogName(row), sub: manualOf(row), source: row.source, compact: true, selected: state.backgroundId === row.id, attr: 'data-cb-background', detail: 'backgrounds' })).join('') || '<p class="cb-empty">Nessun background disponibile per questa versione.</p>'}</div>`;
     },
 
     skills: () => {
@@ -474,6 +481,17 @@ export async function renderCharacterBuilder(container) {
       });
     }
 
+    on('[data-cb-detail]', 'click', async (element) => {
+      const [catalogKey, id] = element.dataset.cbDetail.split(':');
+      setGlobalLoading(true);
+      try {
+        const { openCatalogDetailById } = await import('../dndCatalog/dndCatalog.js');
+        await openCatalogDetailById(catalogKey, id);
+      } catch (error) {
+        console.error('Dettaglio non disponibile', error);
+        createToast(error?.message || 'Dettaglio non disponibile', 'error');
+      } finally { setGlobalLoading(false); }
+    });
     if (key === 'abilities') {
       on('[data-cb-mode]', 'click', (element) => { state.abilities.mode = element.dataset.cbMode; render(); });
       on('[data-cb-pb]', 'click', (element) => {

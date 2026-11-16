@@ -31,11 +31,33 @@ async function listTable(table, version) {
   return [];
 }
 
-/** Manuali che contribuiscono solo con sottoclassi (es. espansioni): codici distinti della versione. */
-async function listSubclassSources(version) {
-  const { data, error } = await supabase.from('shared_subclasses').select('source').eq('rules_version', version).range(0, 999);
-  if (error) throw error;
-  return [...new Set((data || []).map((row) => row.source).filter(Boolean).map(String))];
+/** Conta, per manuale, le righe di una tabella (paginato): serve a mostrare numeri reali nel filtro dei manuali. */
+async function countBySource(table, version) {
+  const counts = new Map();
+  for (let page = 0; page < 20; page += 1) {
+    const { data, error } = await supabase.from(table).select('source').eq('rules_version', version).order('id', { ascending: true }).range(page * 1000, page * 1000 + 999);
+    if (error) throw error;
+    (data || []).forEach((row) => { if (row.source) counts.set(String(row.source), (counts.get(String(row.source)) || 0) + 1); });
+    if ((data || []).length < 1000) break;
+  }
+  return counts;
+}
+
+const SOURCE_TABLES = [['classes', 'shared_classes'], ['subclasses', 'shared_subclasses'], ['species', 'shared_species'], ['variants', 'shared_species_variants'], ['backgrounds', 'shared_backgrounds']];
+
+async function loadSourceStats(version) {
+  const results = await Promise.allSettled(SOURCE_TABLES.map(([, table]) => countBySource(table, version)));
+  const stats = new Map();
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') { console.error(`Conteggio manuali non disponibile per ${SOURCE_TABLES[index][1]}`, result.reason); return; }
+    result.value.forEach((count, code) => {
+      const entry = stats.get(code) || { code, count: 0, breakdown: {} };
+      entry.count += count;
+      entry.breakdown[SOURCE_TABLES[index][0]] = count;
+      stats.set(code, entry);
+    });
+  });
+  return [...stats.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
 
 const optionsCache = new Map();
@@ -43,16 +65,13 @@ const optionsCache = new Map();
 /** Classi, specie e background di una versione delle regole (colonne leggere, niente dati pesanti). */
 export function loadBuilderOptions(version) {
   if (!optionsCache.has(version)) {
-    const request = Promise.allSettled([listTable('shared_classes', version), listTable('shared_species', version), listTable('shared_backgrounds', version), listSubclassSources(version)])
-      .then(([classes, species, backgrounds, subclassSources]) => {
+    const request = Promise.allSettled([listTable('shared_classes', version), listTable('shared_species', version), listTable('shared_backgrounds', version), loadSourceStats(version)])
+      .then(([classes, species, backgrounds, sources]) => {
         [classes, species, backgrounds].forEach((entry, index) => { if (entry.status === 'rejected') console.error(`Elenco ${['classi', 'specie', 'background'][index]} non caricato`, entry.reason); });
         const value = (entry) => (entry.status === 'fulfilled' ? entry.value : []);
-        const counts = new Map();
-        [...value(classes), ...value(species), ...value(backgrounds)].forEach((row) => { if (row.source) counts.set(String(row.source), (counts.get(String(row.source)) || 0) + 1); });
-        value(subclassSources).forEach((code) => { if (!counts.has(code)) counts.set(code, 0); });
         return {
           classes: value(classes), species: value(species), backgrounds: value(backgrounds),
-          availableSources: [...counts.entries()].map(([code, count]) => ({ code, count })).sort((a, b) => a.code.localeCompare(b.code)),
+          availableSources: value(sources),
           errors: [classes, species, backgrounds].filter((entry) => entry.status === 'rejected').length
         };
       });
